@@ -1,0 +1,162 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`site searches for fixture facts (#1026) > birth about 1868 in Kent, England 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Hollis&q.sex=Female&q.birthLikeDate.from=1863&q.birthLikeDate.to=1873&q.birthLikePlace=Maidstone%2C+Kent%2C+England",
+  "freebmd https://www.freebmd.org.uk/cgi/search.pl",
+  "  type: Births",
+  "  surname: HOLLIS",
+  "  given_names: Edith",
+  "  start_year: 1863",
+  "  end_year: 1873",
+  "  district: Maidstone",
+  "  county: Kent",
+  "internetarchive https://archive.org/search?query=%22Edith+Hollis%22+Maidstone&sin=TXT",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > birth in 1880 in Cork, Ireland 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.birthLikeDate.from=1879&q.birthLikeDate.to=1881&q.birthLikePlace=Cork%2C+County+Cork%2C+Ireland",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Cork&sin=TXT",
+  "irishgenealogy https://www.irishgenealogy.ie/search/?church-or-civil=all&firstname=John&lastname=MacLeod&location=Co.+Cork&yearStart=1879&yearEnd=1881&event-birth=1&event-baptism=1",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > burial before 1900 in Sydney, Australia 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.deathLikeDate.from=1890&q.deathLikeDate.to=1900&q.deathLikePlace=Sydney%2C+New+South+Wales%2C+Australia&q.birthLikeDate.from=1875&q.birthLikeDate.to=1877",
+  "findagrave https://www.findagrave.com/memorial/search?firstname=John&lastname=MacLeod&birthyear=1876&birthyearfilter=1&deathyear=1895&deathyearfilter=5&location=Sydney%2C+New+South+Wales%2C+Australia",
+  "trove https://trove.nla.gov.au/search/category/newspapers?keyword=%22John+MacLeod%22",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > burial in 1902 in Wellington, New Zealand, under a married name 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Ashby&q.sex=Female&q.deathLikeDate.from=1901&q.deathLikeDate.to=1903&q.deathLikePlace=Wellington%2C+New+Zealand&q.birthLikeDate.from=1863&q.birthLikeDate.to=1873&q.spouseGivenName=Walter+James&q.spouseSurname=Ashby",
+  "findagrave https://www.findagrave.com/memorial/search?firstname=Edith&middlename=May&lastname=Ashby&birthyear=1868&birthyearfilter=5&deathyear=1902&deathyearfilter=1&location=Wellington%2C+New+Zealand",
+  "paperspast https://paperspast.natlib.govt.nz/newspapers?query=%22Edith+Ashby%22&start_date=01-01-1901&end_date=31-12-1903",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > census in 1881 in Kent, England 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Hollis&q.sex=Female&q.residenceDate.from=1880&q.residenceDate.to=1882&q.residencePlace=Maidstone%2C+Kent%2C+England&q.birthLikeDate.from=1863&q.birthLikeDate.to=1873",
+  "freecen https://www.freecen.org.uk/search_queries/new",
+  "  surname: Hollis",
+  "  given_names: Edith",
+  "  year: 1881",
+  "  county: Kent",
+  "  birth_year: 1863-1873",
+  "internetarchive https://archive.org/search?query=%22Edith+Hollis%22+Maidstone&sin=TXT",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > census in 1911 in Toronto, Ontario 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.residenceDate.from=1910&q.residenceDate.to=1912&q.residencePlace=Toronto%2C+York%2C+Ontario%2C+Canada&q.birthLikeDate.from=1875&q.birthLikeDate.to=1877",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Toronto&sin=TXT",
+  "lac https://recherche-collection-search.bac-lac.gc.ca/eng/Home/Result?ST=STAD&DataSource=Genealogy&DataSourceSel=Genealogy&q_type_1=q&q_1=John+MacLeod&DateBucket=1911",
+  "canadiana https://www.canadiana.ca/search?q0.0=%22John+MacLeod%22",
+  "automatedgenealogy https://automatedgenealogy.com/",
+  "  year: 1911",
+  "  surname: MacLeod",
+  "  province: Ontario",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > death in 1890 in Leiden, Netherlands 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Ashby&q.sex=Female&q.deathLikeDate.from=1889&q.deathLikeDate.to=1891&q.deathLikePlace=Leiden%2C+Zuid-Holland%2C+Netherlands&q.birthLikeDate.from=1863&q.birthLikeDate.to=1873&q.spouseGivenName=Walter+James&q.spouseSurname=Ashby",
+  "findagrave https://www.findagrave.com/memorial/search?firstname=Edith&middlename=May&lastname=Ashby&birthyear=1868&birthyearfilter=5&deathyear=1890&deathyearfilter=1&location=Leiden%2C+Zuid-Holland%2C+Netherlands",
+  "internetarchive https://archive.org/search?query=%22Edith+Ashby%22+Leiden&sin=TXT",
+  "openarchives https://www.openarchieven.nl/search.php?lang=en&name=Edith+May+Ashby+1889-1891&eventplace=Leiden",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > death in 1917 in Halifax, Nova Scotia 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.deathLikeDate.from=1916&q.deathLikeDate.to=1918&q.deathLikePlace=Halifax%2C+Nova+Scotia%2C+Canada&q.birthLikeDate.from=1875&q.birthLikeDate.to=1877",
+  "findagrave https://www.findagrave.com/memorial/search?firstname=John&lastname=MacLeod&birthyear=1876&birthyearfilter=1&deathyear=1917&deathyearfilter=1&location=Halifax%2C+Nova+Scotia%2C+Canada",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Halifax&sin=TXT",
+  "lac https://recherche-collection-search.bac-lac.gc.ca/eng/Home/Result?ST=STAD&DataSource=Genealogy&DataSourceSel=Genealogy&q_type_1=q&q_1=John+MacLeod",
+  "canadiana https://www.canadiana.ca/search?q0.0=%22John+MacLeod%22",
+  "cvwm https://www.veterans.gc.ca/en/remembrance/memorials/canadian-virtual-war-memorial?field_surname=MacLeod&field_given_names=John",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > death in 1975 in Boston, USA, after Chronicling America 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.deathLikeDate.from=1974&q.deathLikeDate.to=1976&q.deathLikePlace=Boston%2C+Suffolk%2C+Massachusetts%2C+USA&q.birthLikeDate.from=1875&q.birthLikeDate.to=1877",
+  "findagrave https://www.findagrave.com/memorial/search?firstname=John&lastname=MacLeod&birthyear=1876&birthyearfilter=1&deathyear=1975&deathyearfilter=1&location=Boston%2C+Suffolk%2C+Massachusetts%2C+USA",
+  "chroniclingamerica blocked: ends_in 1963",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Boston&sin=TXT",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > death in Buffalo, USA, under a married name 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Ashby&q.sex=Female&q.deathLikeDate.from=1930&q.deathLikeDate.to=1932&q.deathLikePlace=Buffalo%2C+Erie%2C+New+York%2C+USA&q.birthLikeDate.from=1863&q.birthLikeDate.to=1873&q.spouseGivenName=Walter+James&q.spouseSurname=Ashby",
+  "findagrave https://www.findagrave.com/memorial/search?firstname=Edith&middlename=May&lastname=Ashby&birthyear=1868&birthyearfilter=5&deathyear=1931&deathyearfilter=1&location=Buffalo%2C+Erie%2C+New+York%2C+USA",
+  "chroniclingamerica https://www.loc.gov/collections/chronicling-america/?dl=page&searchType=advanced&ops=PHRASE&qs=Edith+Ashby&start_date=1930-01-01&end_date=1932-12-31",
+  "  also Mrs. Walter Ashby: https://www.loc.gov/collections/chronicling-america/?dl=page&searchType=advanced&ops=PHRASE&start_date=1930-01-01&end_date=1932-12-31&qs=Mrs.+Walter+Ashby",
+  "internetarchive https://archive.org/search?query=%22Edith+Ashby%22+Buffalo&sin=TXT",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > immigration in 1905 to Halifax, Nova Scotia 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.anyDate.from=1904&q.anyDate.to=1906&q.anyPlace=Halifax%2C+Nova+Scotia%2C+Canada&q.birthLikeDate.from=1875&q.birthLikeDate.to=1877",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Halifax&sin=TXT",
+  "lac https://recherche-collection-search.bac-lac.gc.ca/eng/Home/Result?ST=STAD&DataSource=Genealogy&DataSourceSel=Genealogy&q_type_1=q&q_1=John+MacLeod",
+  "canadiana https://www.canadiana.ca/search?q0.0=%22John+MacLeod%22",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > marriage in 1890 in Kent, England 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Hollis&q.sex=Female&q.marriageLikeDate.from=1889&q.marriageLikeDate.to=1891&q.marriageLikePlace=Maidstone%2C+Kent%2C+England&q.spouseGivenName=Walter+James&q.spouseSurname=Ashby",
+  "freebmd https://www.freebmd.org.uk/cgi/search.pl",
+  "  type: Marriages",
+  "  surname: HOLLIS",
+  "  given_names: Edith",
+  "  spouse_surname: ASHBY",
+  "  start_year: 1889",
+  "  end_year: 1891",
+  "  district: Maidstone",
+  "  county: Kent",
+  "internetarchive https://archive.org/search?query=%22Edith+Hollis%22+Maidstone&sin=TXT",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > marriage in 1912 in Halifax, Nova Scotia 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.marriageLikeDate.from=1911&q.marriageLikeDate.to=1913&q.marriageLikePlace=Halifax%2C+Halifax%2C+Nova+Scotia%2C+Canada&q.spouseGivenName=Mary&q.spouseSurname=Fraser",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Halifax&sin=TXT",
+  "lac https://recherche-collection-search.bac-lac.gc.ca/eng/Home/Result?ST=STAD&DataSource=Genealogy&DataSourceSel=Genealogy&q_type_1=q&q_1=John+MacLeod",
+  "canadiana https://www.canadiana.ca/search?q0.0=%22John+MacLeod%22",
+  "novascotia https://archives.novascotia.ca/vital-statistics/marriage/results/?M=marriage&reset=yes&GFirst=John&GLast=MacLeod&BFirst=Mary&BLast=Fraser&sYear=1911&eYear=1913",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > name with no given name 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.surname=Hollis",
+  "internetarchive blocked: needs_full_name",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > occupation with no date in Dublin, Ireland 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=Edith+May&q.surname=Hollis&q.sex=Female&q.anyPlace=Dublin%2C+Ireland&q.birthLikeDate.from=1863&q.birthLikeDate.to=1873",
+  "internetarchive https://archive.org/search?query=%22Edith+Hollis%22+Dublin&sin=TXT",
+]
+`;
+
+exports[`site searches for fixture facts (#1026) > residence in 1921 in Scotland, after the census years 1`] = `
+[
+  "familysearch https://www.familysearch.org/en/search/record/results?q.givenName=John&q.surname=MacLeod&q.sex=Male&q.residenceDate.from=1920&q.residenceDate.to=1922&q.residencePlace=Stornoway%2C+Ross+and+Cromarty%2C+Scotland&q.birthLikeDate.from=1875&q.birthLikeDate.to=1877",
+  "freecen blocked: ends_in 1911",
+  "internetarchive https://archive.org/search?query=%22John+MacLeod%22+Stornoway&sin=TXT",
+]
+`;

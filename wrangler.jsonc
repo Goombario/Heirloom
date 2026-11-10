@@ -1,0 +1,25 @@
+{
+  // Cloudflare Workers Static Assets config for the local-first static build.
+  //
+  // There is NO "main" / Worker script: the app is entirely client-side
+  // (in-browser PGlite), so Cloudflare just serves the static files in ./out.
+  //
+  // Deploy is via Cloudflare's git integration ("Workers Builds"): on push it
+  // runs the dashboard Build command (`npm run build:static`) to produce ./out,
+  // then `npx wrangler deploy`, which reads this file. See
+  // docs/cloudflare-pages-setup.md for the one-time dashboard setup.
+  //
+  // The hosted multi-user app (Postgres + NextAuth) is unrelated and deploys to
+  // Railway — this config is only used by the static build.
+  "name": "heirloom",
+  "compatibility_date": "2025-06-04",
+  "assets": {
+    "directory": "./out",
+    // Serve index.html (HTTP 200) for any unmatched path so client-side routing
+    // handles deep links. This is the SPA fallback on Workers Static Assets — do
+    // NOT add an out/_redirects `/* /index.html 200` rule (Workers Assets rejects
+    // it as an infinite loop). out/404.html (written by scripts/build-static.mjs)
+    // is a portable fallback for plain static hosts.
+    "not_found_handling": "single-page-application"
+  }
+}

@@ -1,0 +1,134 @@
+name: CI
+
+# No paths filter: CI is a required check on `main`, and a filtered-out run never
+# reports, which would leave a docs-only PR unmergeable.
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+
+# Cancel superseded runs on the same ref so rapid pushes to a PR don't stack
+# full pipelines. Nothing in this repository deploys a site (see
+# docs/cloudflare-pages-setup.md).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Pull requests from forks run this workflow: the token only ever reads.
+permissions:
+  contents: read
+
+jobs:
+  # PR validation, split into parallel jobs. Runners have 2 vCPU and the test
+  # tiers saturate them, so one serial job took 9–16 min while each extra job's
+  # own checkout + `npm ci` costs only ~30s. Only the Postgres tier starts the
+  # service container; the unit suite runs as two shards. Every PR targets
+  # `main`, so every PR gets every job.
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run audit:knip:ci
+      # Lint and knip are about half of all CI failures. Rather than make every
+      # job wait for them, a failure here cancels the run so the test jobs stop.
+      - if: failure()
+        run: gh run cancel ${{ github.run_id }} --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      # Let the other shard finish so one run reports every failing file.
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      AUTH_SECRET: test-secret-for-ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:unit -- --shard=${{ matrix.shard }}/2
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: genealogy_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:testpassword@localhost:5432/genealogy_test
+      AUTH_SECRET: test-secret-for-ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:integration
+
+  # The same integration suite on PGlite, the static and desktop engine (#868).
+  # It needs no Postgres service: vitest.pglite.config.ts boots PGlite per file.
+  integration-pglite:
+    runs-on: ubuntu-latest
+    env:
+      AUTH_SECRET: test-secret-for-ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run test:integration:pglite
+
+  # Builds the static (Cloudflare) target — the artifact that actually deploys —
+  # so this gate validates the same `build:static` that ships, not the hosted
+  # `next build`. The static build stashes app/api + proxy.ts and uses no DB or
+  # auth, so no Postgres service or auth env is needed. `--ignore-scripts` skips
+  # the postinstall `db:init` (which is the only thing that wanted a database).
+  # This job is the check that a PR keeps the static build working.
+  build:
+    needs: [lint, unit, integration, integration-pglite]
+    if: >-
+      always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/cache@v5
+        with:
+          path: .next/cache
+          key: nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          restore-keys: nextjs-${{ hashFiles('package-lock.json') }}-
+      - run: npm ci --ignore-scripts
+      - run: npm run build:static

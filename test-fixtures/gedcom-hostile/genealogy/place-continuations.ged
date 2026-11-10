@@ -1,0 +1,24 @@
+0 HEAD
+1 SOUR RootsMagic
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Pia /Place/
+1 BIRT
+2 DATE 1 JAN 1900
+2 PLAC Leeds, Yorkshire, England
+2 ADDR St Mary's Hospital
+3 CONT Leeds
+3 CONT England
+1 RESI
+2 PLAC York, Yorkshire, England
+2 ADDR 1 Mill Lane
+3 CONC , York
+0 _EVDEF Birth
+1 TYPE I
+1 PLAC Y
+1 DATE Y
+1 DESC N
+0 TRLR

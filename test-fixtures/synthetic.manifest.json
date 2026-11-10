@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 56,
+  "generatorVersion": 3,
+  "counts": {
+    "treeId": 1,
+    "people": 120,
+    "families": 25,
+    "childLinks": 91,
+    "events": 128,
+    "places": 6,
+    "media": 30,
+    "tags": 120,
+    "faceCandidates": 6,
+    "sources": 7,
+    "citations": 118,
+    "cases": 10,
+    "caseComments": 29,
+    "casePeople": 15,
+    "caseCitations": 17,
+    "caseMedia": 6,
+    "mediaBytes": 900600
+  }
+}

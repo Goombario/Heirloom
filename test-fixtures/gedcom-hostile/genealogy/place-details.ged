@@ -1,0 +1,38 @@
+0 HEAD
+1 SOUR ArkivDigital
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Pelle /Plats/
+1 FAMS @F1@
+1 BIRT
+2 DATE 1 JAN 1850
+2 PLAC Testgården, Testby, Testlands län, Sverige
+3 _ADPL
+4 _LOCALITY Testgården
+4 _PARISH Testby
+4 _PARISH_AID 1234
+4 _COUNTY Testlands län
+4 _COUNTRY Sverige
+3 MAP
+4 LATI N59.0
+4 LONG E18.0
+1 _MILT
+2 PLAC Stockholm
+3 _ADPL
+4 _PARISH_AID 5678
+0 @I2@ INDI
+1 NAME Stina /Plats/
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 1875
+2 PLAC Testby, Sverige
+3 FORM Parish, Country
+3 _ADPL
+4 _PARISH Testby
+0 TRLR

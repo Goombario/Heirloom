@@ -1,0 +1,54 @@
+{
+  "kind": "tree-layout",
+  "meta": {
+    "commit": "cbcb7f5",
+    "node": "v24.13.0",
+    "baseUrl": "http://localhost:3000",
+    "iterations": 50
+  },
+  "timestamp": "2026-07-17T16:49:47.416Z",
+  "results": [
+    {
+      "mode": "descendants",
+      "nodes": 252,
+      "ms": {
+        "n": 50,
+        "min": 0.19,
+        "p50": 0.38,
+        "p95": 1.98,
+        "p99": 2.63,
+        "max": 2.63,
+        "mean": 0.53
+      },
+      "flags": []
+    },
+    {
+      "mode": "ancestors",
+      "nodes": 2,
+      "ms": {
+        "n": 50,
+        "min": 0.01,
+        "p50": 0.01,
+        "p95": 0.01,
+        "p99": 0.04,
+        "max": 0.04,
+        "mean": 0.01
+      },
+      "flags": []
+    },
+    {
+      "mode": "focus",
+      "nodes": 252,
+      "ms": {
+        "n": 50,
+        "min": 0.23,
+        "p50": 0.41,
+        "p95": 0.69,
+        "p99": 3.7,
+        "max": 3.7,
+        "mean": 0.53
+      },
+      "flags": []
+    }
+  ]
+}

@@ -1,0 +1,382 @@
+{
+  "kind": "perf-summary",
+  "meta": {
+    "commit": "cbcb7f5",
+    "node": "v24.13.0",
+    "baseUrl": "http://localhost:3000"
+  },
+  "timestamp": "2026-07-17T16:49:47.416Z",
+  "benches": {
+    "apiLatency": {
+      "kind": "api-latency",
+      "meta": {
+        "commit": "cbcb7f5",
+        "node": "v24.13.0",
+        "baseUrl": "http://localhost:3000",
+        "samples": 30,
+        "warmup": 3
+      },
+      "timestamp": "2026-07-17T16:49:47.416Z",
+      "results": [
+        {
+          "key": "tree:descendants",
+          "path": "/api/tree?mode=descendants",
+          "status": 200,
+          "bytesKB": 387.49,
+          "cold_ms": 76.74,
+          "warm": {
+            "n": 30,
+            "min": 28.74,
+            "p50": 33.88,
+            "p95": 47.1,
+            "p99": 48.55,
+            "max": 48.55,
+            "mean": 35.21
+          },
+          "coldWarmDelta_ms": 42.86,
+          "flags": []
+        },
+        {
+          "key": "tree:ancestors",
+          "path": "/api/tree?mode=ancestors",
+          "status": 200,
+          "bytesKB": 355.61,
+          "cold_ms": 29.26,
+          "warm": {
+            "n": 30,
+            "min": 26.15,
+            "p50": 32.8,
+            "p95": 43.67,
+            "p99": 43.69,
+            "max": 43.69,
+            "mean": 34.68
+          },
+          "coldWarmDelta_ms": -3.54,
+          "flags": []
+        },
+        {
+          "key": "tree:focus",
+          "path": "/api/tree?mode=focus",
+          "status": 200,
+          "bytesKB": 419.64,
+          "cold_ms": 29.84,
+          "warm": {
+            "n": 30,
+            "min": 28.31,
+            "p50": 33.64,
+            "p95": 48.09,
+            "p99": 56.87,
+            "max": 56.87,
+            "mean": 36.08
+          },
+          "coldWarmDelta_ms": -3.8,
+          "flags": []
+        },
+        {
+          "key": "people:list",
+          "path": "/api/people",
+          "status": 200,
+          "bytesKB": 1420.13,
+          "cold_ms": 197.12,
+          "warm": {
+            "n": 30,
+            "min": 136.3,
+            "p50": 157.83,
+            "p95": 219.03,
+            "p99": 243.87,
+            "max": 243.87,
+            "mean": 166.01
+          },
+          "coldWarmDelta_ms": 39.29,
+          "flags": []
+        },
+        {
+          "key": "families:list",
+          "path": "/api/families",
+          "status": 200,
+          "bytesKB": 621.44,
+          "cold_ms": 45.33,
+          "warm": {
+            "n": 30,
+            "min": 38.55,
+            "p50": 41.38,
+            "p95": 45.66,
+            "p99": 50.11,
+            "max": 50.11,
+            "mean": 41.63
+          },
+          "coldWarmDelta_ms": 3.95,
+          "flags": []
+        },
+        {
+          "key": "places:list",
+          "path": "/api/places",
+          "status": 200,
+          "bytesKB": 411.09,
+          "cold_ms": 31.86,
+          "warm": {
+            "n": 30,
+            "min": 21.99,
+            "p50": 23.97,
+            "p95": 28.14,
+            "p99": 28.18,
+            "max": 28.18,
+            "mean": 24.41
+          },
+          "coldWarmDelta_ms": 7.89,
+          "flags": []
+        },
+        {
+          "key": "people:search",
+          "path": "/api/people/search?q=john",
+          "status": 200,
+          "bytesKB": 2.09,
+          "cold_ms": 10.04,
+          "warm": {
+            "n": 30,
+            "min": 6.96,
+            "p50": 7.46,
+            "p95": 9.3,
+            "p99": 9.71,
+            "max": 9.71,
+            "mean": 7.74
+          },
+          "coldWarmDelta_ms": 2.58,
+          "flags": []
+        },
+        {
+          "key": "families:search",
+          "path": "/api/families/search?q=smith",
+          "status": 200,
+          "bytesKB": 6.27,
+          "cold_ms": 8.84,
+          "warm": {
+            "n": 30,
+            "min": 7.47,
+            "p50": 8.35,
+            "p95": 10.1,
+            "p99": 10.63,
+            "max": 10.63,
+            "mean": 8.58
+          },
+          "coldWarmDelta_ms": 0.49,
+          "flags": []
+        },
+        {
+          "key": "person:detail",
+          "path": "/api/people/5",
+          "status": 200,
+          "bytesKB": 3.23,
+          "cold_ms": 7.94,
+          "warm": {
+            "n": 30,
+            "min": 5.45,
+            "p50": 5.9,
+            "p95": 6.66,
+            "p99": 7.38,
+            "max": 7.38,
+            "mean": 5.99
+          },
+          "coldWarmDelta_ms": 2.04,
+          "flags": []
+        }
+      ]
+    },
+    "treeLayout": {
+      "kind": "tree-layout",
+      "meta": {
+        "commit": "cbcb7f5",
+        "node": "v24.13.0",
+        "baseUrl": "http://localhost:3000",
+        "iterations": 50
+      },
+      "timestamp": "2026-07-17T16:49:47.416Z",
+      "results": [
+        {
+          "mode": "descendants",
+          "nodes": 252,
+          "ms": {
+            "n": 50,
+            "min": 0.19,
+            "p50": 0.38,
+            "p95": 1.98,
+            "p99": 2.63,
+            "max": 2.63,
+            "mean": 0.53
+          },
+          "flags": []
+        },
+        {
+          "mode": "ancestors",
+          "nodes": 2,
+          "ms": {
+            "n": 50,
+            "min": 0.01,
+            "p50": 0.01,
+            "p95": 0.01,
+            "p99": 0.04,
+            "max": 0.04,
+            "mean": 0.01
+          },
+          "flags": []
+        },
+        {
+          "mode": "focus",
+          "nodes": 252,
+          "ms": {
+            "n": 50,
+            "min": 0.23,
+            "p50": 0.41,
+            "p95": 0.69,
+            "p99": 3.7,
+            "max": 3.7,
+            "mean": 0.53
+          },
+          "flags": []
+        }
+      ]
+    },
+    "mediaUpload": {
+      "kind": "media-upload",
+      "meta": {
+        "commit": "cbcb7f5",
+        "node": "v24.13.0",
+        "baseUrl": "http://localhost:3000",
+        "samples": 8
+      },
+      "timestamp": "2026-07-17T16:49:47.416Z",
+      "results": [
+        {
+          "key": "photo~2MP",
+          "srcKB": 2928.41,
+          "status": 201,
+          "ms": {
+            "n": 8,
+            "min": 51.38,
+            "p50": 55.52,
+            "p95": 95.83,
+            "p99": 95.83,
+            "max": 95.83,
+            "mean": 61.61
+          }
+        },
+        {
+          "key": "photo~near10MB",
+          "srcKB": 8511.43,
+          "status": 201,
+          "ms": {
+            "n": 8,
+            "min": 120.16,
+            "p50": 132.01,
+            "p95": 160.72,
+            "p99": 160.72,
+            "max": 160.72,
+            "mean": 136.48
+          }
+        }
+      ]
+    },
+    "cwv": {
+      "kind": "core-web-vitals",
+      "meta": {
+        "commit": "post-fix (findings #1 & #2)",
+        "tool": "Chrome DevTools performance trace (chrome-devtools MCP)",
+        "cpuThrottling": "1x",
+        "networkThrottling": "none",
+        "dataset": "private family GEDCOM — 2294 people / 867 families",
+        "note": "Lab (observed) metrics, cold reload. people/families re-measured after the pragmatic fix; tree/places/person-detail unchanged by that work. INP and pan/zoom FPS not driven this run (see report)."
+      },
+      "results": [
+        {
+          "key": "families",
+          "path": "/families",
+          "lcp_ms": 655,
+          "cls": 0,
+          "ttfb_ms": 54,
+          "renderDelay_ms": 601,
+          "notes": "after: 50/page pagination — was 1352ms; DOMSize insight gone; 50 rows in DOM (was 867)"
+        },
+        {
+          "key": "people",
+          "path": "/people",
+          "lcp_ms": 859,
+          "cls": 0,
+          "ttfb_ms": 208,
+          "renderDelay_ms": 651,
+          "notes": "after: trimmed query — was 912ms; API p50 502->152ms; LCP still client-processing bound (kept client-side filtering)"
+        },
+        {
+          "key": "tree",
+          "path": "/tree?rootId=1&mode=descendants",
+          "nodes": 252,
+          "lcp_ms": 288,
+          "cls": 0,
+          "ttfb_ms": 8,
+          "renderDelay_ms": 281,
+          "notes": "unchanged by this work"
+        },
+        {
+          "key": "person-detail",
+          "path": "/people/view?id=1",
+          "lcp_ms": 298,
+          "cls": 0,
+          "ttfb_ms": 7,
+          "renderDelay_ms": 292,
+          "notes": "unchanged by this work"
+        },
+        {
+          "key": "places",
+          "path": "/places",
+          "lcp_ms": 118,
+          "cls": 0,
+          "ttfb_ms": 6,
+          "renderDelay_ms": 112,
+          "notes": "unchanged by this work"
+        },
+        {
+          "key": "cases",
+          "path": "/cases",
+          "skipped": "empty-state only (0 cases in dataset)"
+        }
+      ]
+    },
+    "treeFps": {
+      "kind": "tree-pan-zoom-fps",
+      "meta": {
+        "tool": "Chrome DevTools evaluate_script — rAF frame sampler driving continuous pan + zoom on /tree",
+        "route": "/tree?rootId=1&mode=descendants",
+        "dataset": "private family GEDCOM — 252-node descendants subtree (largest from rootId=1); 251 edges",
+        "note": "React Flow uses onlyRenderVisibleElements, so nodes were fit-view'd + zoomed out to force ALL 252 to mount (worst case) before sampling. Display refresh 144Hz (frame budget 6.9ms). Pan is a single GPU-composited viewport transform, so cost is ~independent of node count once mounted.",
+        "budgets": {
+          "smooth_60fps_ms": 16.7,
+          "jank_ms": 33
+        }
+      },
+      "results": [
+        {
+          "scenario": "1x CPU (desktop), all 252 nodes rendered",
+          "avgFps": 144.1,
+          "medianFrameMs": 7,
+          "p95FrameMs": 7.2,
+          "p99FrameMs": 7.3,
+          "maxFrameMs": 7.4,
+          "slowFrames_gt16_7ms": 0,
+          "jankFrames_gt33ms": 0,
+          "frames": 505
+        },
+        {
+          "scenario": "4x CPU throttle (mid-tier mobile), all 252 nodes rendered",
+          "avgFps": 143.4,
+          "medianFrameMs": 7,
+          "p95FrameMs": 7.2,
+          "p99FrameMs": 7.3,
+          "maxFrameMs": 21.6,
+          "slowFrames_gt16_7ms": 1,
+          "jankFrames_gt33ms": 0,
+          "frames": 503
+        }
+      ],
+      "verdict": "Not a bottleneck. Pan/zoom holds full display refresh with zero jank even with the whole subtree mounted under 4x CPU throttle. Re-check only against a root with thousands of simultaneously-visible nodes (this dataset's largest subtree is 252)."
+    }
+  }
+}

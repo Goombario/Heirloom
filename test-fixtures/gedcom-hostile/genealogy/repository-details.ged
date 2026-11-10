@@ -1,0 +1,28 @@
+0 HEAD
+1 SOUR RootsMagic
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Rhea /Repo/
+1 SOUR @S1@
+0 @S1@ SOUR
+1 TITL Census 1881
+1 REPO @R1@
+0 @R1@ REPO
+1 NAME County Archive
+1 ADDR 1 High Street
+2 CONT Leeds
+2 ADR1 1 High Street
+2 CITY Leeds
+2 POST LS1 1AA
+2 CTRY England
+1 PHON +44 113 000 0000
+1 EMAIL desk@archive.example
+1 WWW https://archive.example
+1 CHAN
+2 DATE 1 JAN 2020
+0 @R2@ REPO
+1 NAME Uncited Library
+1 PHON 555-0100
+0 TRLR

@@ -1,0 +1,19 @@
+{
+  "kind": "core-web-vitals",
+  "meta": {
+    "commit": "post-fix (findings #1 & #2)",
+    "tool": "Chrome DevTools performance trace (chrome-devtools MCP)",
+    "cpuThrottling": "1x",
+    "networkThrottling": "none",
+    "dataset": "private family GEDCOM — 2294 people / 867 families",
+    "note": "Lab (observed) metrics, cold reload. people/families re-measured after the pragmatic fix; tree/places/person-detail unchanged by that work. INP and pan/zoom FPS not driven this run (see report)."
+  },
+  "results": [
+    { "key": "families", "path": "/families", "lcp_ms": 655, "cls": 0.0, "ttfb_ms": 54, "renderDelay_ms": 601, "notes": "after: 50/page pagination — was 1352ms; DOMSize insight gone; 50 rows in DOM (was 867)" },
+    { "key": "people", "path": "/people", "lcp_ms": 859, "cls": 0.0, "ttfb_ms": 208, "renderDelay_ms": 651, "notes": "after: trimmed query — was 912ms; API p50 502->152ms; LCP still client-processing bound (kept client-side filtering)" },
+    { "key": "tree", "path": "/tree?rootId=1&mode=descendants", "nodes": 252, "lcp_ms": 288, "cls": 0.0, "ttfb_ms": 8, "renderDelay_ms": 281, "notes": "unchanged by this work" },
+    { "key": "person-detail", "path": "/people/view?id=1", "lcp_ms": 298, "cls": 0.0, "ttfb_ms": 7, "renderDelay_ms": 292, "notes": "unchanged by this work" },
+    { "key": "places", "path": "/places", "lcp_ms": 118, "cls": 0.0, "ttfb_ms": 6, "renderDelay_ms": 112, "notes": "unchanged by this work" },
+    { "key": "cases", "path": "/cases", "skipped": "empty-state only (0 cases in dataset)" }
+  ]
+}

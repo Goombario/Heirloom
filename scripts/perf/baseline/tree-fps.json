@@ -1,0 +1,23 @@
+{
+  "kind": "tree-pan-zoom-fps",
+  "meta": {
+    "tool": "Chrome DevTools evaluate_script — rAF frame sampler driving continuous pan + zoom on /tree",
+    "route": "/tree?rootId=1&mode=descendants",
+    "dataset": "private family GEDCOM — 252-node descendants subtree (largest from rootId=1); 251 edges",
+    "note": "React Flow uses onlyRenderVisibleElements, so nodes were fit-view'd + zoomed out to force ALL 252 to mount (worst case) before sampling. Display refresh 144Hz (frame budget 6.9ms). Pan is a single GPU-composited viewport transform, so cost is ~independent of node count once mounted.",
+    "budgets": { "smooth_60fps_ms": 16.7, "jank_ms": 33 }
+  },
+  "results": [
+    {
+      "scenario": "1x CPU (desktop), all 252 nodes rendered",
+      "avgFps": 144.1, "medianFrameMs": 7.0, "p95FrameMs": 7.2, "p99FrameMs": 7.3, "maxFrameMs": 7.4,
+      "slowFrames_gt16_7ms": 0, "jankFrames_gt33ms": 0, "frames": 505
+    },
+    {
+      "scenario": "4x CPU throttle (mid-tier mobile), all 252 nodes rendered",
+      "avgFps": 143.4, "medianFrameMs": 7.0, "p95FrameMs": 7.2, "p99FrameMs": 7.3, "maxFrameMs": 21.6,
+      "slowFrames_gt16_7ms": 1, "jankFrames_gt33ms": 0, "frames": 503
+    }
+  ],
+  "verdict": "Not a bottleneck. Pan/zoom holds full display refresh with zero jank even with the whole subtree mounted under 4x CPU throttle. Re-check only against a root with thousands of simultaneously-visible nodes (this dataset's largest subtree is 252)."
+}

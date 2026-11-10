@@ -1,0 +1,9 @@
+0 HEAD
+1 GEDC
+2 VERS 7.0
+0 @N1@ SNOTE Shared note text
+0 @I1@ INDI
+1 NAME Ann /Seven/
+1 SNOTE @N1@
+1 SEX F
+0 TRLR

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( $# != 0 )); then
+    echo "This command does not accept arguments." >&2
+    exit 2
+fi
+
+podman rm -f -- heirloom-test-pg

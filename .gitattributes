@@ -1,0 +1,16 @@
+# GitHub Linguist attributes — these only affect how github.com renders the
+# repo (PR diffs and the language-breakdown bar). They do NOT change local git
+# behavior; files remain fully tracked, diffable, and reviewable.
+
+# Internal planning artifacts (brainstorming specs + implementation plans).
+# Marked "generated" so GitHub collapses them by default in PR diffs — click to
+# expand. Keeps doc-heavy PRs focused on the code changes.
+docs/superpowers/**   linguist-generated=true
+
+# Keep Markdown docs out of the repo's language-breakdown stats (does not
+# collapse diffs — that's what linguist-generated above is for).
+*.md                  linguist-documentation=true
+
+# Cloudflare's build reads .node-version to pick the Node version; a stray CRLF
+# (24\r) can break version parsing. Force LF regardless of a checkout's autocrlf.
+.node-version         text eol=lf

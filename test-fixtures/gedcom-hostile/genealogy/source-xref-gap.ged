@@ -1,0 +1,24 @@
+0 HEAD
+1 SOUR FTM
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SUBM @U1@
+0 @U1@ SUBM
+1 NAME Submitter
+0 @S1@ SOUR
+1 TITL First Register
+0 @S3@ SOUR
+1 TITL Third Register
+0 @I1@ INDI
+1 NAME Gil /Gap/
+1 TITL Count
+2 SOUR @S3@
+3 PAGE folio 7
+1 ASSO @I2@
+2 RELA Godfather
+1 ANCI @U1@
+0 @I2@ INDI
+1 NAME Hal /Gap/
+0 TRLR

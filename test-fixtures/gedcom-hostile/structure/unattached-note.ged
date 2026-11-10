@@ -1,0 +1,12 @@
+0 HEAD
+1 SOUR Gramps
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Nell /Note/
+1 NOTE @N1@
+0 @N1@ NOTE Nell's own note.
+0 @N2@ NOTE This fictional family tree was created to test GEDCOM
+1 CONT compatibility across genealogy programs.
+0 TRLR

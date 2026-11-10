@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "proxy.ts",
+    "app/sw.ts",
+    "scripts/**/*.{ts,mjs}",
+    "__tests__/**/*.{ts,tsx}",
+    "vitest.config.ts",
+    "next.config.ts",
+    "eslint.config.mjs",
+    "eslint.ds-audit.mjs"
+  ],
+  "project": ["app/**/*.{ts,tsx}", "lib/**/*.ts"],
+  "ignore": ["src-tauri/**", ".mockups-extracted/**", "out/**", ".next/**", "release/**", "dist-desktop/**", "lib/empty.ts"],
+  "ignoreBinaries": ["tauri", "taskkill", "lsof", "netstat"],
+  "ignoreDependencies": ["tailwindcss", "@auth/core", "@swc/helpers"]
+}

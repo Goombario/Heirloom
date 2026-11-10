@@ -1,0 +1,17 @@
+# Security headers for the static Cloudflare Pages deployment (build:static).
+# The hosted (Railway) build gets its headers from next.config.ts headers();
+# this file is the static-flavor equivalent — keep the two CSPs in sync.
+# Differences from hosted: script-src adds 'wasm-unsafe-eval' because the static
+# flavor runs PGlite (Postgres compiled to WebAssembly); there is no auth surface.
+# The map/geocoder origins are the defaults — if you point
+# NEXT_PUBLIC_MAP_STYLE_URL[_DARK] at a custom host, add its origin here too.
+# accounts.google.com + www.googleapis.com are for the optional Google Drive
+# backup feature (Google Identity Services + Drive REST); only used when
+# NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID is set.
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https://tiles.openfreemap.org; font-src 'self' data:; worker-src 'self' blob:; frame-src 'self' blob: https://accounts.google.com; connect-src 'self' https://tiles.openfreemap.org https://photon.komoot.io https://accounts.google.com https://www.googleapis.com
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload

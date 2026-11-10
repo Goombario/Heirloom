@@ -1,0 +1,114 @@
+[
+  {
+    "name": "tree descendants",
+    "ms": 116,
+    "queries": 5,
+    "kb": 799,
+    "slowest": "76 ms SELECT p.\"Id\", p.\"FirstName\", p.\"LastName\", p.\"Sex\", p.\"BirthDate\", p.\"DeathDate\", p.\"IsDeceased\", C"
+  },
+  {
+    "name": "tree ancestors",
+    "ms": 103,
+    "queries": 5,
+    "kb": 798,
+    "slowest": "50 ms SELECT p.\"Id\", p.\"FirstName\", p.\"LastName\", p.\"Sex\", p.\"BirthDate\", p.\"DeathDate\", p.\"IsDeceased\", C"
+  },
+  {
+    "name": "home dashboard",
+    "ms": 71,
+    "queries": 8,
+    "kb": 1,
+    "slowest": "65 ms WITH RECURSIVE refs AS ( SELECT \"BirthPlaceId\" AS place_id, 'p:' || \"Id\" AS ref FROM \"People\" WHERE "
+  },
+  {
+    "name": "home suggestions",
+    "ms": 132,
+    "queries": 2,
+    "kb": 0,
+    "slowest": "135 ms WITH named AS ( SELECT p.\"Id\", p.\"FirstName\", p.\"LastName\", p.\"Sex\", \"SortableYear\"(p.\"BirthDate\") A"
+  },
+  {
+    "name": "data checks",
+    "ms": 125,
+    "queries": 6,
+    "kb": 934,
+    "slowest": "45 ms SELECT \"Id\", \"FirstName\", \"LastName\", \"Sex\", \"BirthDate\", \"DeathDate\", \"IsDeceased\" FROM \"People\" WH"
+  },
+  {
+    "name": "home data checks summary",
+    "ms": 128,
+    "queries": 6,
+    "kb": 2,
+    "slowest": "47 ms SELECT \"Id\", \"FirstName\", \"LastName\", \"Sex\", \"BirthDate\", \"DeathDate\", \"IsDeceased\" FROM \"People\" WH"
+  },
+  {
+    "name": "people list",
+    "ms": 273,
+    "queries": 3,
+    "kb": 3548,
+    "slowest": "300 ms WITH partner_fam AS ( SELECT COALESCE(\"Partner1Id\", \"HusbandId\") AS person_id, \"Id\" AS family_id FRO"
+  },
+  {
+    "name": "person",
+    "ms": 11,
+    "queries": 10,
+    "kb": 6,
+    "slowest": "2 ms SELECT p.*, COALESCE( (SELECT pn.\"Name\" FROM \"PlaceName\" pn WHERE pn.\"Id\" = p.\"BirthPlaceNameId\" AND"
+  },
+  {
+    "name": "families list",
+    "ms": 114,
+    "queries": 3,
+    "kb": 803,
+    "slowest": "112 ms WITH base AS ( SELECT -- Named, not f.*: the window sort below would carry the notes and raw -- GEDC"
+  },
+  {
+    "name": "family",
+    "ms": 10,
+    "queries": 8,
+    "kb": 6,
+    "slowest": "2 ms SELECT p.*, COALESCE( (SELECT pn.\"Name\" FROM \"PlaceName\" pn WHERE pn.\"Id\" = p.\"BirthPlaceNameId\" AND"
+  },
+  {
+    "name": "places list",
+    "ms": 92,
+    "queries": 6,
+    "kb": 453,
+    "slowest": "59 ms SELECT DISTINCT g.\"Name\" AS place, g.\"Id\", dp.\"PersonId\" FROM ( SELECT \"BirthPlaceId\" AS place_id, \""
+  },
+  {
+    "name": "place detail",
+    "ms": 21,
+    "queries": 14,
+    "kb": 25,
+    "slowest": "11 ms SELECT p.\"Id\" AS \"personId\", CASE WHEN ((SELECT nv.\"Name\" FROM \"NameVariant\" nv WHERE nv.\"PersonId\" "
+  },
+  {
+    "name": "face queue",
+    "ms": 3,
+    "queries": 4,
+    "kb": 0,
+    "slowest": "1 ms SELECT c.*, m.\"Title\" AS \"MediaTitle\", m.\"Date\" AS \"MediaDate\", ( (SELECT COUNT(*) FROM \"MediaTag\" t"
+  },
+  {
+    "name": "sources list",
+    "ms": 53,
+    "queries": 2,
+    "kb": 36,
+    "slowest": "52 ms SELECT s.*, COALESCE(cc.cnt, 0)::int AS \"citationCount\", COALESCE(rp.sample, '[]'::jsonb) AS \"citedB"
+  },
+  {
+    "name": "audit page",
+    "ms": 2,
+    "queries": 4,
+    "kb": 0,
+    "slowest": "1 ms SELECT a.*, u.\"Name\" AS \"UserName\", u.\"Email\" AS \"UserEmail\" FROM \"AuditLog\" a LEFT JOIN \"Users\" u O"
+  },
+  {
+    "name": "cases list",
+    "ms": 1,
+    "queries": 2,
+    "kb": 0,
+    "slowest": "0 ms SELECT c.* FROM \"Cases\" c WHERE c.\"TreeId\" = $1 ORDER BY c.\"UpdatedAt\" DESC, c.\"Id\" DESC"
+  }
+]

@@ -1,0 +1,43 @@
+# Linux build of Heirloom: a Flatpak on the GNOME runtime, which ships the
+# webkit2gtk-4.1 Tauri links against (see docs/desktop-tauri.md).
+#
+# It repackages the .deb from `npm run desktop:build` (Tauri's documented
+# approach), so no Rust or Node build runs here. Copy the .deb next to this file
+# as heirloom.deb first; CI does this in .github/workflows/linux-flatpak.yml.
+id: com.heirloom.desktop
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: heirloom
+
+finish-args:
+  # Display: Wayland, or X11 when there is no Wayland session.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # Map tiles, place search and the optional Google Drive backup.
+  - --share=network
+  # Backups, exports and tree images are saved as downloads.
+  - --filesystem=xdg-download
+  # No other file access: GEDCOM, photo and backup files are opened through the
+  # file chooser portal, which grants just the file picked. The tree itself lives
+  # in ~/.var/app/com.heirloom.desktop/.
+
+modules:
+  - name: heirloom
+    buildsystem: simple
+    sources:
+      - type: file
+        path: heirloom.deb
+      - type: file
+        path: com.heirloom.desktop.metainfo.xml
+    build-commands:
+      - ar -x heirloom.deb
+      - tar -xf data.tar.gz
+      - install -Dm755 usr/bin/heirloom /app/bin/heirloom
+      - install -Dm644 usr/share/applications/Heirloom.desktop /app/share/applications/com.heirloom.desktop.desktop
+      - desktop-file-edit --set-icon=com.heirloom.desktop /app/share/applications/com.heirloom.desktop.desktop
+      - install -Dm644 usr/share/icons/hicolor/32x32/apps/heirloom.png /app/share/icons/hicolor/32x32/apps/com.heirloom.desktop.png
+      - install -Dm644 usr/share/icons/hicolor/128x128/apps/heirloom.png /app/share/icons/hicolor/128x128/apps/com.heirloom.desktop.png
+      - install -Dm644 com.heirloom.desktop.metainfo.xml /app/share/metainfo/com.heirloom.desktop.metainfo.xml

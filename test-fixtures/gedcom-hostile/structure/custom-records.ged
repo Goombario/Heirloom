@@ -1,0 +1,22 @@
+0 HEAD
+1 SOUR Legacy
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @SUB1@ SUBM
+1 NAME Submitter
+0 @I1@ INDI
+1 NAME Cass /Custom/
+0 _EVENT_DEFN Baptism
+1 TYPE I
+1 TITL Baptism
+1 _SEN1 [Name] was baptised[ on Date][ at Place].
+0 _EVENT_DEFN Census
+1 TYPE I
+0 @P1@ _PLAC Leeds
+1 CHAN
+2 DATE 1 JAN 2020
+0  _PUBLISH
+1 _USERNAME exporter
+1 _DISABLED Y
+0 TRLR

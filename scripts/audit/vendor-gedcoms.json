@@ -1,0 +1,686 @@
+{
+  "description": "Public sample GEDCOMs for the interop probe (#810, #869). No real family data: invented trees, fiction, historical royalty and parser test files. scripts/audit/fetch-vendor-gedcoms.mjs downloads them into the gitignored test-data/vendor/; nothing here is committed but the list. A file's own license and origin override its source's: some hosts re-host files they didn't write. Each origin is from the host's README.",
+  "sources": {
+    "gedcom-go": {
+      "repo": "cacack/gedcom-go",
+      "commit": "d852b34ecf4b4b8036826aeb560202d87ec12a81",
+      "license": "MIT"
+    },
+    "slaktforskning": {
+      "repo": "jonaseck2/slaktforskning",
+      "commit": "aefc52c5ff97238ac4b30a8dfffce8e2c3ae2286",
+      "license": "MIT"
+    },
+    "gramps": {
+      "repo": "gramps-project/gramps",
+      "commit": "65554c42923eb8b4a3ffc96c9a1e84292b8ff3a5",
+      "license": "GPL-2.0-or-later"
+    },
+    "djeffrey": {
+      "repo": "D-Jeffrey/gedcom-samples",
+      "commit": "74040285d9e764d25d25c2f66ad1da710eeb391c",
+      "license": "MIT OR CC0-1.0"
+    },
+    "findmypast": {
+      "repo": "findmypast/gedcom-samples",
+      "commit": "6a989ab4dd3b4697d1273aada20e55106b0078a9",
+      "license": "none (\"public files can be used as is\")"
+    },
+    "gedcom7code": {
+      "repo": "gedcom7code/test-files",
+      "commit": "4418c40978bdf9e56bbf612558548d670c590816",
+      "license": "Unlicense"
+    },
+    "gedcom4j": {
+      "repo": "frizbog/gedcom4j",
+      "commit": "e0aa5da86699cdcd5bc6be995a22a07dcbe25f7f",
+      "license": "MIT (declared in pom.xml; no LICENSE file)"
+    },
+    "gedkeeper": {
+      "repo": "Serg-Norseman/GEDKeeper",
+      "commit": "bc10dea57d6ce2938c4b878213a84adc987f5913",
+      "license": "GPL-3.0"
+    },
+    "gedcom-org": {
+      "repo": null,
+      "commit": null,
+      "license": "Copyright gedcom.org, all rights reserved: local use only"
+    }
+  },
+  "files": [
+    {
+      "file": "gedcom-go/seed-for-import.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/seed-for-import.ged",
+      "vendor": "seed",
+      "kind": "seed",
+      "note": "the invented tree each *-2025/2026-export was made from: 14 people, 5 families",
+      "sha256": "4d0631d00e89167ca6a99937e5f6ec0f2ad3c77d4bbc9aae7e27a50882aaf9e6"
+    },
+    {
+      "file": "gedcom-go/ancestry-2025-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/ancestry-2025-export.ged",
+      "vendor": "Ancestry",
+      "kind": "vendor-export",
+      "note": "seed round-tripped through Ancestry 2025.08",
+      "sha256": "f7a6fc3e4efdf5bb2a890aba772ced4e3d8d7f444030232ee865181c8dd92e67"
+    },
+    {
+      "file": "gedcom-go/familysearch-2025-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/familysearch-2025-export.ged",
+      "vendor": "FamilySearch",
+      "kind": "vendor-export",
+      "note": "seed round-tripped through FamilySearch 2025",
+      "sha256": "adce88378670c9747245b5d36ca93609ec098dc65ff1db2559898aa8c8e3f2ef"
+    },
+    {
+      "file": "gedcom-go/gramps-2025-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/gramps-2025-export.ged",
+      "vendor": "Gramps",
+      "kind": "vendor-export",
+      "note": "seed round-tripped through Gramps 6.0.6",
+      "sha256": "b4d082010b3421bf9438092b9b450ba788930387741df40247f804015efe334c"
+    },
+    {
+      "file": "gedcom-go/myheritage-2025-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/myheritage-2025-export.ged",
+      "vendor": "MyHeritage",
+      "kind": "vendor-export",
+      "note": "seed round-tripped through MyHeritage.com",
+      "sha256": "307a335406cee67ba030f2be49e0ee0df90bf584060b82b2780bc72d52728743"
+    },
+    {
+      "file": "gedcom-go/rootsmagic-2026-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/rootsmagic-2026-export.ged",
+      "vendor": "RootsMagic",
+      "kind": "vendor-export",
+      "note": "seed round-tripped through RootsMagic 11 Essentials",
+      "sha256": "10c930e83f530ce03cda279c4b287c53d80f0d9039901d87b0949d5f0a1b82cb"
+    },
+    {
+      "file": "gedcom-go/legacy10-2025-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/legacy10-2025-export.ged",
+      "vendor": "Legacy",
+      "kind": "vendor-export",
+      "note": "Legacy 10.0 export of IvarKingOfDublin (FamilySearch-sourced)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples ivar/IvarKingOfDublin.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "32313910ba58c6cd3eb240f133e30b28edfb44921fa56762fc037034e895cb9f"
+    },
+    {
+      "file": "gedcom-go/mhftb8-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/mhftb8-export.ged",
+      "vendor": "MyHeritage",
+      "kind": "vendor-export",
+      "note": "MyHeritage Family Tree Builder 8 export of Queen.ged (4,683 people, B.C. dates)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples queen/Queen.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "c32e4b454a18f5d70188949ad60e7104fc8b1568b10b09e84c8d6fc0a551c8d9"
+    },
+    {
+      "file": "gedcom-go/ancestry-extensions.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/ancestry-extensions.ged",
+      "vendor": "Ancestry",
+      "kind": "synthetic-dialect",
+      "note": "_APID and Ancestry custom tags",
+      "sha256": "73f8b5c75654fc4da935964c9ae8ef2108264fe280939494d7c2f1f8479c0f3e"
+    },
+    {
+      "file": "gedcom-go/familysearch-extensions.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/familysearch-extensions.ged",
+      "vendor": "FamilySearch",
+      "kind": "synthetic-dialect",
+      "note": "_FSFTID and FamilySearch custom tags",
+      "sha256": "d47e5486857c2883b2d600b71babcb1cf1a9239cc063e898a49f2bacd6f4bab4"
+    },
+    {
+      "file": "gedcom-go/vendor-rootsmagic.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-rootsmagic.ged",
+      "vendor": "RootsMagic",
+      "kind": "vendor-export",
+      "note": "RootsMagic 7.0.2.2: inline vs xref notes and sources",
+      "license": "GPL-2.0-or-later",
+      "origin": "gramps-project/gramps data/tests (re-hosted by cacack/gedcom-go as vendor-rootsmagic.ged)",
+      "sha256": "df3d35322e98baddd627e89066252328b97f76de88d9dc4ea4cab518b7724e91"
+    },
+    {
+      "file": "gedcom-go/vendor-legacy.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-legacy.ged",
+      "vendor": "Legacy",
+      "kind": "vendor-export",
+      "note": "Legacy 8.0 custom tags",
+      "license": "MIT",
+      "origin": "frizbog/gedcom4j sample/ (re-hosted by cacack/gedcom-go)",
+      "sha256": "c6fbc65c4902c233534f9443027b3db43ba1297dc1d80bb488788015034c7e9a"
+    },
+    {
+      "file": "gedcom-go/vendor-ftm.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-ftm.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "FTM 22.2.5 Mac: _FREL/_MREL, Step/Guardian",
+      "license": "MIT",
+      "origin": "frizbog/gedcom4j sample/ (re-hosted by cacack/gedcom-go)",
+      "sha256": "95e46110d0ca54a8614037cd82bf7feb376d806ab5e7c91282f1c858cefad34b"
+    },
+    {
+      "file": "gedcom-go/ftm-general.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/ftm-general.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "FTM general",
+      "license": "GPL-2.0-or-later",
+      "origin": "gramps-project/gramps data/tests (re-hosted by cacack/gedcom-go as ftm-general.ged)",
+      "sha256": "f319a2cfd4b419746bf8427075224d5efced5971da748c2e19df5a6cb251dff2"
+    },
+    {
+      "file": "gedcom-go/ftm-link-test.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/ftm-link-test.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "FTM links",
+      "license": "GPL-2.0-or-later",
+      "origin": "gramps-project/gramps data/tests (re-hosted by cacack/gedcom-go as ftm-link-test.ged)",
+      "sha256": "eccbd20e214613fe97a018d04541aed20020001b9e342ee7138f7d4ed03c8860"
+    },
+    {
+      "file": "gedcom-go/ftm-photo-test.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/ftm-photo-test.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "FTM photos",
+      "license": "GPL-2.0-or-later",
+      "origin": "gramps-project/gramps data/tests (re-hosted by cacack/gedcom-go as ftm-photo-test.ged)",
+      "sha256": "959ec41b113aa13f969806c8df29f4fd74cccbda78db7c7595a25e486b0d4bcd"
+    },
+    {
+      "file": "gedcom-go/vendor-myheritage.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-myheritage.ged",
+      "vendor": "MyHeritage",
+      "kind": "synthetic-dialect",
+      "note": "MyHeritage tags, Hebrew names",
+      "sha256": "182fd4bf40384bc98f567e7b563f8e108a2ddf74eb332c7b08ee6d5ef8bb7b09"
+    },
+    {
+      "file": "gedcom-go/vendor-gramps.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-gramps.ged",
+      "vendor": "Gramps",
+      "kind": "synthetic-dialect",
+      "note": "Gramps tags, Swedish names",
+      "sha256": "947c0bccb49fe447b97df35ec6e26986f5007d464f65ea540d0ffdfd3b355310"
+    },
+    {
+      "file": "gedcom-go/vendor-heredis.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-heredis.ged",
+      "vendor": "Heredis",
+      "kind": "vendor-export",
+      "note": "Heredis 14: 6-part PLAC FORM, ORDN",
+      "license": "GPL-2.0-or-later",
+      "origin": "gramps-project/gramps data/tests (re-hosted by cacack/gedcom-go as vendor-heredis.ged; byte-identical to gramps/imp_Paris.ged)",
+      "sha256": "22913cec01d66b3bab944d6d7f40a3f6b7e120c3c365b7b99f0db76b24822d95"
+    },
+    {
+      "file": "gedcom-go/vendor-familyhistorian.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-familyhistorian.ged",
+      "vendor": "Family Historian",
+      "kind": "vendor-export",
+      "note": "FH 6.2.2: _SHAR witnesses, _PLAC records",
+      "license": "MIT",
+      "origin": "frizbog/gedcom4j sample/ (re-hosted by cacack/gedcom-go)",
+      "sha256": "f601322da950962a6919ab0ae74f889785f4226e716e5acf1dc5c19c52f10f2c"
+    },
+    {
+      "file": "gedcom-go/vendor-tmg12.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-tmg12.ged",
+      "vendor": "TMG",
+      "kind": "vendor-export",
+      "note": "The Master Genealogist 1.2a",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples famous family trees/royalty/Hawaiian+Kings.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "fd97664e8dfff23e926883c8ea2d733613d236cac7c2ee204b24a75ca9b65315"
+    },
+    {
+      "file": "gedcom-go/vendor-paf5.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-paf5.ged",
+      "vendor": "PAF",
+      "kind": "vendor-export",
+      "note": "PAF 5.2.18 (Bach)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples bach.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "f13a3b869a14944b73b51b30987f2245f015f5ee3cd46d119c39be109f0da27c"
+    },
+    {
+      "file": "gedcom-go/vendor-ancestris11-export.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-ancestris11-export.ged",
+      "vendor": "Ancestris",
+      "kind": "vendor-export",
+      "note": "Ancestris 11 (Bourbon)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples sample-bourbon/bourbon.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "1b83323461e2bd4cb0696e28d3d3d8b591453e4120adf7e4a51208e1ab03ec6b"
+    },
+    {
+      "file": "gedcom-go/vendor-familyorigins5.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-familyorigins5.ged",
+      "vendor": "Family Origins",
+      "kind": "vendor-export",
+      "note": "Family Origins 5.0 (Washington)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples washington/washington.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "f2b78584e7b9d456b4adf902a06e05dfe1c7a4a35e1544c5cec9c079509aecff"
+    },
+    {
+      "file": "gedcom-go/vendor-myroots-palmos.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-myroots-palmos.ged",
+      "vendor": "My Roots",
+      "kind": "vendor-export",
+      "note": "My Roots 4.00 Palm OS (Lincoln)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples famous family trees/US presidents/Lincoln+Family.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "44704eeacbac79aecdc80fcaa79f559f0e1b9603b30d5305ca4ddd798b8a9a21"
+    },
+    {
+      "file": "gedcom-go/vendor-webtreeprint.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-webtreeprint.ged",
+      "vendor": "webtreeprint",
+      "kind": "vendor-export",
+      "note": "webtreeprint.com (Bronte)",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples bronte.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "2001466f2496a5c1301fc0d3edadc6cb07e51cc672ebab00b4f5799de316e956"
+    },
+    {
+      "file": "gedcom-go/vendor-customtags-torture.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/vendor-customtags-torture.ged",
+      "vendor": "torture",
+      "kind": "hostile",
+      "note": "custom tags at every level",
+      "license": "MIT",
+      "origin": "frizbog/gedcom4j sample/ (re-hosted by cacack/gedcom-go)",
+      "sha256": "8b059a8af238d74e29acafc4b08aa1c2ebcc035dda728445c36ea2b475f92689"
+    },
+    {
+      "file": "gedcom-go/relationships-complex.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/relationships-complex.ged",
+      "vendor": "edge",
+      "kind": "hostile",
+      "note": "complex relationships",
+      "license": "MIT",
+      "origin": "frizbog/gedcom4j sample/ (re-hosted by cacack/gedcom-go)",
+      "sha256": "2e073f2a3a49d46115810c18a720ef9eca329c88757aa8ecf5f3b3dc7cb10bd3"
+    },
+    {
+      "file": "gedcom-go/family-structure-variants.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/family-structure-variants.ged",
+      "vendor": "edge",
+      "kind": "hostile",
+      "note": "family structure variants",
+      "sha256": "4d5e067e98b0c980b6a3945b9bf7c9c3424862b9c02404316bce7242a6adb21e"
+    },
+    {
+      "file": "gedcom-go/structural-torture.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/structural-torture.ged",
+      "vendor": "edge",
+      "kind": "hostile",
+      "note": "structural torture",
+      "sha256": "e03f29dc142f87a15b7828276ab5a4aa2cda3b3ebf8147e5bd214e5dba7f46b9"
+    },
+    {
+      "file": "gedcom-go/calendar-dates.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/calendar-dates.ged",
+      "vendor": "edge",
+      "kind": "hostile",
+      "note": "calendar escapes",
+      "sha256": "946e19e521aefabd638230a986b5fc7852bf032c60767efa1ac5454948cbb531"
+    },
+    {
+      "file": "gedcom-go/date-dual-years.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/edge-cases/date-dual-years.ged",
+      "vendor": "edge",
+      "kind": "hostile",
+      "note": "dual years",
+      "license": "Unlicense",
+      "origin": "gedcom7code/test-files (re-hosted by cacack/gedcom-go)",
+      "sha256": "1804b848f90601503e895ea71a789fb9f30adb4dd8afe1b97741c465b35c7fba"
+    },
+    {
+      "file": "gedcom-go/ansi-cp1252-ftm17.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/encoding/ansi-cp1252-ftm17.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "encoding",
+      "note": "FTM 17 CHAR ANSI with CP1252 bytes",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples famous family trees/royalty/Irish+Kings.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "f483a1b741350e7e5625284a14d0919ca0cd64f06f69bd400e840787632f5dec"
+    },
+    {
+      "file": "gedcom-go/ibmpc-cp437-broskeep.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/encoding/ibmpc-cp437-broskeep.ged",
+      "vendor": "Brother's Keeper",
+      "kind": "encoding",
+      "note": "CHAR IBMPC CP437",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples famous family trees/US presidents/US+Presidents+Trees+I.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "f14551c21e476da743914679ad891fbc46c4e2419d59ac4f6755f8da373eb407"
+    },
+    {
+      "file": "gedcom-go/ibm-windows-easytree.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/encoding/ibm-windows-easytree.ged",
+      "vendor": "EasyTree",
+      "kind": "encoding",
+      "note": "CHAR IBM WINDOWS",
+      "license": "MIT OR CC0-1.0",
+      "origin": "D-Jeffrey/gedcom-samples famous family trees/US presidents/Kennedy+Family.ged (re-hosted by cacack/gedcom-go)",
+      "sha256": "a8635378d05f7d0201d662a5c8e8ed27de3caf79313ea0bfea0a5a630817beb7"
+    },
+    {
+      "file": "gedcom-go/ansel-lf.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/encoding/ansel-lf.ged",
+      "vendor": "ANSEL",
+      "kind": "encoding",
+      "note": "ANSEL",
+      "license": "GPL-2.0-or-later",
+      "origin": "gramps-project/gramps data/tests (re-hosted by cacack/gedcom-go as ansel-lf.ged)",
+      "sha256": "c33f5957c7e20010c09d271767d5a79e840eee0c43f5663336b08dac1b29328f"
+    },
+    {
+      "file": "gedcom-go/utf16le.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/encoding/utf16le.ged",
+      "vendor": "UTF-16",
+      "kind": "encoding",
+      "note": "UTF-16LE",
+      "license": "Copyright gedcom.org, all rights reserved: local use only",
+      "origin": "https://www.gedcom.org/samples/555SAMPLE16LE.GED (re-hosted by cacack/gedcom-go)",
+      "sha256": "a195004b04fa8390bf6f71f869031be3be653c4bca92c97e9fbc938bb0c79694"
+    },
+    {
+      "file": "gedcom-go/utf16be.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/encoding/utf16be.ged",
+      "vendor": "UTF-16",
+      "kind": "encoding",
+      "note": "UTF-16BE",
+      "license": "Copyright gedcom.org, all rights reserved: local use only",
+      "origin": "https://www.gedcom.org/samples/555SAMPLE16BE.GED (re-hosted by cacack/gedcom-go)",
+      "sha256": "0dc9daa4b3cf8adddc9b23191c0e0e002a6056602c781b0d94962df45e7e331d"
+    },
+    {
+      "file": "gedcom-go/pres2020.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/gedcom-5.5/pres2020.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "US presidents, 2,322 people, _FREL/_MREL",
+      "license": "none stated: arbre-app/public-gedcoms only credits the author",
+      "origin": "Paul E. Stobbe (2020), via arbre-app/public-gedcoms (re-hosted by cacack/gedcom-go)",
+      "sha256": "a5653cdd9076073091ccd0ab58c9000a8dc0308c78abd3f0a17c1a2b05cda521"
+    },
+    {
+      "file": "gedcom-go/royal92.ged",
+      "url": "https://raw.githubusercontent.com/cacack/gedcom-go/d852b34ecf4b4b8036826aeb560202d87ec12a81/testdata/gedcom-5.5/royal92.ged",
+      "vendor": "PAF",
+      "kind": "vendor-export",
+      "note": "royal92, 3,010 people",
+      "license": "none stated: arbre-app/public-gedcoms only credits the author",
+      "origin": "Denis R. Reid (1992), via arbre-app/public-gedcoms (re-hosted by cacack/gedcom-go)",
+      "sha256": "f67ea3b50a5638ff8b1ccc1aaf4e9ade6f7663d3a509a205628855a67748ae81"
+    },
+    {
+      "file": "slaktforskning/macfamilytree.ged",
+      "url": "https://raw.githubusercontent.com/jonaseck2/slaktforskning/aefc52c5ff97238ac4b30a8dfffce8e2c3ae2286/tests/fixtures/gedcom/dialects/macfamilytree.ged",
+      "vendor": "MacFamilyTree",
+      "kind": "synthetic-dialect",
+      "note": "hand-made MacFamilyTree dialect stub",
+      "sha256": "728bdd7633e93865eceb7e7dd16e03e8738b446f4d2962b98575897d4f607a88"
+    },
+    {
+      "file": "slaktforskning/arkivdigital.ged",
+      "url": "https://raw.githubusercontent.com/jonaseck2/slaktforskning/aefc52c5ff97238ac4b30a8dfffce8e2c3ae2286/tests/fixtures/gedcom/dialects/arkivdigital.ged",
+      "vendor": "ArkivDigital",
+      "kind": "synthetic-dialect",
+      "note": "Swedish",
+      "sha256": "b66b97a318e4aac0c204a9441d07239c9a3cc98a8205c97df309cb77bfeaf553"
+    },
+    {
+      "file": "slaktforskning/holger.ged",
+      "url": "https://raw.githubusercontent.com/jonaseck2/slaktforskning/aefc52c5ff97238ac4b30a8dfffce8e2c3ae2286/tests/fixtures/gedcom/dialects/holger.ged",
+      "vendor": "Holger",
+      "kind": "synthetic-dialect",
+      "note": "Swedish",
+      "sha256": "db12fb790da166b2308461af6f5c0bc28ad25d131a93b1b376048065deba11dc"
+    },
+    {
+      "file": "slaktforskning/genney.ged",
+      "url": "https://raw.githubusercontent.com/jonaseck2/slaktforskning/aefc52c5ff97238ac4b30a8dfffce8e2c3ae2286/tests/fixtures/gedcom/dialects/genney.ged",
+      "vendor": "Genney",
+      "kind": "synthetic-dialect",
+      "note": "Swedish",
+      "sha256": "cd30c150a67fd66763413360259d999c47f055ab08f5704744bbfc3755c050a8"
+    },
+    {
+      "file": "gramps/sample.ged",
+      "url": "https://raw.githubusercontent.com/gramps-project/gramps/65554c42923eb8b4a3ffc96c9a1e84292b8ff3a5/example/gedcom/sample.ged",
+      "vendor": "Gramps",
+      "kind": "vendor-export",
+      "note": "Gramps bundled sample, 42 people",
+      "sha256": "2f2edc42ae94467eb175c0665439e8d5d755708a16f5d96eefae0d4a7983ae60"
+    },
+    {
+      "file": "gramps/imp_Paris.ged",
+      "url": "https://raw.githubusercontent.com/gramps-project/gramps/65554c42923eb8b4a3ffc96c9a1e84292b8ff3a5/data/tests/imp_Paris.ged",
+      "vendor": "Heredis",
+      "kind": "vendor-export",
+      "note": "Gramps import test: Heredis",
+      "sha256": "22913cec01d66b3bab944d6d7f40a3f6b7e120c3c365b7b99f0db76b24822d95"
+    },
+    {
+      "file": "djeffrey/EnglishTudorRoyalFamily.ged",
+      "url": "https://raw.githubusercontent.com/D-Jeffrey/gedcom-samples/74040285d9e764d25d25c2f66ad1da710eeb391c/tudor/EnglishTudorRoyalFamily.ged",
+      "vendor": "Legacy",
+      "kind": "vendor-export",
+      "note": "Legacy + FamilySearch, 347 people",
+      "sha256": "ff35c0fa43cf3f2d3ec87bb60ad4b7e97dfc8ba2d87fd257ae362fc5dba6e6bf"
+    },
+    {
+      "file": "findmypast/Habsburg.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Habsburg.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "34,020 people",
+      "sha256": "76518a002cd3d70fae8e83995e46d9641fd33f11b1743098c6316a4e0b9f369c"
+    },
+    {
+      "file": "findmypast/GoT.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/GoT.ged",
+      "vendor": "MyHeritage",
+      "kind": "vendor-export",
+      "note": "Game of Thrones, 501 people",
+      "sha256": "576495dd73a4dfd85f885052e69bd71c162b4ce4a6fcc661e84c1a4f73b372da"
+    },
+    {
+      "file": "findmypast/TGC551.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Torture%20Test/TGC551.ged",
+      "vendor": "GEDitCOM",
+      "kind": "hostile",
+      "note": "TGC 5.5.1 torture, CR line ends",
+      "license": "free for non-commercial use (TestGED README, as gedcom-go reports it)",
+      "origin": "GEDitCOM TestGED.zip, H. Eichmann and J. A. Nairn (re-hosted by findmypast)",
+      "sha256": "e5f8622d723009fbe70b04e1c30d8651cd53793070857d72ea403b9453061b1a"
+    },
+    {
+      "file": "findmypast/TGC55C.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Torture%20Test/TGC55C.ged",
+      "vendor": "GEDitCOM",
+      "kind": "hostile",
+      "note": "TGC 5.5 torture, CR line ends",
+      "license": "free for non-commercial use (TestGED README, as gedcom-go reports it)",
+      "origin": "GEDitCOM TestGED.zip, H. Eichmann and J. A. Nairn (re-hosted by findmypast)",
+      "sha256": "f631b100ed8f8ff00ca9d3c6af6015039fe9ec3d30d661a826691d5c562d00e0"
+    },
+    {
+      "file": "findmypast/FTM - Children Only Family.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/FTM%20-%20Children%20Only%20Family.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "genealogy",
+      "note": "children-only family",
+      "sha256": "1d9c634cf1afd4919ad1267b309b4ed6547f8f014b7dd0b5df2013df12d00638"
+    },
+    {
+      "file": "findmypast/PAF - Children Only Family.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/PAF%20-%20Children%20Only%20Family.ged",
+      "vendor": "PAF",
+      "kind": "genealogy",
+      "note": "children-only family",
+      "sha256": "a2723ea016850cbdcf9e9ae194d58b7b03adf9de2414c8ce96e06fd58954ac9a"
+    },
+    {
+      "file": "findmypast/Female Female Marriage.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/Female%20Female%20Marriage.ged",
+      "vendor": "TJ",
+      "kind": "genealogy",
+      "note": "same-sex",
+      "sha256": "d0d3d75dbe1717617f2ba232485d1998196a901d117dc83ff8da2b776258523f"
+    },
+    {
+      "file": "findmypast/Male Male Marriage.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/Male%20Male%20Marriage.ged",
+      "vendor": "TJ",
+      "kind": "genealogy",
+      "note": "same-sex",
+      "sha256": "93548d4559043719af2e998725fd37be0c4344f86b35e8001e0f8e0627f3986f"
+    },
+    {
+      "file": "findmypast/Unknown Unknown Marriage.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/Unknown%20Unknown%20Marriage.ged",
+      "vendor": "TJ",
+      "kind": "genealogy",
+      "note": "unknown sexes",
+      "sha256": "051a144fdcd04e0e0dfaedf63ef83abd6e01fd18e99fb0613be9af71fdfa0ff0"
+    },
+    {
+      "file": "findmypast/Self Marriage.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/Self%20Marriage.ged",
+      "vendor": "TJ",
+      "kind": "genealogy",
+      "note": "self marriage",
+      "sha256": "2d46a4970ed2c344f7e59a9abcad66fb7f1f206f0e8251ebf5749439fa958114"
+    },
+    {
+      "file": "findmypast/Empty Family.ged",
+      "url": "https://raw.githubusercontent.com/findmypast/gedcom-samples/6a989ab4dd3b4697d1273aada20e55106b0078a9/Gedcom%20Permutations/Empty%20Family.ged",
+      "vendor": "TJ",
+      "kind": "genealogy",
+      "note": "empty FAM",
+      "sha256": "9c5538f9e62c8ddb952bcbf4baaa3400122ffd489c9b6331cda100f774a2bd38"
+    },
+    {
+      "file": "gedcom4j/ftmcustomtags.ged",
+      "url": "https://raw.githubusercontent.com/frizbog/gedcom4j/e0aa5da86699cdcd5bc6be995a22a07dcbe25f7f/sample/ftmcustomtags.ged",
+      "vendor": "Family Tree Maker",
+      "kind": "vendor-export",
+      "note": "FTM custom tags",
+      "sha256": "95e46110d0ca54a8614037cd82bf7feb376d806ab5e7c91282f1c858cefad34b"
+    },
+    {
+      "file": "gedcom4j/legacycustomtags.ged",
+      "url": "https://raw.githubusercontent.com/frizbog/gedcom4j/e0aa5da86699cdcd5bc6be995a22a07dcbe25f7f/sample/legacycustomtags.ged",
+      "vendor": "Legacy",
+      "kind": "vendor-export",
+      "note": "Legacy custom tags",
+      "sha256": "78c276bcb4da6b7ae3f8cb5cea7bd4ddf6f2fe75247169eeff6bd390f5c88788"
+    },
+    {
+      "file": "gedcom4j/famhistcustomtags.ged",
+      "url": "https://raw.githubusercontent.com/frizbog/gedcom4j/e0aa5da86699cdcd5bc6be995a22a07dcbe25f7f/sample/famhistcustomtags.ged",
+      "vendor": "Family Historian",
+      "kind": "vendor-export",
+      "note": "FH custom tags",
+      "sha256": "11fb5069dd69d0c1be7cf5778f7dfea0d41ff76e5ebaad7f29ad4a6ac947cccb"
+    },
+    {
+      "file": "gedcom4j/issue102_100levels.ged",
+      "url": "https://raw.githubusercontent.com/frizbog/gedcom4j/e0aa5da86699cdcd5bc6be995a22a07dcbe25f7f/sample/issue102_100levels.ged",
+      "vendor": "edge",
+      "kind": "hostile",
+      "note": "100 nesting levels",
+      "sha256": "03fabe9eb7cff61590685d622fdaf44492cc06e9e102929a002d426d69c58c74"
+    },
+    {
+      "file": "gedkeeper/test_geni.ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_geni.ged",
+      "vendor": "Geni",
+      "kind": "vendor-export",
+      "note": "Geni",
+      "sha256": "d97486cf5162ee77729e11366f42852e5c22b840ccaba28253a8a4d317773ad7"
+    },
+    {
+      "file": "gedkeeper/test_geni_badlines.ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_geni_badlines.ged",
+      "vendor": "Geni",
+      "kind": "hostile",
+      "note": "Geni bad lines",
+      "sha256": "298ef9901e5ee9bf2fec9d4590cf0ac359362a4a3db29cb716242409af636328"
+    },
+    {
+      "file": "gedkeeper/test_geni_neg_years.ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_geni_neg_years.ged",
+      "vendor": "Geni",
+      "kind": "hostile",
+      "note": "negative years",
+      "sha256": "29d8ace7d1eafd567d9a4b9508d2d2348895a9ae0b2e9c1ef7f1ff0d4589aed1"
+    },
+    {
+      "file": "gedkeeper/test_ftb6_ansi(win1251).ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_ftb6_ansi%28win1251%29.ged",
+      "vendor": "MyHeritage",
+      "kind": "encoding",
+      "note": "FTB6 CHAR ANSI Win1251 Russian",
+      "sha256": "eedf78f6c87694843e3a74945ac937026bb52f250a321ceb5d67a35c4fc2bb05"
+    },
+    {
+      "file": "gedkeeper/test_ftb_dmgutf8rus.ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_ftb_dmgutf8rus.ged",
+      "vendor": "MyHeritage",
+      "kind": "encoding",
+      "note": "damaged UTF-8 Russian",
+      "sha256": "b3471ac0ed414cee16a331c9d7fedd429c95284f5e47be6a679d2138b2755ea4"
+    },
+    {
+      "file": "gedkeeper/test_agelong_ansel(win1251).ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_agelong_ansel%28win1251%29.ged",
+      "vendor": "Agelong",
+      "kind": "encoding",
+      "note": "CHAR ANSEL but Win1251 bytes",
+      "sha256": "4b72402c0918a6f4016333d65e25b12cc6a94609d2174e7c64eabce3945b487a"
+    },
+    {
+      "file": "gedkeeper/test_ages_adop.ged",
+      "url": "https://raw.githubusercontent.com/Serg-Norseman/GEDKeeper/bc10dea57d6ce2938c4b878213a84adc987f5913/projects/GKTests/Resources/test_ages_adop.ged",
+      "vendor": "GEDKeeper",
+      "kind": "genealogy",
+      "note": "adoption ages",
+      "sha256": "3046accd8099b4f138c69adb39c5d403b6698f62eff313f5b3a8391ffe0bed8c"
+    },
+    {
+      "file": "gedcom-org/555SAMPLE.GED",
+      "url": "https://www.gedcom.org/samples/555SAMPLE.GED",
+      "vendor": "spec",
+      "kind": "genealogy",
+      "note": "5.5.5 sample (all rights reserved; local use only)",
+      "sha256": "47795b0807070cf05cc33182ae142cfc15738dd06e16a7a6a94d13b9bbb9aefd"
+    },
+    {
+      "file": "gedcom-org/REMARR.GED",
+      "url": "https://www.gedcom.org/samples/REMARR.GED",
+      "vendor": "spec",
+      "kind": "genealogy",
+      "note": "remarriage (all rights reserved; local use only)",
+      "sha256": "673bf70ebee6ac0562c22b2bc4753ef164345ae26863e727760d0aca8af50133"
+    },
+    {
+      "file": "gedcom-org/SSMARR.GED",
+      "url": "https://www.gedcom.org/samples/SSMARR.GED",
+      "vendor": "spec",
+      "kind": "genealogy",
+      "note": "same-sex marriage (all rights reserved; local use only)",
+      "sha256": "9d4b2f15ce6f1a2fdff85e12801f2cfd5f2b652a7e97d24f3493615f50bce74f"
+    }
+  ]
+}

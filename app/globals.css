@@ -1,0 +1,2525 @@
+@import "tailwindcss";
+
+/* ============================================
+   DESIGN SYSTEM - Heirloom
+   ============================================
+
+   Palette (Option B, #688): stone (surfaces), slate (chrome), ink blue
+   (interactive: main action, links, focus), amber (evidence only: dates,
+   citations, complete sourcing).
+   Typography: Fraunces (serif/editorial), Inter (UI/body), JetBrains Mono (IDs/dates).
+
+   In components, use Tailwind classes:
+     bg-primary, text-primary, hover:bg-primary-dark
+     text-evidence, bg-evidence-soft (evidence only — never an action)
+     text-link (navigational links)
+     bg-surface, bg-card, bg-card-alt
+     text-text, text-text-secondary, text-text-muted
+     border-border, border-border-light
+     bg-success, bg-error, text-success, text-error
+
+   For inline styles or JavaScript, use CSS variables:
+     var(--primary), var(--primary-dark), var(--evidence)
+     var(--surface), var(--card), var(--card-alt)
+     var(--text), var(--text-2), var(--text-muted)
+     var(--border), var(--border-light)
+
+   ============================================ */
+
+
+/* ============================================
+   SECTION 1: TAILWIND 4 DESIGN TOKENS
+   ============================================ */
+
+@theme {
+  /* Default duration/easing for every Tailwind `transition-*` utility (#706). Kept
+     equal to --dur-fast / --ease below. */
+  --default-transition-duration: var(--dur-fast);
+  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Primary — copper, the main-action fill. The ONLY coloured fill on a screen: the
+     ui/Button primary variant and other solid main-action controls. A dark burnt copper
+     since 2026-09-23 (audit §13 addendum); links and the focus ring stay ink. White
+     text is 6.5:1 at rest, 8.5:1 on hover. */
+  --color-primary: #9A4418;
+  --color-primary-dark: #7F3813;
+  --color-primary-light: #A9531F;
+
+  /* Focus ring — slate ink, the same hue as links. A separate token from
+     --color-primary: the dark theme needs a lighter slate to clear 3:1 on cards. */
+  --color-focus: #475569;
+
+  /* Evidence — amber means evidence ONLY (dates, citation chips, complete sourcing).
+     Never an action, link, selection or warning colour. Replaces the retired
+     --color-accent (#688), which had drifted into links, buttons and emphasis.
+     Text value matches --color-date: evidence reads as one family. */
+  --color-evidence: #9A4C08;
+  /* Citation-chip fill (evidence text on it is 4.6:1) and its hairline edge. */
+  --color-evidence-soft: #FCD9A8;
+  --color-evidence-border: #D9A15E;
+  /* Faint evidence tint (hover wash on evidence rows, timeline medallions). */
+  --color-evidence-bg: #FEF3C7;
+  /* "Complete sourcing" tag: solid evidence fill + its text (7.3:1). */
+  --color-evidence-tag: #F3C27F;
+  --color-on-evidence-tag: #5C2804;
+  /* Foreground for text/icons ON a solid --color-evidence fill. The evidence colour
+     flips lightness between themes, so this flips with it. */
+  --color-on-evidence: #FFFFFF;
+  /* Navbar background. Slate chrome, separate from --primary so the header never
+     reads as another action surface; white text is 7.6:1 light / 10.4:1 dark. */
+  --color-nav-bg: #475569;
+  /* Navigational text links ("View all →", breadcrumbs) — slate ink (the nav's hue),
+     regular weight, underline on hover. 7.6:1 on cards, 5.7:1 on surface-2. Slate sits
+     near muted text in lightness, so a link inside running text carries a permanent
+     underline (app/CLAUDE.md → Colors). 2026-09-23: replaced the #274A85 blue, which read cold. */
+  --color-link: #475569;
+  /* Theme-neutral light ink for links/focus on surfaces that are dark in BOTH themes
+     and aren't a .dark-island (the lightbox stage and its mobile sheet). 6.9:1+ on the
+     --color-lightbox-* surfaces. */
+  --color-ink-on-dark: #C3CEDC;
+  /* Date highlights — amber JetBrains Mono lifespans/citations (.date-mono).
+     Darkened from #D97706 (only 3.2:1 on the white list rows — a WCAG AA fail,
+     #333) to #9A4C08, which clears AA (4.5:1) on ALL light surfaces including the
+     darkest --surface-2 (#E2DFD8, 4.63:1). Evidence text shares this value. */
+  --color-date: #9A4C08;
+
+  /* Surfaces - Warm stone backgrounds */
+  --color-surface: #ECEAE5;
+  --color-surface-2: #E2DFD8;
+
+  /* Card backgrounds */
+  --color-card: #FFFFFF;
+  --color-card-alt: #F6F4EE;
+
+  /* Borders */
+  --color-border: #D6D3CC;
+  --color-border-light: rgba(0, 0, 0, 0.06);
+  /* The add-media drop strip's dashed edge (#1204): visible where --color-border is not. */
+  --color-drop-edge: #8C857C;
+
+  /* Overlay / glass chrome — the black veil behind transient full-screen tree
+     overlays (saving/exporting) and the frosted hairline on their glass panels +
+     the header map-preview frame. Theme-neutral: black/white alpha reads correctly
+     over both the light and dark tree canvas, so these live once here and are
+     inherited (not re-declared) by the dark palette blocks below. */
+  --color-scrim: rgba(0, 0, 0, 0.35);
+  --color-glass-border: rgba(255, 255, 255, 0.18);
+
+  /* Undo toast (#1043) — inverted: a dark card in light mode, a light one in dark.
+     Its action is light copper text on the dark card, the one named exception to
+     "copper is never text" (design-system.md → Mobile → Feedback). */
+  --color-toast-bg: #2A211B;
+  --color-toast-fg: #FBF6F1;
+  --color-toast-action: #F4B183;
+
+  /* On-media foreground/scrim — the white text/glyphs that sit ON TOP of photos,
+     saturated avatar discs, and solid evidence fills, plus the dark legibility scrim
+     directly behind on-photo captions/controls. Theme-neutral by design: white
+     reads on any photo, and the scrim is a darker (0.6) veil than --color-scrim's
+     0.35 page overlay because it backs small text/icons over arbitrary imagery.
+     These are the tokenized homes for the white-on-media literals (#175 floor). */
+  --color-on-media: #ffffff;
+  --color-media-scrim: rgba(0, 0, 0, 0.6);
+
+  /* Lightbox surfaces — the photo viewer is a DARK ISLAND in BOTH themes on
+     purpose (a neutral-dark surround maximizes the photo's perceived
+     contrast/colour and cuts eye-strain; faded/sepia genealogy scans benefit
+     most, and the side panel stays dark so there's no bright edge next to the
+     stage). These are dark CONSTANTS, deliberately NOT wired to
+     prefers-color-scheme. The white-on-dark FG scale the panel text uses lives
+     in the reusable `.dark-island` base (see @layer components near .hero-dark).
+     See design-system.md + issue #332. */
+  --color-lightbox-panel: #16120f;        /* opaque metadata rail (EvidencePanel) */
+  --color-lightbox-stage-top: #1a1512;    /* stage gradient center/top */
+  --color-lightbox-stage-bottom: #0f0c0a; /* stage gradient edge + thumbnail strip */
+  --color-lightbox-scrim: rgba(0, 0, 0, 0.5); /* WhoIsThisModal veil over the stage */
+  --color-lightbox-sheet: #1d1815;        /* mobile lightbox bottom sheet + tag chrome */
+
+  /* Text */
+  --color-text: #1C1917;
+  --color-text-secondary: #44403C;
+  /* Darkened from #78716C to clear WCAG AA (4.5:1) on all light surfaces —
+     #605A52 is 5.1:1 on the darkest (--surface-2 #E2DFD8) while staying clearly
+     lighter than --color-text-secondary so the text hierarchy is preserved. */
+  --color-text-muted: #605A52;
+
+  /* Tree visualization */
+  --color-tree-edge: #374151;
+
+  /* Status colors (use sparingly — never decorative) */
+  /* success text is emerald-800 (not -700) so `text-success` on `bg-success-bg`
+     (e.g. the "Validated" pill) clears WCAG AA comfortably (~6.8:1 vs ~4.8:1). */
+  --color-success: #065F46;
+  --color-success-bg: #D1FAE5;
+  --color-error: #B91C1C;
+  --color-error-bg: #FEE2E2;
+  /* Warnings are orange, not amber (#688): amber is reserved for evidence, and an
+     amber-on-amber warning read as "sourced". 6.4:1. */
+  --color-warning-text: #9A3412;
+  --color-warning-bg: #FFEDD5;
+  /* The edge of a warning control or pill (#833): the Data checks flag and mark. */
+  --color-warning-border: #F2B98A;
+  /* A warning edge that must be SEEN (#899, #824): the warning badge's 1px edge, the
+     "Check this date" mark and the flagged timeline row's 3px edge. The faint
+     warning-bg is only a text backing (1.03:1 on a dark card), so the shape comes
+     from this edge, >= 3:1 on card, card-alt and surface-2 in both themes. */
+  --color-warning-edge: #C2410C;
+  /* The overdue-backup dot on the nav chip. The nav is dark in both themes, so it
+     takes the dark warning orange in both (3.5:1 light, 6.5:1 dark on the chip). */
+  --color-nav-warning: #FDBA74;
+  --color-info-text: #1E40AF;
+  --color-info-bg: #DBEAFE;
+
+  /* Gender avatar colors — muted to sit alongside the archival warm palette
+     instead of clashing with it. Male/female/non-binary are saturation-matched
+     (S 25-29%) so none of the three visually dominates the others. */
+  --color-male: #5B7C99;
+  --color-male-dark: #456278;
+  --color-female: #9A5B6F;
+  --color-female-dark: #774655;
+  /* Lightened from #845B9A to keep separation from --color-male under
+     protanopia/deuteranopia simulation (they were nearly indistinguishable
+     at equal lightness — RGB distance dropped to ~14/24 out of ~440). */
+  --color-nonbinary: #976AAF;
+  --color-nonbinary-dark: #7A5488;
+  --color-neutral: #a8a29e;
+  --color-neutral-dark: #57534e;
+
+  /* Button variants */
+  --color-button-success: #047857;
+  --color-button-success-hover: #065F46;
+  --color-button-danger: #B91C1C;
+  --color-button-danger-hover: #991B1B;
+
+  /* Hover states */
+  --color-hover-surface: #F3F4F6;
+
+  /* Hero section. Light mode is ink navy (#1246), chosen to sit under the slate nav;
+     dark mode keeps the warm umber. --color-hero-tint is the colour the hero gradient's
+     top-left stop mixes in (30%), and --color-hero-select is the opaque fill a native
+     <select> takes on a dark island. */
+  --color-hero-bg: #1F2B3D;
+  --color-hero-tint: #3E5677;
+  --color-hero-select: #172131;
+  /* The phone slim bar in light mode (#1099): slate 700, a step under the nav's slate so it
+     reads as a sub-bar, and dark enough for the hero amber (5.06:1). Dark mode sets it
+     transparent, so the bar keeps the hero gradient. */
+  --color-slim-bar: #334155;
+  /* The slim bar as one solid colour (light: the slate; dark: the hero's top-left stop),
+     for the notch tint, which can't read a gradient. */
+  --color-slim-bar-solid: #334155;
+
+  /* Legacy aliases (keep for gradual migration) */
+  --color-surface-dark: #E2DFD8;
+  --color-bg-subtle: #F9FAFB;
+  --color-badge-info-bg: #DBEAFE;
+  --color-badge-info-text: #1E40AF;
+  --color-badge-warning-bg: #FFEDD5;
+  --color-badge-warning-text: #9A3412;
+  --color-badge-count-bg: #E9D5FF;
+  --color-badge-count-text: #6B21A8;
+  /* Kit-named count aliases (map to existing badge-count values) */
+  --color-count-bg: #E9D5FF;
+  --color-count-text: #6B21A8;
+  /* Announcement tag ("NEW", #692): a quiet neutral fill beside its label. It is the
+     one badge whose shape may sit near its surface; the text carries it (7.4:1). */
+  --color-new-bg: #C9C3B8;
+  --color-on-new: #35302C;
+  /* Living-status mark (StatusMark, 2026-09-23; colours #736): living dot, † deceased,
+     ? unknown. Living and deceased are 3.2:1 apart so they differ by more than hue.
+     The glyph (--color-on-status) is 5.5:1 on living, 17.5:1 on deceased. Unknown is
+     a hollow ring in its own colour. */
+  --color-status-living: #047857;
+  --color-status-deceased: #1C1917;
+  --color-status-unknown: #605A52;
+  --color-on-status: #FFFFFF;
+  /* SegmentedControl's selected segment (#691): the ink fill, i.e. text on card.
+     Its own pair so a dark island (which washes --color-card to white) can pin it. */
+  --color-segment-on: var(--color-text);
+  --color-on-segment: var(--color-card);
+
+  /* Fonts */
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  /* Fraunces has no Cyrillic; Literata (Cyrillic-capable, similar book-serif
+     proportions) takes those glyphs so Russian headings get a designed serif
+     rather than the OS fallback (#703). */
+  --font-serif: var(--font-fraunces), var(--font-literata);
+
+  /* Type scale (kit values) — canonical source of truth for Tailwind's text-*,
+     leading-*, and tracking-* utilities. Intentionally overrides Tailwind's
+     defaults so e.g. `text-base` = 14px app-wide. Defined here in @theme (not
+     :root) so the override is deliberate and documented, not accidental. */
+  --text-xs: 11px;
+  /* 12px meta (#687): row sub-lines, helper text, captions, bylines. The
+     ramp is 11/12/13/14/16/18/22/28/32/40 — see design-system.md. */
+  --text-meta: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 32px;
+  --text-4xl: 40px;
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.6;
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-wide: 0.08em;
+
+  /* Radius scale — promoted from :root so these generate real utilities
+     (rounded-btn/card/panel/pill). Names are deliberately semantic and do NOT
+     match any Tailwind default, so no utility is shadowed. The colliding kit
+     names (--radius-sm 4px, --radius-md 6px) intentionally stay :root-only. */
+  --radius-btn: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-pill: 999px;
+
+  /* Shadow scale — only the non-colliding semantic names are promoted
+     (shadow-card/hero). --shadow-sm/md/lg stay :root-only to avoid shadowing
+     Tailwind's own shadow utilities. */
+  --shadow-card: 0 1px 2px rgba(28, 20, 12, 0.05), 0 6px 16px -8px rgba(60, 45, 30, 0.12);
+  /* A pointed-at card (hover or keyboard focus): the card shadow, a little deeper
+     and just as warm (#753). */
+  --shadow-card-hover: 0 1px 2px rgba(28, 20, 12, 0.06), 0 12px 24px -12px rgba(60, 45, 30, 0.24);
+  /* Toned down by about half (#753): the hero is a dark block and already carries
+     the weight; it no longer floats ~30px above cards that sit 2px up. */
+  --shadow-hero: 0 14px 28px -14px rgba(20, 30, 46, 0.38), 0 3px 8px -4px rgba(0, 0, 0, 0.2);
+  /* Header: a hairline at rest, and a soft shadow once the page has scrolled. */
+  --shadow-nav: 0 1px 0 rgba(0, 0, 0, 0.08);
+  --shadow-nav-scrolled: 0 1px 0 rgba(0, 0, 0, 0.08), 0 8px 16px -10px rgba(40, 28, 18, 0.35);
+  /* A filter panel floating on an open page (Library, #1152): the one raised object
+     there, so it sits a little higher than a card. Dark values are in section 3. */
+  --shadow-float: 0 2px 4px rgba(28, 20, 12, 0.05), 0 18px 36px -18px rgba(60, 45, 30, 0.35);
+}
+
+
+/* ============================================
+   SECTION 2: JS / INLINE STYLE BRIDGE
+
+   Shorthand aliases for use in inline styles
+   and JavaScript (e.g. var(--primary)).
+   These use var() so they automatically follow
+   dark mode overrides — no manual sync needed.
+   ============================================ */
+
+:root {
+  /* Native controls (checkboxes, radios, scrollbars) follow the app theme; the
+     dark roots below switch this to `dark` (CL-4, #750). */
+  color-scheme: light;
+  /* Inline-style / JS aliases — use these in style={{ }} and reworks components */
+  --primary: var(--color-primary);
+  --primary-dark: var(--color-primary-dark);
+  --evidence: var(--color-evidence);
+  --evidence-soft: var(--color-evidence-soft);
+  --evidence-bg: var(--color-evidence-bg);
+  --link: var(--color-link);
+  --focus: var(--color-focus);
+  /* Focus ring (#690): one ring for every interactive element: 2px ink outline, 2px
+     offset. An outline follows the element's border-radius, so it is radius-matched
+     without a per-shape rule. Use the `focus-ring` utility, or rely on the base
+     :focus-visible rule; never `outline-none` + `ring-*`. */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --date: var(--color-date);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --card: var(--color-card);
+  --card-alt: var(--color-card-alt);
+  --border: var(--color-border);
+  --border-light: var(--color-border-light);
+  --text: var(--color-text);
+  --text-2: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --hero-bg: var(--color-hero-bg);
+  --success: var(--color-success);
+  --success-bg: var(--color-success-bg);
+  --error: var(--color-error);
+  --error-bg: var(--color-error-bg);
+  --warning-text: var(--color-warning-text);
+  --warning-bg: var(--color-warning-bg);
+  --info-text: var(--color-info-text);
+  --info-bg: var(--color-info-bg);
+
+  /* Legacy aliases (keep for gradual migration) */
+  --bg-page: var(--color-surface);
+  --bg-card: var(--color-card);
+  --bg-card-alt: var(--color-card-alt);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+
+  /* Spacing tokens (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 28px;
+  --space-8: 48px;
+
+  /* Radius tokens — btn/card/panel/pill now live in @theme (generate utilities).
+     sm/md kept here as var()-only because their names would shadow Tailwind's
+     rounded-sm/rounded-md utilities. */
+  --radius-sm: 4px;   /* pills, mono tags (var() only) */
+  --radius-md: 6px;   /* inputs, small cards (var() only) */
+
+  /* Shadows — card/hero now live in @theme (generate utilities).
+     sm/md/lg kept here as var()-only (their names would shadow Tailwind). */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.10);
+
+  /* Explore: the map is a hole in the page, not a card on it (4a). Light gets a
+     softer inset than dark plus a hairline ring, because a heavy inner shadow on
+     a parchment ground reads as dirt rather than depth. */
+  --map-well-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.16), inset 0 0 0 1px var(--color-border);
+  --map-well-bg: #E6E2DA;
+  /* The one raised panel holding the index rail + detail. */
+  --panel-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+
+  /* Motion (#706, INT-6): two durations. --dur-fast for hover/press state changes,
+     --dur-base for overlays entering (menus, modals, sheets). Tailwind's
+     `transition-*` utilities pick up --dur-fast through --default-transition-duration
+     in @theme, so a bare `transition-colors` is already on the token. */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+
+  /* Font weights (kit) — consumed via var(); NOT a Tailwind namespace
+     (Tailwind uses --font-weight-*), so these don't generate utilities. */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+}
+
+
+/* ============================================
+   SECTION 3: DARK MODE OVERRIDES
+
+   Two selectors for dark mode support:
+   - @media (prefers-color-scheme: dark) with
+     :root:not(.light) — respects OS preference
+     unless user explicitly chose light mode
+   - html.dark — user manually selected dark mode
+
+   Both override the same --color-* variables
+   defined in @theme above. The duplication is
+   necessary because CSS can't share declarations
+   between a media query and a class selector.
+   ============================================ */
+
+/* Dark palette — authored ONCE, applied through two selectors:
+   - :root:not(.light) inside the OS media query : respect OS dark unless forced light
+   - html.dark : user manually selected dark
+   Keeping the selectors separate preserves exact resolution order; only the
+   declaration list is de-duplicated. */
+html.dark {
+  color-scheme: dark;
+  /* --color-primary is the main-action FILL under white text (5.3:1). It is too dark
+     to read as text or as a focus ring on a dark card (2.9:1), so those use the
+     lighter ink in --color-link / --color-focus instead — one token can't be both
+     "dark enough for white text" and "light enough to read on a dark card". */
+  --color-primary: #A9531F;
+  /* Hover goes darker in dark mode too: white is 7.1:1 at hover, 5.3:1 at rest. */
+  --color-primary-dark: #8C4418;
+  --color-primary-light: #C6702A;
+  --color-focus: #A7B4C6;
+  /* Calmer dark amber (#688): #FBBF24 competed with names. 7.8:1 on cards. */
+  --color-evidence: #E6B24A;
+  --color-date: #E6B24A;
+  --color-evidence-soft: #3A2A0E;
+  --color-evidence-border: #8A6418;
+  --color-evidence-bg: #451A03;
+  --color-evidence-tag: #7A5410;
+  --color-on-evidence-tag: #FFF1C2;
+  /* Dark text on the light dark-mode amber (9.0:1); white would be 1.9:1. */
+  --color-on-evidence: #1C1917;
+  /* Warm charcoal chrome in dark mode (§15 item 1, #750), so the header belongs to
+     the warm page and hero; light keeps slate. White nav text/icons are 15:1. */
+  --color-nav-bg: #2B2622;
+  /* Light slate so links read on dark surfaces: 7.2:1 on cards and 4.9:1 on
+     card-alt (#719 set the card-alt floor). */
+  --color-link: #A7B4C6;
+  --color-surface: #1C1917;
+  --color-surface-2: #0C0A09;
+  --color-toast-bg: #F3ECE5;
+  --color-toast-fg: #231B16;
+  --color-toast-action: #9A4A1A;
+  --color-card: #292524;
+  --color-card-alt: #44403C;
+  --color-border: #44403C;
+  --color-border-light: rgba(255, 255, 255, 0.06);
+  --color-drop-edge: #9C958C;
+  --color-text: #FAFAF9;
+  --color-text-secondary: #D6D3CC;
+  --color-text-muted: #B8B2AA;
+  --color-tree-edge: #6B7280;
+  --color-success: #34D399;
+  --color-success-bg: #064E3B;
+  --color-error: #F87171;
+  /* red-950, not the red-900 that its success/warning/info siblings use: --color-error
+     (#F87171) on red-900 (#7F1D1D) is only 3.62:1, under AA. Guarded by
+     contrast-tokens.test.ts. Keep in sync with the prefers-color-scheme block below. */
+  --color-error-bg: #450A0A;
+  --color-warning-text: #FDBA74;
+  --color-warning-bg: #431407;
+  --color-warning-border: #7C2D12;
+  --color-warning-edge: #F97316;
+  --color-info-text: #93C5FD;
+  --color-info-bg: #1E3A8A;
+  --color-male: #8CA8C0;
+  --color-male-dark: #5B7C99;
+  --color-female: #C08C9C;
+  --color-female-dark: #9A5B6F;
+  --color-nonbinary: #BFA0CF;
+  --color-nonbinary-dark: #976AAF;
+  --color-neutral: #57534e;
+  --color-neutral-dark: #292524;
+  --color-button-success: #10B981;
+  --color-button-success-hover: #059669;
+  /* Darkened from #F87171 (white text = 2.8:1) to #DC2626 (4.8:1). The lighter
+     #F87171 stays as --color-error for error *text* on dark backgrounds. */
+  --color-button-danger: #DC2626;
+  --color-button-danger-hover: #B91C1C;
+  --color-hover-surface: #3D3836;
+  --color-bg-subtle: #1C1917;
+  --color-surface-dark: #0C0A09;
+  --color-badge-info-bg: #1E3A8A;
+  --color-badge-info-text: #93C5FD;
+  --color-badge-warning-bg: #431407;
+  --color-badge-warning-text: #FDBA74;
+  --color-badge-count-bg: #581C87;
+  --color-badge-count-text: #E9D5FF;
+  --color-count-bg: #581C87;
+  --color-count-text: #E9D5FF;
+  --color-new-bg: #3A3635;
+  --color-on-new: #D6D3CC;
+  --color-status-living: #34D399;
+  /* Deceased is 2.5:1 from living (#736); its † takes a white glyph (4.8:1). Living
+     never carries a glyph. */
+  --color-status-deceased: #78716C;
+  --color-status-unknown: #B8B2AA;
+  --color-on-status: #FFFFFF;
+  --color-hero-bg: #4a3d38;
+  --color-hero-tint: #8a6034;
+  --color-hero-select: #2A2320;
+  --shadow-hero: 0 14px 28px -14px rgba(58, 40, 28, 0.38), 0 3px 8px -4px rgba(0, 0, 0, 0.2);
+  --color-slim-bar: transparent;
+  --color-slim-bar-solid: color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-hero-tint));
+  /* Explore elevation (4a) — see the light values in section 2. */
+  --map-well-shadow: inset 0 2px 18px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --map-well-bg: #100D0C;
+  --panel-shadow: 0 28px 56px rgba(0, 0, 0, 0.62);
+  --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 36px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* System preference: dark — applied unless the user forced light mode.
+   Re-applies the dark palette via the same declarations as above. CSS cannot
+   share a declaration list between a media query and a top-level selector, so
+   this one duplication is unavoidable; keep it byte-identical to the block above. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+    --color-primary: #A9531F;
+    --color-primary-dark: #8C4418;
+    --color-primary-light: #C6702A;
+    --color-focus: #A7B4C6;
+    --color-evidence: #E6B24A;
+    --color-date: #E6B24A;
+    --color-evidence-soft: #3A2A0E;
+    --color-evidence-border: #8A6418;
+    --color-evidence-bg: #451A03;
+    --color-evidence-tag: #7A5410;
+    --color-on-evidence-tag: #FFF1C2;
+    --color-on-evidence: #1C1917;
+    --color-nav-bg: #2B2622;
+    --color-link: #A7B4C6;
+    --color-surface: #1C1917;
+    --color-surface-2: #0C0A09;
+    --color-toast-bg: #F3ECE5;
+    --color-toast-fg: #231B16;
+    --color-toast-action: #9A4A1A;
+    --color-card: #292524;
+    --color-card-alt: #44403C;
+    --color-border: #44403C;
+    --color-border-light: rgba(255, 255, 255, 0.06);
+    --color-drop-edge: #9C958C;
+    --color-text: #FAFAF9;
+    --color-text-secondary: #D6D3CC;
+    --color-text-muted: #B8B2AA;
+    --color-tree-edge: #6B7280;
+    --color-success: #34D399;
+    --color-success-bg: #064E3B;
+    --color-error: #F87171;
+    /* Keep in sync with the [data-theme="dark"] block above (see note there). */
+    --color-error-bg: #450A0A;
+    --color-warning-text: #FDBA74;
+    --color-warning-bg: #431407;
+    --color-warning-border: #7C2D12;
+    --color-warning-edge: #F97316;
+    --color-info-text: #93C5FD;
+    --color-info-bg: #1E3A8A;
+    --color-male: #8CA8C0;
+    --color-male-dark: #5B7C99;
+    --color-female: #C08C9C;
+    --color-female-dark: #9A5B6F;
+    --color-nonbinary: #BFA0CF;
+    --color-nonbinary-dark: #976AAF;
+    --color-neutral: #57534e;
+    --color-neutral-dark: #292524;
+    --color-button-success: #10B981;
+    --color-button-success-hover: #059669;
+    --color-button-danger: #DC2626;
+    --color-button-danger-hover: #B91C1C;
+    --color-hover-surface: #3D3836;
+    --color-bg-subtle: #1C1917;
+    --color-surface-dark: #0C0A09;
+    --color-badge-info-bg: #1E3A8A;
+    --color-badge-info-text: #93C5FD;
+    --color-badge-warning-bg: #431407;
+    --color-badge-warning-text: #FDBA74;
+    --color-badge-count-bg: #581C87;
+    --color-badge-count-text: #E9D5FF;
+    --color-count-bg: #581C87;
+    --color-count-text: #E9D5FF;
+    --color-new-bg: #3A3635;
+    --color-on-new: #D6D3CC;
+    --color-status-living: #34D399;
+    --color-status-deceased: #78716C;
+    --color-status-unknown: #B8B2AA;
+    --color-on-status: #FFFFFF;
+    --color-hero-bg: #4a3d38;
+    --color-hero-tint: #8a6034;
+    --color-hero-select: #2A2320;
+    --shadow-hero: 0 14px 28px -14px rgba(58, 40, 28, 0.38), 0 3px 8px -4px rgba(0, 0, 0, 0.2);
+    --color-slim-bar: transparent;
+    --color-slim-bar-solid: color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-hero-tint));
+    /* Explore elevation (4a) — keep in sync with the html.dark block above. */
+    --map-well-shadow: inset 0 2px 18px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --map-well-bg: #100D0C;
+    --panel-shadow: 0 28px 56px rgba(0, 0, 0, 0.62);
+    --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 36px -18px rgba(0, 0, 0, 0.7);
+  }
+}
+
+
+/* ============================================
+   SECTION 4: BASE STYLES
+   ============================================ */
+
+html {
+  /* Keep the scrollbar rail painted on every page, scrollable or not, so content
+     never shifts left when one appears (a tall page, or a modal scroll-lock).
+
+     `overflow-y: scroll` rather than `scrollbar-gutter: stable`: measured in
+     Chromium, both reserve the same ~15px column, but only `scroll` paints a
+     scrollbar in it when the page fits. With `stable` the column was empty, so
+     the sticky navbar appeared to stop short of the window edge for no reason
+     (that is review 6 §5.7 — which assumed the gutter was missing; it has been
+     there since the app-shell work, and nothing was ever overlapping the bar).
+
+     The bar cannot extend under the scrollbar without moving the page onto an
+     inner scroller, which PR #232 deliberately undid so iOS Safari can collapse
+     its toolbar — so the fix is to make the column read as chrome. Mobile is
+     unaffected either way: touch scrollbars are overlay and reserve nothing.
+
+     Standard properties only, deliberately: Blink ignores the ::-webkit-scrollbar
+     pseudo-elements on any element that also sets scrollbar-width/scrollbar-color,
+     so a webkit block here would be dead code duplicating .scroll-area's. */
+  overflow-y: scroll;
+  background: var(--color-surface);
+  /* Colour only, no scrollbar-width: this is the bar the user actually drags, so
+     it keeps the OS width (15px here) rather than the 10px `thin` gives. */
+  scrollbar-color: var(--color-border) var(--color-surface-2);
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Paper grain — subtle archival texture laid over the whole UI.
+   To tweak: change `opacity` (0 disables it) or `baseFrequency` in the SVG
+   (higher = finer grain). Lives here in app/globals.css. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  /* MUST stay below the nav's z-40. This is a fixed, full-viewport, ~transparent
+     overlay covering the top edge — and Safari 26 tints the top browser/status bar
+     from the highest-z-index fixed element there. At a high z (it was 9999) this
+     grain outranks the slate <nav>, so Safari samples the near-transparent texture
+     and the bar falls back to the grey <body>. Keeping the grain below the nav lets
+     the opaque slate nav be the tint source (browser tab AND PWA). See issue #234. */
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNDAnIGhlaWdodD0nMTQwJz48ZmlsdGVyIGlkPSduJz48ZmVUdXJidWxlbmNlIHR5cGU9J2ZyYWN0YWxOb2lzZScgYmFzZUZyZXF1ZW5jeT0nMC44NScgbnVtT2N0YXZlcz0nMicgc3RpdGNoVGlsZXM9J3N0aXRjaCcvPjxmZUNvbG9yTWF0cml4IHR5cGU9J3NhdHVyYXRlJyB2YWx1ZXM9JzAnLz48L2ZpbHRlcj48cmVjdCB3aWR0aD0nMTAwJScgaGVpZ2h0PScxMDAlJyBmaWx0ZXI9J3VybCgjbiknLz48L3N2Zz4=");
+}
+
+/* Typography utility classes.
+   #310: the collision-free legacy classes (.serif / .muted / .ds-name / .section /
+   .title / .card* etc.) live in @layer components so Tailwind utilities (which
+   cascade in the later `utilities` layer) can override them.
+
+   Fonts footgun — #331 caught it, #342 fixed it:
+   next/font injects the real font families as `--font-fraunces` / `--font-inter` /
+   `--font-jetbrains-mono`. #331 found these lived on <body>, so the `@theme` aliases
+   `--font-sans/-mono/-serif` (emitted at `:root`) computed empty and the Tailwind
+   `font-mono` / `font-serif` utilities silently fell back to Inter. #342 moved the
+   next/font variable classes to <html>, so the vars now exist at `:root`, the aliases
+   resolve, and `font-sans/-serif/-mono` DO render Inter / Fraunces / JetBrains Mono.
+   These layered classes keep referencing the next/font vars directly (still valid) and
+   remain the canonical, single-blessed-path typography treatments:
+   - `.serif` — canonical serif class. (`.font-serif`, retired in #331, stays retired so
+     there's one serif class, not two; the ESLint guardrail keeps it out of new code.)
+   - `.date-mono` — canonical amber-mono date treatment. `.text-date` is a colour-ONLY
+     Tailwind utility that drops the mono + weight, so it stays retired and guarded.
+   - `.mono` — layered, so utilities can override it. */
+@layer components {
+  .serif {
+    font-family: var(--font-fraunces), var(--font-literata), 'Georgia', serif;
+  }
+
+  .mono {
+    font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+    font-size: 0.875em;
+  }
+
+  /* Amber mono date — the kit's signature treatment for lifespans / event dates.
+     Renamed from the retired `.text-date` (which name-collided with Tailwind's
+     text-date colour utility). References the working next/font var directly. */
+  .date-mono {
+    font-family: var(--font-jetbrains-mono), 'Courier New', monospace;
+    /* var(--color-date), NOT the --date alias: aliases substitute at :root with the
+       light value and inherit frozen, so they never pick up the .dark-island /
+       .hero-dark override (#E9A94F) — dates on hero islands would render the dark
+       amber on dark (≈1.5:1). See design-system.md §Dark islands. */
+    color: var(--color-date);
+    font-weight: 500;
+  }
+  /* A date that only helps tell people apart (#935, ADR 0034): same mono and weight,
+     muted grey, so names and portraits lead. Amber stays for dates read as facts. */
+  .date-mono.date-muted {
+    color: var(--color-text-muted);
+  }
+}
+
+@layer components {
+  .ds-name { font-size: var(--text-md); line-height: var(--leading-snug); }
+
+  .muted {
+    color: var(--color-text-muted);
+    /* Muted asides inside a bold title ("Partnership ended · cause: death of …")
+       must not inherit the bold (#702). A `font-*` utility still wins. */
+    font-weight: 400;
+  }
+
+  /* The count/description line that sits directly under a list page's <h1>
+     (People, Families, Places, Cases). Was hand-rolled as
+     `muted mt-[2px] text-base` on each page. Distinct from the tighter
+     12px subtitle used by SectionHeader/DialogHeader inside cards + modals. */
+  .page-subtitle {
+    color: var(--color-text-muted);
+    font-size: var(--text-base);
+    margin-top: 2px;
+  }
+}
+
+/* #310/#331/#80: the `.btn` base + `.btn.btn-primary/-outline/-ghost` compound
+   classes were a dead legacy button system (0 call sites — the ui/Button
+   primitive styles itself with Tailwind utilities). Removed so no unlayered
+   class out-specifies utilities. The ESLint guardrail keeps them from returning.
+   `.btn-glow` (used by Button's primary variant) and `.btn-close` live on below. */
+
+/* Section heading within page.
+   #310: this block (.section / .title / .row / .card-pad / .rel-group-label /
+   .eyebrow) is wrapped in @layer components so utilities can override it. */
+@layer components {
+.section {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 12px;
+  letter-spacing: -0.01em;
+}
+
+/* Heading ramp (#687). Every heading is serif 600 except the sans eyebrow
+   (.eyebrow). Owners: PageShell → .title / .title-record / .title-workspace;
+   DialogHeader + FormTopBarTitle → .title-dialog; SectionHeader → .section /
+   .rail-title / .eyebrow. Person's portrait hero alone uses .title-hero. */
+
+/* Page title — list and utility pages. */
+.title {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 4px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* Record title — Family, Case, Place and Source heroes. */
+.title-record {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-3xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* Person portrait hero only. */
+.title-hero {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-4xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* Dialog and form-bar title. */
+.title-dialog {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Workspace (Tree toolbar) title. */
+.title-workspace {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* Rail-card heading. */
+.rail-title {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+/* Row flex helper */
+.row {
+  display: flex;
+  align-items: center;
+}
+
+/* Card helpers matching design-bible */
+.card-pad {
+  padding: 16px;
+}
+
+/* Soft group label — a quieter alternative to .eyebrow (no uppercase/tracking),
+   used for relationship groups in the rail. */
+.rel-group-label {
+  font-size: var(--text-meta);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Eyebrow: the only heading with positive tracking (TYPE-4). */
+/* Eyebrow label (#694). Named `.eyebrow`, not `.overline`: Tailwind v4 ships an
+   `overline` utility (text-decoration-line: overline) in the utilities layer, which
+   beat this component rule and drew a stray rule over every eyebrow (LAY-4). */
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+}
+
+/* Timeline (life events, partnership timeline) */
+.tl {
+  position: relative;
+  padding-left: 18px;
+}
+
+.tl::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--color-border);
+  border-radius: 1px;
+}
+
+.tl-item {
+  position: relative;
+  padding: 6px 0 14px;
+}
+
+.tl-item:last-child {
+  padding-bottom: 2px;
+}
+
+.tl-item::before {
+  content: '';
+  position: absolute;
+  /* Center the dot on the vertical line: line center sits 12px left of the item
+     content edge (.tl padding-left 18px − line left 5px − line half-width 1px). */
+  left: -12px;
+  transform: translateX(-50%);
+  top: 11px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-card);
+  border: 2px solid var(--color-border);
+  box-sizing: border-box;
+}
+
+.tl-item.acc::before {
+  background: var(--color-evidence);
+  border-color: var(--color-evidence);
+}
+
+.tl-item.dim .tl-text {
+  opacity: 0.7;
+}
+
+.tl-item.dim::before {
+  background: var(--color-text-muted);
+  border-color: var(--color-text-muted);
+}
+
+/* Medallion timeline (reusable — person life events, later the family timeline).
+   Grid: [age track] [medallion] [body]; a gradient spine threads the medallions. */
+.tl-med { position: relative; isolation: isolate; }
+.tl-med-ev {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px 34px 1fr;
+  align-items: start;
+  column-gap: 12px;
+  /* Right padding gives the row-action buttons breathing room from the card
+     edge, matching the vertical rhythm; left stays 0 (the age track hugs it). */
+  padding: 14px 10px 14px 0;
+}
+/* Alternating band so consecutive events separate at a glance. Drawn as a
+   z-index:-1 layer (not the row's background) so the spine line — which extends
+   from one row into the next — always paints in front of the zebra. */
+.tl-med-ev:nth-child(even)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* A 4% text tint on the card, not card-alt: dark card-alt equals the border
+     colour, so it read as a heavy stripe. The tint weighs the same in both themes. */
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-card));
+  border-radius: 10px;
+  z-index: -1;
+}
+.tl-med-ev::before {
+  content: '';
+  position: absolute;
+  /* Center on the medallion: age track (42px) + column-gap (12px) + half node (17px). */
+  left: calc(42px + 12px + 17px);
+  /* Medallions are top-aligned: their center is a fixed 31px (14px band padding +
+     17px half-node) from the row top. Span from this centre to the next one. */
+  top: 31px;
+  bottom: -31px;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: linear-gradient(var(--color-evidence), color-mix(in srgb, var(--color-evidence) 65%, var(--color-text-muted)));
+  opacity: 0.42;
+  z-index: 1;
+}
+.tl-med-ev:last-child::before { display: none; }
+/* No ages to show (a family timeline, a person with no birth date): no age track.
+   The row gets the gutter's padding back so the medallion doesn't touch the card
+   edge, and the spine centres on the node again: padding (10px) + half node (17px).
+   (#897) */
+.tl-med--no-age .tl-med-ev { grid-template-columns: 34px 1fr; padding-left: 10px; }
+.tl-med--no-age .tl-med-ev::before { left: calc(10px + 17px); }
+.tl-med--no-age .tl-med-chapter { grid-column: 2; }
+/* Deceased-state events read as muted, not translucent — a solid neutral medallion
+   (opacity would let the spine/zebra bleed through and look like a render glitch). */
+.tl-med-ev.is-dim .tl-med-node {
+  background: var(--color-card-alt);
+  color: var(--color-text-muted);
+  box-shadow: 0 0 0 1px var(--color-border), 0 3px 6px -2px rgba(0, 0, 0, 0.14);
+}
+.tl-med-age {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: right;
+  align-self: start;
+  padding-top: 1px;
+  white-space: nowrap;
+}
+.tl-med-node {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-evidence-bg);
+  color: var(--color-evidence);
+  border: 2px solid var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-evidence-soft), 0 3px 6px -2px rgba(0, 0, 0, 0.18);
+  align-self: start;
+  z-index: 2;
+}
+.tl-med-chapter {
+  grid-column: 3;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-evidence);
+  font-weight: 600;
+  margin: 0 0 8px;
+  opacity: 0.75;
+}
+.tl-med-body { min-width: 0; }
+/* Two columns: content on the left, row-action buttons on the right of the TITLE
+   row only. Everything below the title spans both columns, so the date/place line
+   gets the body's full width — as a flex row with the buttons as a sibling of the
+   whole stack, they reserved ~29% of the row permanently for a control that is
+   `visibility: hidden` until hover (#438).
+
+   The mark and buttons are placed onto row 1 by grid area, so DOM order (title →
+   meta → note → mark → callout → actions) can keep following reading order, and a
+   mark's panel is the next Tab stop after it (#843). Column gaps are margins, so
+   an empty mark or actions column takes no space. They must stay SHORT enough not to
+   drive row 1's height, or they reopen the gap between a title and its date that
+   the previous layout was written to avoid — see `.ev-act`'s min-height.
+
+   `.tl-med-extra` sits outside this grid entirely so the map spans the full body. */
+.tl-med-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: "title mark actions" "meta meta meta" "note note note" "callout callout callout";
+  align-items: center;
+}
+.tl-med-mark { grid-area: mark; display: flex; margin-left: 8px; }
+.tl-med-actions { grid-area: actions; justify-self: end; display: flex; align-items: center; gap: 6px; margin-left: 8px; }
+.tl-med-mark ~ .tl-med-actions { margin-left: 6px; }
+/* A data check's date to fix (#833): the warning tint, drawn like the zebra band
+   (and over it) so the spine still paints in front. */
+.tl-med-ev.is-flagged::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-warning-bg) 65%, var(--color-card));
+  /* The tint is deliberately faint (1.04:1 in dark); the 3px edge carries the
+     signal, so it never rests on colour lightness alone (#899, #824). */
+  border-left: 3px solid var(--color-warning-edge);
+  border-radius: 10px;
+  z-index: -1;
+}
+.tl-med-callout { grid-area: callout; margin-top: 10px; }
+.tl-med-title { grid-area: title; font-size: var(--text-base); font-weight: 600; color: var(--color-text); }
+.tl-med-meta {
+  grid-area: meta;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tl-med-note { grid-area: note; font-size: 13px; color: var(--color-text-muted); font-style: italic; margin-top: 5px; }
+.tl-med-extra { margin-top: 6px; }
+
+/* Collection row actions (`RowActions`: Edit / Delete / Edit↗; #760). Quiet ghost
+   buttons that warm to link ink / danger on interaction. Hover-reveal on desktop,
+   always-on for touch — the row (a timeline .tl-med-ev, or any .row-host) is the
+   hover/focus-within target. */
+.ev-row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.ev-row-actions.compact .ev-act-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+/* Opacity, not visibility: a hidden action stays in the tab order and shows when it
+   takes focus, so a row with nothing else focusable (a note) is still reachable. */
+@media (hover: hover) and (pointer: fine) {
+  :is(.tl-med-ev, .row-host) .ev-row-actions { opacity: 0; transition: opacity var(--dur-fast) ease; }
+  :is(.tl-med-ev, .row-host):hover .ev-row-actions,
+  :is(.tl-med-ev, .row-host):focus-within .ev-row-actions { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .ev-row-actions { transition: none; } }
+
+/* Data checks "Edit date" (#832). The timeline is a container: narrower than
+   480px (a 768 split pane, a phone, a narrow window) the button becomes a 44px
+   pencil with its label visually hidden, like `.ev-row-actions.compact`. Unlayered,
+   so it beats the Button's size utilities. */
+.dc-timeline { container-type: inline-size; }
+@container (max-width: 479.98px) {
+  .dc-fix-btn { width: 44px; min-height: 44px; padding: 0; }
+  .dc-fix-btn .dc-fix-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* Hover-revealed citation pins. An editor's "+" on an unsourced fact is the
+   add-source cue and always shows, quietly (#896). On read views, a viewer's
+   search-only pin (#1028) stays out of sight until its fact row (timeline or
+   table) is hovered or focused, like the row's Edit/Delete. Opacity, not
+   visibility, so the pin stays in the tab order and shows when it takes focus.
+   Unlayered, so it outranks the chip's opacity utilities. Touch keeps the quiet
+   always-on pin. */
+@media (hover: hover) and (pointer: fine) {
+  :is(.tl-med-ev, tr) .cite-hover-pin { opacity: 0; }
+  :is(.tl-med-ev, tr):is(:hover, :focus-within) .cite-hover-pin { opacity: 0.5; }
+  :is(.tl-med-ev, tr) .cite-hover-pin:is(:hover, :focus-visible) { opacity: 1; }
+}
+/* The "+" after a cited fact's chips adds another source (#900). It is a
+   desktop hover affordance; touch adds one from the citation preview (#1049). */
+@media (hover: none), (pointer: coarse) {
+  .cite-more-pin { display: none; }
+}
+/* Height is load-bearing: these share the timeline's title row, so anything taller
+   than the title itself pushes the date line down and reopens the gap #438's layout
+   exists to avoid. 26px clears the WCAG 2.2 AA 24px target floor on a fine pointer;
+   the ≤560px block below restores a 44px touch target where it matters. */
+.ev-act {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px;
+  color: var(--color-text-muted); background: transparent; border: 1px solid transparent;
+  border-radius: 8px; padding: 3px 8px; cursor: pointer; min-height: 26px;
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.ev-act:hover, .ev-act:focus-visible {
+  color: var(--color-link); background: var(--color-hover-surface);
+  border-color: var(--color-border); outline: none;
+}
+.ev-act.danger:hover, .ev-act.danger:focus-visible {
+  color: var(--color-error); background: var(--color-hover-surface);
+  border-color: color-mix(in srgb, var(--color-error) 35%, transparent);
+}
+.ev-act:focus-visible { outline: var(--focus-ring-width) solid var(--color-focus); outline-offset: var(--focus-ring-offset); }
+.ev-act:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 560px) {
+  /* Touch: the buttons are always visible and 44px tall, which is far too much to
+     share the title's row — and two of them would eat ~40% of a narrow row's width.
+     They drop to their own line at the foot of the block instead, leaving the title
+     and date the full width. */
+  .tl-med-head { grid-template-areas: "title title title" "meta meta meta" "note note note" ". mark actions" "callout callout callout"; }
+  .tl-med-mark, .tl-med-actions { margin-top: 6px; }
+  .ev-row-actions { justify-content: flex-end; }
+  .ev-act { min-width: 44px; min-height: 44px; justify-content: center; padding: 0 8px; border-color: var(--color-border); }
+  .ev-act .ev-act-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+
+/* Map placeholder */
+.map-pl {
+  position: relative;
+  background: linear-gradient(135deg, #d6e3d8 0%, #c3d3c8 50%, #b8d8e0 100%);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Reference table */
+.t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.t thead th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  background: var(--color-card-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.t tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-light);
+  vertical-align: top;
+}
+
+.t tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Row hover is OPT-IN, via `.t-rows-interactive` on the table. On a read-only
+   surface the rows carry no controls at all, so a hover highlight promised an
+   interaction that did not exist (#430). The one table that IS interactive
+   (NamesPanel in edit mode — click-to-edit name cell, primary star, remove ✕)
+   asks for it. */
+.t-rows-interactive tbody tr {
+  transition: background-color var(--dur-fast) ease;
+}
+
+.t-rows-interactive tbody tr:hover {
+  background: var(--color-hover-surface);
+}
+
+/* Shared DataTable primitive row hover (ui/DataTable) */
+.dt-row {
+  transition: background-color var(--dur-fast) ease;
+}
+.dt-row:hover {
+  background: var(--color-hover-surface);
+}
+
+/* Audit: per-row Revert button reveals on row hover */
+.audit-revert {
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+.dt-row:hover .audit-revert,
+.audit-revert:focus-visible {
+  opacity: 1;
+}
+
+/* Audit date-range calendar (react-day-picker) themed to app tokens */
+.audit-daterange {
+  --rdp-accent-color: var(--color-primary);
+  --rdp-accent-background-color: var(--color-surface-2);
+  --rdp-today-color: var(--color-link);
+  --rdp-day-width: 34px;
+  --rdp-day-height: 34px;
+  --rdp-font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text);
+}
+.audit-daterange .rdp-day_button {
+  position: relative;
+  color: var(--color-text);
+}
+.audit-daterange .rdp-has-entries .rdp-day_button::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-link);
+}
+
+/* ============================================
+   SECTION 5: UTILITY CLASSES
+
+   Reusable component classes built from the
+   theme tokens above. Use these in markup:
+   .card, .card-interactive
+   .badge-living, .badge-deceased, .badge-unknown
+   .avatar-male, .avatar-female, .avatar-neutral
+   ============================================ */
+
+/* ─── LEGACY ALIASES (retire during per-surface migration / final cleanup sweep) ───
+   The classes below (.card*, .badge-*, .section-card, .card-interactive,
+   .page-empty) are no longer the implementation for the ui/* primitives — those
+   now own their styling as Tailwind utility strings. These remain only so existing
+   call sites keep rendering. Do NOT use them in new code (the ESLint guardrail
+   warns). The unlayered footgun set was dissolved in #331: .pill / .input-field* /
+   .link-view / .cite / .font-serif retired; .text-date renamed to .date-mono;
+   .sidepanel / .note / .tab / .badge-info / .badge-warning deleted; .mono layered.
+   #310/#331/#80: the dead .btn / .btn-primary/-secondary/-danger/-outline/-ghost
+   button classes (0 call sites — ui/Button uses utilities) were removed, killing
+   the dual-button system; only .btn-glow (Button primary) + .btn-close remain.
+   See issue #80. */
+
+/* Card styles */
+@layer components {
+.card {
+  @apply bg-card border border-border rounded-card shadow-card;
+}
+}
+
+/* ---- Button glow (the kit "pop") ----
+   Soft ink glow + hover lift, added by the ui/Button *primary* variant via
+   the `btn-glow` class. The `.btn-primary/-secondary/-danger` classes this rule
+   used to share selectors with were a dead second button system (0 call sites) and
+   were removed (#310/#331/#80 — dual-button consolidation); only `.btn-glow` is live. */
+/* Gated on :not(:disabled), not :enabled: a Button rendered as a link (<a>) never
+   matches :enabled, but should still glow. Disabled buttons neither glow nor lift (#753). */
+.btn-glow:not(:disabled) {
+  box-shadow: 0 2px 6px -3px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+.btn-glow:not(:disabled):hover:not(:active) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Same selector as the lift, so it actually wins (a bare .btn-glow:hover lost on
+     specificity and never applied). */
+  .btn-glow:not(:disabled):hover:not(:active) { transform: none; }
+}
+
+/* Card `interactive` (ui/Card): lift, warm shadow and a neutral strong edge when
+   pointed at, by hover or keyboard, including focus on a link that wraps the card
+   (PlaceCard). Layered, so a call site's utilities still win. */
+@layer components {
+  .card-interactive {
+    transition: box-shadow var(--dur-fast), transform var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
+  }
+  .card-interactive:hover,
+  .card-interactive:focus-visible,
+  :focus-visible > .card-interactive {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+    border-color: var(--color-text-muted);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card-interactive:hover,
+    .card-interactive:focus-visible,
+    :focus-visible > .card-interactive { transform: none; }
+  }
+}
+
+/* Button `tonal`: a translucent copper wash with a copper-tinted edge, for a record's
+   own Edit beside navigation outlines (the person hero). Mixed from --color-primary
+   and the control edge, so it follows the theme and the dark island. */
+.btn-tonal {
+  background: color-mix(in srgb, var(--color-primary) 24%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-control-border, var(--color-border)));
+}
+.btn-tonal:enabled:hover { background: color-mix(in srgb, var(--color-primary) 38%, transparent); }
+
+/* Expands a small control's HIT AREA to 44x44 without changing a pixel of how it
+   looks (#431). The remove (x) on name, alias and relationship rows measured 19x22
+   on a fine pointer — under the WCAG 2.2 AA 24px floor and well under the 44px
+   touch guidance — but drawing it at 44px would make the delete control the
+   heaviest thing in a 13px row, heavier than the name it removes.
+
+   A transparent, centred ::after carries the extra target instead. Sized (not
+   inset) so it lands on 44 regardless of the button's own box, and centred so it
+   grows evenly in all four directions.
+
+   Two rules for using it:
+   - The element must establish a containing block. Add Tailwind's `relative`
+     unless it is already positioned; this class deliberately does NOT set
+     `position`, so it can't fight an `absolute` utility on the same element.
+   - Keep 44px of clear space around it. Two haloes that overlap would make one
+     control steal the other's clicks. */
+.tap-44::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+/* Interactive-row hover lift (relationship person rows, etc.). */
+/* Tint only, like table rows (#753): rows in a list that each jump 1px feel jittery. */
+.row-lift { transition: background var(--dur-fast); border-radius: 8px; }
+.row-lift:hover { background: var(--color-hover-surface); }
+
+/* Hero location "See Journey" affordance — hint fades in on hover/focus. */
+.hero-geo-map { position: relative; }
+.hero-journey-hint {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(28, 20, 12, 0.62);
+  border-radius: 999px;
+  padding: 3px 9px;
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+  pointer-events: none;
+}
+.hero-geo-map:hover .hero-journey-hint,
+.hero-journey-btn:focus-visible .hero-journey-hint { opacity: 1; }
+/* Keep the MapLibre credits ⓘ above the View journey overlay and clickable (#740). */
+.hero-geo-map .maplibregl-ctrl-bottom-right { z-index: 4; }
+
+/* Close/dismiss icon button */
+.btn-close {
+  @apply p-2 rounded-lg text-text-secondary hover:text-text hover:bg-hover-surface transition-colors;
+}
+
+/* Gender avatar gradients */
+.avatar-male {
+  background: linear-gradient(to bottom right, var(--color-male), var(--color-male-dark));
+}
+
+.avatar-female {
+  background: linear-gradient(to bottom right, var(--color-female), var(--color-female-dark));
+}
+
+.avatar-nonbinary {
+  background: linear-gradient(to bottom right, var(--color-nonbinary), var(--color-nonbinary-dark));
+}
+
+.avatar-neutral {
+  background: linear-gradient(to bottom right, var(--color-neutral), var(--color-neutral-dark));
+}
+
+/* Section card (standard content container) + empty-state container.
+   #310: wrapped in @layer components so utilities can override them. */
+@layer components {
+.section-card {
+  @apply bg-card rounded-card shadow-card p-6;
+}
+
+/* Empty state container */
+.page-empty {
+  @apply bg-card rounded-xl shadow-sm p-8 text-center;
+}
+}
+
+/* iOS auto-zoom guard for form fields — a font-size bump to 16px on coarse
+   pointers ONLY (no padding/border, so it can never override a field's own
+   padding utilities like ui/Input's pl-9 icon padding — see the ui/Input
+   icon-padding regression test). Both field sizes are sub-16px (md 14px /
+   sm 13px, via ui/Input's fieldClass()), so both opt in. The legacy
+   `.input-field` / `.input-field-sm` classes are retired (#331) — field chrome
+   now lives in ui/Input as utility strings. */
+@media (hover: none) and (pointer: coarse) {
+  .input-nozoom {
+    font-size: 16px;
+  }
+}
+
+/* Segmented-control option (Sex / Living status) keyboard focus */
+.segment-option:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* iOS Safari autofill background override.
+   WebKit overrides background-color on autofilled inputs; the only reliable
+   fix is a large inset box-shadow that paints over the forced white fill. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--color-card) inset !important;
+  box-shadow: 0 0 0 1000px var(--color-card) inset !important;
+  -webkit-text-fill-color: var(--color-text) !important;
+  caret-color: var(--color-text);
+}
+
+/* Zoom indicator tick — brief scale+fade pop when the number changes */
+@keyframes zoom-tick {
+  0%   { opacity: 0.4; transform: scale(0.88); }
+  60%  { opacity: 1;   transform: scale(1.06); }
+  100% { opacity: 1;   transform: scale(1);    }
+}
+
+/* ============================================
+   MOTION TOOLKIT
+   Subtle, reusable entrance animations + skeleton.
+   Applied to modals (backdrop/panel), content swaps,
+   and loading placeholders. Disabled wholesale by the
+   prefers-reduced-motion guard at the end of this file.
+   ============================================ */
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* Mobile full-screen push panel (SourceModal detail/editor) — slide in from the right. */
+@keyframes push-in {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.animate-backdrop-in { animation: backdrop-in var(--dur-base) ease-out; }
+.animate-modal-in    { animation: modal-in var(--dur-base) ease-out; }
+.animate-fade-in-up  { animation: fade-in-up var(--dur-base) ease-out; }
+.animate-push-in     { animation: push-in 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-push-in { animation: none; }
+}
+
+.skeleton {
+  background: var(--color-card-alt);
+  border-radius: 0.5rem;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Hide React Flow minimap on mobile */
+@media (max-width: 768px) {
+  .react-flow__minimap {
+    display: none;
+  }
+}
+
+/* Responsive 2-column layouts.
+   Inline `style={{ gridTemplateColumns: ... }}` doesn't collapse on mobile;
+   these classes pair desktop ratios with a single-column collapse <768px. */
+.layout-2col-rail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+.layout-2col-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.layout-2col-case {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 28px;
+  align-items: start;
+}
+.layout-2col-family {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.hero-flex {
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
+}
+.hero-geo {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Person hero — framed rectangular portrait (desktop). Museum mat + date
+   plate; holds either a real photo or the engraved-monogram placeholder. */
+.hero-portrait-frame {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  /* The photo/monogram always fully covers the frame, so this background is only
+     ever seen in the brief window before the portrait decodes on a cold/hard load.
+     It MUST stay dark: this frame always sits on the dark hero band, and a light
+     fill here paints a white-box flash while the image loads (the profile-image
+     cold-load flash). Reuse the hero's empty-panel fill so the loading portrait
+     reads like the empty geo panel beside it, not a white card. */
+  background: var(--hero-panel-bg, rgba(255, 255, 255, 0.07));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 0 0 7px rgba(255, 255, 255, 0.06),
+    0 14px 24px -10px rgba(0, 0, 0, 0.6);
+}
+/* ── Living-status mark (ui/StatusMark, audit §13 addendum 2026-09-23) ──
+   By default a small plain dot beside its word: filled green living, grey deceased,
+   hollow ring unknown. The Accessibility option "Show status symbols" sets
+   html[data-status-symbols="on"]: the dot grows and carries † (U+2020 DAGGER in Inter)
+   for deceased and ? for unknown; living stays a plain dot. With symbols on, 14px is
+   the floor: below it the dagger is ~6px tall at 1x and reads as a keyhole. */
+.status-mark {
+  --status-size: 8px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--status-size);
+  height: var(--status-size);
+  border-radius: 9999px;
+  color: var(--color-on-status);
+}
+.status-mark[data-size="md"] { --status-size: 11px; }
+.status-mark[data-size="lg"] { --status-size: 13px; }
+.status-mark > * { display: none; }
+html[data-status-symbols="on"] .status-mark { --status-size: 14px; }
+html[data-status-symbols="on"] .status-mark[data-size="md"] { --status-size: 16px; }
+html[data-status-symbols="on"] .status-mark[data-size="lg"] { --status-size: 20px; }
+html[data-status-symbols="on"] .status-mark > * { display: block; }
+/* Tree cards (#736): one size in every state. 14px is the smallest that keeps † legible,
+   so the symbols option adds the glyph without growing the mark. */
+.status-mark[data-size="tree"],
+html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 14px; }
+.status-mark[data-status="living"] { background: var(--color-status-living); }
+.status-mark[data-status="deceased"] { background: var(--color-status-deceased); }
+.status-mark[data-status="unknown"] {
+  background: transparent;
+  color: var(--color-status-unknown);
+  box-shadow: inset 0 0 0 1.25px currentColor;
+}
+.status-mark svg { width: 100%; height: 100%; }
+.status-mark .status-dagger {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 800;
+  font-size: calc(var(--status-size) * 0.82);
+  line-height: 1;
+  transform: translateY(4%);
+}
+/* On an avatar's corner, with a cutout ring in the colour behind the avatar. */
+.status-mark.status-corner {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  box-shadow: 0 0 0 2px var(--status-cutout, var(--color-card));
+}
+/* Tree portrait card: raised inside the photo so the ring clears the photo/name seam. */
+.status-mark.status-corner.status-tree { right: 6px; bottom: 6px; }
+/* Tree card ages (#736 B7, "split on a fade"): a soft dark fade rises from the photo's
+   foot with the age at the left, level with the mark at the right. White on the fade's
+   foot over a white photo is 6.4:1. The bar card shows its age before the mark. */
+.tree-card-fade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 24px;
+  background: linear-gradient(to bottom, rgba(28, 25, 23, 0), rgba(28, 25, 23, 0.7));
+  pointer-events: none;
+}
+.tree-card-age {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+.tree-bar-age {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.status-mark.status-corner[data-status="unknown"] {
+  background: var(--status-cutout, var(--color-card));
+  box-shadow: inset 0 0 0 1.25px currentColor, 0 0 0 2px var(--status-cutout, var(--color-card));
+}
+
+/* ── Sourcing meter (ui/SourcingMeter): one segment per fact up to 8, then a bar ── */
+.sourcing-meter { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; font-size: var(--text-sm); color: var(--color-text-secondary); }
+.sourcing-meter[data-complete="true"] { color: var(--color-evidence); }
+.sourcing-meter .sm-track { display: inline-flex; gap: 3px; width: 96px; height: 8px; }
+.sourcing-meter .sm-track > i { flex: 1 1 0; min-width: 0; border-radius: 2px; background: var(--color-border); }
+.sourcing-meter .sm-track > i[data-on] { background: var(--color-evidence); }
+.sourcing-meter .sm-bar { display: inline-block; width: 96px; height: 8px; border-radius: 4px; overflow: hidden; background: var(--color-border); }
+.sourcing-meter .sm-bar > i { display: block; height: 100%; border-radius: 4px; background: var(--color-evidence); }
+.sourcing-meter .sm-info { position: relative; display: inline-flex; }
+.sourcing-meter .sm-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: var(--color-text-muted); cursor: pointer; }
+.sourcing-meter .sm-info-btn:hover { color: var(--color-text); }
+/* The meter only renders on the person hero (a dark island in both themes), so the
+   tip takes the hero surface and the island's light text and hairline. */
+.sourcing-meter .sm-info-tip { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); z-index: 20; width: max-content; max-width: 260px; white-space: normal; padding: 8px 10px; border-radius: 8px; background: var(--color-hero-bg); border: 1px solid var(--color-border); color: var(--color-text); font-family: var(--font-sans); font-size: var(--text-meta); line-height: 1.45; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
+
+.hero-portrait-invite {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: rgba(43, 33, 25, 0.62);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+.hero-portrait-frame:hover .hero-portrait-invite,
+.hero-portrait-frame:focus-within .hero-portrait-invite {
+  opacity: 1;
+}
+.hero-portrait-invite:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+  opacity: 1;
+}
+
+/* Right rail cards: the quietest tier — no shadow, only the faint hairline the
+   mockup used (barely-there; the white-on-parchment edge does the rest). */
+.person-rail > .card {
+  box-shadow: none;
+  border: 1px solid var(--color-border-light);
+}
+
+/* Sources cited (#904). The desktop copy tops the sticky rail, its list capped so
+   the rest of the rail stays reachable. At one column the rail copy hides and the
+   copy after the timeline shows, dressed like a rail card. */
+.sources-cited-inline { display: none; }
+.sources-cited-rail .sources-cited-list { max-height: 40vh; overflow-y: auto; }
+@media (max-width: 768px) {
+  .sources-cited-rail { display: none; }
+  .sources-cited-inline {
+    display: block;
+    box-shadow: none;
+    border: 1px solid var(--color-border-light);
+  }
+}
+
+/* A main-column section (DetailSection, #764): one card with its heading inside.
+   The panel's own card folds into it, so the left column matches the rail. */
+.detail-section > .card {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  margin: 0;
+  padding-top: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+}
+
+@layer components {
+  /* Reusable white-on-dark FG scale for DARK ISLANDS — surfaces that stay dark in
+     BOTH themes (the person/family hero + the photo lightbox). AA-tuned once here
+     so any dark island inherits accessible text/border/date colours without
+     re-tuning; extenders add their own surface background (+ any placeholder
+     tokens). See design-system.md §Dark islands + issue #332. */
+  .dark-island,
+  .hero-dark {
+    --color-card: rgba(255,255,255,0.10);
+    --color-surface-2: rgba(255,255,255,0.13);
+    --color-text: #fff;
+    --color-text-secondary: rgba(255,255,255,0.82);
+    /* 0.52 was 4.1:1 on a dark island; 0.66 clears AA (5.6:1) in both themes. */
+    --color-text-muted: rgba(255,255,255,0.66);
+    /* Dark islands are dark in BOTH themes, so dates inside need a light-on-dark
+       amber. The global light --color-date (#9A4C08 — darkened for AA on light
+       surfaces, #333) is unreadable on a dark island. #E9A94F (#688) sits in the
+       list-date amber family: 4.8–6.3:1 from the hero's midpoint to its dark end (the
+       dark theme's top-left corner stop is 4.2:1; dates don't render there). Evidence
+       text on the island follows it. */
+    --color-date: #E9A94F;
+    --color-evidence: #E9A94F;
+    /* Links and focus rings on the island use the light ink in BOTH themes: the light
+       theme's #475569 is ~2:1 on a dark island. #C3CEDC is 5.8:1 at the hero's
+       lightest stop. */
+    --color-link: #C3CEDC;
+    --color-focus: #C3CEDC;
+    /* Warnings on the island take the dark pair in both themes, as hero dates take
+       the island amber (#833): the "dates to check" flag on the family hero. */
+    --color-warning-text: #FDBA74;
+    --color-warning-bg: #431407;
+    --color-warning-border: #9A3412;
+    --color-warning-edge: #F97316;
+    /* Status marks on the island use the light set in both themes. */
+    --color-status-living: #34D399;
+    --color-status-deceased: #D6D3CC;
+    --color-status-unknown: #D6D3CC;
+    --color-on-status: #1C1917;
+    --color-border: rgba(255,255,255,0.28);
+    /* Outline-button edge on the island (#694, LAY-3): every hero outline action
+       (Edit, View in tree, Descendants) is the same weight, 55% white (5.1:1). The
+       0.28 hairline above is for dividers, not controls. */
+    --color-control-border: rgba(255,255,255,0.55);
+    /* Field chrome for inline editors sitting ON the dark island (e.g. the hero
+       identity editor). Without these two, FieldLabel (var(--text-2)) rendered
+       dark-on-dark and SegmentedControl (bg var(--color-card-alt)) rendered a
+       light beige box with light text — both invisible in light mode. `--text-2`
+       is a separate alias that the --color-text-secondary override above does not
+       reach, so it must be re-pointed at that (now-light) token here. */
+    --text-2: var(--color-text-secondary);
+    --color-card-alt: rgba(255,255,255,0.12);
+    /* SegmentedControl's selected ink fill (#691). Its default is text-on-card, and
+       the island makes that white text at 10% on a white fill; pin a solid dark ink. */
+    --color-segment-on: #FFFFFF;
+    --color-on-segment: #1C1917;
+    /* Error text on the island (a field error, the editor's quiet Delete; #759): the
+       light theme's #B91C1C is ~2:1 here. red-300 is 7:1+ across the gradient. */
+    --color-error: #FCA5A5;
+  }
+  .dark-island {
+    color: var(--color-text);
+  }
+  .hero-dark {
+    --hero-gradient: linear-gradient(135deg, color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-hero-tint)) 0%, color-mix(in srgb, var(--color-hero-bg) 90%, #000) 100%);
+    background: var(--hero-gradient);
+    border-radius: var(--radius-card);
+    padding: 20px;
+    box-shadow: var(--shadow-hero);
+    color: var(--color-text);
+    /* Hero placeholder scale — white opacities with no semantic token home:
+       the empty geo panel fill, the decorative map-pin stroke, and the faint
+       "unknown" placeholder text (deliberately quieter than --color-text-muted). */
+    --hero-panel-bg: rgba(255, 255, 255, 0.07);
+    --hero-fg-dim: rgba(255, 255, 255, 0.45);
+    --hero-fg-faint: rgba(255, 255, 255, 0.3);
+  }
+  /* The phone slim bar (#1099): solid slate in light mode, laid over the hero gradient,
+     which shows through in dark mode where --color-slim-bar is transparent. */
+  .hero-dark.mp-slim-bar {
+    /* A solid colour under the layers too: Safari 26 tints the notch from the top fixed
+       or sticky bar's background colour, and an image alone leaves it transparent. */
+    background: linear-gradient(var(--color-slim-bar), var(--color-slim-bar)), var(--hero-gradient), var(--color-slim-bar-solid);
+  }
+}
+/* Native <select> on a dark island. `fieldClass()` paints the control with
+   `bg-card`, which the tokens above remap to a 10%-white translucency — fine
+   for the closed control (the dark gradient shows through) but fatal for the
+   native option popup, which composites that 10% white over the browser's own
+   light backdrop and renders white text on near-white. Options are OS-drawn
+   chrome, so they cannot inherit a translucent token: give the control an
+   OPAQUE dark background and declare the colour scheme so the popup is drawn
+   dark-with-light-text in both themes. Deliberately UNLAYERED (not inside
+   `@layer components` like the token block above) — Tailwind emits `bg-card`/
+   `text-text` into `@layer utilities`, which always wins over `@layer
+   components` regardless of selector specificity, so a components-layer rule
+   here is silently overridden by fieldClass()'s own bg-card/text-text classes.
+   Unlayered CSS outranks every `@layer`, so this is the only placement that
+   actually takes effect. See follow-up item 12. */
+.dark-island select,
+.hero-dark select {
+  background-color: var(--color-hero-select);
+  color: #fff;
+  color-scheme: dark;
+}
+.dark-island select option,
+.hero-dark select option {
+  background-color: var(--color-hero-select);
+  color: #fff;
+}
+/* "Skip to content" (#798, KB-1): off-screen until it takes focus, then a card in
+   the top-left corner above the nav. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+/* Main takes focus only from the skip link; a ring around the whole page says nothing. */
+main#main-content:focus {
+  outline: none;
+}
+/* The collections pattern's inline panel (#760): adding or editing an event, child,
+   name or note opens this in place. One style for add and edit — no dashed "new"
+   box, no eyebrow; the inset bar marks the row being worked on. */
+.inline-panel {
+  background: var(--color-card-alt);
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+/* The event editor's notes rail inside a mobile sheet (#797, M-2): the sheet is
+   already the surface, so the rail's card chrome would nest a third card. */
+.sheet-flat .card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+/* A page body behind an in-place hero editor (#759): pair with the `inert`
+   attribute so it is dimmed, unclickable and out of the tab order together. */
+.edit-dimmed {
+  opacity: 0.4;
+  transition: opacity 150ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .edit-dimmed { transition: none; }
+}
+.partnership-ribbon {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 60px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+/* The ribbon's centre track is a fixed 60px, but a full year range
+   ("1910–1947" in date-mono 13px) measures ~70px. Left alone the label wraps to
+   two flush-left lines ("1910–" / "1947") that read off-centre under the ⚭.
+   Keeping it on one line and centring it lets the few px of excess spill evenly
+   into the 14px gaps either side, which is what "centred under the glyph" means. */
+.partnership-ribbon > .partnership-center {
+  text-align: center;
+}
+.partnership-ribbon > .partnership-center > * {
+  white-space: nowrap;
+}
+
+/* Cases tile grid — two columns on desktop, single column on mobile */
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .cases-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-2col-rail,
+  .layout-2col-content,
+  .layout-2col-case,
+  .layout-2col-family {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  /* Stacked, the partner cards stay left-aligned like every other card (#807);
+     only the ⚭ strip between them centres. */
+  .partnership-ribbon {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .partnership-center {
+    flex-direction: row;
+    gap: 8px;
+    padding: 4px 0;
+    border-top: 1px solid var(--color-surface-2);
+    border-bottom: 1px solid var(--color-surface-2);
+  }
+  /* Person hero stacks and centers on mobile */
+  .hero-flex {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    text-align: center;
+  }
+  .hero-flex .row {
+    justify-content: center;
+  }
+  /* Geolocation panel is hidden on mobile to keep the hero compact. */
+  .hero-geo {
+    display: none;
+  }
+  /* Right rails stop sticking on mobile so they don't pin off-screen */
+  .layout-2col-rail > :nth-child(2),
+  .layout-2col-case > :nth-child(2) {
+    position: static !important;
+    top: auto !important;
+  }
+  /* Sticky search/filter header for list pages (people, families).
+     This 768px block still applies at exactly 768px (e.g. iPad portrait),
+     where the app-shell scroller (<=767px) is NOT engaged and the document
+     itself scrolls under the sticky nav — so filters must clear the nav
+     by --nav-h here (two rows at 768: #806). The narrower app-shell breakpoint
+     below (<=767px) overrides this back to top: 0 once .app-scroll takes over. */
+  .mobile-sticky-filters {
+    position: sticky;
+    top: var(--nav-h);
+    z-index: 20;
+    background: var(--surface);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+  /* Filter chips scroll horizontally on mobile instead of wrapping.
+     Scoped under .mobile-sticky-filters so it beats the base .list-filter-chips
+     rule on specificity regardless of source order. */
+  .mobile-sticky-filters .list-filter-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-sticky-filters .list-filter-chips::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Filter chip row — wraps on desktop, scrolls on mobile (see media query) */
+.list-filter-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Horizontal-scrolling strip (e.g. the library tab headers). Scrolls on narrow
+   widths with no visible scrollbar, and pins overflow-y to hidden so the
+   horizontal scrollbar's height can't spawn a spurious vertical scrollbar
+   (overflow-x:auto otherwise computes overflow-y:visible to auto). */
+.hscroll-strip {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.hscroll-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Single height for inline controls that sit side by side — navbar search and
+   tree switcher, the Places explore/cards switcher. Each control previously
+   chose its own padding, so neighbours never lined up. 36px is the navbar
+   search button's existing height (h-9), which is the control the others have
+   to match. SegmentedControl is the only consumer so far; the navbar and Places
+   controls adopt it in tranches 2 and 7, which is when they actually line up.
+
+   NOT named --h/--radius/--text/etc: Tailwind 4 auto-maps a handful of custom
+   property names onto its utilities, and a collision would silently retheme the
+   whole app (#80).
+
+   Coarse pointers get 50px so a segmented control's inner buttons still clear
+   the 44px tap target: the container is border-box, so 44 + 2px padding and
+   1px border a side = 50. Measured, not guessed — a 48px container leaves a
+   42px content box and the 44px buttons spill out of it. */
+:root {
+  --control-h: 36px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h: 50px;
+  }
+}
+
+/* min-height, NOT height: a fixed height clips a segment label that wraps to two
+   lines (fr "Non binaire" / ru "Небинарный" in a fullWidth control on a narrow
+   non-touch window — measured at 40.8px before this token existed, so a hard
+   36px would have pushed the second line through the bottom border). Sitting in
+   the utilities layer keeps a caller's h-* able to win. */
+@layer utilities {
+  .control-h {
+    min-height: var(--control-h);
+  }
+}
+
+/* Themed scroll container — see app/components/ui/ScrollArea.tsx.
+   Scrollbar colours have no Tailwind utility equivalent, so they live here.
+
+   The track is TINTED rather than transparent: the component keeps the rail
+   painted (overflow: scroll) so the reserved column reads as chrome instead of
+   as an unexplained gap beside a full-width row. A transparent track would
+   defeat that — it shows the container's own background, which is what made the
+   column look empty in the first place.
+
+   Colour only, no scrollbar-width: panels use the OS scrollbar width, same as
+   the document. The ::-webkit-scrollbar block this rule used to carry was dead
+   code — Blink ignores those pseudo-elements on any element that also sets
+   scrollbar-color, confirmed by measurement (the panel reserves the OS 15px,
+   not the 10px that block asked for). Keeping it would only have applied in
+   browsers too old for scrollbar-color, and there it would have contradicted
+   this decision by rendering a narrow bar. */
+.scroll-area {
+  scrollbar-color: var(--color-border) var(--color-surface-2);
+}
+
+/* .filter-chip retired — the chip is now the ui/FilterChip primitive (Tailwind
+   utilities). The .list-filter-chips scroll container above is unrelated (kept). */
+
+/* Dark mode minimap — system preference */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .react-flow__minimap {
+    background-color: var(--color-card);
+  }
+  :root:not(.light) .react-flow__minimap-mask {
+    fill: rgba(12, 10, 9, 0.7) !important;
+  }
+}
+
+/* Dark mode minimap — manual toggle */
+html.dark .react-flow__minimap {
+  background-color: var(--color-card);
+}
+html.dark .react-flow__minimap-mask {
+  fill: rgba(12, 10, 9, 0.7) !important;
+}
+
+/* MapLibre popups — MapLibre hardcodes a white background with inherited text
+   colour, so in dark mode the inherited near-white text sits on white and is
+   invisible. Theme the popup with the app's surface/text variables so it reads
+   in both modes, and recolour the little tip triangle to match. `!important`
+   beats MapLibre's own single-class rules, which load after globals.css and
+   would otherwise win at equal specificity (matches .react-flow__minimap-mask). */
+.maplibregl-popup-content {
+  background: var(--color-card) !important;
+  color: var(--color-text) !important;
+  border: 1px solid var(--color-border) !important;
+  /* Inset content from the close button (its default jams the × into the
+     top-right corner: right:0; top:0). */
+  padding-right: 24px !important;
+}
+.maplibregl-popup-content a {
+  color: var(--color-text) !important;
+}
+/* Tip triangle — the border side facing the content carries the fill colour. */
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--color-card) !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--color-card) !important;
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--color-card) !important;
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--color-card) !important;
+}
+/* Close button — inset it so the × isn't jammed against the rounded edge, and
+   colour it for the themed surface. */
+.maplibregl-popup-close-button {
+  right: 6px !important;
+  top: 4px !important;
+  padding: 0 3px !important;
+  line-height: 1.1;
+  color: var(--color-text-muted) !important;
+}
+.maplibregl-popup-close-button:hover {
+  background: var(--color-hover-surface) !important;
+  color: var(--color-text) !important;
+}
+
+/* Map pins. MapLibre positions a marker by writing `transform` on the element it was
+   given, so `.location-map-pin` (the root) must carry no transform of ours — every
+   treatment goes on the inner body. MapLibre also makes that root the marker's
+   role="button" tab stop, so a selectable pin (#466) takes its cursor and focus ring
+   there rather than nesting a button of ours inside it. */
+.location-map-pin-body {
+  display: block;
+  line-height: 0;
+  position: relative;
+  transform-origin: bottom center;
+  transition: transform var(--dur-fast) ease;
+}
+.location-map-pin.is-clickable {
+  cursor: pointer;
+}
+.location-map-pin.is-clickable:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 4px;
+}
+/* Draggable pin (edit mode, #566). The SVG is 24×32, well under a 44px touch target, so
+   the pin grows an invisible one — only while draggable, since on a multi-pin map these
+   boxes would overlap and eat map panning. */
+.location-map-pin.is-draggable {
+  cursor: grab;
+}
+.location-map-pin.is-draggable:active {
+  cursor: grabbing;
+}
+.location-map-pin.is-draggable .location-map-pin-body::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 44px;
+  height: 44px;
+  transform: translateX(-50%);
+}
+
+/* Highlighted pin (a hovered list row, #416): SIZE + NAME, never colour — the pin's own
+   accent fill is unchanged, so the cue survives any colour vision. */
+.location-map-pin.is-highlighted {
+  z-index: 2;
+}
+.location-map-pin.is-highlighted .location-map-pin-body {
+  transform: scale(1.35);
+}
+.location-map-pin-label {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  line-height: 1.4;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-size: 9px;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+/* Only a single-pin highlight is named: a jurisdiction hover lights every pin inside it,
+   and five chips in one county stack into an unreadable pile. Size still carries it. */
+.location-map-pin.is-highlighted.show-label .location-map-pin-label {
+  display: block;
+}
+
+/* Respect users who prefer reduced motion — neutralizes every animation and
+   transition (the motion toolkit, zoom-tick, hover lifts, button presses). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   NAV REDESIGN — motion
+   ============================================ */
+@keyframes nav-fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.nav-anim-fade-up { animation: nav-fade-in-up var(--dur-base) ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-anim-fade-up { animation: none; }
+}
+
+/* --sat = the top safe-area inset. Drives the nav's top padding and --nav-h so the
+   nav content clears the notch and full-height fills never overshoot the scroll
+   region. Nav height = the 3.5rem (h-14) bar + that inset (0 off-notch / on desktop).
+   The nav is also the Safari-26 top-bar tint source: it's the highest-z fixed element
+   at the top edge (z-40, opaque slate), which is what Safari 26 samples — provided no
+   higher-z fixed overlay covers the top (see the body::after grain, kept below it). */
+:root { --sat: env(safe-area-inset-top, 0px); --nav-h: calc(3.5rem + var(--sat)); }
+/* md–lg: TopRail adds a 2.5rem row for the labelled destinations (#806). */
+@media (width >= 48rem) and (width < 64rem) {
+  :root { --nav-h: calc(3.5rem + 2.5rem + var(--sat)); }
+}
+
+/* Nav pads its content clear of the top safe-area inset (notch), and its slate
+   background fills that zone so Safari 26 tints the top bar from it. */
+.app-nav { padding-top: var(--sat); }
+
+/* A redesigned phone screen with its own dark header (the list kit's
+   MobileListHeader, #1058) hides the app top bar while it is mounted, and --nav-h
+   becomes that header's height so everything that clears "the bar" clears it. */
+@media (width < 48rem) {
+  html[data-own-header] .app-nav { display: none; }
+  html[data-own-header] { --nav-h: calc(54px + var(--sat)); }
+  /* The person and family heroes are the header (#1099): nothing sits above them, so the
+     slim bar takes the top edge and grows by the notch inset. */
+  html[data-own-header="hero"] { --nav-h: 0px; }
+  html[data-own-header="hero"] .mp-root { --mp-sat: var(--sat); --mp-bar-h: calc(48px + var(--sat)); }
+}
+/* The notch tint in a Safari 26 tab (#1099). Safari ignores theme-color there. It
+   hit-tests the top edge's midpoint 4px down, walks up from what it hits to the first
+   fixed or sticky element at least 90% of the viewport wide, and takes the first
+   background-color on the way from a box over 10px tall (WebKit
+   LocalFrameView::fixedContainerEdges). Anything that scrolls, fades or bounces away
+   from the top edge (a hero, the home band, the slim bar fading out, the rubber-band
+   at the top) hands the bar back to the page colour, so one fixed strip owns the edge
+   on every phone screen: always there, the slim bar's one solid colour, over the bars
+   (z-30 / z-40) and under sheets and dialogs (z-50), which tint or dim the bar while
+   open. Safari reads its background-color whatever its opacity, as long as that is 0.1
+   or more, so at 0.12 it barely shows. Browser tabs only: the home-screen app draws the
+   page itself under the status bar. */
+.top-edge-tint { display: none; }
+@media (width < 48rem) and (display-mode: browser) {
+  html[data-own-header] .top-edge-tint {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 12px;
+    z-index: 45;
+    pointer-events: none;
+    opacity: 0.12;
+    background-color: var(--color-slim-bar-solid);
+  }
+}
+
+/* The phone person page (#1046). Its slim name bar sits under the app top bar, and
+   the tabs stick under the bar. --mp-sat is the notch inset the bar pads by when
+   nothing sits above it (0 under the app top bar). */
+.mp-root { --mp-sat: 0px; --mp-bar-h: 48px; }
+.mp-hero-name { font-size: 28px; line-height: 1.08; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.mp-monogram { font-size: 92px; font-weight: 400; line-height: 1; }
+/* Two stops: the top darkens for the glass buttons, the bottom for the name. */
+.mp-scrim { background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 25%, transparent 45%, rgba(28,20,14,0.92) 100%); }
+.mp-scrim-light { background: linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, transparent 25%, transparent 55%, rgba(20,14,10,0.62) 100%); }
+/* A place with no pin anywhere: hatched hero gradient, "Not on the map yet" (#1118). */
+.mpl-hatch { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-hero-bg) 82%, #000) 0 10px, color-mix(in srgb, var(--color-hero-bg) 70%, #000) 10px 20px); }
+/* Its citation chips stay 18px but take a 44px-tall tap (#1053). Side by side they sit 7px
+   apart, so each has 24px of its own (WCAG 2.5.8), and their taps reach half-way to the next
+   chip; a chip on its own gets the full 44. */
+.mp-root .cite-chip { position: relative; }
+.mp-root .cite-chip + .cite-chip { margin-left: 3px; }
+.mp-root .cite-chip::before { content: ''; position: absolute; inset: -13px -3px; }
+.mp-root .cite-chip:only-child::before { inset: -13px; }
+/* The phone person page's changed row flashes amber once after an edit (#1048). */
+@keyframes mp-flash { from { background-color: var(--color-evidence-soft); } to { background-color: transparent; } }
+.mp-flash { animation: mp-flash 1.6s ease-out; }
+@media (prefers-reduced-motion: reduce) { .mp-flash { animation: none; } }
+/* The phone family page's unknown partner (#1062): a hatched avatar in rows, a hatched
+   half in the hero. */
+.mf-hatch { background: repeating-linear-gradient(135deg, var(--color-surface-2) 0 4px, transparent 4px 8px); box-shadow: inset 0 0 0 1px var(--color-border); }
+.mf-monogram { font-size: 64px; font-weight: 400; line-height: 1; }
+.mf-hatch-dark { background: repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 10px, transparent 10px 20px), #2A221C; }
+/* The portrait crop's rule-of-thirds guide (#1051). */
+.mp-crop-grid {
+  background:
+    linear-gradient(to right, transparent 33.2%, rgba(255,255,255,0.18) 33.3%, transparent 33.5%, transparent 66.5%, rgba(255,255,255,0.18) 66.6%, transparent 66.8%),
+    linear-gradient(to bottom, transparent 33.2%, rgba(255,255,255,0.18) 33.3%, transparent 33.5%, transparent 66.5%, rgba(255,255,255,0.18) 66.6%, transparent 66.8%);
+}
+
+/* Desktop: shell/scroll are transparent — the document scrolls as before. */
+.app-shell { }
+.app-scroll { }
+
+/* Fill the area below the nav. Works on desktop (below the sticky nav) and
+   mobile (inside .app-scroll) because it is viewport-relative (dvh). */
+.min-h-app { min-height: calc(100dvh - var(--nav-h)); }
+
+/* --- Tree canvas: right-hand panels step aside for the person sidebar --------
+   The sidebar is an overlay pinned to the canvas's right edge, so it sat on top
+   of the minimap (bottom-right) and the zoom badge (top-right). Rather than
+   resize the canvas — which would re-fit the layout and shift the whole tree
+   every time you open a card — the right-hand React Flow panels translate clear
+   by the sidebar's own width.
+
+   One width token, consumed by both the sidebar and this offset, so they cannot
+   drift apart. The transition matches the sidebar's own 300ms ease-in-out slide.
+   Desktop only: below 768px the sidebar is a bottom sheet (see useTreePersonEditor),
+   which covers neither panel, and the minimap/controls are display:none there
+   anyway. --tree-panel-inset is set per-render by TreeVisualization. */
+:root { --tree-sidebar-w: 300px; }
+
+@media (min-width: 768px) {
+  .tree-canvas .react-flow__panel.right {
+    transform: translateX(calc(-1 * var(--tree-panel-inset, 0px)));
+    transition: transform 300ms ease-in-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-canvas .react-flow__panel.right { transition: none; }
+}
+
+/* Mobile (<=767px): scroll the DOCUMENT, like a normal web page (e.g.
+   theverge.com). An earlier inner-scroll "app-shell" (body overflow:hidden + a
+   fixed 100dvh region that scrolled internally) stopped the document from
+   scrolling — which stopped iOS Safari from ever collapsing its bottom toolbar.
+   With the toolbar permanently expanded it reserved a fixed grey strip below the
+   content that NO viewport unit (dvh/lvh) could reach. Document scroll lets the
+   toolbar collapse on scroll, so content/background bleeds to the true screen
+   edge (transparent bottom); the sticky nav (opaque, notch-filled via its own
+   env(safe-area-inset-top) padding) covers the top, and sticky footers pin to
+   bottom:0 + env(safe-area-inset-bottom) so their colour bleeds to the edge. */
+@media (max-width: 767px) {
+  /* The nav is sticky in the document flow, so list filters clear it by --nav-h
+     (not 0 — there is no inner scroller starting below the nav any more). */
+  .mobile-sticky-filters { top: var(--nav-h); }
+}
+
+/* ── Edit-pin popover (LocationField) ──────────────────────────────────────
+   Candidate rows and footer actions are net-new interactive surface, so they
+   carry full interaction states and clear the 44px touch minimum on coarse
+   pointers. Amber is reserved for dates/citations, so neither footer action
+   uses it: the coords toggle is muted, Remove pin is the error token. */
+.pin-candidate {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pin-candidate:hover { background: var(--color-hover-surface); }
+.pin-candidate:focus-visible {
+  /* Inset: the row fills the popover edge to edge, so an outer ring would clip. */
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.pin-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+}
+
+.pin-footer-action {
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.pin-footer-action:hover { color: var(--text); text-decoration: underline; }
+.pin-footer-action:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: var(--focus-ring-offset);
+}
+.pin-footer-action--danger { color: var(--error); }
+.pin-footer-action--danger:hover { color: var(--error); }
+
+@media (pointer: coarse) {
+  .pin-candidate { min-height: 44px; display: flex; align-items: center; }
+  .pin-footer-action { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
+/* Focus ring (#690). The base rule gives every focusable element the ring without a
+   class; primitives also carry `focus-ring` so the ring survives a caller's
+   utility-layer outline classes. Hero-portrait and inset pin rows keep their own
+   rules above because their geometry needs an inset ring. */
+@layer base {
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+/* Inset variant for full-width rows inside clipped (overflow-hidden) popovers. */
+@utility focus-ring-inset {
+  &:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: calc(-1 * var(--focus-ring-width));
+  }
+}
+
+/* The top nav is slate in both themes, where the ink ring is ~1.3:1: the ring turns
+   white there (7.6:1), and back to ink inside its card-coloured popovers. `--focus`
+   holds the :root (theme-resolved) focus colour. */
+.app-nav { --color-focus: #FFFFFF; }
+.app-nav [role="menu"],
+.app-nav [role="dialog"] { --color-focus: var(--focus); }
+
+/* Composite fields (a borderless input inside a styled shell, e.g. SearchBar): the
+   shell draws the ring while its text field has keyboard focus. */
+@utility focus-ring-within {
+  &:has(input:focus-visible, textarea:focus-visible) {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+}
+
+/* Native checkboxes, radios and range sliders take the ink action colour (#693,
+   BTN-6) instead of the browser's own blue. */
+:root { accent-color: var(--color-primary); }
+
+/* Interaction baseline (#706, INT-4/INT-6). Tailwind's preflight gives <button> the
+   default arrow; every enabled button-like control gets the pointer, and every link
+   or button eases its colour changes on --dur-fast instead of snapping. :where()
+   keeps both at zero specificity so any utility (cursor-*, transition-*) wins. */
+@layer base {
+  :where(button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, label[for]) {
+    cursor: pointer;
+  }
+  :where(a, button, [role="button"], summary) {
+    transition-property: color, background-color, border-color, text-decoration-color, opacity, box-shadow;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease);
+  }
+}
+
+/* Mobile change toast (#1043): the inverted bottom card and its time bar. The bar
+   shrinks over the toast's duration and pauses (animation-play-state, set inline)
+   while a finger rests on the card or Undo has focus. */
+@layer components {
+  .change-toast {
+    background: var(--color-toast-bg);
+    color: var(--color-toast-fg);
+  }
+  .change-toast-action { color: var(--color-toast-action); }
+  .change-toast-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    background: var(--color-toast-action);
+    transform-origin: left;
+    animation-name: change-toast-bar;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+}
+@keyframes change-toast-bar {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* The phone upload tile's indeterminate bar (#1124). */
+@keyframes upload-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* ============================================
+   Sign-in title page (#1129): laid out like the first page of a printed family
+   history. The owner's pocket-watch drawing is a one-colour mask filled with the
+   text colour, so it follows light and dark; it is cut off at the left edge and
+   fades out before the words.
+   ============================================ */
+.auth-title {
+  font-family: var(--font-fraunces), var(--font-literata), Georgia, serif;
+  font-size: 52px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.auth-title-sm { font-size: 34px; line-height: 1.1; }
+.auth-watch {
+  position: absolute;
+  pointer-events: none;
+  width: 540px;
+  left: -250px;
+  top: 14%;
+  aspect-ratio: 700 / 658;
+  opacity: 0.28;
+  background: var(--color-text);
+  -webkit-mask-image: url('/pocketwatch-mask.webp'), linear-gradient(to right, #000 30%, transparent 92%);
+  mask-image: url('/pocketwatch-mask.webp'), linear-gradient(to right, #000 30%, transparent 92%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  -webkit-mask-size: contain, 100% 100%;
+  mask-size: contain, 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  filter: blur(0.4px);
+}

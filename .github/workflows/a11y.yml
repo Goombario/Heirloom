@@ -1,0 +1,61 @@
+name: a11y contrast
+
+# Browser-level WCAG color-contrast guard. Boots the static build and runs axe-core
+# over the key routes in light and dark themes (scripts/a11y-contrast-scan.mjs).
+# The fast token-level guard lives in the unit suite (contrast-tokens.test.ts), which
+# runs locally via `npm run verify` before every PR and in CI on every PR.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'scripts/a11y-contrast-scan.mjs'
+      - 'scripts/page-shell-scan.mjs'
+      - 'scripts/focus-ring-scan.mjs'
+      - 'scripts/mobile-person-scan.mjs'
+      - 'test-fixtures/synthetic.hlbak'
+      - 'scripts/lib/**'
+      - '.github/workflows/a11y.yml'
+      - 'package.json'
+      - 'package-lock.json'
+
+concurrency:
+  group: a11y-${{ github.ref }}
+  cancel-in-progress: true
+
+# Pull requests from forks run this workflow: the token only ever reads.
+permissions:
+  contents: read
+
+jobs:
+  contrast:
+    # About 3 min per run, so the path filter above limits it to PRs that can change
+    # what the scan sees. Not a required check: a PR it skips never reports.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      # --ignore-scripts skips the postinstall db:init (no DB needed for the static build).
+      - run: npm ci --ignore-scripts
+      # ubuntu-latest includes a Google Chrome apt source, but this job installs
+      # Playwright's own browser. Remove that unrelated source so a Chrome mirror
+      # publication race cannot prevent Playwright from installing Linux libraries.
+      - name: Remove unrelated Chrome apt source
+        run: sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
+      # --only-shell fetches just chromium-headless-shell, which is what a headless
+      # launch() actually uses. Plain `install chromium` also pulls the headed browser,
+      # which this scan never opens.
+      - run: npm exec -- playwright install --with-deps --only-shell chromium
+      - run: npm run test:a11y
+      # page-shell-scan screenshots a route that fails its shell check (#1016).
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: page-shell-scan-failures
+          path: test-results/page-shell-scan/
+          if-no-files-found: ignore

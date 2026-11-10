@@ -1,0 +1,175 @@
+{
+  "app/audit/AuditDateRange.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/cases/page.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 2
+    }
+  },
+  "app/cases/view/CaseEvidenceRail.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 2
+    }
+  },
+  "app/cases/view/CaseGuidedStart.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/cases/view/CaseHeaderCard.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 2
+    }
+  },
+  "app/cases/view/CaseJournal.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 4
+    }
+  },
+  "app/components/AttachSourceSidebar.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 8
+    }
+  },
+  "app/components/DiagOverlay.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 1
+    }
+  },
+  "app/components/LocationJourneyModal.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 1
+    }
+  },
+  "app/components/PersonPicker.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 1
+    }
+  },
+  "app/components/lightbox/EvidencePanel.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 2
+    }
+  },
+  "app/components/options/TreesSection.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/components/person-form/IdentitySection.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 3
+    },
+    "ds/no-inline-static-literal": {
+      "count": 2
+    }
+  },
+  "app/components/person-form/NamesPanel.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/components/person-form/PersonFormDesktop.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 3
+    }
+  },
+  "app/components/person-form/RelationshipsSection.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/components/person-form/SuggestionsSection.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 3
+    }
+  },
+  "app/components/tree/PersonBarNode.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 4
+    }
+  },
+  "app/components/tree/PersonNode.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 5
+    }
+  },
+  "app/components/tree/PersonSidebar.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 1
+    }
+  },
+  "app/components/tree/TreeVisualization.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 8
+    }
+  },
+  "app/components/tree/person-sidebar/SidebarContent.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 5
+    }
+  },
+  "app/components/ui/DataTable.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 2
+    }
+  },
+  "app/components/upload/UploadTile.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/library/RepositoryModal.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 3
+    }
+  },
+  "app/library/sections/LibraryPhotoBulkToolbar.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/library/sections/PhotosGrid.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/library/sections/RepositoriesList.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/page.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 2
+    }
+  },
+  "app/people/view/DescendantsPanel.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 1
+    }
+  },
+  "app/people/view/PersonGalleryCard.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 2
+    }
+  },
+  "app/tree/TreeHeader.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 3
+    }
+  },
+  "app/tree/TreeLeftRail.tsx": {
+    "ds/no-arbitrary-font-size": {
+      "count": 1
+    }
+  },
+  "app/tree/TreeOverlays.tsx": {
+    "ds/no-inline-static-literal": {
+      "count": 4
+    }
+  }
+}

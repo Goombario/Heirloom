@@ -1,0 +1,149 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+/test-results/
+
+# next.js
+/.next/
+/out/
+/.static-build-stash/
+/.serve-root/
+/.srv/
+
+# serwist (static build only) writes its compiled service worker straight into
+# public/ before `next export` copies it into out/ — a build artifact, not source.
+/public/sw.js
+/public/sw.js.map
+
+# MapLibre v6 worker assets are copied from node_modules before dev/build so they
+# always match the installed package version; they are generated, not source.
+/public/maplibre/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files
+.env
+.env*.local
+.env.production
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# Database backups (keep main db)
+data/*.db-backup
+data/*.db-journal
+data/*.db-wal
+
+# Database files - DO NOT commit personal genealogy data
+data/*.db
+data/*.db-shm
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+logs/
+*.log
+.claude/settings.local.json
+.claude/worktrees/
+
+# Uploaded media - personal family photos
+public/uploads/
+data/uploads/
+data/genealogy.db.backup
+
+# Playwright mcp artifacts
+/.playwright-mcp/
+
+# Playwright screenshots (design audit / visual testing)
+/.playwright-screenshots/
+
+# Test user IDs resolved by globalSetup (regenerated each run)
+/__tests__/setup/.test-user-ids.json
+
+# Superpower AI logs and data
+/.superpowers
+docs/plans/
+genealogy_backup.dump
+
+# Railway backup scripts (contain credentials) and backup output
+RailwayBackup.bat
+_BackupMedia.ps1
+/backups/
+
+# Temporary files
+Heirloom Modals and cleanup (8).zip
+.mockups-extracted/
+
+# Heirloom design-system kit (reference only — not part of the app build)
+_design-system-extracted/
+Heirloom Design System*.zip
+GEDCOM Specs/*
+
+# Tauri / Rust build output
+/src-tauri/target
+/src-tauri/gen/schemas
+
+# Desktop app build + bundle output (local only — large, regenerated, never committed)
+/postgres-bundle/
+/release/
+/dist-desktop/
+/desktop/.next/
+
+# Stray Playwright screenshots (use .playwright-screenshots/ which is already ignored)
+/cases-*.png
+.playwright-mcp/
+
+# Private, real-data test material (GEDCOM+media exports for local reproduction).
+# NEVER commit real family data — this whole folder is ignored except its README.
+/test-data/*
+!/test-data/README.md
+
+/.codex/*
+/.pnpm-store/*
+# Personal words blocked by the public-repo export; never commit them
+/.public-export-denylist
+
+# Flatpak build inputs and outputs (flatpak/com.heirloom.desktop.yml)
+/flatpak/heirloom.deb
+/flatpak/.flatpak-builder
+/flatpak/build-dir
+/flatpak/repo
+
+# Third-party licence notices are written before each build (#1256); generated, not source.
+/public/third-party-licenses.txt

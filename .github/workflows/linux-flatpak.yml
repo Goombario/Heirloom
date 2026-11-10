@@ -1,0 +1,92 @@
+name: Linux Flatpak
+
+# Builds the Linux app as a Flatpak bundle and uploads it as the `heirloom-flatpak`
+# artifact. desktop-build.yml calls this for a release; a PR that touches the
+# Flatpak build runs it too, so the bundle can be installed and tested before
+# it ships (download the artifact from the run's summary page).
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - flatpak/**
+      - src-tauri/**
+      - .github/workflows/linux-flatpak.yml
+
+# The static build reads AUTH_SECRET at build time (NextAuth config); any value
+# works because the static target has no auth server.
+env:
+  AUTH_SECRET: unused-in-static-build
+
+permissions:
+  contents: read
+
+jobs:
+  build-deb:
+    # The .deb is only the Flatpak's input: the app runs on the GNOME runtime's
+    # libraries, so the build host's glibc does not limit which distros it reaches.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch
+        with:
+          toolchain: stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the .deb
+        run: npm run desktop:build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heirloom-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+
+  build-flatpak:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    container:
+      # Must match runtime-version in flatpak/com.heirloom.desktop.yml.
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: heirloom-deb
+          path: deb
+
+      - name: Put the .deb where the manifest expects it
+        run: mv deb/*.deb flatpak/heirloom.deb
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          manifest-path: flatpak/com.heirloom.desktop.yml
+          bundle: Heirloom.flatpak
+          upload-artifact: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heirloom-flatpak
+          path: Heirloom.flatpak
+          if-no-files-found: error

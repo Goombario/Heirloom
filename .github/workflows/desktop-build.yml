@@ -1,0 +1,153 @@
+name: Desktop Build
+
+# A release is a `v<version>` tag pushed on `main`.
+on:
+  push:
+    tags: ['v*']
+
+# The static build reads AUTH_SECRET at build time (NextAuth config); any
+# value works because the static target has no auth server. No DATABASE_URL:
+# scripts/init-db.ts self-guards on its absence, and the app uses in-browser
+# PGlite, so no Postgres service is needed.
+env:
+  AUTH_SECRET: unused-in-static-build
+
+# Read-only by default; the jobs that write to the release ask for it themselves.
+permissions:
+  contents: read
+
+jobs:
+  # Both platform jobs upload to one release. Creating it up front means neither
+  # races to create it; creating it as a draft means a failed platform build never
+  # publishes a release with that platform's assets missing (publish-release runs
+  # only when both builds succeed).
+  #
+  # The tag must match package.json, so the bundles carry the version they are
+  # released as, and must be on `main`, so only merged code ships. A tag whose release is already published builds nothing, so it
+  # never overwrites a live release's assets.
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      id: ${{ steps.release.outputs.id }}
+      build: ${{ steps.release.outputs.build }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create the draft release if it does not exist
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          version="v$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$version" ]; then
+            echo "::error file=package.json::Tag $tag does not match package.json ($version). Bump the version in a PR to main, then tag that commit."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $tag is not on main. Release only commits that merged into main."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # The releases list includes drafts, which a lookup by tag does not find.
+          find_id() { gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+            --jq ".[] | select(.tag_name == \"$tag\") | .id"; }
+          id=$(find_id)
+          if [ -n "$id" ] && [ "$(gh api "repos/$GITHUB_REPOSITORY/releases/$id" --jq .draft)" = false ]; then
+            echo "::notice::$tag is already published; bump package.json to release again. Nothing built."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "build=true" >> "$GITHUB_OUTPUT"
+          # Take the new draft's id from the create call: the releases list can lag
+          # behind it, and an empty id makes tauri-action skip the Windows upload.
+          [ -n "$id" ] || id=$(gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
+            -f tag_name="$tag" \
+            -f target_commitish="$GITHUB_SHA" \
+            -f name="Heirloom $tag" \
+            -F draft=true \
+            -f body='Download Heirloom for your platform from the assets below:
+          - Windows: the _x64-setup.exe installer.
+          - Linux: the .flatpak bundle (flatpak install --user <file>), or install the web app from Chrome or Edge.' \
+            --jq .id)
+          [ -n "$id" ] || { echo "::error::No release id for $tag"; exit 1; }
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build-windows:
+    needs: create-release
+    if: needs.create-release.outputs.build == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      # This job's token can write releases. Keep it out of .git/config, where
+      # every later step (dependency install and build scripts) could read it.
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch
+        with:
+          toolchain: stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app and upload to the release
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.id }}
+
+  build-linux:
+    needs: create-release
+    if: needs.create-release.outputs.build == 'true'
+    uses: ./.github/workflows/linux-flatpak.yml
+
+  upload-linux:
+    needs: [create-release, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: heirloom-flatpak
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          mv Heirloom.flatpak "Heirloom_${TAG#v}_x86_64.flatpak"
+          gh release upload "$TAG" --clobber --repo "$GITHUB_REPOSITORY" "Heirloom_${TAG#v}_x86_64.flatpak"
+
+  publish-release:
+    needs: [create-release, build-windows, upload-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ID: ${{ needs.create-release.outputs.id }}
+        run: gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=false --silent

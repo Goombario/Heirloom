@@ -1,0 +1,29 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Par /Pedi/
+0 @I2@ INDI
+1 NAME Adopted /Pedi/
+1 FAMC @F1@
+2 PEDI adopted
+0 @I3@ INDI
+1 NAME Foster /Pedi/
+1 FAMC @F1@
+2 PEDI foster
+0 @I4@ INDI
+1 NAME Step /Pedi/
+1 FAMC @F1@
+2 PEDI step
+0 @I5@ INDI
+1 NAME Sealed /Pedi/
+1 FAMC @F1@
+2 PEDI sealing
+0 @F1@ FAM
+1 HUSB @I1@
+1 CHIL @I2@
+1 CHIL @I3@
+1 CHIL @I4@
+1 CHIL @I5@
+0 TRLR

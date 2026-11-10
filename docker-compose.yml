@@ -1,0 +1,34 @@
+# Local Postgres for running the integration test suite the same way CI does.
+# Mirrors the service in .github/workflows/ci.yml (postgres:16-alpine, db
+# genealogy_test, user postgres / testpassword, port 5432) so a local
+# `npm run test:integration` exercises the identical schema + connection string.
+#
+# Usage:
+#   npm run db:test:up          # start the throwaway Postgres (detached)
+#   npm run test:integration    # global-setup reads .env.test.local, inits schema, runs
+#   npm run db:test:down        # stop + delete the volume (fresh next time)
+#
+# This is a DISPOSABLE test database — never point it at real family data.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: heirloom-test-db
+    environment:
+      POSTGRES_DB: genealogy_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testpassword
+    # Host port 5433 (not 5432) to avoid clashing with a local Postgres / other
+    # dev container. .env.test.local points at 5433 to match. The container port
+    # and DB name/user/pass stay identical to CI, so the schema + behavior match.
+    ports:
+      - "5433:5432"
+    volumes:
+      - heirloom-test-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d genealogy_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  heirloom-test-pgdata:

@@ -1,0 +1,23 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Mary /Note/
+1 BIRT
+2 DATE 1920
+2 NOTE Birth note
+1 NOTE Person note after birth
+2 DATE 1999
+1 OCCU Baker
+2 NOTE Occupation note
+1 NOTE Person note after occupation
+1 DEAT
+2 DATE 3 FEB 2010
+2 PLAC Chicago, Cook County, Illinois, USA
+1 SOUR @S1@
+2 PAGE Marriage certificate
+1 NOTE Person note after death
+0 @S1@ SOUR
+1 TITL Certificates
+0 TRLR

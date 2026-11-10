@@ -1,0 +1,24 @@
+0 HEAD
+1 SOUR Ancestry.com
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Groom /Cite/
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Bride /Cite/
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 4 MAY 1901
+2 PLAC Leeds
+2 SOUR @S1@
+3 PAGE Register 12
+1 SOUR @S1@
+2 PAGE Family file
+0 @S1@ SOUR
+1 TITL Parish register
+0 TRLR

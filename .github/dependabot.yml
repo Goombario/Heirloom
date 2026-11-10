@@ -1,0 +1,12 @@
+# Third-party actions in .github/workflows are pinned to a commit, so a moved
+# tag cannot change what builds the desktop installers. This keeps those pins
+# current: one grouped pull request a month.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

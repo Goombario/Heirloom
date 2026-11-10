@@ -1,0 +1,195 @@
+0 HEAD
+1 SOUR Heirloom
+2 NAME Heirloom Genealogy
+2 VERS 1.0
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SUBM @SUB1@
+0 @SUB1@ SUBM
+1 NAME Heirloom Sample
+0 @I1@ INDI
+1 NAME Everett /Smith/
+1 SEX M
+1 BIRT
+2 DATE 14 MAR 1868
+2 PLAC Southwark, London, England
+1 OCCU Bookbinder
+2 PLAC Clerkenwell, London, England
+1 DEAT
+2 DATE 2 NOV 1939
+2 PLAC Marylebone, London, England
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Agnes /Whitfield/
+1 SEX F
+1 BIRT
+2 DATE 9 JUN 1872
+2 PLAC Islington, London, England
+1 DEAT
+2 DATE 21 JAN 1945
+2 PLAC Hampstead, London, England
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Jonathan Everett /Smith/
+1 SEX M
+1 BIRT
+2 DATE 20 FEB 1901
+2 PLAC Marylebone, London, England
+1 CENS
+2 DATE 1911
+2 PLAC Marylebone, London, England
+1 IMMI
+2 DATE 3 MAY 1919
+2 PLAC New York, New York, USA
+1 RESI
+2 DATE 1923
+2 PLAC Boston, Massachusetts, USA
+1 OCCU Draughtsman
+2 DATE 1942
+2 PLAC Charlestown Navy Yard, Boston, Massachusetts, USA
+1 RESI
+2 DATE 1955
+2 PLAC Hampstead, London, England
+1 RETI
+2 DATE 1968
+2 PLAC Lyon, France
+1 DEAT
+2 DATE 3 MAR 1970
+2 PLAC Lyon, France
+1 BURI
+2 PLAC Lyon, France
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Mary /Jones/
+1 SEX F
+1 BIRT
+2 DATE 5 JUN 1905
+2 PLAC Dublin, Ireland
+1 RESI
+2 DATE 1926
+2 PLAC New York, New York, USA
+1 DEAT
+2 DATE 20 DEC 1980
+2 PLAC Lyon, France
+1 FAMC @F3@
+1 FAMS @F2@
+0 @I5@ INDI
+1 NAME Clara /Smith/
+1 SEX F
+1 BIRT
+2 DATE 11 SEP 1899
+2 PLAC Marylebone, London, England
+1 DEAT
+2 DATE 4 APR 1978
+2 PLAC Brighton, England
+1 FAMC @F1@
+0 @I6@ INDI
+1 NAME Thomas /Smith/
+1 SEX M
+1 BIRT
+2 DATE 30 JUL 1903
+2 PLAC Marylebone, London, England
+1 DEAT
+2 DATE 18 OCT 1917
+2 PLAC Ypres, Belgium
+1 FAMC @F1@
+0 @I7@ INDI
+1 NAME Patrick /Jones/
+1 SEX M
+1 BIRT
+2 DATE 2 FEB 1902
+2 PLAC Cork, Ireland
+1 DEAT
+2 DATE 1971
+2 PLAC Cork, Ireland
+1 FAMC @F3@
+0 @I8@ INDI
+1 NAME Seamus /Jones/
+1 SEX M
+1 BIRT
+2 DATE 1874
+2 PLAC Cork, Ireland
+1 DEAT
+2 DATE 1939
+2 PLAC Dublin, Ireland
+1 FAMS @F3@
+0 @I9@ INDI
+1 NAME Bridget /O'Malley/
+1 SEX F
+1 BIRT
+2 DATE 1878
+2 PLAC Galway, Ireland
+1 DEAT
+2 DATE 1952
+2 PLAC Dublin, Ireland
+1 FAMS @F3@
+0 @I10@ INDI
+1 NAME William /Smith/
+1 SEX M
+1 BIRT
+2 DATE 15 SEP 1930
+2 PLAC Boston, Massachusetts, USA
+1 OCCU Architect
+2 PLAC Boston, Massachusetts, USA
+1 RESI
+2 DATE 1972
+2 PLAC Lyon, France
+1 FAMC @F2@
+1 FAMS @F4@
+0 @I11@ INDI
+1 NAME Eleanor /Hart/
+1 SEX F
+1 BIRT
+2 DATE 22 APR 1934
+2 PLAC Providence, Rhode Island, USA
+1 FAMS @F4@
+0 @I12@ INDI
+1 NAME Margaret /Smith/
+1 SEX F
+1 BIRT
+2 DATE 8 JAN 1958
+2 PLAC Boston, Massachusetts, USA
+1 FAMC @F4@
+0 @I13@ INDI
+1 NAME Henry /Smith/
+1 SEX M
+1 BIRT
+2 DATE 30 NOV 1961
+2 PLAC Lyon, France
+1 FAMC @F4@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 6 JUN 1896
+2 PLAC St Pancras, London, England
+1 CHIL @I5@
+1 CHIL @I3@
+1 CHIL @I6@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 MARR
+2 DATE 12 OCT 1928
+2 PLAC New York, New York, USA
+1 CHIL @I10@
+0 @F3@ FAM
+1 HUSB @I8@
+1 WIFE @I9@
+1 MARR
+2 DATE 1898
+2 PLAC Cork, Ireland
+1 CHIL @I7@
+1 CHIL @I4@
+0 @F4@ FAM
+1 HUSB @I10@
+1 WIFE @I11@
+1 MARR
+2 DATE 4 JUL 1956
+2 PLAC Boston, Massachusetts, USA
+1 CHIL @I12@
+1 CHIL @I13@
+0 TRLR

@@ -1,0 +1,13 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Anna /Smith/
+1 NAME Anna /Jones/
+2 TYPE married
+1 NAME Ann /Smith/
+2 NICK Nan
+1 NAME Anya /Smirnova/
+2 TYPE aka
+0 TRLR

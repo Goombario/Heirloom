@@ -1,0 +1,40 @@
+{
+  "kind": "media-upload",
+  "meta": {
+    "commit": "cbcb7f5",
+    "node": "v24.13.0",
+    "baseUrl": "http://localhost:3000",
+    "samples": 8
+  },
+  "timestamp": "2026-07-17T16:49:47.416Z",
+  "results": [
+    {
+      "key": "photo~2MP",
+      "srcKB": 2928.41,
+      "status": 201,
+      "ms": {
+        "n": 8,
+        "min": 51.38,
+        "p50": 55.52,
+        "p95": 95.83,
+        "p99": 95.83,
+        "max": 95.83,
+        "mean": 61.61
+      }
+    },
+    {
+      "key": "photo~near10MB",
+      "srcKB": 8511.43,
+      "status": 201,
+      "ms": {
+        "n": 8,
+        "min": 120.16,
+        "p50": 132.01,
+        "p95": 160.72,
+        "p99": 160.72,
+        "max": 160.72,
+        "mean": 136.48
+      }
+    }
+  ]
+}

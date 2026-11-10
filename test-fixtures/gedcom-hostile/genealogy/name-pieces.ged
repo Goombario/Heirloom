@@ -1,0 +1,23 @@
+0 HEAD
+1 SOUR GRAMPS
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Robert /Baratheon/
+2 TYPE birth
+2 NPFX King
+2 GIVN Robert
+2 NICK Bob
+2 SURN Baratheon
+2 NSFX I
+2 SOUR @S1@
+3 PAGE p. 1
+0 @I2@ INDI
+1 NAME Ludwig /Beethoven/
+2 SPFX van
+2 FONE Lud-vig
+3 TYPE kana
+0 @S1@ SOUR
+1 TITL Chronicle
+0 TRLR

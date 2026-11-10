@@ -1,0 +1,31 @@
+0 HEAD
+1 SOUR RootsMagic
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Ada /Cite/
+2 SOUR @S1@
+3 PAGE Name entry
+3 _LINK https://example.org/record/1
+1 BIRT
+2 DATE 1900
+2 _PRIMARY Y
+1 SOUR @S1@
+2 PAGE Person file
+2 _FOOT Register of births, folio 3
+2 EVEN BIRT
+3 DATE 1950
+2 _TMPLT
+3 FIELD
+4 NAME Page
+4 VALUE folio 3
+1 DEAT
+2 DATE 1960
+2 SOUR @S1@
+3 PAGE Death entry
+3 _FOOT Register of deaths
+0 @S1@ SOUR
+1 TITL Parish register
+0 TRLR
