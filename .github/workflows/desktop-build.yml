@@ -34,7 +34,7 @@ jobs:
       id: ${{ steps.release.outputs.id }}
       build: ${{ steps.release.outputs.build }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -88,11 +88,11 @@ jobs:
     steps:
       # This job's token can write releases. Keep it out of .git/config, where
       # every later step (dependency install and build scripts) could read it.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -111,7 +111,7 @@ jobs:
         run: npm ci
 
       - name: Build Tauri app and upload to the release
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -128,7 +128,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: heirloom-flatpak
 
