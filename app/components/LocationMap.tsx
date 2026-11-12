@@ -17,12 +17,15 @@ export interface MapMarker {
   /** Gazetteer place id. Required for a marker to be clickable (selection is id-based),
    *  to report hover, and for `highlightedIds` to be able to address it. */
   id?: number | null;
+  /** Where the pin was before a drag (#56): faded, and never draggable itself. */
+  ghost?: boolean;
 }
 
 interface LocationMapProps {
   markers: MapMarker[];
   variant?: 'full' | 'mini';
-  height?: number;
+  /** Pixels, or `'100%'` to fill a sized parent (the full-page Places Explore, #56). */
+  height?: number | '100%';
   className?: string;
   /** Makes pins with an `id` operable: they become focusable buttons that report the
    *  clicked place instead of opening a popup — the caller has somewhere to select into. */
@@ -44,6 +47,9 @@ interface LocationMapProps {
   gestures?: boolean;
   /** A tap on the map itself, not on a pin. */
   onBackgroundClick?: () => void;
+  /** Space kept clear of pins when framing them, in pixels: the place page's cover lays
+   *  its name over the map's foot (#56), so the pins frame above it. */
+  insets?: { top: number; right: number; bottom: number; left: number };
 }
 
 /** Stable empty default — a fresh `[]` in the parameter list would be a new array every
@@ -65,7 +71,7 @@ interface RegistryEntry {
  *  body, never on the root. */
 function makePinEl(m: MapMarker): HTMLElement {
   const el = document.createElement('div');
-  el.className = 'location-map-pin';
+  el.className = m.ghost ? 'location-map-pin is-ghost' : 'location-map-pin';
 
   const body = document.createElement('div');
   body.className = 'location-map-pin-body';
@@ -167,6 +173,7 @@ export default function LocationMap({
   onMarkerDragEnd,
   gestures = false,
   onBackgroundClick,
+  insets,
 }: LocationMapProps) {
   const t = useTranslations('common');
   const { resolvedTheme } = useTheme();
@@ -178,8 +185,10 @@ export default function LocationMap({
   // marker values actually change. Read live markers via ref.
   const markersRef = useRef(markers);
   markersRef.current = markers;
+  // Read once, when the map is built: the cover's insets never change.
+  const insetsRef = useRef(insets);
   const markersKey = markers
-    .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}`)
+    .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}|${m.ghost ? 'g' : ''}`)
     .join(';');
   const hasMarkers = markers.length > 0;
 
@@ -187,7 +196,8 @@ export default function LocationMap({
   // different set of places (a drill), never because a place MOVED. A dragged pin (#566)
   // or a coordinate typed into the edit field must not yank the viewport out from under
   // the hand doing the dragging — the pin moves, the map holds still.
-  const identityKey = markers.map((m) => m.id ?? `@${m.label}`).join(';');
+  // A ghost (a dragged pin's old place) never re-frames the map.
+  const identityKey = markers.filter((m) => !m.ghost).map((m) => m.id ?? `@${m.label}`).join(';');
   const identityKeyRef = useRef(identityKey);
   identityKeyRef.current = identityKey;
 
@@ -249,6 +259,7 @@ export default function LocationMap({
         });
         map.on('error', () => { if (!cancelled) setFailed(true); });
         collapseCompactAttribution(map);
+        if (insetsRef.current) map.setPadding(insetsRef.current);
 
         // Pins stop their own clicks, so this is only ever the map itself.
         map.on('click', () => backgroundClickRef.current?.());
@@ -326,7 +337,7 @@ export default function LocationMap({
       const marker = new maplibregl.Marker({
         element: makePinEl(data),
         anchor: 'bottom',
-        draggable: draggableRef.current,
+        draggable: draggableRef.current && !data.ghost,
       }).setLngLat([data.lng, data.lat]);
       // dragend only — never `drag`. The coordinates field is the source of truth and a
       // per-frame write would thrash it (and its validation) sixty times a second.
@@ -397,9 +408,10 @@ export default function LocationMap({
   // rebuild the map, which is exactly what a re-mount would cost.
   useEffect(() => {
     if (!map) return;
-    registryRef.current.forEach(({ marker }) => {
-      marker.setDraggable(draggable);
-      marker.getElement().classList.toggle('is-draggable', draggable);
+    registryRef.current.forEach(({ marker, data }) => {
+      const can = draggable && !data.ghost;
+      marker.setDraggable(can);
+      marker.getElement().classList.toggle('is-draggable', can);
     });
   }, [map, draggable, markersKey]);
 
@@ -423,6 +435,16 @@ export default function LocationMap({
     next.forEach((key) => setLabelled(registryRef.current.get(key), named));
     highlightKeysRef.current = next;
   }, [map, highlightKey]);
+
+  // A map that fills its parent follows the parent's size, not just the window's: the
+  // Explore pane beside it can widen (#56), which MapLibre's own resize tracking misses.
+  useEffect(() => {
+    const el = elRef.current;
+    if (!map || !el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [map]);
 
   if (failed) {
     return (

@@ -139,7 +139,13 @@ export function PersonFinder(props: Single | Multi) {
     return () => document.removeEventListener('pointerdown', onDown);
   }, [open, close]);
 
-  useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+    // Inside a scrolling dialog body the list can open below the fold: bring it in.
+    const pop = wrapRef.current?.querySelector<HTMLElement>('.person-finder');
+    if (pop && typeof pop.scrollIntoView === 'function') pop.scrollIntoView({ block: 'nearest' });
+  }, [open]);
 
   const typed = query.trim();
   const options: Option[] = useMemo(() => {

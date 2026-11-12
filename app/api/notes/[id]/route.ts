@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
 import { handleApiError } from '@/lib/api/handle-error';
-import { removeNoteService, updateNoteService, setPrimaryNoteService } from '@/lib/services/notes';
+import { removeNoteService, updateNoteService, setPrimaryNoteService, moveNoteService } from '@/lib/services/notes';
+import type { NoteOwnerFact } from '@/lib/db/queries/notes';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserFromRequest();
@@ -41,9 +42,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 /**
- * Mark this note as its owner's primary (preferred) one, or clear the owner's
- * primary when `isPrimary` is false. Separate from PUT because it changes the
- * NoteLink, not the note text (ADR 0010/0012).
+ * Change this note's link, not its text (ADR 0010/0012). `{ isPrimary }` marks it
+ * as its owner's primary (preferred) one, or clears the owner's primary when false.
+ * `{ ownerFact, moveTo: { ownerTable, recordId, ownerFact } }` moves the link from
+ * this owner (and fact) to another record or fact it is about (ADR 0043).
  */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getUserFromRequest();
@@ -64,6 +66,29 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const body = await request.json().catch(() => ({}));
+  if (body.moveTo !== undefined) {
+    const to = body.moveTo as { ownerTable?: unknown; recordId?: unknown; ownerFact?: unknown } | null;
+    const toRecordId = typeof to?.recordId === 'number' && Number.isInteger(to.recordId) ? to.recordId : null;
+    const fact = (v: unknown) => (v == null ? null : typeof v === 'string' ? v as NoteOwnerFact : undefined);
+    const fromFact = fact(body.ownerFact);
+    const toFact = fact(to?.ownerFact);
+    if (!to || typeof to.ownerTable !== 'string' || toRecordId === null || fromFact === undefined || toFact === undefined) {
+      return NextResponse.json({ error: 'moveTo needs ownerTable, recordId and ownerFact' }, { status: 400 });
+    }
+    try {
+      const { auditIds } = await moveNoteService({
+        id: noteId,
+        from: { ownerTable, ownerId: recordId, ownerFact: fromFact },
+        to: { ownerTable: to.ownerTable, ownerId: toRecordId, ownerFact: toFact },
+        requestedTreeId,
+        requestedOwnerId,
+        currentUserId: user.id,
+      });
+      return NextResponse.json({ auditIds });
+    } catch (error) {
+      return handleApiError(error, 'Failed to move note');
+    }
+  }
   if (typeof body.isPrimary !== 'boolean') {
     return NextResponse.json({ error: 'isPrimary (boolean) is required' }, { status: 400 });
   }

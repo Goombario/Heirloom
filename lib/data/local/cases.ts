@@ -1,5 +1,12 @@
-import type { Audited, CaseNoteStrike, CasesClient, ListCasesOptions, CreateCaseInput, UpdateCaseInput, AddCommentInput, LinkMediaInput } from '../types';
-import type { Case, CaseComment, CaseWithRelations, MediaWithPerson } from '@/lib/db/schema';
+import type {
+  Audited, CaseNoteStrike, CasesClient, ListCasesOptions, CreateCaseInput, UpdateCaseInput, AddCommentInput, LinkMediaInput,
+  CaseClaimInput, CaseFindingInput, CaseLeadChange, CaseLeadInput, CaseRequestInput, CaseWorkspaceWrite, CloseCaseInput,
+} from '../types';
+import type { Case, CaseChange, CaseClaimDecision, CaseComment, CaseRequestState, CaseWithRelations, CaseWorkspace, MediaWithPerson } from '@/lib/db/schema';
+import {
+  addClaimService, addFindingService, addLeadService, addRequestService, changeLeadService, closeCaseService, decideClaimService,
+  getCaseChangesService, getCaseWorkspaceService, replyToRequestService, undoAppliedClaimService,
+} from '@/lib/services/case-workspace';
 import {
   listCasesService,
   getCaseService,
@@ -71,6 +78,7 @@ export class LocalCasesClient implements CasesClient {
       id,
       body: input.body,
       mediaId: input.mediaId,
+      leadIds: input.leadIds,
       requestedTreeId: treeId ?? null,
       requestedOwnerId: null,
       currentUserId,
@@ -101,5 +109,53 @@ export class LocalCasesClient implements CasesClient {
     const currentUserId = await ensureLocalUser();
     // In local mode there is no server file-system — the service handles the DB side only.
     await unlinkMediaService({ id, mediaId, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
+  }
+
+  private async scope(id: number, treeId?: number | null) {
+    return { caseId: id, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId: await ensureLocalUser() };
+  }
+
+  async getWorkspace(id: number, treeId?: number | null): Promise<CaseWorkspace> {
+    return getCaseWorkspaceService(await this.scope(id, treeId));
+  }
+
+  async addLead(id: number, input: CaseLeadInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return addLeadService({ ...(await this.scope(id, treeId)), body: input });
+  }
+
+  async changeLead(id: number, leadId: number, change: CaseLeadChange, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return changeLeadService({ ...(await this.scope(id, treeId)), leadId, body: change });
+  }
+
+  async addFinding(id: number, input: CaseFindingInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return addFindingService({ ...(await this.scope(id, treeId)), body: input });
+  }
+
+  async addClaim(id: number, findingId: number, input: CaseClaimInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return addClaimService({ ...(await this.scope(id, treeId)), findingId, body: input });
+  }
+
+  async decideClaim(id: number, claimId: number, decision: CaseClaimDecision, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return decideClaimService({ ...(await this.scope(id, treeId)), claimId, body: { decision } });
+  }
+
+  async addRequest(id: number, input: CaseRequestInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return addRequestService({ ...(await this.scope(id, treeId)), body: input });
+  }
+
+  async replyToRequest(id: number, requestId: number, reply: { state: CaseRequestState; note?: string | null }, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return replyToRequestService({ ...(await this.scope(id, treeId)), requestId, body: reply });
+  }
+
+  async getChanges(id: number, treeId?: number | null): Promise<CaseChange[]> {
+    return getCaseChangesService(await this.scope(id, treeId));
+  }
+
+  async close(id: number, input: CloseCaseInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return closeCaseService({ ...(await this.scope(id, treeId)), body: input });
+  }
+
+  async undoApplied(id: number, claimId: number, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return undoAppliedClaimService({ ...(await this.scope(id, treeId)), claimId });
   }
 }

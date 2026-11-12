@@ -75,7 +75,7 @@ export function useDataCheckMarks(filter: DataChecksFilter, reloadKey: unknown):
  *
  * Returns a function that gives a row its `flagged`, `mark` and `callout`.
  */
-export function useTimelineMarks(marks: DataCheckMarks | undefined) {
+export function useTimelineMarks(marks: DataCheckMarks | undefined, { dataChecksLink = true }: { dataChecksLink?: boolean } = {}) {
     const [open, setOpen] = useState<string | null>(null);
     const buttons = useRef(new Map<string, HTMLButtonElement>());
     const idPrefix = useId();
@@ -98,7 +98,7 @@ export function useTimelineMarks(marks: DataCheckMarks | undefined) {
                     onToggle={() => setOpen(expanded ? null : factKey)} onClose={() => close(factKey)} />
             ),
             callout: expanded ? (
-                <Callout id={id} entries={entries} text={marks.text} onClose={() => close(factKey)}
+                <Callout id={id} entries={entries} text={marks.text} link={dataChecksLink} onClose={() => close(factKey)}
                     // Focus the mark first, so the row's editor returns focus to it on close.
                     onEdit={onEdit && (() => { buttons.current.get(factKey)?.focus(); setOpen(null); onEdit(); })} />
             ) : null,
@@ -122,8 +122,8 @@ function MarkButton({ entries, text, expanded, controls, buttonRef, onToggle, on
     );
 }
 
-function Callout({ id, entries, text, onEdit, onClose }: {
-    id: string; entries: DataCheckEntry[]; text: DataCheckText; onEdit?: () => void; onClose: () => void;
+function Callout({ id, entries, text, link, onEdit, onClose }: {
+    id: string; entries: DataCheckEntry[]; text: DataCheckText; link: boolean; onEdit?: () => void; onClose: () => void;
 }) {
     const t = useTranslations('dataChecks');
     return (
@@ -145,11 +145,13 @@ function Callout({ id, entries, text, onEdit, onClose }: {
                         <Pencil className="w-4 h-4" aria-hidden="true" />{t('edit_date')}
                     </Button>
                 )}
-                <Link href={`/data-checks?entry=${encodeURIComponent(entries[0].id)}`}
-                    className="inline-flex items-center gap-0.5 min-h-6 text-sm text-link hover:underline">
-                    {t('open_in_data_checks')}
-                    <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                </Link>
+                {link && (
+                    <Link href={`/data-checks?entry=${encodeURIComponent(entries[0].id)}`}
+                        className="inline-flex items-center gap-0.5 min-h-6 text-sm text-link hover:underline">
+                        {t('open_in_data_checks')}
+                        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </Link>
+                )}
             </div>
         </Card>
     );

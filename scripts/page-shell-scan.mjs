@@ -18,9 +18,8 @@ import { startStaticPreview } from './lib/managed-static-preview.mjs';
 
 let baseUrl = process.env.BASE_URL || '';
 
-// The ten top-level routes #689 covers. `/people/new` is scanned separately
-// (below) for form-bar/column alignment — it's a `detail` page, not `list`,
-// so it doesn't belong in the per-viewport list-alignment check.
+// The top-level routes #689 covers. `/people/new` now only redirects to the
+// People list's Add person dialog (#52), so it is checked for hydration only.
 const ROUTES = [
   '/', '/people', '/families', '/library', '/places',
   '/cases', '/relationship', '/import-export', '/options', '/audit', '/data-checks', '/about',
@@ -30,6 +29,12 @@ const ROUTES = [
 // so it sits inside the card's padding by design. Home's "Welcome back" lives in
 // the dark welcome hero. Their <main>/shell check still runs.
 const HERO_TITLE_ROUTES = new Set(['/']);
+
+// Routes whose desktop page is a full-width workspace by design, not a list page:
+// Places Explore is the map and its rail across the whole width (#56). On a phone
+// they stay list pages. Their h1 sits in the workspace, so it is not aligned.
+const DESKTOP_WORKSPACE_ROUTES = new Set(['/places']);
+const expectedShell = (route, viewport) => (viewport === 'desktop' && DESKTOP_WORKSPACE_ROUTES.has(route) ? 'workspace' : 'list');
 
 // Every route above, plus `/people/new`, fails the scan on a React hydration
 // error in either viewport (#845): the prerender is desktop-width, so markup
@@ -156,7 +161,10 @@ function measureRoute(page) {
       return style.visibility !== 'hidden' && style.display !== 'none';
     };
     const h1 = [...document.querySelectorAll('h1')].find(isVisible) || null;
-    const h1Left = h1 ? h1.getBoundingClientRect().left : null;
+    // A v1.1 desktop page titles itself in the navy cover band (#55), its h1 inset
+    // in the band: the band's own edge is what lines up with the other pages' titles.
+    const band = h1 ? h1.closest('.cover-band') : null;
+    const h1Left = h1 ? (band || h1).getBoundingClientRect().left : null;
 
     return { mainCount, pageShellVariant, h1Left };
   });
@@ -211,47 +219,6 @@ async function scanViewport(browser, viewport) {
       );
     }
     return { results, hydrationErrors, pageErrors };
-  } finally {
-    await ctx.close();
-  }
-}
-
-/**
- * The `/people/new` form-bar alignment check (#689): the form-bar title (the
- * page's `h1`) must line up with the form column (`#person-form`) at desktop
- * width, and the shell must be `detail`.
- */
-async function scanFormAlignment(browser) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  try {
-    const page = await ctx.newPage();
-    await page.addInitScript(() => {
-      try {
-        localStorage.setItem('heirloom_local_first_run_seen', '1');
-      } catch { /* ignore */ }
-    });
-
-    try {
-      await gotoReady(page, '/people/new');
-    } catch (e) {
-      return { error: `never rendered — ${String(e.message).split('\n')[0]}` };
-    }
-
-    // `await`, not a bare return: the finally below closes the context, and an
-    // un-awaited evaluate races it ("Target page, context or browser has been closed").
-    return await page.evaluate(() => {
-      const mains = document.querySelectorAll('main');
-      const mainCount = mains.length;
-      const pageShellVariant = mains.length === 1 ? mains[0].getAttribute('data-page-shell') : null;
-      const h1 = document.querySelector('h1');
-      const form = document.querySelector('#person-form');
-      return {
-        mainCount,
-        pageShellVariant,
-        h1Left: h1 ? h1.getBoundingClientRect().left : null,
-        formLeft: form ? form.getBoundingClientRect().left : null,
-      };
-    });
   } finally {
     await ctx.close();
   }
@@ -337,7 +304,7 @@ async function main() {
   }
   await waitForServer(baseUrl + '/');
 
-  const { listResults, hydrationErrors, pageErrors, formResult, tabletProblems } = await withBrowser(
+  const { listResults, hydrationErrors, pageErrors, tabletProblems } = await withBrowser(
     () => chromium.launch({
       args: ['--no-sandbox'],
       executablePath: resolveChromiumExecutable() || undefined,
@@ -346,18 +313,16 @@ async function main() {
       // Viewports are independent and the run is dominated by waiting on the
       // server, not local CPU, so scanning them concurrently roughly halves
       // wall clock — same rationale as the theme concurrency in
-      // a11y-contrast-scan.mjs. The form-alignment check runs in its own
-      // context alongside them.
-      const [viewportResults, formResult, tabletProblems] = await Promise.all([
+      // a11y-contrast-scan.mjs. The tablet check runs in its own context
+      // alongside them.
+      const [viewportResults, tabletProblems] = await Promise.all([
         runConcurrently(VIEWPORTS.map((viewport) => () => scanViewport(browser, viewport))),
-        scanFormAlignment(browser),
         scanTablet(browser),
       ]);
       return {
         listResults: viewportResults.flatMap((v) => v.results),
         hydrationErrors: viewportResults.flatMap((v) => v.hydrationErrors),
         pageErrors: viewportResults.flatMap((v) => v.pageErrors),
-        formResult,
         tabletProblems,
       };
     },
@@ -371,9 +336,9 @@ async function main() {
     r.screenshot ? `\n      screenshot: ${r.screenshot}` : '',
   ].join('');
 
-  // 1. Every route: exactly one <main>, data-page-shell="list".
+  // 1. Every route: exactly one <main>, data-page-shell="list" (or its desktop workspace).
   const broken = listResults.filter((r) => r.error);
-  const badShell = listResults.filter((r) => !r.error && (r.mainCount !== 1 || r.pageShellVariant !== 'list'));
+  const badShell = listResults.filter((r) => !r.error && (r.mainCount !== 1 || r.pageShellVariant !== expectedShell(r.route, r.viewport)));
   if (broken.length > 0) {
     problems.push(`${broken.length} route/viewport combo(s) could not be scanned:\n${
       broken.map((r) => `  [${r.viewport}] ${r.route}: ${r.error}${detail(r)}`).join('\n')}`);
@@ -396,7 +361,7 @@ async function main() {
   const alignmentReports = [];
   for (const viewport of VIEWPORTS) {
     const rows = listResults.filter((r) => r.viewport === viewport.name && !r.error);
-    const withH1 = rows.filter((r) => r.h1Left != null && !HERO_TITLE_ROUTES.has(r.route));
+    const withH1 = rows.filter((r) => r.h1Left != null && !HERO_TITLE_ROUTES.has(r.route) && expectedShell(r.route, r.viewport) === 'list');
     const withoutH1 = rows.filter((r) => r.h1Left == null);
     for (const r of withoutH1) {
       excluded.push(`[${r.viewport}] ${r.route}: no visible h1 in the empty state`);
@@ -412,22 +377,6 @@ async function main() {
     if (outliers.length > 0) {
       problems.push(`${viewport.name}: h1 left edges misaligned (reference ${reference.toFixed(1)}px from ${withH1[0].route}):\n${
         outliers.map((r) => `  [${r.viewport}] ${r.route}: ${r.h1Left.toFixed(1)}px${detail(r)}`).join('\n')}`);
-    }
-  }
-
-  // 3. /people/new form-bar alignment.
-  if (formResult.error) {
-    problems.push(`/people/new could not be scanned: ${formResult.error}`);
-  } else {
-    if (formResult.mainCount !== 1 || formResult.pageShellVariant !== 'detail') {
-      problems.push(`/people/new has the wrong <main>/shell: main count=${formResult.mainCount}, data-page-shell=${formResult.pageShellVariant}`);
-    }
-    if (formResult.h1Left == null || formResult.formLeft == null) {
-      problems.push(`/people/new: could not measure h1Left=${formResult.h1Left} / formLeft=${formResult.formLeft}`);
-    } else if (Math.abs(formResult.h1Left - formResult.formLeft) > ALIGNMENT_TOLERANCE_PX) {
-      problems.push(`/people/new: form-bar title (${formResult.h1Left.toFixed(1)}px) does not align with #person-form (${formResult.formLeft.toFixed(1)}px)`);
-    } else {
-      console.log(`\n✓ /people/new: h1 (${formResult.h1Left.toFixed(1)}px) aligns with #person-form (${formResult.formLeft.toFixed(1)}px), shell=detail.`);
     }
   }
 
@@ -454,7 +403,7 @@ async function main() {
     console.error(`\n✗ page-shell-scan failures:\n\n${problems.join('\n\n')}`);
     process.exitCode = 1;
   } else {
-    console.log(`\n✓ Every route renders exactly one <main data-page-shell="list"> and h1 titles align across ${ROUTES.length} routes × ${VIEWPORTS.length} viewports.`);
+    console.log(`\n✓ Every route renders exactly one <main> with its expected shell and h1 titles align across ${ROUTES.length} routes × ${VIEWPORTS.length} viewports.`);
   }
 }
 

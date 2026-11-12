@@ -1,5 +1,5 @@
 import type { Audited, NotesClient } from '../types';
-import type { Note, NoteOwnerFact } from '@/lib/db/queries/notes';
+import type { Note, NoteLinkEnd, NoteOwnerFact } from '@/lib/db/queries/notes';
 import type { LinkOwnerTable } from '@/lib/db/fact-tables';
 import { auditIdsFrom, ensureAuditIds, throwForStatus, treeQuery } from './shared';
 
@@ -54,6 +54,18 @@ export class HttpNotesClient implements NotesClient {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isPrimary }),
+    });
+    if (!res.ok) await throwForStatus(res);
+    return auditIdsFrom(res);
+  }
+
+  async move(id: number, from: NoteLinkEnd, to: NoteLinkEnd, treeId?: number | null): Promise<Audited> {
+    const qs = new URLSearchParams({ ownerTable: from.ownerTable, recordId: String(from.ownerId) });
+    if (treeId != null) qs.set('treeId', String(treeId));
+    const res = await fetch(`/api/notes/${id}?${qs.toString()}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ownerFact: from.ownerFact, moveTo: { ownerTable: to.ownerTable, recordId: to.ownerId, ownerFact: to.ownerFact } }),
     });
     if (!res.ok) await throwForStatus(res);
     return auditIdsFrom(res);

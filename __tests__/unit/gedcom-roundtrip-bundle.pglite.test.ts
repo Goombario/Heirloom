@@ -98,6 +98,21 @@ describe('GEDCOM bundle round-trip is a fixed point', () => {
     expect(comments.map(c => [c.Body, c.Kind])).toEqual([
       ['Check the original register before closing the case.', undefined],
       ['on_hold', 'status'],
+      // #58: the research workspace's entries, each filed under its lead.
+      ['Baptism entry, 1900', 'request'],
+      ['Parish register', 'finding'],
+      ['Civil births, 1900', 'search'],
+      ['settled', 'lead'],
+    ]);
+    expect(comments.slice(2).map(c => [c.leads, c.finding, c.request])).toEqual([
+      [[1], undefined, 0], [[1], 0, undefined], [[0], 1, undefined], [[1], undefined, undefined],
+    ]);
+    // The workspace by index and xref (ADR 0045 §9).
+    expect(cases[0]).toMatchObject({ FromYear: 1895, ToYear: 1905, Place: 'Paris', QuestionKind: 'parents' });
+    expect((cases[0].leads as unknown[]).length).toBe(2);
+    expect(cases[0].findings).toEqual([
+      expect.objectContaining({ Kind: 'record', leads: [1], request: 0, citation: expect.objectContaining({ source: '@S1@', page: 'f. 12' }) }),
+      expect.objectContaining({ Kind: 'nothing', leads: [0], Searched: 'Civil births, 1900' }),
     ]);
     // #1068: photos by the same media xrefs the .ged declares; #1035: the entry's citation.
     const objeXrefs = [...first.ged.matchAll(/^0 (@O\d+@) OBJE$/gm)].map(m => m[1]);

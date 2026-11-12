@@ -25,6 +25,8 @@ export const FACT_TABLES = {
     CASES: 'Cases',
     /** A single research-journal entry (comment). FactId = CaseComments.Id */
     CASE_COMMENTS: 'CaseComments',
+    /** A case finding's record (#58, ADR 0045). FactId = CaseFindings.Id */
+    CASE_FINDINGS: 'CaseFindings',
 } as const;
 
 export type FactTableValue = (typeof FACT_TABLES)[keyof typeof FACT_TABLES];

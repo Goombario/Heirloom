@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Button, Card, IconButton, InlineDataError, Input, PageShell } from '@/app/components/ui';
-import { ArrowDown, ArrowLeftRight, Link2Off, LinkIcon, Search, UserRound, X } from '@/lib/icons';
+import { ActionLink, Button, Card, CoverBand, IconButton, InlineDataError, Input, PageShell, cx } from '@/app/components/ui';
+import { ArrowLeftRight, Link2Off, LinkIcon, Search, UserRound, X } from '@/lib/icons';
 import { getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { errorToastKey } from '@/lib/utils/data-error';
@@ -42,6 +42,7 @@ export default function RelationshipPage() {
     const t = useTranslations('relationship');
     const tCommon = useTranslations('common');
     const tPeople = useTranslations('people');
+    const tNav = useTranslations('nav');
     useDocumentTitle(t('title'));
     const [people, setPeople] = useState<Person[]>([]);
     const [peopleTreeKey, setPeopleTreeKey] = useState<string | null>(null);
@@ -178,131 +179,117 @@ export default function RelationshipPage() {
         );
     }
 
+    // The person where the path turns from going up to going down: the shared ancestor.
+    const path = currentResult?.path ?? [];
+    const peak = path.findIndex((step, i) => i > 0 && i < path.length - 1 && step.relationship === 'child' && path[i + 1].relationship === 'parent');
+    const ancestor = peak > 0 ? path[peak] : null;
+    const link = (rel: string) => (rel === 'child' ? t('path_child_of') : rel === 'parent' ? t('path_parent_of') : rel === 'spouse' ? t('path_partner_of') : rel);
+
     return (
-        <PageShell title={t('title')} subtitle={t('subtitle')}>
-                <div className="max-w-2xl">
-                    {/* Person Selection */}
-                    <Card pad={false} className="p-6 mb-6">
-                        {currentPeopleError && (
-                            <InlineDataError
-                                className="mb-4"
-                                message={currentPeopleError}
-                                retryLabel={tCommon('retry')}
-                                onRetry={loadPeople}
-                            />
-                        )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                            <PersonSlot
-                                label={t('first_person')}
-                                selected={selectedPerson1}
-                                search={search1}
-                                onSearch={setSearch1}
-                                matches={filteredPeople1}
-                                onPick={(id) => { setPerson1(id); setSearch1(''); }}
-                                onClear={() => { setPerson1(null); setSearch1(''); }}
-                                getFullName={getFullName}
-                            />
-                            <PersonSlot
-                                label={t('second_person')}
-                                selected={selectedPerson2}
-                                search={search2}
-                                onSearch={setSearch2}
-                                matches={filteredPeople2}
-                                onPick={(id) => { setPerson2(id); setSearch2(''); }}
-                                onClear={() => { setPerson2(null); setSearch2(''); }}
-                                getFullName={getFullName}
-                            />
-                        </div>
-
-                        <div className="mt-4 flex justify-center">
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    const [p1, p2] = [person1, person2];
-                                    setPerson1(p2); setPerson2(p1);
-                                    const [s1, s2] = [search1, search2];
-                                    setSearch1(s2); setSearch2(s1);
-                                    setResult(null);
-                                }}
-                                disabled={!person1 && !person2}
-                                icon={<ArrowLeftRight className="w-4 h-4" aria-hidden="true" />}
-                                title={t('swap_title')}
-                            >
-                                {t('swap')}
-                            </Button>
-                        </div>
-
+        <PageShell>
+            {/* The Tools pages' short band (#59). */}
+            <div className="mb-4">
+                <CoverBand variant="short" eyebrow={tNav('tools')} title={t('title')} meta={t('subtitle')} />
+            </div>
+            <div className="grid gap-4 max-w-4xl">
+                {/* One panel: the two people, Swap between them, then Find relationship. */}
+                <Card pad={false} className="p-5">
+                    {currentPeopleError && (
+                        <InlineDataError className="mb-4" message={currentPeopleError} retryLabel={tCommon('retry')} onRetry={loadPeople} />
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-3">
+                        <PersonSlot
+                            label={t('first_person')}
+                            selected={selectedPerson1}
+                            search={search1}
+                            onSearch={setSearch1}
+                            matches={filteredPeople1}
+                            onPick={(id) => { setPerson1(id); setSearch1(''); }}
+                            onClear={() => { setPerson1(null); setSearch1(''); }}
+                            getFullName={getFullName}
+                        />
                         <Button
-                            variant="primary"
-                            onClick={calculateRelationship}
-                            disabled={!person1 || !person2 || loading}
-                            className="mt-4"
+                            variant="ghost"
+                            onClick={() => {
+                                const [p1, p2] = [person1, person2];
+                                setPerson1(p2); setPerson2(p1);
+                                const [s1, s2] = [search1, search2];
+                                setSearch1(s2); setSearch2(s1);
+                                setResult(null);
+                            }}
+                            disabled={!person1 && !person2}
+                            icon={<ArrowLeftRight className="w-4 h-4" aria-hidden="true" />}
+                            title={t('swap_title')}
                         >
+                            {t('swap')}
+                        </Button>
+                        <PersonSlot
+                            label={t('second_person')}
+                            selected={selectedPerson2}
+                            search={search2}
+                            onSearch={setSearch2}
+                            matches={filteredPeople2}
+                            onPick={(id) => { setPerson2(id); setSearch2(''); }}
+                            onClear={() => { setPerson2(null); setSearch2(''); }}
+                            getFullName={getFullName}
+                        />
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <Button variant="primary" onClick={calculateRelationship} disabled={!person1 || !person2 || loading}>
                             {loading ? t('calculating') : t('find_relationship')}
                         </Button>
-                    </Card>
+                    </div>
+                </Card>
 
-                    {/* Result */}
-                    {currentResultError && (
-                        <InlineDataError
-                            className="mb-6"
-                            message={currentResultError}
-                            retryLabel={tCommon('retry')}
-                            onRetry={calculateRelationship}
-                        />
-                    )}
+                {currentResultError && (
+                    <InlineDataError message={currentResultError} retryLabel={tCommon('retry')} onRetry={calculateRelationship} />
+                )}
 
-                    {currentResult && (
-                        <Card pad={false} className="p-6">
-                            <div className="text-center mb-6">
-                                <ResultIcon degree={currentResult.degree} />
-                                <h2 className="title text-text mb-2">
-                                    {currentResult.relationship}
-                                </h2>
-                                {currentResult.degree > 0 && (
-                                    <p className="text-text-muted">
-                                        {t('steps_apart', { count: currentResult.degree })}
-                                    </p>
-                                )}
+                {currentResult && (
+                    <Card pad={false} className="p-5 grid gap-4">
+                        <div className="flex items-start gap-3">
+                            <ResultIcon degree={currentResult.degree} />
+                            <div className="grid gap-0.5">
+                                <h2 role="status" className="m-0 serif text-2xl font-semibold leading-tight text-text">{currentResult.relationship}</h2>
+                                {currentResult.degree > 0 && <p className="m-0 text-sm text-text-muted">{t('steps_apart', { count: currentResult.degree })}</p>}
                             </div>
+                        </div>
 
-                            {/* Relationship Path */}
-                            {currentResult.path.length > 0 && (
-                                <div>
-                                    <h3 className="eyebrow mb-3">
-                                        {t('path_heading')}
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {currentResult.path.map((step, idx) => (
-                                            <div key={step.id} className="flex items-center gap-3">
-                                                {idx > 0 && (
-                                                    <div className="w-8 flex flex-col items-center text-text-muted">
-                                                        <ArrowDown className="w-4 h-4" aria-hidden="true" />
-                                                        <span className="text-xs">{step.relationship}</span>
-                                                    </div>
-                                                )}
-                                                {idx === 0 && <div className="w-8" />}
+                        {/* The path, left to right, joined by "child of" / "parent of"; both ends stand out. */}
+                        {path.length > 0 && (
+                            <div className="grid gap-2">
+                                <h3 className="eyebrow m-0">{t('path_heading')}</h3>
+                                <ol className="list-none m-0 p-0 flex flex-wrap items-center gap-x-2 gap-y-2">
+                                    {path.map((step, idx) => {
+                                        const end = idx === 0 || idx === path.length - 1;
+                                        return (
+                                            <li key={step.id} className="flex items-center gap-2">
+                                                {idx > 0 && <span className="text-meta text-text-muted">{link(step.relationship)}</span>}
                                                 <Link
                                                     href={`/people/view?id=${step.id}`}
-                                                    className="flex-1 flex items-center gap-3 p-3 bg-surface rounded-lg hover:bg-hover-surface transition-colors"
+                                                    className={cx('inline-flex items-center rounded-btn px-2.5 py-1.5 text-sm no-underline transition-colors focus-ring',
+                                                        end ? 'bg-segment-on text-on-segment font-semibold' : idx === peak ? 'border border-border bg-card font-semibold text-text hover:bg-hover-surface' : 'bg-surface-2 text-text hover:bg-hover-surface')}
                                                 >
-                                                    <UserRound className="w-5 h-5 text-text-muted shrink-0" aria-hidden="true" />
-                                                    <span className="font-medium text-text">{step.name}</span>
+                                                    {step.name}
                                                 </Link>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </Card>
-                    )}
+                                            </li>
+                                        );
+                                    })}
+                                </ol>
+                            </div>
+                        )}
 
-                    {loadingPeople && (
-                        <div className="text-center text-text-muted py-8">
-                            {tPeople('loading')}
-                        </div>
-                    )}
-                </div>
+                        {ancestor && (
+                            <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm text-text-secondary">
+                                <span>{t('shared_ancestor', { name: ancestor.name })}</span>
+                                <ActionLink kind="leave" href={`/tree?rootId=${ancestor.id}`}>{t('show_in_tree')}</ActionLink>
+                            </p>
+                        )}
+                    </Card>
+                )}
+
+                {loadingPeople && <div className="text-center text-text-muted py-8">{tPeople('loading')}</div>}
+            </div>
         </PageShell>
     );
 }
@@ -310,7 +297,7 @@ export default function RelationshipPage() {
 /** The degree's glyph: 0 is the same person, -1 is no path found, otherwise a link. */
 function ResultIcon({ degree }: { degree: number }) {
     const Icon = degree === 0 ? UserRound : degree === -1 ? Link2Off : LinkIcon;
-    return <Icon className="w-8 h-8 mx-auto mb-2 text-text-muted" aria-hidden="true" />;
+    return <Icon className="w-7 h-7 mt-0.5 shrink-0 text-text-muted" aria-hidden="true" />;
 }
 
 /** One side of the calculator: the chosen person, or a search field with its matches. */

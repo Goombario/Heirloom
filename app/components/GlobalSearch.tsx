@@ -135,7 +135,9 @@ export default function GlobalSearch() {
                 e.preventDefault();
                 setIsOpen(true);
             }
-            if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(tagOf(e.target))) {
+            // A list page's own search (ListToolbar, the tree's Find) takes `/` first, in
+            // the capture phase, and marks it handled.
+            if (e.key === '/' && !e.defaultPrevented && !['INPUT', 'TEXTAREA'].includes(tagOf(e.target))) {
                 e.preventDefault();
                 setIsOpen(true);
             }

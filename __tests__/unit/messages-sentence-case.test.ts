@@ -50,7 +50,6 @@ const ALLOWED_KEYS = new Set([
     'options.tz_utc',
     'options.tz_city_mexico_city',
     // Spreadsheet sheet and column names, quoted verbatim.
-    'spreadsheetImport.download_template_desc',
     'spreadsheetImport.help_dropdowns',
     // A tab name quoted verbatim.
     'shareTree.empty_body',

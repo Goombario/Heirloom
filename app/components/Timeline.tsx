@@ -86,7 +86,7 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
     return (
         <div className={hasAges ? 'tl-med' : 'tl-med tl-med--no-age'}>
             {items.map((it) => (
-                <div key={it.key} id={it.anchor} className={`tl-med-ev${it.dim ? ' is-dim' : ''}${it.flagged ? ' is-flagged' : ''}`}>
+                <div key={it.key} id={it.anchor} className={`tl-med-ev${it.dim ? ' is-dim' : ''}${it.flagged ? ' is-flagged' : ''}${it.href ? ' is-relative' : ''}`}>
                     {it.chapter && <div className="tl-med-chapter">{it.chapter}</div>}
                     {/* aria-label is ignored on a role-less div, so the explanation is
                         real (visually hidden) text and the bare number is hidden. */}

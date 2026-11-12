@@ -7,7 +7,6 @@ export {
   Network,         // Tree + tree switcher
   BookOpen,        // Library
   Paperclip,       // Attach image to a journal entry
-  Compass,         // Case guided-start (new-case)
   MapPin,          // Places
   Circle,          // Places — "no location pin" mark
   FolderSearch,    // Cases
@@ -29,9 +28,14 @@ export {
   Search,
   SearchX,         // RecordNotFound (#697)
   ArrowLeft,       // RecordNotFound back link
-  ArrowDown,       // Relationship path step
   ArrowLeftRight,  // Relationship swap
   ChevronDown,
+  ArrowDown,       // Sort direction (Places rail)
+  ArrowUp,         // Sort direction (Places rail)
+  ArrowDownFromLine, // Tree direction: descendants
+  ArrowUpToLine,   // Tree direction: ancestors
+  Target,          // Tree direction: focus; Focus here
+  Crosshair,       // Tree: Bring into view
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -81,7 +85,6 @@ export {
   Mail,            // Invite email field icon (share tree)
   GitMerge,        // Merge-with-another-place placeholder (places edit, deferred)
   CheckCircle2,    // Saved / success toast confirmation
-  Sparkles,        // Suggestions card header
   // Life-event medallion glyphs (Timeline / event types)
   Sprout,          // Birth
   Flower2,         // Death / Burial (memorial)

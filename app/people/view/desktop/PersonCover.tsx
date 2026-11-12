@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useTranslations } from 'next-intl';
 import type { PersonGalleryMedia, PersonWithRelations } from '@/lib/db/schema';
@@ -20,7 +20,7 @@ import type { RunChange } from '../mobile/useChange';
  * hanging over its lower edge, the name and life line, the one ⋯ menu (Edit person,
  * Descendants, Delete person) and the biography beside the portrait.
  */
-export function PersonCover({ person, media, treeId, role, datesToCheck, biography, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
+export function PersonCover({ person, media, treeId, role, datesToCheck, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
   person: PersonWithRelations;
   media: PersonGalleryMedia[];
   treeId: number | null;
@@ -28,6 +28,8 @@ export function PersonCover({ person, media, treeId, role, datesToCheck, biograp
   /** Open dates to check on this person (#833): the header pill. */
   datesToCheck: number;
   biography: Note | null;
+  /** Bumped by Notes → Biography: opens the biography editor here. */
+  bioRequest?: number;
   run: RunChange;
   onEdit: () => void;
   onDescendants: () => void;
@@ -82,7 +84,7 @@ export function PersonCover({ person, media, treeId, role, datesToCheck, biograp
       )}
       actions={items.length > 0 ? <RecordMenu tone="island" recordName={name} items={items} /> : undefined}
       portrait={<Portrait person={person} media={media} treeId={treeId} canEdit={canWrite} onAdd={onAddPortrait} onOpen={onOpenPortrait} />}
-      lead={<Biography person={person} biography={biography} treeId={treeId} canEdit={canWrite} canDelete={role === 'editor'} run={run} />}
+      lead={<Biography person={person} biography={biography} treeId={treeId} canEdit={canWrite} canDelete={role === 'editor'} run={run} request={bioRequest} />}
     />
   );
 }
@@ -135,9 +137,9 @@ function Portrait({ person, media, treeId, canEdit, onAdd, onOpen }: {
  * 0010/0012); a stand-in note (an imported one, #902) becomes the chosen one.
  * Clearing it removes the note from this person, with Undo for editors.
  */
-function Biography({ person, biography, treeId, canEdit, canDelete, run }: {
+function Biography({ person, biography, treeId, canEdit, canDelete, run, request }: {
   person: PersonWithRelations; biography: Note | null; treeId: number | null;
-  canEdit: boolean; canDelete: boolean; run: RunChange;
+  canEdit: boolean; canDelete: boolean; run: RunChange; request: number;
 }) {
   const t = useTranslations('personDesktop');
   const tp = useTranslations('mobileProfile');
@@ -155,6 +157,15 @@ function Biography({ person, biography, treeId, canEdit, canDelete, run }: {
     requestAnimationFrame(() => Array.from(wrap.current?.querySelectorAll<HTMLElement>('button') ?? []).pop()?.focus());
   };
   const open = () => { setText(saved); setEditing(true); };
+  // Notes → Biography asks for the editor: bring the cover into view and open it.
+  const seen = useRef(request);
+  useEffect(() => {
+    if (request === seen.current || !canEdit) return;
+    seen.current = request;
+    setText(biography?.Text ?? '');
+    setEditing(true);
+    wrap.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [request, canEdit, biography]);
 
   const save = async () => {
     const body = text.trim();

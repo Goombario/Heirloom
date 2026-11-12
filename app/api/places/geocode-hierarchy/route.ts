@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const body = await request.json();
 
-    await upsertPlaceHierarchyService({
+    const { auditIds } = await upsertPlaceHierarchyService({
       levels: body.levels,
       reparent: body.reparent,
       leafId: parseOptionalIdParam(body?.leafId == null ? null : String(body.leafId), 'leafId'),
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       currentUserId: user.id,
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, auditIds });
   } catch (error) {
     return handleApiError(error, 'Failed to save place hierarchy');
   }

@@ -1,11 +1,11 @@
 import { query, getClient } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
 import type {
-    Case, NewCase, CaseCitation, CaseComment, CaseCommentKind, CaseStatusEntry, CaseWithRelations, MediaWithPerson,
+    Case, NewCase, CaseCitation, CaseComment, CaseCommentKind, CaseOutcome, CaseStatusEntry, CaseWithRelations, MediaWithPerson,
 } from '../schema';
 import type { Media } from '../schema';
 import { hasEditPermission } from './sharing';
-import { auditCreate, auditUpdate, auditDelete } from './audit-capture';
+import { auditCreate, auditUpdate, auditDelete, type Queryable } from './audit-capture';
 import { primaryPhotoJoin } from './media-tags';
 import { effectiveFirstName, primaryNickname } from './people';
 import type { DbExecutor } from './owner-links';
@@ -13,9 +13,10 @@ import { publicMediaColumns } from './media-projection';
 import { likeContains } from './like-pattern';
 import { ValidationError } from '@/lib/validation';
 import { NotFoundError } from '@/lib/data/errors';
+import { checkFiling, exportWorkspaceData, fileComment, getCommentLeads, type WorkspaceExportRaw } from './case-workspace';
 
 export const ALLOWED_CASE_FIELDS: ReadonlySet<string> = new Set([
-    'Title', 'Description', 'Status', 'Tags',
+    'Title', 'Description', 'Status', 'Tags', 'FromYear', 'ToYear', 'Place', 'QuestionKind',
 ]);
 
 /** Cheap tree-scoped case existence predicate for media upload validation. */
@@ -152,6 +153,7 @@ async function fetchCommentsForCases(caseIds: number[], treeId: number): Promise
          ORDER BY cc."CreatedAt" ASC, cc."Id" ASC`,
         [caseIds, treeId]
     );
+    const leadsByComment = await getCommentLeads(caseIds);
     const map = new Map<number, CaseComment[]>();
     for (const row of result.rows) {
         const comment: CaseComment = {
@@ -179,6 +181,9 @@ async function fetchCommentsForCases(caseIds: number[], treeId: number): Promise
             StruckBy: row.StruckBy ?? null,
             StruckByName: row.StruckByName ?? null,
             StruckReason: row.StruckReason ?? null,
+            FindingId: row.FindingId ?? null,
+            RequestId: row.RequestId ?? null,
+            leadIds: leadsByComment.get(row.Id) ?? [],
         };
         const list = map.get(row.CaseId) ?? [];
         list.push(comment);
@@ -196,8 +201,9 @@ function buildCaseWithRelations(
 ): CaseWithRelations {
     const comments = commentsMap.get(c.Id) ?? [];
     // A card previews what the researcher wrote (a note or the conclusion), never
-    // a status line or a note struck out as no longer accurate (#1251).
-    const written = comments.filter(cm => cm.Kind !== 'status' && cm.StruckAt == null);
+    // a line the app wrote (status, a finding, a lead's change) or a note struck
+    // out as no longer accurate (#1251).
+    const written = comments.filter(cm => (cm.Kind == null || cm.Kind === 'conclusion') && cm.StruckAt == null);
     return {
         ...c,
         people: peopleMap.get(c.Id) ?? [],
@@ -323,8 +329,8 @@ export async function createCase(
         await client.query('BEGIN');
 
         const result = await client.query(
-            `INSERT INTO "Cases" ("UserId", "TreeId", "Title", "Description", "Status", "Tags")
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO "Cases" ("UserId", "TreeId", "Title", "Description", "Status", "Tags", "FromYear", "ToYear", "Place", "QuestionKind")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              RETURNING *`,
             [
                 data.UserId,
@@ -333,6 +339,10 @@ export async function createCase(
                 data.Description ?? null,
                 data.Status ?? 'in_progress',
                 data.Tags ?? [],
+                data.FromYear ?? null,
+                data.ToYear ?? null,
+                data.Place ?? null,
+                data.QuestionKind ?? null,
             ]
         );
         const newCase = result.rows[0] as Case;
@@ -347,6 +357,17 @@ export async function createCase(
                 [newCase.Id, personIds, data.TreeId ?? null]
             );
         }
+
+        // The question is the case's first lead, with the case's people and years (#58, ADR 0045).
+        await client.query(
+            `WITH lead AS (
+               INSERT INTO "CaseLeads" ("CaseId", "Question", "FromYear", "ToYear", "Position", "CreatedBy")
+               VALUES ($1, LEFT($2, 500), $3, $4, 0, $5) RETURNING "Id"
+             )
+             INSERT INTO "CaseLeadPerson" ("LeadId", "PersonId")
+             SELECT lead."Id", cp."PersonId" FROM lead JOIN "CasePerson" cp ON cp."CaseId" = $1`,
+            [newCase.Id, data.Title, data.FromYear ?? null, data.ToYear ?? null, actingUserId ?? data.UserId]
+        );
 
         await auditCreate(
             'case',
@@ -367,6 +388,40 @@ export async function createCase(
 }
 
 /**
+ * A case's status changed (#801, #58): closing records when and how it ended,
+ * reopening clears both, and the journal logs the change, with the answer as the
+ * final entry when it closes. Runs in the caller's transaction after the
+ * "Status" column is written.
+ */
+export async function recordStatusChange(
+    exec: Queryable,
+    id: number,
+    actor: number,
+    from: string,
+    to: string,
+    conclusion: string | null,
+    outcome: CaseOutcome | null,
+): Promise<void> {
+    const closing = to === 'closed';
+    if (closing) {
+        await exec.query(`UPDATE "Cases" SET "ClosedAt" = CURRENT_TIMESTAMP, "Outcome" = $2 WHERE "Id" = $1`, [id, outcome]);
+    } else if (from === 'closed') {
+        await exec.query(`UPDATE "Cases" SET "ClosedAt" = NULL, "Outcome" = NULL WHERE "Id" = $1`, [id]);
+    }
+    const entry: CaseStatusEntry = from === 'closed' ? 'reopened' : to as CaseStatusEntry;
+    await exec.query(
+        `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'status')`,
+        [id, actor, entry]
+    );
+    if (closing) {
+        await exec.query(
+            `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'conclusion')`,
+            [id, actor, conclusion]
+        );
+    }
+}
+
+/**
  * Update case fields and re-sync people/media. Uses a transaction.
  * Authorization = the tree-scoped SELECT (the row must be in the caller's
  * resolved tree) + the user-keyed edit check kept as defense in depth.
@@ -380,7 +435,8 @@ export async function updateCase(
     mediaIds: number[],
     treeId: number,
     actingUserId?: number,
-    conclusion: string | null = null
+    conclusion: string | null = null,
+    outcome: CaseOutcome | null = null
 ): Promise<Case> {
     const existing = await getCaseById(id, treeId);
     if (!existing) throw new Error('Case not found');
@@ -441,17 +497,7 @@ export async function updateCase(
         }
 
         if (statusChanged && nextStatus) {
-            const entry: CaseStatusEntry = existing.Status === 'closed' ? 'reopened' : nextStatus;
-            await client.query(
-                `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'status')`,
-                [id, actor, entry]
-            );
-            if (closing) {
-                await client.query(
-                    `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'conclusion')`,
-                    [id, actor, conclusion]
-                );
-            }
+            await recordStatusChange(client, id, actor, existing.Status, nextStatus, conclusion, outcome);
         }
 
         const updatedResult = await client.query(`SELECT * FROM "Cases" WHERE "Id" = $1`, [id]);
@@ -495,6 +541,15 @@ export async function deleteCase(id: number, treeId: number, actingUserId?: numb
     try {
         await client.query('BEGIN');
 
+        // A case that put something into the tree keeps its record of it (#58, ADR 0046):
+        // undo those changes first.
+        const applied = await client.query(
+            `SELECT 1 FROM "CaseClaims" cl JOIN "CaseFindings" f ON f."Id" = cl."FindingId"
+              WHERE f."CaseId" = $1 AND cl."AppliedAt" IS NOT NULL LIMIT 1`,
+            [id],
+        );
+        if (applied.rows.length > 0) throw new ValidationError('This case has changed the tree. Undo its changes before deleting it.');
+
         await auditDelete(
             'case',
             existing as unknown as Record<string, unknown>,
@@ -525,11 +580,14 @@ export async function addComment(
     caseId: number,
     userId: number,
     body: string,
-    mediaId?: number | null
+    mediaId?: number | null,
+    leadIds: readonly number[] = []
 ): Promise<CaseComment> {
     const client = await getClient();
     try {
         await client.query('BEGIN');
+        // Filed under the case's own leads still in play (#58); none = the whole case.
+        const filed = await checkFiling(client, caseId, leadIds);
         // Touch UpdatedAt on the parent case
         await client.query(
             `UPDATE "Cases" SET "UpdatedAt" = CURRENT_TIMESTAMP WHERE "Id" = $1`,
@@ -540,8 +598,10 @@ export async function addComment(
              VALUES ($1, $2, $3, $4) RETURNING *`,
             [caseId, userId, body, mediaId ?? null]
         );
+        const comment = result.rows[0] as CaseComment;
+        await fileComment(client, comment.Id, filed);
         await client.query('COMMIT');
-        return result.rows[0] as CaseComment;
+        return { ...comment, leadIds: filed };
     } catch (err) {
         await safeRollback(client);
         throw err;
@@ -690,7 +750,7 @@ export async function getMediaForCaseLinkedPeople(
 /**
  * Remove media from a case. The media itself is deleted only when nothing else
  * uses it: no link to any record (person, family, fact, source, place, …), no
- * face tag, no other case and no journal entry. Anything else only loses this
+ * face tag, no other case, no journal entry and no case finding. Anything else only loses this
  * case's link (#1223, security audit M-2).
  * Returns 'deleted', 'unlinked', or null if not found.
  */
@@ -721,7 +781,8 @@ export async function unlinkOrDeleteCaseMedia(
             `SELECT EXISTS (SELECT 1 FROM "MediaLink" WHERE "MediaId" = $1)
                  OR EXISTS (SELECT 1 FROM "MediaTag" WHERE "MediaId" = $1)
                  OR EXISTS (SELECT 1 FROM "CaseMedia" WHERE "MediaId" = $1)
-                 OR EXISTS (SELECT 1 FROM "CaseComments" WHERE "MediaId" = $1) AS "InUse"`,
+                 OR EXISTS (SELECT 1 FROM "CaseComments" WHERE "MediaId" = $1)
+                 OR EXISTS (SELECT 1 FROM "CaseFindings" WHERE "MediaId" = $1) AS "InUse"`,
             [mediaId]
         );
         const inUse = Boolean((used.rows[0] as { InUse: boolean }).InUse);
@@ -779,6 +840,10 @@ interface CaseExportComment {
     /** When a struck-out note was struck, and why (#1251). Who struck it stays behind, as the author does. */
     StruckAt?: string;
     StruckReason?: string;
+    /** The leads the entry is filed under, and the finding or request it tells of, as DB ids (#58). */
+    leadDbIds?: number[];
+    findingDbId?: number;
+    requestDbId?: number;
 }
 
 export interface CaseExportRecord {
@@ -795,6 +860,15 @@ export interface CaseExportRecord {
     sourceCitationsRaw: CaseCitationRaw[];
     /** The case's attached photos as DB media ids — caller maps them to media xrefs (#1068). */
     mediaDbIds: number[];
+    /** The case's scope and outcome (#58). */
+    FromYear?: number | null;
+    ToYear?: number | null;
+    Place?: string | null;
+    QuestionKind?: string | null;
+    Outcome?: string | null;
+    ClosedAt?: string | null;
+    /** Leads, requests and findings with their claims (#58, ADR 0045). */
+    workspace?: WorkspaceExportRaw;
 }
 
 function citationRaw(row: CaseCitationRaw): CaseCitationRaw {
@@ -820,7 +894,8 @@ export async function exportCasesData(treeId: number): Promise<CaseExportRecord[
     const [commentsResult, peopleResult, structuredResult, mediaResult, commentCitationResult] = await Promise.all([
         // Tree-filtered like fetchCommentsForCases: a photo from another tree exports as none.
         query(
-            `SELECT cc."CaseId", cc."Body", cc."CreatedAt", cc."Kind", cc."Id", cc."StruckAt", cc."StruckReason", m."Id" AS "MediaId"
+            `SELECT cc."CaseId", cc."Body", cc."CreatedAt", cc."Kind", cc."Id", cc."StruckAt", cc."StruckReason", m."Id" AS "MediaId",
+                    cc."FindingId", cc."RequestId"
              FROM "CaseComments" cc
              LEFT JOIN "Media" m ON m."Id" = cc."MediaId" AND m."TreeId" = $2
              WHERE cc."CaseId" = ANY($1) ORDER BY cc."CreatedAt" ASC, cc."Id" ASC`,
@@ -847,6 +922,9 @@ export async function exportCasesData(treeId: number): Promise<CaseExportRecord[
         ),
     ]);
 
+    const workspaces = await exportWorkspaceData(caseIds, treeId);
+    const commentLeads = await getCommentLeads(caseIds);
+
     const citationByComment = new Map<number, CaseCitationRaw>();
     for (const row of commentCitationResult.rows as Array<CaseCitationRaw & { CommentId: number }>) {
         if (!citationByComment.has(row.CommentId)) citationByComment.set(row.CommentId, citationRaw(row));
@@ -866,6 +944,10 @@ export async function exportCasesData(treeId: number): Promise<CaseExportRecord[
             comment.StruckAt = row.StruckAt instanceof Date ? row.StruckAt.toISOString() : row.StruckAt;
             if (row.StruckReason) comment.StruckReason = row.StruckReason;
         }
+        const leads = commentLeads.get(row.Id);
+        if (leads && leads.length > 0) comment.leadDbIds = leads;
+        if (row.FindingId != null) comment.findingDbId = row.FindingId;
+        if (row.RequestId != null) comment.requestDbId = row.RequestId;
         list.push(comment);
         cmtMap.set(row.CaseId, list);
     }
@@ -902,5 +984,12 @@ export async function exportCasesData(treeId: number): Promise<CaseExportRecord[
         linkedPersonDbIds: pplMap.get(c.Id) ?? [],
         sourceCitationsRaw: structuredByCase.get(c.Id) ?? [],
         mediaDbIds: mediaByCase.get(c.Id) ?? [],
+        FromYear: c.FromYear ?? null,
+        ToYear: c.ToYear ?? null,
+        Place: c.Place ?? null,
+        QuestionKind: c.QuestionKind ?? null,
+        Outcome: c.Outcome ?? null,
+        ClosedAt: c.ClosedAt == null ? null : (c.ClosedAt as unknown) instanceof Date ? (c.ClosedAt as unknown as Date).toISOString() : c.ClosedAt,
+        workspace: workspaces.get(c.Id),
     }));
 }

@@ -135,3 +135,23 @@ export function familyResearchSubject(
     }
     return null;
 }
+
+/**
+ * A research lead (#58): the person it is about, searched across the lead's
+ * years (or the case's) and the case's focus place. With no years it searches
+ * the person's name around their birth, as a name fact does.
+ */
+export function leadResearchSubject(
+    person: SubjectPerson & { spouses?: { person: Pick<SubjectPerson, 'FirstName' | 'LastName'> | null; family: SubjectFamily }[] },
+    scope: { fromYear: number | null; toYear: number | null; place: string | null },
+    nowYear: number,
+): ResearchSubject {
+    const marriages = (person.spouses ?? []).map(s => ({ date: s.family.MarriageDate, spouse: s.person }));
+    const { fromYear: from, toYear: to } = scope;
+    const date = from != null && to != null ? (from === to ? String(from) : `BET ${from} AND ${to}`)
+        : from != null ? `AFT ${from}` : to != null ? `BEF ${to}` : null;
+    const fact = date == null && !scope.place
+        ? { kind: 'name' as const, date: null, place: null }
+        : { kind: 'residence' as const, date, place: scope.place };
+    return subject(person, { marriages, nameVariants: [], fact }, nowYear);
+}

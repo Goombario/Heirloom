@@ -2,7 +2,7 @@
 
 import React, { useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { FamilyType, Person, PersonGalleryMedia, PersonResult, PersonWithRelations } from '@/lib/db/schema';
+import type { Person, PersonGalleryMedia, PersonResult, PersonWithRelations } from '@/lib/db/schema';
 import type { ChildRelationshipType } from '@/lib/data/types';
 import { getDataClient } from '@/lib/data';
 import { formatYearOrEmpty } from '@/lib/date-utils';
@@ -18,14 +18,12 @@ import { LinkIcon, Network, Plus, Users } from '@/lib/icons';
 import { peopleListKey } from '../../peopleListKey';
 import { nameBarParts } from './model';
 import {
-    FAMILY_ROLES, childFamilyOptions, linkPlan, linkedIds, parentFamilyOptions, siblingFamilyOptions, suggestRelatives,
-    type FamilyRole, type LinkChoice, type Who,
+    CHILD_TYPES, FAMILY_ROLES, PARTNERSHIP_TYPES, childFamilyOptions, linkPlan, linkedIds, parentFamilyOptions, siblingFamilyOptions, suggestRelatives,
+    type FamilyRole, type LinkChoice,
 } from './familyLinks';
 import type { RunChange } from './useChange';
+import { runLinkPlan } from './runLinkPlan';
 
-// The child types a person picks for their own child; Guardian and Unknown are
-// set from the family page (#982).
-const CHILD_TYPES: ChildRelationshipType[] = ['Birth', 'Adoption', 'Foster', 'Step'];
 
 /*
  * Add family on the phone (#1050, tracking #1054): Parent, Partner, Child or Sibling,
@@ -40,14 +38,6 @@ export interface AddFamilyFlow {
     role: FamilyRole | null;
 }
 
-/** The partnership types the family editor offers, in its order. */
-const PARTNERSHIP_TYPES: { v: FamilyType; key: 'marriage' | 'civil_union' | 'common_law' | 'other' | 'unknown' }[] = [
-    { v: 'Marriage', key: 'marriage' },
-    { v: 'Civil union', key: 'civil_union' },
-    { v: 'Common-law', key: 'common_law' },
-    { v: 'Other', key: 'other' },
-    { v: 'Unknown', key: 'unknown' },
-];
 
 const ROLE_ICONS: Record<FamilyRole, React.ReactNode> = {
     parent: <Network />,
@@ -130,51 +120,7 @@ function AddFamilyBody({ open, flow, onClose, person, portrait, treeId, canUndo,
             : [picked.draft.firstName, picked.draft.lastName].filter(Boolean).join(' ') || t('unknown');
         const sex = (picked.kind === 'existing' ? picked.person.Sex : picked.draft.sex) ?? 'U';
         setBusy(true);
-        const ok = await run(async () => {
-            const client = await getDataClient();
-            const auditIds: number[] = [];
-            try {
-                let pickedId: number;
-                if (picked.kind === 'existing') {
-                    pickedId = picked.person.Id;
-                } else {
-                    const d = picked.draft;
-                    const created = await client.people.create({
-                        FirstName: d.firstName || null, LastName: d.lastName || null, Sex: d.sex, BirthDate: d.birthDate,
-                    }, { treeId });
-                    auditIds.push(...created.auditIds);
-                    pickedId = created.Id;
-                }
-                const who = (w: Who | null) => (w === 'picked' ? pickedId : w);
-                let newFamily: number | null = null;
-                for (const s of plan) {
-                    if (s.kind === 'create-family') {
-                        const f = await client.families.create({
-                            Partner1Id: who(s.partners[0]), Partner2Id: who(s.partners[1]),
-                            ...(s.type ? { Type: s.type } : {}),
-                            ...(s.startDate ? { MarriageDate: s.startDate } : {}),
-                        }, treeId);
-                        auditIds.push(...f.auditIds);
-                        newFamily = f.Id;
-                    } else if (s.kind === 'set-partner') {
-                        const f = await client.families.update(s.familyId, { [s.slot]: pickedId }, treeId);
-                        auditIds.push(...f.auditIds);
-                    } else {
-                        const familyId = s.familyId === 'new' ? newFamily : s.familyId;
-                        if (familyId == null) throw new Error('No family to join');
-                        const r2 = await client.families.addChild(familyId, who(s.child) as number, s.type, treeId);
-                        auditIds.push(...r2.auditIds);
-                    }
-                }
-            } catch (e) {
-                // Leave nothing half-linked: take back what went through, then report.
-                if (canUndo && auditIds.length > 0) {
-                    try { await client.audit.revert(auditIds, treeId); } catch { /* the error below is the one to show */ }
-                }
-                throw e;
-            }
-            return { auditIds };
-        }, { message: t(`added_${r}`, { name: shownName, of: name, sex, married: choice.familyType === 'Marriage' ? 'yes' : 'no' }) });
+        const ok = await run(async () => runLinkPlan({ client: await getDataClient(), plan, picked, treeId, canUndo }), { message: t(`added_${r}`, { name: shownName, of: name, sex, married: choice.familyType === 'Marriage' ? 'yes' : 'no' }) });
         setBusy(false);
         if (ok) onClose();
     }

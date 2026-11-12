@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { livingStatus } from '@/lib/living';
 import { compareText } from '@/lib/collation';
-import { Button, CopperPill, DataTable, Pagination, EmptyState, MobileListHeader, PageShell, type Column } from '@/app/components/ui';
+import { Button, CopperPill, CoverBand, DataTable, EmptyState, ListToolbar, MobileListHeader, PageShell, TablePanel, type Column } from '@/app/components/ui';
 import { Plus } from '@/lib/icons';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import { formatDateForDisplay } from '@/lib/date-utils';
@@ -16,7 +16,6 @@ import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { useTree } from '@/app/contexts/TreeContext';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import { FilterChip } from '@/app/components/ui';
-import SearchBar from '@/app/components/SearchBar';
 import { SkeletonList } from '@/app/components/SkeletonLoader';
 import { useLoadPhase } from '@/app/components/useLoadPhase';
 import { getInitials } from '@/lib/utils/initials';
@@ -33,6 +32,9 @@ import { cycleTri, flagFromUrlFilter, matchesSexBucket, matchesTri, sexBucketsPr
 import { foldForSearch } from '@/lib/utils/search-fold';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { AddPersonSheet } from './AddPersonSheet';
+import { AddPersonDialog } from './AddPersonDialog';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
+import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 
 type SortColumn = PeopleSortColumn;
 type SortDirection = 'asc' | 'desc';
@@ -141,13 +143,13 @@ export default function PeoplePageClient({
     const canEdit = activePermission !== 'view';
     const { redirectIfUnauthorized } = useErrorToast();
 
-    // The phone's Add person is a sheet over this list (#1065). `?add=1` opens it, which
-    // is where /people/new and the home page send a phone; a wider screen gets the page.
+    // Add person is a sheet over this list on a phone (#1065) and a quick-add dialog on
+    // a wider screen (#52). `?add=1` opens it, which is where /people/new sends everyone.
     const [adding, setAdding] = useState(false);
+    const phone = useIsMobile();
     const wantsAdd = searchParams.get('add') === '1';
     useEffect(() => {
         if (!wantsAdd) return;
-        if (!window.matchMedia('(max-width: 767px)').matches) { router.replace('/people/new'); return; }
         if (canEdit) setAdding(true);
         const rest = new URLSearchParams(searchParams.toString());
         rest.delete('add');
@@ -197,6 +199,7 @@ export default function PeoplePageClient({
     const phase = useLoadPhase(currentUserId === null || loading || (flag !== null && flagged.loading), { delay: 0 });
 
     useDocumentTitle(t('title'));
+    const treeName = useActiveTreeName();
     useEffect(() => {
         setFlag(urlFlag);
     }, [urlFlag]);
@@ -355,11 +358,6 @@ export default function PeoplePageClient({
     const surnameLabel = surnameFilter ? t('filter_surname_active', { name: surnameFilter }) : surnameAddLabel;
     const anyFilter = flag !== null || effectiveSex !== null || surnameFilter !== null
         || hasParentsFilter !== 'off' || hasChildrenFilter !== 'off' || hasPhotoFilter !== 'off' || livingFilter !== 'off';
-    const sortLabel = (() => {
-        const colName = sortColumn === 'name' ? t('sort_col_name') : sortColumn === 'birth' ? t('sort_col_birth') : sortColumn === 'death' ? t('sort_col_death') : sortColumn === 'place' ? t('sort_col_place') : t('sort_col_updated');
-        const arrow = sortDirection === 'asc' ? '↑' : '↓';
-        return t('sort_label', { col: colName, arrow });
-    })();
 
     // One reset for both the "clear all" chip and the empty state — they used to
     // clear different subsets, so the empty state could leave a filter applied.
@@ -390,7 +388,7 @@ export default function PeoplePageClient({
                         <CopperPill icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</CopperPill>
                     </span>
                     <span className="hidden md:inline">
-                        <Button variant="outline" size="sm" onClick={() => router.push('/people/new')}>{t('add_person_outline')}</Button>
+                        <Button variant="outline" size="sm" onClick={() => setAdding(true)}>{t('add_person_outline')}</Button>
                     </span>
                 </>
             ) : undefined}
@@ -428,7 +426,7 @@ export default function PeoplePageClient({
                             focalRadius={person.FocalRadius}
                         />
                         <div>
-                            <Link href={`/people/view?id=${person.Id}`} className="text-sm no-underline" style={{ color: 'var(--text)' }}>
+                            <Link href={`/people/view?id=${person.Id}`} className="serif text-base font-semibold text-text no-underline hover:underline">
                                 <SplitName person={person} unnamed={String(fullName)} surnameFirst />
                             </Link>
                             {/* The parent line is always laid out, empty or not, so every
@@ -499,22 +497,20 @@ export default function PeoplePageClient({
     return (
         <PageShell
             topBar={<MobileListHeader title={t('title')} />}
-            title={t('title')}
             // Below md the dark header names the page and the list runs edge to edge (#1063).
-            titleClassName="max-md:hidden"
             contentClassName="max-md:p-0!"
-            subtitle={phase === 'ready'
-                ? t('people_count', { count: people.length })
-                // PageShell wraps `subtitle` in a <p>; a block-level Skeleton div isn't
-                // valid phrasing content there, so use an inline span for this slot.
-                : <span className="skeleton inline-block h-4 w-40 rounded-[6px]" aria-hidden="true" />}
-            // One create path per screen (FL-2): the FAB takes over below md.
-            actions={canEdit && (
-                <div className="hidden md:block">
-                    <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => router.push('/people/new')}>{t('add_person')}</Button>
-                </div>
-            )}
         >
+                {/* Desktop (#59): the short navy band (tree, title, counts), then the toolbar. */}
+                <div className="hidden md:block mb-4">
+                    <CoverBand
+                        variant="short"
+                        eyebrow={treeName}
+                        title={t('title')}
+                        meta={phase === 'ready'
+                            ? (filtered.length !== people.length ? t('count_of', { filtered: filtered.length, total: people.length }) : t('people_count', { count: people.length }))
+                            : <span className="skeleton inline-block h-3 w-40 rounded-[4px] opacity-40" aria-hidden="true" />}
+                    />
+                </div>
 
                 {/* Phone: the filter field and chips, sliding away on scroll down */}
                 <MobilePeopleFilters
@@ -539,23 +535,15 @@ export default function PeoplePageClient({
                     onClearAll={clearAllFilters}
                 />
 
-                {/* Desktop: search + filter chips */}
-                <div className="hidden md:block">
-                    {/* Search row */}
-                    <SearchBar
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        placeholder={t('search_placeholder_full')}
-                        clearLabel={t('clear_search')}
-                        trailing={!loading ? (
-                            <span className="muted text-meta shrink-0">
-                                {filtered.length !== people.length ? t('count_of', { filtered: filtered.length, total: people.length }) : t('count_total', { total: people.length })}
-                            </span>
-                        ) : undefined}
-                    />
-
-                    {/* Filter chips row */}
-                    <div className="list-filter-chips mb-1">
+                {/* Desktop: search, the filter chips, then the one main button (#59) */}
+                <div className="hidden md:block mb-3">
+                    <ListToolbar
+                        search={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        searchLabel={t('search_placeholder_full')}
+                        // One create path per screen (FL-2): the floating pill takes over below md.
+                        action={canEdit ? <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</Button> : undefined}
+                        filters={<>
                         {flag && (
                             <FilterChip
                                 label={t('filter_duplicates')}
@@ -626,9 +614,8 @@ export default function PeoplePageClient({
                                 {t('clear_all')}
                             </button>
                         )}
-                        <div className="hidden md:block flex-1" />
-                        <span className="muted hidden md:inline text-meta shrink-0">{sortLabel}</span>
-                    </div>
+                        </>}
+                    />
 
                     {/* Surname picker — fixed-positioned so it escapes the chip scroller's overflow clip */}
                     {showSurnamePicker && !surnameFilter && surnamePickerPos && (
@@ -681,7 +668,7 @@ export default function PeoplePageClient({
                 {phase === 'loading' && (
                     <>
                         <div className="md:hidden"><SkeletonList rows={8} /></div>
-                        <div className="hidden md:block card overflow-hidden mt-1.5">
+                        <div className="hidden md:block card overflow-hidden">
                             <SkeletonList rows={8} />
                         </div>
                     </>
@@ -720,32 +707,18 @@ export default function PeoplePageClient({
                             onPage={(n) => { setCurrentPage(n); window.scrollTo({ top: 0 }); }}
                         />
 
-                        {/* Desktop table — hidden on mobile */}
-                        <div className="hidden md:block mt-1.5">
-                            <div className="card overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <DataTable
-                                        columns={peopleColumns}
-                                        rows={currentPeople}
-                                        rowKey={(p) => p.Id}
-                                        sort={{ key: sortColumn, dir: sortDirection }}
-                                        onSortChange={(key) => handleSort(key as SortColumn)}
-                                        onRowPrefetch={(p) => prefetchPerson(p.Id, activeTreeId)}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
+                        {/* Desktop: one white panel holds the table, the pager in its footer (#59) */}
                         <div className="hidden md:block">
-                        <Pagination
-                            current={currentPage}
-                            total={totalPages}
-                            onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            onNext={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            prevLabel={t('prev')}
-                            nextLabel={t('next')}
-                            positionLabel={t('page_pos', { current: currentPage, total: totalPages })}
-                        />
+                            <TablePanel page={currentPage} pageSize={ITEMS_PER_PAGE} total={filtered.length} onPage={setCurrentPage}>
+                                <DataTable
+                                    columns={peopleColumns}
+                                    rows={currentPeople}
+                                    rowKey={(p) => p.Id}
+                                    sort={{ key: sortColumn, dir: sortDirection }}
+                                    onSortChange={(key) => handleSort(key as SortColumn)}
+                                    onRowPrefetch={(p) => prefetchPerson(p.Id, activeTreeId)}
+                                />
+                            </TablePanel>
                         </div>
                     </>
                 )}
@@ -759,7 +732,9 @@ export default function PeoplePageClient({
                     <CopperPill floating icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</CopperPill>
                 </>
             )}
-            {canEdit && <AddPersonSheet open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />}
+            {canEdit && (phone
+                ? <AddPersonSheet open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />
+                : <AddPersonDialog open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />)}
         </PageShell>
     );
 }

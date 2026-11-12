@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const body = await request.json().catch(() => ({}));
-    await updatePlaceCoordinatesService({
+    const { auditIds } = await updatePlaceCoordinatesService({
       name: body?.name,
       placeId: parseOptionalIdParam(body?.placeId == null ? null : String(body.placeId), 'placeId'),
       latitude: body?.latitude,
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       currentUserId: user.id,
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, auditIds });
   } catch (error) {
     return handleApiError(error, 'Failed to update place coordinates');
   }

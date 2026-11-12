@@ -2,8 +2,10 @@
  * Person-owned rows that a person delete destroys or strands, carried in the
  * delete's audit entry so a revert can bring them back (#788, ED-10).
  *
- * `NameVariant`, `MediaTag` and `CasePerson` reference "People" with
- * ON DELETE CASCADE, so the delete removes them. `NoteLink` and `MediaLink` are
+ * `NameVariant`, `MediaTag`, `CasePerson` and `CaseLeadPerson` reference
+ * "People" with ON DELETE CASCADE, so the delete removes them. A case claim about
+ * the person keeps its row and loses the link (ON DELETE SET NULL), so only the
+ * claim Ids are captured and the link is set again on restore (ADR 0045). `NoteLink` and `MediaLink` are
  * polymorphic (no FK) and survive today, but they are captured as well so a
  * restore doesn't depend on no sweep having run in between. Citations, events,
  * `FamilyPerson` child links and partner slots are also FK-less and survive the
@@ -19,6 +21,10 @@ interface PersonDependents {
     CasePerson: Row[];
     NoteLink: Row[];
     MediaLink: Row[];
+    /** Absent in entries written before v69. */
+    CaseLeadPerson?: Row[];
+    /** The case claims about the person, as `{ Id }`; absent before v69. */
+    CaseClaim?: Row[];
 }
 
 /** Read every dependent row of one person. Run before the delete, in its transaction. */
@@ -29,12 +35,16 @@ export async function capturePersonDependents(exec: Executor, personId: number):
     const casePeople = await exec.query(`SELECT * FROM "CasePerson" WHERE "PersonId" = $1 ORDER BY "CaseId"`, [personId]);
     const noteLinks = await exec.query(`SELECT * FROM "NoteLink" WHERE "OwnerTable" = 'People' AND "OwnerId" = $1 ORDER BY "NoteId"`, [personId]);
     const mediaLinks = await exec.query(`SELECT * FROM "MediaLink" WHERE "OwnerTable" = 'People' AND "OwnerId" = $1 ORDER BY "MediaId"`, [personId]);
+    const leadPeople = await exec.query(`SELECT * FROM "CaseLeadPerson" WHERE "PersonId" = $1 ORDER BY "LeadId"`, [personId]);
+    const claims = await exec.query(`SELECT "Id" FROM "CaseClaims" WHERE "PersonId" = $1 ORDER BY "Id"`, [personId]);
     return {
         NameVariant: nameVariants.rows as Row[],
         MediaTag: mediaTags.rows as Row[],
         CasePerson: casePeople.rows as Row[],
         NoteLink: noteLinks.rows as Row[],
         MediaLink: mediaLinks.rows as Row[],
+        CaseLeadPerson: leadPeople.rows as Row[],
+        CaseClaim: claims.rows as Row[],
     };
 }
 
@@ -42,7 +52,8 @@ export async function capturePersonDependents(exec: Executor, personId: number):
 export function isPersonDependents(value: unknown): value is PersonDependents {
     if (!value || typeof value !== 'object') return false;
     const v = value as Record<string, unknown>;
-    return ['NameVariant', 'MediaTag', 'CasePerson', 'NoteLink', 'MediaLink'].every(k => v[k] === undefined || Array.isArray(v[k]));
+    return ['NameVariant', 'MediaTag', 'CasePerson', 'NoteLink', 'MediaLink', 'CaseLeadPerson', 'CaseClaim']
+        .every(k => v[k] === undefined || Array.isArray(v[k]));
 }
 
 /** Ids from `rows[field]` that name a row of `table` in this tree and owner. */
@@ -139,6 +150,29 @@ export async function restorePersonDependents(
     for (const cp of casePeople) {
         if (!cases.has(Number(cp.CaseId))) continue;
         await insertRow(exec, 'CasePerson', { CaseId: cp.CaseId, PersonId: personId });
+    }
+
+    // Lead links and claims come back only where their case is in this tree and owner.
+    const leadIds = [...new Set((dependents.CaseLeadPerson ?? []).map(r => Number(r.LeadId)).filter(Number.isInteger))];
+    if (leadIds.length > 0) {
+        await exec.query(
+            `INSERT INTO "CaseLeadPerson" ("LeadId", "PersonId")
+             SELECT l."Id", $2 FROM "CaseLeads" l JOIN "Cases" c ON c."Id" = l."CaseId"
+              WHERE l."Id" = ANY($1::int[]) AND c."TreeId" = $3 AND c."UserId" = $4
+             ON CONFLICT DO NOTHING`,
+            [leadIds, personId, treeId, treeOwnerId],
+        );
+    }
+    const claimIds = [...new Set((dependents.CaseClaim ?? []).map(r => Number(r.Id)).filter(Number.isInteger))];
+    if (claimIds.length > 0) {
+        // A claim linked to someone else since the delete keeps that link.
+        await exec.query(
+            `UPDATE "CaseClaims" cl SET "PersonId" = $2
+               FROM "CaseFindings" f JOIN "Cases" c ON c."Id" = f."CaseId"
+              WHERE cl."Id" = ANY($1::int[]) AND cl."PersonId" IS NULL AND f."Id" = cl."FindingId"
+                AND c."TreeId" = $3 AND c."UserId" = $4`,
+            [claimIds, personId, treeId, treeOwnerId],
+        );
     }
 
     const notes = await idsInTree(exec, 'Note', 'OwnerId', noteLinks, 'NoteId', treeId, treeOwnerId);

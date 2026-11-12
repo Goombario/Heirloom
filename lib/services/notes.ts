@@ -5,6 +5,7 @@ import {
   unlinkNote,
   setPrimaryNoteForOwner,
   getNoteAuditSnapshot,
+  moveNoteLink,
   NOTE_OWNER_FACTS,
   type Note,
   type NoteOwnerFact,
@@ -14,6 +15,8 @@ import type { LinkOwnerTable } from '@/lib/db/fact-tables';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import { AccessError, NotFoundError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
+import { getClient } from '@/lib/db/connection';
+import { safeRollback } from '@/lib/db/rollback';
 import { validatedOwner, assertOwnerInTree } from '@/lib/services/owner-links';
 
 export interface ListNotesParams {
@@ -39,7 +42,7 @@ export interface CreateNoteParams {
   requestedTreeId: number | null;
   requestedOwnerId: number | null;
   currentUserId: number;
-  /** Which promoted vital fact this note is about (ADR 0016 — set from context, never re-scoped). */
+  /** Which promoted vital fact this note is about (set from context; moving it later is `moveNoteService`, ADR 0043). */
   ownerFact?: NoteOwnerFact;
 }
 
@@ -196,4 +199,91 @@ export async function removeNoteService(params: RemoveNoteParams): Promise<Audit
   const removed = before ? await unlinkNote(id, table, ownerId, scope.treeId) : false;
   if (!before || !removed) throw new NotFoundError('Note not found');
   return withAuditIds({}, [await auditNote('delete', before, scope.ownerId, currentUserId)]);
+}
+
+/** One end of a note move, as a caller names it (untrusted until validated). */
+interface NoteMoveEnd {
+  ownerTable: string;
+  ownerId: number;
+  ownerFact: NoteOwnerFact | null;
+}
+
+export interface MoveNoteParams {
+  id: number;
+  from: NoteMoveEnd;
+  to: NoteMoveEnd;
+  requestedTreeId: number | null;
+  requestedOwnerId: number | null;
+  currentUserId: number;
+}
+
+function validatedEnd(end: NoteMoveEnd) {
+  const ownerTable = validatedOwner(end.ownerTable, end.ownerId);
+  const ownerFact = end.ownerFact ?? null;
+  if (ownerFact != null && !NOTE_OWNER_FACTS.includes(ownerFact)) throw new ValidationError('Invalid note scope');
+  // A fact is a promoted vital on a person or family; an event is its own fact.
+  if (ownerFact != null && ownerTable !== 'People' && ownerTable !== 'Families') throw new ValidationError('Invalid note scope');
+  return { ownerTable, ownerId: end.ownerId, ownerFact };
+}
+
+/**
+ * Move a note to another thing it is about (ADR 0043, superseding ADR 0016
+ * decision 3): from the person in general to their birth, or to one of their
+ * events, and back. The note keeps its text and history; only its link moves.
+ * A move needs write permission, like editing the text, since nothing is
+ * destroyed. Logged so Undo can put it back: on the same record as an update of
+ * the link's `OwnerFact`; across records as a link added there and a link
+ * removed here, in that order, so a revert never leaves the note without a link.
+ */
+export async function moveNoteService(params: MoveNoteParams): Promise<Audited> {
+  const { id, requestedTreeId, requestedOwnerId, currentUserId } = params;
+  const from = validatedEnd(params.from);
+  const to = validatedEnd(params.to);
+  const sameRecord = from.ownerTable === to.ownerTable && from.ownerId === to.ownerId;
+  if (sameRecord && from.ownerFact === to.ownerFact) return withAuditIds({}, []);
+
+  const scope = await resolveTreeScope({ treeId: requestedTreeId, ownerId: requestedOwnerId }, currentUserId);
+  if (scope.permission === 'view') {
+    throw new AccessError('You only have view permission for this tree');
+  }
+  await assertOwnerInTree(from.ownerTable, from.ownerId, scope.treeId);
+  await assertOwnerInTree(to.ownerTable, to.ownerId, scope.treeId);
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const before = await getNoteAuditSnapshot(id, from.ownerTable, from.ownerId, scope.treeId, client);
+    if (!before || !before.Links.some((l) => l.OwnerFact === from.ownerFact)) throw new NotFoundError('Note not found');
+    // A note linked twice to one record (under two facts, #512) can't move one of
+    // the two across records: Undo restores a record's links as a set.
+    if (!sameRecord && before.Links.length > 1) throw new ValidationError('This note is linked here more than once');
+    const target = sameRecord ? before : await getNoteAuditSnapshot(id, to.ownerTable, to.ownerId, scope.treeId, client);
+    if (sameRecord ? before.Links.some((l) => l.OwnerFact === to.ownerFact) : target) {
+      throw new ValidationError('The note is already there');
+    }
+
+    const moved = await moveNoteLink(id, from, to, scope.treeId, client);
+    if (!moved) throw new NotFoundError('Note not found');
+
+    const auditIds: (number | null)[] = [];
+    if (sameRecord) {
+      const after = await getNoteAuditSnapshot(id, to.ownerTable, to.ownerId, scope.treeId, client);
+      if (after) {
+        auditIds.push(await auditNote('update', after, scope.ownerId, currentUserId, {
+          OwnerFact: { old: from.ownerFact, new: to.ownerFact },
+        }, client));
+      }
+    } else {
+      const added = await getNoteAuditSnapshot(id, to.ownerTable, to.ownerId, scope.treeId, client);
+      if (added) auditIds.push(await auditNote('create', added, scope.ownerId, currentUserId, undefined, client));
+      auditIds.push(await auditNote('delete', before, scope.ownerId, currentUserId, undefined, client));
+    }
+    await client.query('COMMIT');
+    return withAuditIds({}, auditIds);
+  } catch (error) {
+    await safeRollback(client);
+    throw error;
+  } finally {
+    client.release();
+  }
 }

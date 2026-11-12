@@ -13,7 +13,8 @@ import { useErrorToast } from '@/app/components/useErrorToast';
 import { useUndoRemoval } from '@/app/hooks/useUndoRemoval';
 import { kindKey } from '@/app/families/view/mobile/model';
 import { ActionLink, DetailRail, FamilyRecordRow, Lifespan, OpenInTreeRow, PersonRow, SectionHeader } from '@/app/components/ui';
-import { RelationshipAddPanel } from '../RelationshipAddPanel';
+import { AddFamilyPanel } from './AddFamilyPanel';
+import type { RunChange } from '../mobile/useChange';
 import { nameBarParts, type FamilyCard, type PortraitPerson } from '../mobile/model';
 import { desktopFamily, type ChildEntry, type ParentBlock, type PartnerBlock, type SiblingEntry } from './family';
 
@@ -23,7 +24,7 @@ import { desktopFamily, type ChildEntry, type ParentBlock, type PartnerBlock, ty
  * per partnership (its record row, the partner, their children), Add family and the
  * journey. Unlinks act at once and offer Undo (editors only).
  */
-export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journeyCount, onShowJourney, onChanged }: {
+export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journeyCount, onShowJourney, onChanged, run }: {
   person: PersonWithRelations;
   portrait?: PersonGalleryMedia;
   treeId: number | null;
@@ -35,6 +36,8 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
   journeyCount: number;
   onShowJourney: () => void;
   onChanged: () => void;
+  /** Add family's writes: reload, then the Undo toast. */
+  run: RunChange;
 }) {
   const t = useTranslations('personDesktop');
   const family = useMemo(() => desktopFamily(person, portrait), [person, portrait]);
@@ -78,12 +81,6 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
       : t('partner_unlinked_alone', { name: given }),
   );
 
-  const relatedIds = [
-    person.Id,
-    ...family.parentBlocks.flatMap((b) => [...b.parents.map((p) => p.person.Id), ...b.siblings.map((s) => s.person.Id)]),
-    ...family.partnerBlocks.flatMap((b) => [...(b.partner ? [b.partner.Id] : []), ...b.children.map((c) => c.person.Id)]),
-  ];
-
   return (
     <DetailRail look="open">
       <OpenInTreeRow personId={person.Id} firstName={given} />
@@ -125,11 +122,11 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
           {adding && (
             // Escape closes it and hands focus back to "Add family" (#690).
             <div className="mt-2" onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); addRef.current?.focus(); } }}>
-              <RelationshipAddPanel
-                personId={person.Id}
+              <AddFamilyPanel
+                person={person}
                 treeId={treeId}
-                excludeIds={relatedIds}
-                onAdded={onChanged}
+                canUndo={canDelete}
+                run={run}
                 onClose={() => { setAdding(false); addRef.current?.focus(); }}
               />
             </div>

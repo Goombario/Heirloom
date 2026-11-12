@@ -8,7 +8,7 @@
 // page →". Body is TWO columns: People (clickable → profile, warmed on hover, one entry per
 // person with its linking facts stacked beneath the name) / Events + Place details stacked.
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getDataClient } from '@/lib/data';
@@ -17,14 +17,15 @@ import { initialsFromName } from '@/lib/utils/initials';
 import { useCachedResource } from '@/app/components/useCachedResource';
 import { placeDetailKey } from '@/lib/places/prefetch';
 import { eventTypeLabel } from '@/lib/places/eventTypes';
+import { factTally } from '@/app/places/factTally';
 import { usePlaceFactReason } from '../usePlaceFactReason';
-import { PinMark } from '../PinMark';
 import { groupFactLinks } from './groupFactLinks';
 import { prefetchPerson } from '@/app/people/view/personCache';
 import { ExploreDetailSkeleton } from './ExploreSkeleton';
 import { warmThumbnails } from '@/lib/media/warmThumbnails';
-import { Badge } from '@/app/components/ui/Badge';
+import { ActionLink, SectionHeader } from '@/app/components/ui';
 import { MapPin, ChevronRight } from '@/lib/icons';
+import { sortableYear } from '@/lib/date-utils';
 import type { PlaceDetail } from '@/lib/data/types';
 import { placeHref } from '@/lib/places/place-key';
 
@@ -34,12 +35,13 @@ import { placeHref } from '@/lib/places/place-key';
 // PEOPLE and point at the full page, which owns the complete list. Capping facts
 // instead meant 60 rows could be a dozen people repeated.
 const MAX_PREVIEW_PEOPLE = 60;
+/** People here and Places within open at five rows, then expand in place (#56). */
+const FIRST_ROWS = 5;
 /** Reasons shown under one person before the "+N more facts" line. */
 const MAX_REASONS_PER_PERSON = 3;
 /** Avatar diameter for a person row — also the width the thumbnail warm targets,
  *  so the prefetch and the render ask for the same variant. */
 const PERSON_AVATAR_SIZE = 30;
-const COL_LABEL = 'eyebrow mb-2.5';
 
 export interface ExploreDetailProps {
   /** Selected place name, or null for the empty state. */
@@ -47,9 +49,13 @@ export interface ExploreDetailProps {
   /** Its id (#1186), which addresses it when present. */
   placeId?: number | null;
   treeId: number | null;
+  /** Picks a place listed under Places within, in Explore itself. */
+  onPickPlace?: (id: number) => void;
 }
 
-export function ExploreDetail({ placeName, placeId, treeId }: ExploreDetailProps) {
+export function ExploreDetail({ placeName, placeId, treeId, onPickPlace }: ExploreDetailProps) {
+  const [allPeople, setAllPeople] = useState<string | null>(null);
+  const [allPlaces, setAllPlaces] = useState<string | null>(null);
   const t = useTranslations('places');
 
   // Gate on placeName ONLY. `treeId` is null for the user's DEFAULT tree — the
@@ -98,20 +104,21 @@ export function ExploreDetail({ placeName, placeId, treeId }: ExploreDetailProps
     return link.placeName.split(',')[0]?.trim() ?? link.placeName;
   }, [placeName]);
 
-  const eventCounts = useMemo(() => {
-    if (!detail) return [] as { type: string; label: string; count: number }[];
-    const tally = new Map<string, number>();
-    for (const e of detail.eventCounts) tally.set(e.type, (tally.get(e.type) ?? 0) + e.count);
-    if (detail.familyCount > 0) tally.set('MARR', (tally.get('MARR') ?? 0) + detail.familyCount);
-    return Array.from(tally.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, count]) => ({ type, label: eventTypeLabel(type, t), count }));
-  }, [detail, t]);
+  // Every record here by type, births and deaths included (#56).
+  const eventCounts = useMemo(
+    () => factTally(detail?.factLinks ?? []).map(({ type, count }) => ({ type, label: eventTypeLabel(type, t), count })),
+    [detail, t],
+  );
+
+  // The selected place's first and last dated record, for the summary line and Years.
+  const years = useMemo(() => {
+    const ys = factRows.map((f) => sortableYear(f.date)).filter((y): y is number => y != null);
+    return ys.length > 0 ? { first: Math.min(...ys), last: Math.max(...ys) } : null;
+  }, [factRows]);
 
   if (!placeName) {
-    // Centred inside the panel's right column — NOT its own card. The panel keeps
-    // the same height whether or not something is selected, so choosing a place
-    // never pushes the page around.
+    // Centred inside the pane — NOT its own card. The pane keeps its width whether or
+    // not something is selected, so choosing a place never moves the map.
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 p-10 text-center text-text-muted">
         <MapPin size={26} aria-hidden="true" className="opacity-60" />
@@ -121,9 +128,8 @@ export function ExploreDetail({ placeName, placeId, treeId }: ExploreDetailProps
     );
   }
 
-  // Loading shape mirrors the loaded layout — header band, then the body
-  // columns — so selecting a place does not collapse the pane to nothing and
-  // then push the page back down when the payload lands.
+  // Loading shape mirrors the loaded layout, so selecting a place does not collapse
+  // the pane and push it back out when the payload lands.
   if (loading && !detail) {
     return (
       // Labelled here rather than inside the shared shape: ExploreSkeleton wraps
@@ -136,167 +142,157 @@ export function ExploreDetail({ placeName, placeId, treeId }: ExploreDetailProps
   }
 
   const short = placeName.split(',')[0]?.trim() ?? placeName;
-  const region = placeName.includes(',') ? placeName.slice(placeName.indexOf(',') + 1).trim() : '';
-  const geocoded = detail != null && detail.latitude != null && detail.longitude != null;
-  // Facts, matching the rows below and the "people linked" count beside it. It
-  // used to be people(birth/death only) + events + families, which could read
-  // "2 people linked · 1 record" for a place referenced only by one marriage.
+  const partOf = detail?.parents && detail.parents.length > 0
+    ? [...detail.parents].reverse().map((p) => p.name.split(',')[0]?.trim() ?? p.name)
+    : placeName.includes(',') ? placeName.slice(placeName.indexOf(',') + 1).split(',').map((x) => x.trim()) : [];
+  // Facts, matching the rows below and the people count beside it.
   const totalCount = factRows.length;
+  const within = detail?.children ?? [];
+  const peopleOpen = allPeople === placeName;
+  const placesOpen = allPlaces === placeName;
+  const people = personGroups.slice(0, peopleOpen ? MAX_PREVIEW_PEOPLE : FIRST_ROWS);
+  const places = placesOpen ? within : within.slice(0, FIRST_ROWS);
+  const summary = [
+    detail ? t('people_linked', { count: linkedPeopleCount }) : null,
+    detail ? t('records_total', { count: totalCount }) : null,
+    years ? (years.first === years.last ? String(years.first) : `${years.first}–${years.last}`) : null,
+  ].filter(Boolean).join(' · ');
 
   return (
-    <div className="flex flex-col flex-1">
-      {/* header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap px-5 py-4 border-b border-border">
-        <div className="min-w-0">
-          <h3 className="serif text-2xl font-semibold text-text leading-tight">{short}</h3>
-          {region && <p className="mt-0.5 text-xs text-text-muted">{region}</p>}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* One geocode-state symbol set (#266) — a MapPin in both states meant the
-              same shape said "pinned" and "not pinned", leaving colour to carry it.
-              Own-pin mark only: the hollow ring means "no pin anywhere", which this
-              surface cannot tell from "inherits one". The words carry the negative. */}
-          {/* A fact as muted text; a missing pin keeps its warning tag (#757). */}
-          {geocoded ? (
-            <span className="inline-flex items-center gap-1 text-meta text-text-muted"><PinMark state="own" />{t('geocoded')}</span>
-          ) : (
-            <Badge tone="warning">{t('not_geocoded')}</Badge>
-          )}
-          {detail && <Badge tone="neutral">{t('people_linked', { count: linkedPeopleCount })}</Badge>}
-          {detail && <Badge tone="neutral">{t('records_total', { count: totalCount })}</Badge>}
-          <Link
-            href={placeHref({ id: placeId, name: placeName })}
-            className="text-sm font-semibold text-link hover:underline whitespace-nowrap"
-          >
-            {t('open_full_page')} →
-          </Link>
+    <div className="flex flex-col">
+      {/* The place: name, the "Part of" chain, the counts line, and the way to its page. */}
+      <div className="px-5 pt-5 pb-4 border-b border-border-light">
+        <h2 className="serif text-2xl font-semibold text-text leading-tight m-0 break-words line-clamp-3" title={placeName}>{short}</h2>
+        {partOf.length > 0 && (
+          <p className="mt-1 mb-0 text-meta text-text-muted">{t('part_of_chain', { chain: partOf.join(' › ') })}</p>
+        )}
+        {summary && <p className="mt-1.5 mb-0 text-sm text-text-secondary tabular-nums">{summary}</p>}
+        <div className="mt-2.5">
+          <ActionLink kind="leave" href={placeHref({ id: placeId, name: placeName })}>{t('open_place_page')}</ActionLink>
         </div>
       </div>
 
-      {/* body */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] flex-1">
-        {/* People */}
-        <div className="p-4 border-b lg:border-b-0 lg:border-r border-border-light">
-          <div className={COL_LABEL}>
-            {t('people_linked', { count: linkedPeopleCount })}
-            <span className="normal-case tracking-normal font-normal text-text-muted"> · {t('explore_open_profile_hint')}</span>
-          </div>
-          {personGroups.length > 0 ? (
-            <div className="flex flex-col">
-              {personGroups.slice(0, MAX_PREVIEW_PEOPLE).map((group) => {
-                const sex = group.sex === 'M' ? 'M' : group.sex === 'F' ? 'F' : null;
-                const shown = group.facts.slice(0, MAX_REASONS_PER_PERSON);
-                const hidden = group.facts.length - shown.length;
-                return (
-                  <Link
-                    key={group.personId}
-                    href={`/people/view?id=${group.personId}`}
-                    onMouseEnter={() => prefetchPerson(group.personId, treeId)}
-                    onFocus={() => prefetchPerson(group.personId, treeId)}
-                    className="flex items-start gap-2.5 -mx-2 px-2 py-2 min-h-[44px] rounded-lg hover:bg-[color:var(--color-hover-surface)] transition-colors focus-ring"
-                  >
-                    {/* PersonAvatar, not Avatar: these people carry a primary
-                        photo id, and showing initials for someone we have a
-                        portrait of reads as "no photo on file". */}
-                    <PersonAvatar
-                      mediaId={group.primaryMediaId}
-                      treeId={treeId}
-                      sex={sex}
-                      name={group.name}
-                      initials={initialsFromName(group.name)}
-                      focalX={group.focalX}
-                      focalY={group.focalY}
-                      focalRadius={group.focalRadius}
-                      size={PERSON_AVATAR_SIZE}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="serif text-sm font-semibold text-text truncate">
-                        {group.name || t('person_fallback', { id: group.personId })}
-                      </div>
-                      {shown.map((link, i) => {
-                        const where = subPlace(link);
-                        return (
-                          <div key={`${link.kind}-${link.eventType ?? ''}-${link.date ?? ''}-${i}`} className="text-xs text-text-muted truncate">
-                            {factReason(link)}
-                            {where && <span className="opacity-85"> · {where}</span>}
-                          </div>
-                        );
-                      })}
-                      {hidden > 0 && (
-                        <div className="text-xs text-text-muted italic">{t('explore_more_facts', { count: hidden })}</div>
-                      )}
-                    </div>
-                    <ChevronRight size={15} className="text-text-muted shrink-0 self-center" aria-hidden="true" />
-                  </Link>
-                );
-              })}
-              {personGroups.length > MAX_PREVIEW_PEOPLE && (
+      {/* People here: five rows, expanding in place (no link out). One entry per person,
+          with the facts that tie them here stacked under the name. */}
+      <section className="px-5 py-4 border-b border-border-light">
+        <SectionHeader level="rail" title={t('people_here')} count={linkedPeopleCount} />
+        {personGroups.length > 0 ? (
+          <div className="flex flex-col">
+            {people.map((group) => {
+              const sex = group.sex === 'M' ? 'M' : group.sex === 'F' ? 'F' : null;
+              const shown = group.facts.slice(0, MAX_REASONS_PER_PERSON);
+              const hidden = group.facts.length - shown.length;
+              return (
                 <Link
-                  href={placeHref({ id: placeId, name: placeName })}
-                  className="mt-1 -mx-2 px-2 py-2 min-h-[44px] flex items-center rounded-lg text-xs text-link hover:bg-[color:var(--color-hover-surface)] transition-colors focus-ring"
+                  key={group.personId}
+                  href={`/people/view?id=${group.personId}`}
+                  onMouseEnter={() => prefetchPerson(group.personId, treeId)}
+                  onFocus={() => prefetchPerson(group.personId, treeId)}
+                  className="flex items-start gap-2.5 -mx-2 px-2 py-2 min-h-[44px] rounded-lg hover:bg-[color:var(--color-hover-surface)] transition-colors focus-ring"
                 >
-                  {t('explore_more_people', { shown: MAX_PREVIEW_PEOPLE, total: personGroups.length })}
-                </Link>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-text-muted italic">{t('no_people_recorded')}</p>
-          )}
-        </div>
-
-        {/* Events + place details stacked in one column — the 372px rail leaves
-            room for two body columns, not three. */}
-        <div className="p-4 flex flex-col gap-4">
-          <div>
-            <div className={COL_LABEL}>{t('events_here')}</div>
-            {eventCounts.length > 0 ? (
-              <div className="text-sm">
-                {eventCounts.map(({ type, label, count }) => (
-                  <div key={type} className="flex justify-between items-center py-1 border-b border-border-light last:border-0">
-                    <span className="text-text">{label}</span>
-                    <span className="tabular-nums text-text-muted">{count}</span>
+                  {/* PersonAvatar, not Avatar: these people carry a primary
+                      photo id, and showing initials for someone we have a
+                      portrait of reads as "no photo on file". */}
+                  <PersonAvatar
+                    mediaId={group.primaryMediaId}
+                    treeId={treeId}
+                    sex={sex}
+                    name={group.name}
+                    initials={initialsFromName(group.name)}
+                    focalX={group.focalX}
+                    focalY={group.focalY}
+                    focalRadius={group.focalRadius}
+                    size={PERSON_AVATAR_SIZE}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="serif text-sm font-semibold text-text truncate">
+                      {group.name || t('person_fallback', { id: group.personId })}
+                    </div>
+                    {shown.map((link, i) => {
+                      const where = subPlace(link);
+                      return (
+                        <div key={`${link.kind}-${link.eventType ?? ''}-${link.date ?? ''}-${i}`} className="text-xs text-text-muted truncate">
+                          {factReason(link)}
+                          {where && <span className="opacity-85"> · {where}</span>}
+                        </div>
+                      );
+                    })}
+                    {hidden > 0 && (
+                      <div className="text-xs text-text-muted italic">{t('explore_more_facts', { count: hidden })}</div>
+                    )}
                   </div>
-                ))}
+                  <ChevronRight size={15} className="text-text-muted shrink-0 self-center" aria-hidden="true" />
+                </Link>
+              );
+            })}
+            {personGroups.length > FIRST_ROWS && (
+              <div className="mt-1">
+                <ActionLink kind="expand" expanded={peopleOpen} onClick={() => setAllPeople(peopleOpen ? null : placeName)}>
+                  {peopleOpen ? t('show_fewer') : t('show_all_n', { count: personGroups.length })}
+                </ActionLink>
               </div>
-            ) : (
-              <p className="text-xs text-text-muted italic">—</p>
+            )}
+            {peopleOpen && personGroups.length > MAX_PREVIEW_PEOPLE && (
+              <Link
+                href={placeHref({ id: placeId, name: placeName })}
+                className="mt-1 -mx-2 px-2 py-2 min-h-[44px] flex items-center rounded-lg text-xs text-link hover:bg-[color:var(--color-hover-surface)] transition-colors focus-ring"
+              >
+                {t('explore_more_people', { shown: MAX_PREVIEW_PEOPLE, total: personGroups.length })}
+              </Link>
             )}
           </div>
+        ) : (
+          <p className="text-xs text-text-muted italic m-0">{years == null && totalCount > 0 ? t('only_undated') : t('no_people_recorded')}</p>
+        )}
+      </section>
 
-          <div>
-            <div className={COL_LABEL}>{t('place_details')}</div>
-            <dl className="grid grid-cols-[84px_1fr] gap-x-3 gap-y-2 text-sm">
-              {detail?.displayName && (
-                <>
-                  <dt className="text-text-muted">{t('geocoded_label')}</dt>
-                  <dd className="text-text truncate">{detail.displayName}</dd>
-                </>
-              )}
-              <dt className="text-text-muted">{t('coordinates')}</dt>
-              <dd className="tabular-nums text-text-muted">
-                {geocoded ? `${detail!.latitude!.toFixed(4)}, ${detail!.longitude!.toFixed(4)}` : t('not_geocoded_value')}
-              </dd>
-              {detail?.parents && detail.parents.length > 0 && (
-                <>
-                  <dt className="text-text-muted">{t('parent_place_label')}</dt>
-                  <dd className="text-text truncate">
-                    {(() => {
-                      const parent = detail.parents[detail.parents.length - 1];
-                      return parent.name.split(',')[0]?.trim() ?? parent.name;
-                    })()}
-                  </dd>
-                </>
-              )}
-              {detail?.children && detail.children.length > 0 && (
-                <>
-                  <dt className="text-text-muted">{t('subplaces_label')}</dt>
-                  <dd className="tabular-nums text-text-muted">{detail.children.length}</dd>
-                </>
-              )}
-            </dl>
+      {/* Places within: under People here, also expanding in place. Left out at 0. */}
+      {within.length > 0 && (
+        <section className="px-5 py-4 border-b border-border-light">
+          <SectionHeader level="rail" title={t('places_within_title')} count={within.length} />
+          <div className="flex flex-col">
+            {places.map((p) => (
+              <button key={p.id} type="button" onClick={() => onPickPlace?.(p.id)}
+                className="flex items-center gap-2 -mx-2 px-2 py-1.5 min-h-9 rounded-lg text-left text-sm text-text serif bg-transparent border-0 cursor-pointer hover:bg-[color:var(--color-hover-surface)] focus-ring">
+                <span className="flex-1 min-w-0 truncate">{p.name.split(',')[0]?.trim() ?? p.name}</span>
+                <ChevronRight size={14} className="text-text-muted shrink-0" aria-hidden="true" />
+              </button>
+            ))}
+            {within.length > FIRST_ROWS && (
+              <div className="mt-1">
+                <ActionLink kind="expand" expanded={placesOpen} onClick={() => setAllPlaces(placesOpen ? null : placeName)}>
+                  {placesOpen ? t('show_fewer') : t('show_all_n', { count: within.length })}
+                </ActionLink>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        </section>
+      )}
+
+      {/* Records here, by kind. */}
+      <section className="px-5 py-4 border-b border-border-light">
+        <SectionHeader level="rail" title={t('records_here')} count={totalCount} />
+        {eventCounts.length > 0 ? (
+          <div className="text-sm">
+            {eventCounts.map(({ type, label, count }) => (
+              <div key={type} className="flex justify-between items-center py-1 border-b border-border-light last:border-0">
+                <span className="text-text">{label}</span>
+                <span className="tabular-nums text-text-muted">{count}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-text-muted italic m-0">{t('no_records_here')}</p>
+        )}
+      </section>
+
+      {/* Years: the first and last dated record here. */}
+      <section className="px-5 py-4">
+        <SectionHeader level="rail" title={t('years_title')} />
+        <p className="text-sm text-text-secondary m-0 tabular-nums">
+          {years ? t('years_span', { first: years.first, last: years.last }) : t('years_none')}
+        </p>
+      </section>
     </div>
   );
 }

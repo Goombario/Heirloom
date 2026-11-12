@@ -8,7 +8,7 @@ export async function attachPendingCommentCitation(
   pending: PendingCitation,
   commentId: number,
   treeId: number | null,
-): Promise<void> {
+): Promise<number> {
   const sourceId = pending.sourceId ?? (pending.newSource ? (await client.sources.create(pending.newSource, treeId)).Id : null);
   if (!sourceId) throw new Error('Queued citation has no source');
   await client.citations.create({
@@ -20,4 +20,5 @@ export async function attachPendingCommentCitation(
     DataText: pending.dataText ?? null,
     Url: pending.url ?? null,
   }, treeId);
+  return sourceId;
 }

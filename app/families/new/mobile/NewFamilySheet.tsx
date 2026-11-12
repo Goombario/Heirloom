@@ -23,13 +23,14 @@ import { Lifespan, MobileRow, SegmentedControl, citeClass, cx, fieldClass, showC
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
 import { ChevronRight, Plus, UserMinus } from '@/lib/icons';
 import { peopleListKey } from '@/app/people/peopleListKey';
-import { END_REASON_TAGS, childRelationshipTags, partnerShortName } from '@/app/families/view/derive';
+import { childRelationshipTags, partnerShortName } from '@/app/families/view/derive';
 import type { PartnerPerson } from '@/app/families/view/useFamilyDetail';
 import type { Slot } from '@/app/families/view/mobile/model';
 import { coupleName } from '@/app/families/view/mobile/model';
 import { ftypeKey } from '@/app/families/view/mobile/panes';
 import { ChipGroup, Face, Group } from '@/app/families/view/mobile/parts';
 import { LinkChoices } from '@/app/families/view/mobile/PeopleSheets';
+import { saveNewFamily, type CiteFor, type EndReason } from '../saveNewFamily';
 import {
     childWindow, existingId, faceOf, firstDeath, inBirthOrder, likelyChildren, partnerSuggestions, PARTNER_SPREAD, sharedFamily, slotLinks, stage,
     takenIds, type PoolPerson, type Staged, type StagedChild, type StagedFace,
@@ -44,13 +45,10 @@ import {
  */
 
 const FAMILY_TYPES: FamilyType[] = ['Marriage', 'Civil union', 'Common-law', 'Other', 'Unknown'];
-type Reason = 'Divorce' | 'Annulment' | 'Separation';
+type Reason = EndReason;
 type How = 'death' | Reason;
 const HOWS: How[] = ['death', 'Divorce', 'Annulment', 'Separation'];
 const isReason = (h: How | null): h is Reason => h != null && h !== 'death';
-
-/** Which citations a pending one belongs to: the start (the family row) or the ending event. */
-type CiteFor = 'start' | 'end';
 
 type Sub =
     | { kind: 'partner' }
@@ -217,77 +215,24 @@ function Form({ open, onClose, onCreated }: NewFamilySheetProps) {
         if (saving || !valid) return;
         setSaving(true);
         const client = await getDataClient();
-        const made: number[] = [];
-        const peopleIds = new Map<string, number>();
-        const idOf = async (s: Staged) => {
-            if (s.picked.kind === 'existing') return s.picked.person.Id;
-            const d = s.picked.draft;
-            const created = await client.people.create({ FirstName: d.firstName || null, LastName: d.lastName || null, Sex: d.sex, BirthDate: d.birthDate }, { treeId });
-            made.push(...created.auditIds);
-            return created.Id;
-        };
-
-        // The people and the family itself: all or nothing, so a failed save leaves no one behind.
-        let familyId: number;
-        let savedPlaceId: number | null | undefined;
-        try {
-            for (const s of [...partners, ...children]) peopleIds.set(s.key, await idOf(s));
-            const family = await client.families.create({
-                Partner1Id: partners[0] ? peopleIds.get(partners[0].key) ?? null : null,
-                Partner2Id: partners[1] ? peopleIds.get(partners[1].key) ?? null : null,
-                Type: type,
-                MarriageDate: date.trim() || null,
-                MarriagePlace: place.trim() || null,
-                MarriagePlaceId: place.trim() ? placeId : null,
-            }, treeId);
-            familyId = family.Id;
-            savedPlaceId = family.MarriagePlaceId;
-        } catch (e) {
-            if (made.length > 0) { try { await client.audit.revert(made, treeId); } catch { /* report the first error */ } }
-            reportError(e);
+        const result = await saveNewFamily(client, {
+            treeId, partners, children, type,
+            start: { date, place, placeId, resolution: placeRes },
+            end: ended && isReason(howNow) ? { reason: howNow, date: endDate, place: endPlace, placeId: endPlaceId, resolution: endPlaceRes } : null,
+            pending,
+        }, flushPlace, {
+            child: (name) => tef('partial_save_child', { name }),
+            childName: (c) => displayFullName(faceOf(c)) || unknown,
+            end: (reason) => t('partial_end', { reason }),
+            source: () => tef('partial_save_source'),
+            citation: () => tef('partial_save_citation'),
+        });
+        if (!result.ok) {
+            reportError(result.error);
             setSaving(false);
             return;
         }
-
-        // The rest is named when it fails; the family exists, so it opens either way.
-        const failed: string[] = [];
-        try { await flushPlace(place.trim(), placeRes, savedPlaceId); } catch { /* best effort, as on desktop */ }
-        for (const c of inBirthOrder(children)) {
-            try {
-                await client.families.addChild(familyId, peopleIds.get(c.key) as number, slotLinks(c, partners), treeId);
-            } catch {
-                failed.push(tef('partial_save_child', { name: displayFullName(faceOf(c)) || unknown }));
-            }
-        }
-        let endEventId: number | null = null;
-        if (ended && isReason(howNow)) {
-            try {
-                const ev = await client.events.create({ Type: END_REASON_TAGS[howNow], Date: endDate.trim() || null, Place: endPlace.trim() || null, PlaceId: endPlace.trim() ? endPlaceId : null, FamilyId: familyId }, treeId);
-                endEventId = ev.Id;
-                try { await flushPlace(endPlace.trim(), endPlaceRes, ev.PlaceId); } catch { /* best effort */ }
-            } catch {
-                failed.push(t('partial_end', { reason: howNow }));
-            }
-        }
-        for (const pc of pending) {
-            const factId = pc.for === 'start' ? familyId : endEventId;
-            if (factId == null) continue;
-            let sourceId = pc.sourceId;
-            if (sourceId == null && pc.newSource) {
-                try {
-                    sourceId = (await client.sources.create(pc.newSource, treeId)).Id;
-                } catch {
-                    failed.push(tef('partial_save_source'));
-                    continue;
-                }
-            }
-            if (sourceId == null) continue;
-            try {
-                await client.citations.create({ FactTable: pc.for === 'start' ? FACT_TABLES.FAMILIES : FACT_TABLES.EVENTS, FactId: factId, SourceId: sourceId, Page: pc.page, Quay: pc.quay ?? null, DataText: pc.dataText ?? null, Url: pc.url ?? null }, treeId);
-            } catch {
-                failed.push(tef('partial_save_citation'));
-            }
-        }
+        const { familyId, failed } = result;
 
         const name = coupleName(faces[0] as PartnerPerson ?? null, faces[1] as PartnerPerson ?? null) || tp('family');
         if (failed.length > 0) showErrorToast(tef('partial_save_failed', { details: failed.join('; ') }));

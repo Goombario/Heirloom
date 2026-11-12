@@ -25,6 +25,8 @@ import { getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { vitalDeletePatchFor } from '@/app/components/person-form/vitalEvent';
 import { factPlaceEntry } from '@/lib/places/place-key';
+import type { RunChange } from './mobile/useChange';
+import { displayFullName } from '@/lib/utils/names';
 
 interface LifeEventsPanelProps {
     person: PersonWithRelations;
@@ -59,12 +61,19 @@ interface LifeEventsPanelProps {
     footer?: React.ReactNode;
     /** This person's dates to check (#833): a mark on each row whose date to fix it is. */
     marks?: DataCheckMarks;
+    /**
+     * The v1.1 desktop page's change runner (#49): deletes act at once and offer Undo,
+     * like mobile. Without it a delete asks first.
+     */
+    run?: RunChange;
 }
 
-export function LifeEventsPanel({ person, language, renderCitePin, tTypes, placeCoords, canEdit, canDelete, onChanged, personNotes, personMedia, onMediaChanged, footer, marks }: LifeEventsPanelProps) {
+export function LifeEventsPanel({ person, language, renderCitePin, tTypes, placeCoords, canEdit, canDelete, onChanged, personNotes, personMedia, onMediaChanged, footer, marks, run }: LifeEventsPanelProps) {
     const t = useTranslations('personDetail');
     const tc = useTranslations('common');
     const te = useTranslations('eventEdit');
+    const tDesk = useTranslations('personDesktop');
+    const tm = useTranslations('mobileEvents');
     const { activeTreeId } = useTree();
     const dateWords = useDateQualifierWords();
     const { isOpen, toggle } = useToggleSet();
@@ -80,7 +89,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
     const panelRef = useRef<HTMLDivElement>(null);
     const rememberOpener = useEditorFocusReturn(editingId !== null || editingVital !== null, panelRef);
     const [confirmDelete, setConfirmDelete] = useState<GedcomEvent | null>(null);
-    const markRow = useTimelineMarks(marks);
+    // The desktop page keeps the marks on the page: no Open in Data checks link (#49).
+    const markRow = useTimelineMarks(marks, { dataChecksLink: !run });
     // Live note counts per event, keyed by Events."Id". Seeded lazily: the count
     // that arrives with the person payload (`ev.noteCount`, one batched query — no
     // per-row fetch) is authoritative until a rail on this page adds or deletes a
@@ -113,6 +123,11 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
         /** Birth/Death are derived from the profile columns, not Events rows → Edit
          *  routes the inline save back to those columns (Option A), never an Events row. */
         isIntrinsic: boolean;
+        /**
+         * A relative's event shown read-only here (#49): a marriage or partnership
+         * start, or the birth of this person's child. It links to where it is edited.
+         */
+        relative?: { href: string };
     };
 
     const items: Item[] = [];
@@ -181,6 +196,51 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
             citation: renderCitePin(FACT_TABLES.PERSON_DEATH, person.Id, t('fact_death')),
             isIntrinsic: true,
         });
+    }
+
+    // Relatives' events (#49): marriages and partnership starts, and the births of
+    // this person's children whatever the link, except a step-child who comes only
+    // through a partner. Never a relative's death. Read-only, and never counted.
+    for (const s of person.spouses ?? []) {
+        const f = s.family;
+        const partnerName = s.person ? displayFullName(s.person) || tc('unknown') : null;
+        if (f.MarriageDate || f.MarriagePlace) {
+            const married = f.Type == null || f.Type === 'Marriage';
+            items.push({
+                key: `family-${f.Id}`,
+                sortKey: sortableYear(f.MarriageDate),
+                type: 'MARR',
+                title: partnerName
+                    ? tDesk(married ? 'rel_marriage_to' : 'rel_partnership_with', { name: partnerName })
+                    : tDesk(married ? 'rel_marriage' : 'rel_partnership'),
+                date: f.MarriageDate,
+                place: f.MarriagePlace,
+                placeId: f.MarriagePlaceId ?? null,
+                description: null,
+                modifier: '',
+                citation: null,
+                isIntrinsic: false,
+                relative: { href: `/families/view?id=${f.Id}` },
+            });
+        }
+        const slot = f.Partner1Id === person.Id ? 'Partner1Relationship' : 'Partner2Relationship';
+        for (const c of s.children ?? []) {
+            if (c.Id === person.Id || c[slot] === 'Step' || (!c.BirthDate && !c.BirthPlace)) continue;
+            items.push({
+                key: `child-${c.Id}`,
+                sortKey: sortableYear(c.BirthDate),
+                type: 'BIRT',
+                title: tDesk('rel_birth_of', { name: displayFullName(c) || tc('unknown') }),
+                date: c.BirthDate,
+                place: c.BirthPlace,
+                placeId: c.BirthPlaceId ?? null,
+                description: null,
+                modifier: '',
+                citation: null,
+                isIntrinsic: false,
+                relative: { href: `/people/view?id=${c.Id}` },
+            });
+        }
     }
 
     items.sort(compareTimelineItems);
@@ -284,7 +344,29 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
             ev.Place,
         ].filter(Boolean).join(' · ');
 
+    /** A relative's row: its title leaves for the record it is edited on (↗). */
+    const relativeRow = (item: Item): TimelineItem => {
+        const { Icon } = eventGlyph(item.type);
+        const age = birthYear !== null && item.sortKey !== null ? item.sortKey - birthYear : null;
+        const ageLabel = age != null && age > 0 ? String(age) : '';
+        return {
+            key: item.key,
+            icon: <Icon size={15} strokeWidth={2} aria-hidden="true" />,
+            title: item.title,
+            href: item.relative!.href,
+            ageLabel,
+            ageTitle: ageLabel ? t('age_at_event_title', { age: ageLabel }) : undefined,
+            meta: (item.date || item.place) ? (
+                <TimelineWhenWhere
+                    date={item.date && <span className="date-mono text-sm">{formatDateForDisplay(item.date, language, dateWords)}</span>}
+                    place={item.place}
+                />
+            ) : null,
+        };
+    };
+
     const timelineItems: TimelineItem[] = items.map((item) => {
+        if (item.relative) return relativeRow(item);
         // Translate the event title where a localized label exists.
         let displayTitle = item.title;
         try {
@@ -403,7 +485,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
                     <EventRowActions
                         label={displayTitle}
                         onEdit={() => { rememberOpener(); setEditingVital(vital); }}
-                        onDelete={canDelete ? () => setConfirmDeleteVital(vital) : undefined}
+                        onDelete={canDelete ? () => requestDeleteVital(vital) : undefined}
                     />
                 );
             } else if (item.event) {
@@ -412,7 +494,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
                     <EventRowActions
                         label={displayTitle}
                         onEdit={() => { rememberOpener(); setEditingId(ev.Id); }}
-                        onDelete={canDelete ? () => setConfirmDelete(ev) : undefined}
+                        onDelete={canDelete ? () => requestDelete(ev) : undefined}
                     />
                 );
             }
@@ -429,7 +511,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
                     onCancel={() => setEditingId(null)}
                     onRefresh={onChanged}
                     onSaved={() => { setEditingId(null); onChanged(); }}
-                    onDelete={canDelete ? () => setConfirmDelete(ev) : undefined}
+                    onDelete={canDelete ? () => requestDelete(ev) : undefined}
                     // The same rail, always shown while the row is open for edit — this
                     // is where a note is ADDED, including to an event that has none (so
                     // no disclosure toggle above). Inside the editor's block now, not
@@ -507,6 +589,38 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
             dim: dim || item.modifier === 'dim',
         };
     });
+
+    /**
+     * Delete at once with Undo when the page gives a `run` (the v1.1 desktop page,
+     * #49, like mobile); otherwise ask first. Undo reverts the delete's audit entries.
+     */
+    function requestDelete(ev: GedcomEvent) {
+        if (!run) { setConfirmDelete(ev); return; }
+        setEditingId((cur) => (cur === ev.Id ? null : cur));
+        void run(async () => {
+            const client = await getDataClient();
+            return client.events.remove(ev.Id, activeTreeId);
+        }, { message: tm('deleted', { type: typeLabel(ev.Type) }), detail: whenWhere(ev.Date, ev.Place) });
+    }
+
+    function requestDeleteVital(vital: 'BIRT' | 'DEAT') {
+        if (!run) { setConfirmDeleteVital(vital); return; }
+        setEditingVital((cur) => (cur === vital ? null : cur));
+        const date = vital === 'BIRT' ? person.BirthDate : person.DeathDate;
+        const place = vital === 'BIRT' ? person.BirthPlace : person.DeathPlace;
+        void run(async () => {
+            const client = await getDataClient();
+            // Deleting a death sets the status to unknown (vitalDeletePatchFor); the toast says so.
+            return client.people.update(person.Id, vitalDeletePatchFor(vital), activeTreeId);
+        }, {
+            message: vital === 'DEAT' ? tm('death_deleted_unknown') : tm('deleted', { type: tTypes('BIRT') }),
+            detail: whenWhere(date, place),
+        });
+    }
+
+    const typeLabel = (type: string) => (EVENT_TYPES[type] ? tTypes(type as Parameters<typeof tTypes>[0]) : getEventDisplayType(type));
+    const whenWhere = (date: string | null | undefined, place: string | null | undefined) =>
+        [date && formatDateForDisplay(date, language, dateWords), place?.split(',')[0]?.trim()].filter(Boolean).join(' · ') || undefined;
 
     async function handleDelete() {
         const ev = confirmDelete;

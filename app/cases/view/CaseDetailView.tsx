@@ -12,13 +12,11 @@ import RecordNotFound from '@/app/components/RecordNotFound';
 import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { X } from '@/lib/icons';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useCaseDetail } from './useCaseDetail';
-import CaseHeaderCard from './CaseHeaderCard';
-import CaseJournal from './CaseJournal';
-import CaseEvidenceRail from './CaseEvidenceRail';
 import MobileCasePage, { MobileCaseSkeleton } from './MobileCasePage';
+import { ResearchWorkspace } from './desktop/ResearchWorkspace';
+import { StartCase } from './desktop/StartCase';
 
 export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: boolean }) {
     const cd = useCaseDetail({ forceDraft });
@@ -32,7 +30,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
     }, [phoneDraft, router]);
     const {
         id, activeTreeId, t, tCommon,
-        caseData, loading, fetchError, notFound, saveError, setSaveError, setFetchError, setLoading,
+        caseData, loading, fetchError, notFound, setFetchError, setLoading,
         showUploadModal, setShowUploadModal,
         libraryPickerSource,
         lightboxIndex, setLightboxIndex,
@@ -75,28 +73,12 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
 
     if (!caseData) return null;
 
-    const detailContent = (
-        <>
-            {saveError && (
-                <div className="flex justify-between items-center mb-3.5 px-3.5 py-2 rounded-lg text-sm bg-error-bg border border-error text-error">
-                    <span>{saveError}</span>
-                    <button type="button" onClick={() => setSaveError(null)} className="cursor-pointer inline-flex" aria-label={tCommon('close')}>
-                        <X className="w-3.5 h-3.5" aria-hidden="true" />
-                    </button>
-                </div>
-            )}
-
-            <CaseHeaderCard cd={cd} />
-            <div className="grid gap-5 items-start grid-cols-1 md:grid-cols-[minmax(0,1.55fr)_330px]">
-                <CaseJournal cd={cd} />
-                <CaseEvidenceRail cd={cd} />
-            </div>
-        </>
-    );
-
     return (
         <>
-            {isMobile ? <MobileCasePage cd={cd} /> : <PageShell variant="detail">{detailContent}</PageShell>}
+            {isMobile ? <MobileCasePage cd={cd} />
+                // A new case starts from its kind of question; a saved one opens the research workspace (#58).
+                : cd.isDraft ? <StartCase treeId={activeTreeId} />
+                    : <ResearchWorkspace cd={cd} />}
 
             {/* Add media: upload, and the case's people's media (#926, #1204). */}
             {showUploadModal && (

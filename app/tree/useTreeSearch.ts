@@ -17,7 +17,9 @@ export function useTreeSearch(allPeople: TreePersonInfo[] | undefined, onSelect:
     // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            // The control bar portals its list to <body> (#71), so it sits outside searchRef.
+            if (searchRef.current && !searchRef.current.contains(target) && !dropdownRef.current?.contains(target)) {
                 setShowDropdown(false);
             }
         }

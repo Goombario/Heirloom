@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import {
-  Badge, Button, Card, CopperPill, DataTable, EmptyState, FilterChip, InlineDataError, MobileListHeader, PageShell,
-  showErrorToast, showSuccessToast, type Column,
+  Badge, Button, CopperPill, CoverBand, DataTable, EmptyState, FilterChip, InlineDataError, ListToolbar, MobileListHeader, PageShell,
+  TablePanel, showErrorToast, showSuccessToast, type Column,
 } from '@/app/components/ui';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
@@ -77,10 +77,8 @@ export default function MembersPageClient() {
     invited: members.filter((m) => m.Status === 'invited').length,
     revoked: members.filter((m) => m.Status === 'revoked').length,
   }), [members]);
-  const shown = useMemo(
-    () => members.filter((m) => status === 'all' || m.Status === status),
-    [members, status],
-  );
+  const [deskQuery, setDeskQuery] = useState('');
+  const shown = useMemo(() => filterMembers(members, status, deskQuery), [members, status, deskQuery]);
   const phoneRows = useMemo(() => filterMembers(members, phoneView, query), [members, phoneView, query]);
   const openMember = members.find((m) => m.Id === openId || (openEmail !== null && m.Email === openEmail)) ?? null;
 
@@ -204,20 +202,23 @@ export default function MembersPageClient() {
 
   const shell = {
     topBar: <MobileListHeader title={t('title')} />,
-    title: t('title'),
-    titleClassName: 'max-md:hidden',
     contentClassName: 'max-md:p-0!',
-    subtitle: t('subtitle'),
-    actions: api.load === 'ready' && (
-      <div className="hidden md:block">
-        <Button variant="primary" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setInviting(true)}>{t('invite')}</Button>
-      </div>
-    ),
   };
+  // Desktop (#59): the short navy band, as on the other list pages.
+  const band = (
+    <div className="hidden md:block mb-4">
+      <CoverBand
+        variant="short"
+        title={t('title')}
+        meta={api.load === 'ready' ? <><span className="tabular-nums">{t('count', { count: members.length })}</span> · {t('subtitle')}</> : t('subtitle')}
+      />
+    </div>
+  );
 
   if (api.load !== 'ready') {
     return (
       <PageShell {...shell} busy={api.load === 'loading'}>
+        {band}
         <div className="max-md:p-4">
           {api.load === 'forbidden' && <EmptyState variant="empty" title={t('forbidden_title')} message={t('forbidden_body')} />}
           {api.load === 'error' && <InlineDataError message={t('load_failed')} retryLabel={tc('retry')} onRetry={() => void api.refresh()} />}
@@ -228,6 +229,7 @@ export default function MembersPageClient() {
 
   return (
     <PageShell {...shell}>
+      {band}
       {/* Phone */}
       <MobileMembersFilters query={query} onQuery={setQuery} view={phoneView} onView={setPhoneView} />
       {phoneView === 'log' ? (
@@ -282,13 +284,19 @@ export default function MembersPageClient() {
 
         {tab === 'members' ? (
           <div role="tabpanel" id="members-panel-members" aria-labelledby="members-tab-members" className="grid gap-4">
-            <div className="list-filter-chips" role="group" aria-label={t('filters_label')}>
+            <ListToolbar
+              search={deskQuery}
+              onSearchChange={setDeskQuery}
+              searchLabel={t('filter_placeholder')}
+              action={<Button variant="primary" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setInviting(true)}>{t('invite')}</Button>}
+              filters={<div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('filters_label')}>
               <FilterChip label={t('filter_all')} count={members.length} active={status === 'all'} onClick={() => setStatus('all')} />
               <FilterChip label={t('status_active')} count={counts.active} active={status === 'active'} onClick={() => setStatus('active')} />
               <FilterChip label={t('status_invited')} count={counts.invited} active={status === 'invited'} onClick={() => setStatus('invited')} />
               <FilterChip label={t('status_revoked')} count={counts.revoked} active={status === 'revoked'} onClick={() => setStatus('revoked')} />
-            </div>
-            <Card pad={false}>
+              </div>}
+            />
+            <TablePanel page={1} pageSize={Math.max(1, shown.length)} total={shown.length} onPage={() => {}}>
               <DataTable
                 columns={columns}
                 rows={shown}
@@ -296,7 +304,7 @@ export default function MembersPageClient() {
                 rowClassName={(m) => (m.Status === 'revoked' ? 'opacity-70' : undefined)}
                 empty={<p className="m-0 px-4 py-8 text-center text-sm text-text-muted">{t('empty_filtered')}</p>}
               />
-            </Card>
+            </TablePanel>
           </div>
         ) : (
           <div role="tabpanel" id="members-panel-log" aria-labelledby="members-tab-log">

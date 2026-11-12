@@ -51,17 +51,14 @@ export interface TreeDisplayProps {
 
 /**
  * The tree's display settings: orientation, depth, ages and the dev-only bar aids.
- * One component for the desktop rail and the Display sheet below lg, so a
+ * One component for the desktop Display menu (#71) and the Display sheet below lg, so a
  * setting added later can't go missing at small widths again (#936).
  */
 export function TreeDisplayControls({
     orientation, onOrientationChange, orientationDisabled,
     barZoomThreshold, onBarZoomThresholdChange,
-    depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, stacked = false,
-}: TreeDisplayProps & {
-    /** The narrow rail: options stacked, and the dev aids pushed to its foot. */
-    stacked?: boolean;
-}) {
+    depth, maxDepth, onDepthCommit, showAges, onShowAgesChange,
+}: TreeDisplayProps) {
     const t = useTranslations('treeView');
 
     // Live slider position while dragging. The applied depth only changes on
@@ -80,10 +77,8 @@ export function TreeDisplayControls({
                 <div className="eyebrow mb-2">{t('orientation')}</div>
                 {/* Stays truthful in focus view: the control is disabled there, but the
                     canvas is still laid out vertically, so the current layout stays marked. */}
-                {/* Stacked in the rail: side by side, the 180px rail clipped "Horizontal" (#751). */}
                 <SegmentedControl
-                    orientation={stacked ? 'vertical' : undefined}
-                    fullWidth={!stacked}
+                    fullWidth
                     aria-label={t('orientation')}
                     disabled={orientationDisabled}
                     value={orientation}
@@ -146,8 +141,6 @@ export function TreeDisplayControls({
                     )} />
                 </span>
             </button>
-
-            {stacked && <div style={{ flex: 1 }} />}
 
             {/* DEBUG — horizontal-bar review aid. Dev-only; not shipped. Tunes the
                 zoom-out threshold live. */}

@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 /**
  * Redirects legacy /families/edit?id=<id> links to the detail page, which now owns
- * all inline editing. id=new goes to /families/new (the only remaining FamilyForm
- * entry point). Client-side because static-export can't read runtime query params
+ * all inline editing. id=new goes to /families/new, which opens New family over the
+ * Families list. Client-side because static-export can't read runtime query params
  * in a server redirect.
  */
 export default function EditFamilyClient() {

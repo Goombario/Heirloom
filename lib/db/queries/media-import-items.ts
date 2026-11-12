@@ -253,5 +253,6 @@ export async function reuseMediaForImportItem(
         [placeholderMediaId, existingMediaId],
     );
     await exec.query(`UPDATE "CaseComments" SET "MediaId" = $2 WHERE "MediaId" = $1`, [placeholderMediaId, existingMediaId]);
+    await exec.query(`UPDATE "CaseFindings" SET "MediaId" = $2 WHERE "MediaId" = $1`, [placeholderMediaId, existingMediaId]);
     await exec.query(`DELETE FROM "Media" WHERE "Id" = $1`, [placeholderMediaId]);
 }

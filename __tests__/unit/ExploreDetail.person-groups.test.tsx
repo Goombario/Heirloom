@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import '@testing-library/jest-dom';
 import en from '@/messages/en.json';
@@ -163,9 +163,12 @@ describe('ExploreDetail — grouped person entries', () => {
       detail.mockResolvedValue(payload('Wolds, Nottinghamshire', links));
 
       const { container } = renderDetail('Wolds, Nottinghamshire');
-      // Capped at MAX_PREVIEW_PEOPLE, and the count in the link is PEOPLE, not
-      // facts — the bug the cap change fixed was 60 rows being a dozen people.
-      await waitFor(() => expect(personLinks(container)).toHaveLength(60));
+      // Five rows first; "Show all" expands in place (#56), still capped at
+      // MAX_PREVIEW_PEOPLE. The count in the link is PEOPLE, not facts — the bug
+      // the cap change fixed was 60 rows being a dozen people.
+      await waitFor(() => expect(personLinks(container)).toHaveLength(5));
+      fireEvent.click(screen.getByRole('button', { name: /Show all 61/ }));
+      expect(personLinks(container)).toHaveLength(60);
       expect(
         screen.getByText('Showing 60 of 61 people — open the full page'),
       ).toBeInTheDocument();

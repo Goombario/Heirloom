@@ -273,7 +273,8 @@ const ENTITY_CONFIG: Record<string, EntityConfig> = {
     case: {
         table: '"Cases"',
         scope: 'user-tree',
-        allowedFields: new Set(['Title', 'Description', 'Status', 'Tags']),
+        // The case's scope (#58) is audited and reverts like its title.
+        allowedFields: new Set(['Title', 'Description', 'Status', 'Tags', 'FromYear', 'ToYear', 'Place', 'QuestionKind']),
     },
     source: {
         table: '"Sources"',
@@ -466,6 +467,15 @@ async function assertCitationRelationships(
                       FROM "CaseComments" cc
                       JOIN "Cases" c ON c."Id" = cc."CaseId"
                       WHERE cc."Id" = $1 AND c."TreeId" = $2 AND c."UserId" = $3`,
+                params: [factId, treeId, treeOwnerId],
+            };
+            break;
+        case FACT_TABLES.CASE_FINDINGS:
+            fact = {
+                sql: `SELECT 1
+                      FROM "CaseFindings" cf
+                      JOIN "Cases" c ON c."Id" = cf."CaseId"
+                      WHERE cf."Id" = $1 AND c."TreeId" = $2 AND c."UserId" = $3`,
                 params: [factId, treeId, treeOwnerId],
             };
             break;
@@ -1362,6 +1372,23 @@ async function revertNote(
             );
             action = 'update';
             changes = { fields: { IsPrimary: { old: fields.IsPrimary.new, new: flag } }, snapshot: snap };
+        } else if (fields.OwnerFact) {
+            // A note moved between facts on one record (ADR 0043): move it back.
+            const fact = (v: unknown) => (v == null ? null : (NOTE_OWNER_FACTS as readonly unknown[]).includes(v) ? v as string : undefined);
+            const was = fact(fields.OwnerFact.old);
+            const now = fact(fields.OwnerFact.new);
+            if (was === undefined || now === undefined) throw new Error(`Audit entry #${entry.Id} has a malformed note scope`);
+            const moved = await executor.query(
+                `UPDATE "NoteLink" SET "OwnerFact" = $1
+                 WHERE "NoteId" = $2 AND "OwnerTable" = $3 AND "OwnerId" = $4 AND COALESCE("OwnerFact", '') = COALESCE($5, '')`,
+                [was, snap.NoteId, snap.OwnerTable, snap.RecordId, now],
+            );
+            if ((moved.rowCount ?? 0) === 0) throw new Error(`Note #${snap.NoteId} has moved again since`);
+            action = 'update';
+            changes = {
+                fields: { OwnerFact: { old: now, new: was } },
+                snapshot: { ...snap, Links: snap.Links.map((l) => (l.OwnerFact === now ? { ...l, OwnerFact: was as NoteAuditSnapshot['Links'][number]['OwnerFact'] } : l)) },
+            };
         } else {
             throw new Error(`Audit entry #${entry.Id} has no revertible fields`);
         }
@@ -1485,4 +1512,26 @@ export async function revertAuditEntries(ids: number[], treeId: number, treeOwne
     } finally {
         client.release();
     }
+}
+
+/**
+ * Revert audit entries inside the caller's transaction, newest first: Undo on a
+ * closed case (#58, ADR 0046) puts back what Answer and close changed. The caller
+ * checks permission and locks what it needs; each revert is logged as usual.
+ */
+export async function revertAuditEntriesWith(
+    exec: AuditExecutor,
+    ids: number[],
+    treeId: number,
+    treeOwnerId: number,
+    userId: number,
+): Promise<void> {
+    if (ids.length === 0) return;
+    const result = await exec.query(
+        `SELECT * FROM "AuditLog" WHERE "Id" = ANY($1::int[]) AND "TreeId" = $2 ORDER BY "CreatedAt" DESC, "Id" DESC`,
+        [ids, treeId],
+    );
+    const entries = result.rows as AuditLogEntry[];
+    if (entries.length !== new Set(ids).size) throw new Error('Audit entry not found');
+    for (const entry of entries) await revertSingleEntry(entry, treeOwnerId, userId, exec);
 }

@@ -41,8 +41,9 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
       e.preventDefault();
       inputRef.current?.focus();
     };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    // Capture phase, so this runs before the global search's own `/` (#59).
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
   }, []);
   return (
     <div className={cx('list-toolbar flex flex-wrap items-center gap-x-3 gap-y-2.5', className)}>

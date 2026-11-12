@@ -271,6 +271,8 @@ Never reuse a Tailwind default's name unless the override is deliberate and docu
        `numberSources`), shared with the page's Sources cited list; never a source ID.
        Sources cited is that footnote list: one row per source (its chip and title),
        linking to the source, with no fact rows and no "Manage all" action (ADR 0020, #780).
+       On the v1.1 desktop person page each row adds one muted line: the source type and
+       "Cited for" up to three facts, then "and N more" (ADR 0044); it stays one link.
        It shows only once the page cites something, tops the person and family rails
        (its list capped and scrolling), and at one column follows the timeline (#904).
        An editor's empty "+" on an unsourced fact always shows; a viewer's search pin and

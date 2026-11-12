@@ -34,7 +34,7 @@ export function toPersonResults(people: CaseWithRelations['people']): PersonResu
  * the status lines the app logs (#801). Counts and "has an entry" checks use it.
  */
 export function writtenEntries(comments: CaseComment[]): CaseComment[] {
-    return comments.filter(c => c.Kind !== 'status');
+    return comments.filter(c => c.Kind == null || c.Kind === 'conclusion');
 }
 
 /** A case-level citation in the shape the shared CitationPreview reads (#918). */
@@ -45,4 +45,21 @@ export function caseCitationAsCitation(c: CaseCitation): Citation {
         DataDate: null, Even: null, Role: null, CreatedAt: '',
         sourceTitle: c.sourceTitle, sourceType: c.sourceType, sourceRepo: c.sourceRepo,
     };
+}
+
+/**
+ * A journal line the app logged rather than one someone wrote: a status change
+ * (#801), or a research workspace step (#58: a lead added or settled, a record
+ * found, a search, a request or its reply). Each shows as one quiet line.
+ */
+export function loggedEntryText(c: CaseComment, t: (key: string, values?: Record<string, string>) => string): string | null {
+    switch (c.Kind) {
+        case 'status': return t(`journal_status_${c.Body}`);
+        case 'lead': return t(`journal_lead_${c.Body}`);
+        case 'finding': return t('journal_finding', { title: c.Body });
+        case 'search': return t('journal_search', { searched: c.Body });
+        case 'request': return t('journal_request', { asked: c.Body });
+        case 'reply': return t('journal_reply', { asked: c.Body });
+        default: return null;
+    }
 }

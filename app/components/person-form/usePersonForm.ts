@@ -15,6 +15,7 @@ import { FACT_TABLES } from '@/lib/db/fact-tables';
 import type { FactTableValue } from '@/lib/db/fact-tables';
 import { getDataClient } from '@/lib/data';
 import type { ChildRelationshipType, PinChainRow } from '@/lib/data/types';
+import type { ChildRelationships } from '@/lib/child-relationship';
 import type { HierarchyLevel } from '@/lib/geocode/photon';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { useUnsavedChangesGuard } from '@/app/components/UnsavedChangesProvider';
@@ -106,7 +107,7 @@ interface CitationRow {
 
 type CitationMap = Record<string, CitationRow[]>;
 
-export type AttachTarget = { factTable: string; factId: number; factLabel: string };
+type AttachTarget = { factTable: string; factId: number; factLabel: string };
 
 export type UsePersonFormProps =
     | { mode: 'new'; personId?: undefined; initialPerson?: undefined }
@@ -193,6 +194,12 @@ export interface UsePersonForm {
     setAttachAsPartner: (v: boolean) => void;
     childRelationshipType: ChildRelationshipType;
     setChildRelationshipType: (v: ChildRelationshipType) => void;
+    /**
+     * Desktop quick-add (#52, ADR 0027): this person's link to each parent of the
+     * picked family. When set it wins over `childRelationshipType`, which sets both.
+     */
+    parentLinks: ChildRelationships | null;
+    setParentLinks: (v: ChildRelationships | null) => void;
     marriageDate: string;
     marriagePlace: string;
     /** Phone form (#1065): people made in a picker are staged and created on Save.
@@ -304,6 +311,7 @@ export function usePersonForm(props: UsePersonFormProps): UsePersonForm {
     const [attachAsChild, setAttachAsChild] = useState(false);
     const [attachAsPartner, setAttachAsPartner] = useState(false);
     const [childRelationshipType, setChildRelationshipType] = useState<ChildRelationshipType>('Birth');
+    const [parentLinks, setParentLinks] = useState<ChildRelationships | null>(null);
 
     // Spouse attach (new mode)
     const [selectedSpouse, setSelectedSpouse] = useState<PersonResult | null>(null);
@@ -656,14 +664,14 @@ export function usePersonForm(props: UsePersonFormProps): UsePersonForm {
                 try {
                     const parentId = await createStaged(newParent);
                     const family = await client.families.create({ Partner1Id: parentId, Partner2Id: null }, activeTreeId);
-                    await client.families.addChild(family.Id, newPersonId, childRelationshipType as ChildRelationshipType, activeTreeId);
+                    await client.families.addChild(family.Id, newPersonId, parentLinks?.partner1 ?? childRelationshipType, activeTreeId);
                 } catch {
                     subFailures.push(t('partial_save_family_child'));
                 }
             } else if (isNew && attachAsChild && selectedFamily) {
                 try {
                     const client = await getDataClient();
-                    await client.families.addChild(selectedFamily.Id, newPersonId, childRelationshipType as ChildRelationshipType, activeTreeId);
+                    await client.families.addChild(selectedFamily.Id, newPersonId, parentLinks ?? childRelationshipType, activeTreeId);
                 } catch {
                     subFailures.push(t('partial_save_family_child'));
                 }
@@ -740,6 +748,7 @@ export function usePersonForm(props: UsePersonFormProps): UsePersonForm {
                 setAttachAsChild(false);
                 setAttachAsPartner(false);
                 setChildRelationshipType('Birth');
+                setParentLinks(null);
                 setPendingCitations([]);
                 setSuggestions([]);
                 // Name variants are collected locally in new mode and replayed
@@ -771,7 +780,7 @@ export function usePersonForm(props: UsePersonFormProps): UsePersonForm {
         }
     }, [
         form, savedForm, placeIds, noteDraft, isNew, personId, activeTreeId, variants, pendingCitations,
-        attachAsChild, selectedFamily, childRelationshipType,
+        attachAsChild, selectedFamily, childRelationshipType, parentLinks,
         attachAsPartner, selectedSpouse, marriageDate, marriagePlace,
         newParent, newSpouse, children,
         birthPlaceResolution, deathPlaceResolution, marriagePlaceResolution,
@@ -1061,14 +1070,14 @@ export function usePersonForm(props: UsePersonFormProps): UsePersonForm {
     // staged work. Edit mode tracks the persisted scalar snapshot separately.
     const draftFingerprint = JSON.stringify({
         form, noteDraft, variants, newVariantType, newVariantName, pendingCitations,
-        selectedFamily, attachAsChild, attachAsPartner, childRelationshipType,
+        selectedFamily, attachAsChild, attachAsPartner, childRelationshipType, parentLinks,
         selectedSpouse, marriageDate, marriagePlace, newParent, newSpouse, children,
         birthPlaceResolution, deathPlaceResolution, marriagePlaceResolution,
     });
     const emptyDraftFingerprint = JSON.stringify({
         form: emptyForm, noteDraft: '', variants: [], newVariantType: 'Nickname', newVariantName: '',
         pendingCitations: [], selectedFamily: null, attachAsChild: false, attachAsPartner: false,
-        childRelationshipType: 'Birth', selectedSpouse: null, marriageDate: '', marriagePlace: '',
+        childRelationshipType: 'Birth', parentLinks: null, selectedSpouse: null, marriageDate: '', marriagePlace: '',
         newParent: null, newSpouse: null, children: [],
         birthPlaceResolution: undefined, deathPlaceResolution: undefined, marriagePlaceResolution: undefined,
     });
@@ -1131,6 +1140,8 @@ export function usePersonForm(props: UsePersonFormProps): UsePersonForm {
         setAttachAsPartner,
         childRelationshipType,
         setChildRelationshipType,
+        parentLinks,
+        setParentLinks,
         marriageDate,
         marriagePlace,
         setMarriageDate,

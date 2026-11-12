@@ -54,7 +54,7 @@ export function FieldColumn({ title, action, inactive = false, inactiveReason, c
   children: React.ReactNode;
 }) {
   return (
-    <fieldset disabled={inactive} className={cx('field-column m-0 grid min-w-0 gap-2.5 border-0 p-0', inactive && 'is-inactive')}>
+    <fieldset disabled={inactive} className={cx('field-column m-0 grid min-w-0 content-start gap-2.5 border-0 p-0', inactive && 'is-inactive')}>
       <legend className="contents">
         <span className="flex items-baseline justify-between gap-3">
           <span className={cx('eyebrow', inactive && 'text-text-muted')}>{title}</span>

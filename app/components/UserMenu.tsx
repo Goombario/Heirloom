@@ -8,7 +8,8 @@ import { useDesktopMode, useDesktopModeResolved } from '@/app/hooks/useDesktopMo
 import { DATA_MODE } from '@/lib/data';
 import ShareTreeButton from './ShareTreeButton';
 import { useMenuKeyboard } from './ui/useMenuKeyboard';
-import { Settings, Share2, Users } from '@/lib/icons';
+import { LogOut, Settings, Share2, Users } from '@/lib/icons';
+import { useTree } from '@/app/contexts/TreeContext';
 import { useMembersAdmin } from '@/app/hooks/useMembersAdmin';
 import { aboutInfo } from '@/lib/about';
 
@@ -26,6 +27,8 @@ export default function UserMenu() {
   const ta = useTranslations('about');
   const { version } = aboutInfo();
   const isMembersAdmin = useMembersAdmin();
+  const tn = useTranslations('nav');
+  const { activePermission } = useTree();
 
   const closeMenu = useCallback((returnFocus: boolean) => {
     setIsOpen(false);
@@ -129,18 +132,20 @@ export default function UserMenu() {
             <p className="text-sm font-medium text-text truncate">
               {user?.name || user?.email || '?'}
             </p>
-            <p className="text-xs text-text-muted truncate">
-              {user?.email}{isMembersAdmin && ` · ${tm('role_admin')}`}
+            {/* The name and role (#59): an admin, or what they can do in this tree. */}
+            <p className="text-xs text-text-secondary truncate">
+              {isMembersAdmin ? tm('role_admin') : activePermission ? tn(`perm_${activePermission}`) : null}
             </p>
+            {user?.name && user.email && <p className="text-xs text-text-muted truncate">{user.email}</p>}
           </div>
 
           <div className="py-1" ref={itemsRef} role="menu" aria-label={t('menu_label')} onKeyDown={onMenuKeyDown}>
             <Link
               href="/options"
               onClick={() => setIsOpen(false)}
-              className="block w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover-surface focus-ring-inset" role="menuitem" tabIndex={-1}
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover-surface focus-ring-inset" role="menuitem" tabIndex={-1}
             >
-              {t('options')}
+              <Settings className="w-4 h-4" aria-hidden="true" /> {t('options')}
             </Link>
             <button
               onClick={() => { setIsOpen(false); setShareOpen(true); }}
@@ -168,9 +173,9 @@ export default function UserMenu() {
                 setIsOpen(false);
                 signOut({ callbackUrl: '/auth/signin' });
               }}
-              className="w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover-surface focus-ring-inset" role="menuitem" tabIndex={-1}
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover-surface focus-ring-inset" role="menuitem" tabIndex={-1}
             >
-              {t('sign_out')}
+              <LogOut className="w-4 h-4" aria-hidden="true" /> {t('sign_out')}
             </button>
             {/* The menu's last row, under a divider (#1256): the way to the version,
                 licence and source link from every screen, the tree included. */}

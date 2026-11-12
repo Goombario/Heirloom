@@ -48,12 +48,12 @@ export class LocalPlacesClient implements PlacesClient {
     return upsertPlaceGeocodeService({ ...place, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 
-  async updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<void> {
+  async updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<Audited> {
     const currentUserId = await ensureLocalUser();
     return updatePlaceCoordinatesService({ ...byKey(place), latitude, longitude, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 
-  async geocodeUpsertHierarchy(levels: HierarchyLevelInput[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<void> {
+  async geocodeUpsertHierarchy(levels: HierarchyLevelInput[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited> {
     const currentUserId = await ensureLocalUser();
     return upsertPlaceHierarchyService({ levels, reparent: options?.reparent, leafId: options?.leafId, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }

@@ -34,10 +34,10 @@ export interface Note {
      * Which promoted vital fact (Birth/Death/Marriage) this note is about, or null
      * for a record-level note. Like `IsPrimary`, this is a property of the
      * `NoteLink`, not the note itself — a shared note can be birth-scoped for one
-     * owner and unscoped for another. Set at creation only, from context — the
-     * GEDCOM importer, or a create path that already knows the vital (the
-     * synthetic Birth/Death editor's note box). Never re-scoped afterwards; there
-     * is no control to change it (ADR 0016, decision 3). Only present on
+     * owner and unscoped for another. Set at creation from context — the GEDCOM
+     * importer, or a create path that already knows the vital (the synthetic
+     * Birth/Death editor's note box). The desktop person page's Notes "About"
+     * select can move it later (`moveNoteLink`, ADR 0043). Only present on
      * owner-scoped reads.
      */
     OwnerFact?: NoteOwnerFact | null;
@@ -80,14 +80,18 @@ export interface NoteAuditSnapshot {
     Links: { OwnerFact: NoteOwnerFact | null; IsPrimary: number; AddedInApp: number }[];
 }
 
+/** Runs a note query on the pool, or on a transaction's client. */
+type NoteExec = { query: (sql: string, params: unknown[]) => Promise<{ rows: unknown[]; rowCount?: number | null }> };
+
 /** A note's audit snapshot for one owner record, or null when it is not attached there in this tree. */
 export async function getNoteAuditSnapshot(
     noteId: number,
     ownerTable: LinkOwnerTable,
     ownerId: number,
     treeId: number,
+    exec: NoteExec = { query },
 ): Promise<NoteAuditSnapshot | null> {
-    const result = await query(
+    const result = await exec.query(
         `SELECT n."Id", n."OwnerId", n."TreeId", n."Text", n."GedcomXref", n."CreatedAt", n."UpdatedAt",
                 l."OwnerFact", l."IsPrimary", l."AddedInApp"
          FROM "Note" n
@@ -370,6 +374,56 @@ export async function unlinkNote(
         );
     }
     return removed;
+}
+
+/** One end of a note's link: the record it is on, and the fact on that record it is about. */
+export interface NoteLinkEnd {
+    ownerTable: LinkOwnerTable;
+    ownerId: number;
+    ownerFact: NoteOwnerFact | null;
+}
+
+/**
+ * Move one link of a note from one record (or fact) to another, keeping the note
+ * itself, its preferred flag only when it stays on the same record, and how it was
+ * added (ADR 0043). Run inside the caller's transaction. Returns false when the
+ * note has no such link in this tree.
+ */
+export async function moveNoteLink(
+    noteId: number,
+    from: NoteLinkEnd,
+    to: NoteLinkEnd,
+    treeId: number,
+    exec: NoteExec,
+): Promise<boolean> {
+    if (from.ownerTable === to.ownerTable && from.ownerId === to.ownerId) {
+        const result = await exec.query(
+            `UPDATE "NoteLink" l SET "OwnerFact" = $5
+             FROM "Note" n
+             WHERE l."NoteId" = n."Id" AND n."TreeId" = $6
+               AND l."NoteId" = $1 AND l."OwnerTable" = $2 AND l."OwnerId" = $3
+               AND COALESCE(l."OwnerFact", '') = COALESCE($4, '')`,
+            [noteId, from.ownerTable, from.ownerId, from.ownerFact, to.ownerFact, treeId],
+        );
+        return (result.rowCount ?? 0) > 0;
+    }
+    // Link the new record first, so the note is never left without a link.
+    const added = await exec.query(
+        `INSERT INTO "NoteLink" ("NoteId", "OwnerTable", "OwnerId", "OwnerFact", "IsPrimary", "AddedInApp")
+         SELECT l."NoteId", $5, $6, $7, 0, l."AddedInApp"
+         FROM "NoteLink" l JOIN "Note" n ON n."Id" = l."NoteId"
+         WHERE n."TreeId" = $8 AND l."NoteId" = $1 AND l."OwnerTable" = $2 AND l."OwnerId" = $3
+           AND COALESCE(l."OwnerFact", '') = COALESCE($4, '')`,
+        [noteId, from.ownerTable, from.ownerId, from.ownerFact, to.ownerTable, to.ownerId, to.ownerFact, treeId],
+    );
+    if ((added.rowCount ?? 0) === 0) return false;
+    await exec.query(
+        `DELETE FROM "NoteLink"
+         WHERE "NoteId" = $1 AND "OwnerTable" = $2 AND "OwnerId" = $3
+           AND COALESCE("OwnerFact", '') = COALESCE($4, '')`,
+        [noteId, from.ownerTable, from.ownerId, from.ownerFact],
+    );
+    return true;
 }
 
 /**
