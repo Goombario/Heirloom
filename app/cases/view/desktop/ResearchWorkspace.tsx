@@ -21,6 +21,7 @@ import { FindRecord, type FindStart } from './FindRecord';
 import { RecordView } from './RecordView';
 import { ResearchSide, type SideTab } from './ResearchSide';
 import { WorkspaceJournal } from './WorkspaceJournal';
+import { EvidenceView } from './EvidenceView';
 
 type Dialog =
     | { kind: 'new-lead' }
@@ -171,7 +172,13 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     {!ws.workspace ? (
                         <p className="m-0 text-sm text-text-muted" role="status">{t('loading')}</p>
                     ) : ws.view?.kind === 'evidence' ? (
-                        <p className="m-0 text-sm text-text-muted">{t('evidence_soon')}</p>
+                        <EvidenceView
+                            findings={ws.workspace.findings}
+                            leads={ws.workspace.leads}
+                            treeId={activeTreeId}
+                            onOpenRecord={(f) => openPanel({ kind: 'record', findingId: f.Id })}
+                            onOpenMedia={setLightbox}
+                        />
                     ) : open ? (
                         <LeadView
                             key={open.lead.Id}
