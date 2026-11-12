@@ -1,6 +1,8 @@
 name: Desktop Build
 
-# A release is a `v<version>` tag pushed on `main`.
+# A release is a `v<version>` tag pushed on `main`. A `v<x.y.z>-rc.<n>` tag is a
+# test build: the same bundles, published as a GitHub pre-release that never
+# becomes the latest release.
 on:
   push:
     tags: ['v*']
@@ -32,6 +34,7 @@ jobs:
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       id: ${{ steps.release.outputs.id }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
       build: ${{ steps.release.outputs.build }}
     steps:
       - uses: actions/checkout@v7
@@ -50,6 +53,15 @@ jobs:
             echo "::error file=package.json::Tag $tag does not match package.json ($version). Bump the version in a PR to main, then tag that commit."
             exit 1
           fi
+          if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            prerelease=true
+          elif [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            prerelease=false
+          else
+            echo "::error::Tag $tag is neither a release (vX.Y.Z) nor a test build (vX.Y.Z-rc.N)."
+            exit 1
+          fi
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "::error::Tag $tag is not on main. Release only commits that merged into main."
             exit 1
@@ -65,6 +77,14 @@ jobs:
             exit 0
           fi
           echo "build=true" >> "$GITHUB_OUTPUT"
+          body='Download Heirloom for your platform from the assets below:
+          - Windows: the _x64-setup.exe installer.
+          - Linux: the .flatpak bundle (flatpak install --user <file>), or install the web app from Chrome or Edge.'
+          if [ "$prerelease" = true ]; then
+            body="A test build of the next release, not a release. It upgrades the data it opens to this build's schema, and the last release cannot open that data again, so back up first or test on a copy.
+
+          $body"
+          fi
           # Take the new draft's id from the create call: the releases list can lag
           # behind it, and an empty id makes tauri-action skip the Windows upload.
           [ -n "$id" ] || id=$(gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
@@ -72,9 +92,8 @@ jobs:
             -f target_commitish="$GITHUB_SHA" \
             -f name="Heirloom $tag" \
             -F draft=true \
-            -f body='Download Heirloom for your platform from the assets below:
-          - Windows: the _x64-setup.exe installer.
-          - Linux: the .flatpak bundle (flatpak install --user <file>), or install the web app from Chrome or Edge.' \
+            -F prerelease="$prerelease" \
+            -f body="$body" \
             --jq .id)
           [ -n "$id" ] || { echo "::error::No release id for $tag"; exit 1; }
           echo "id=$id" >> "$GITHUB_OUTPUT"
@@ -150,4 +169,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ID: ${{ needs.create-release.outputs.id }}
-        run: gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" -F draft=false --silent
+          PRERELEASE: ${{ needs.create-release.outputs.prerelease }}
+        # A pre-release is never marked latest, so "latest" stays the last real release.
+        run: |
+          latest=true
+          [ "$PRERELEASE" = true ] && latest=false
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$ID" \
+            -F draft=false -F prerelease="$PRERELEASE" -f make_latest="$latest" --silent
