@@ -19,6 +19,7 @@ vi.mock('next-intl', () => ({
     if (!values) return key;
     return `${key} ${Object.entries(values).map(([name, value]) => `${name}=${value}`).join(' ')}`;
   },
+  useFormatter: () => ({ dateTime: (value: number) => String(value) }),
 }));
 vi.mock('@/app/contexts/TreeContext', () => ({
   useTree: () => ({ activeTreeId: state.treeId }),
@@ -71,10 +72,12 @@ beforeEach(() => {
 });
 
 describe('import/export media export UI', () => {
+  beforeEach(() => { window.history.replaceState(null, '', '/import-export'); });
+
   it('preflights a clean media export, downloads the returned artifact, and revokes its object URL', async () => {
     render(<ImportExportPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
 
     await waitFor(() => expect(state.client.preflightExport).toHaveBeenCalledWith(9));
     await waitFor(() => expect(state.client.exportGedcom).toHaveBeenCalledWith({ includeMedia: true }, 9));
@@ -88,19 +91,18 @@ describe('import/export media export UI', () => {
     state.client.preflightExport.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
     render(<ImportExportPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
 
-    const busy = await screen.findByRole('button', { name: 'export_preparing' });
+    const busy = await screen.findByRole('button', { name: 'preparing' });
     expect(busy).toBeDisabled();
     expect(busy).toHaveAttribute('aria-busy', 'true');
     finish(cleanPreflight);
-    await screen.findByRole('button', { name: 'download_zip' });
+    await screen.findByRole('button', { name: 'download_backup' });
   });
 
   it('exports plain GEDCOM without media and propagates the active tree', async () => {
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.click(screen.getByRole('button', { name: 'download_gedcom' }));
+    fireEvent.click(screen.getByRole('button', { name: /^export_gedcom/ }));
 
     await waitFor(() => expect(state.client.exportGedcom).toHaveBeenCalledWith({ includeMedia: false }, 9));
     expect(state.client.preflightExport).not.toHaveBeenCalled();
@@ -109,7 +111,7 @@ describe('import/export media export UI', () => {
   it('shows only aggregate blocked-state categories and counts', async () => {
     state.client.preflightExport.mockResolvedValue(blockedPreflight);
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('media_export_blocked_total count=3')).toBeInTheDocument();
@@ -123,7 +125,7 @@ describe('import/export media export UI', () => {
   it('reviews unresolved media by closing and focusing the recovery panel', async () => {
     state.client.preflightExport.mockResolvedValue(blockedPreflight);
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
     await screen.findByRole('dialog');
 
     fireEvent.click(screen.getByRole('button', { name: 'media_export_review' }));
@@ -135,7 +137,7 @@ describe('import/export media export UI', () => {
   it('cancels the blocked dialog without exporting', async () => {
     state.client.preflightExport.mockResolvedValue(blockedPreflight);
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
     await screen.findByRole('dialog');
 
     fireEvent.click(screen.getByRole('button', { name: 'media_export_cancel' }));
@@ -146,7 +148,7 @@ describe('import/export media export UI', () => {
   it('allows an explicit exact omit-unresolved override for a blocked export', async () => {
     state.client.preflightExport.mockResolvedValue(blockedPreflight);
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
     await screen.findByRole('dialog');
 
     fireEvent.click(screen.getByRole('button', { name: 'media_export_override' }));
@@ -159,7 +161,7 @@ describe('import/export media export UI', () => {
   it('closes a stale preflight when the active tree changes before an override', async () => {
     state.client.preflightExport.mockResolvedValue(blockedPreflight);
     const view = render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
     await screen.findByRole('dialog');
 
     state.treeId = 8;
@@ -168,7 +170,7 @@ describe('import/export media export UI', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(state.client.exportGedcom).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
     await screen.findByRole('dialog');
     fireEvent.click(screen.getByRole('button', { name: 'media_export_override' }));
 
@@ -183,7 +185,7 @@ describe('import/export media export UI', () => {
     let resolvePreflight!: (value: typeof cleanPreflight) => void;
     state.client.preflightExport.mockReturnValue(new Promise((resolve) => { resolvePreflight = resolve; }));
     render(<ImportExportPage />);
-    const button = screen.getByRole('button', { name: 'download_zip' });
+    const button = screen.getByRole('button', { name: 'download_backup' });
     fireEvent.click(button);
     fireEvent.click(button);
 
@@ -196,7 +198,7 @@ describe('import/export media export UI', () => {
   it('renders a generic translated failure without exposing the raw error', async () => {
     state.client.preflightExport.mockRejectedValue(new Error('secret path /private/family.jpg'));
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
 
     expect(await screen.findByText('export_error_generic')).toBeInTheDocument();
     expect(screen.queryByText(/secret path|private|family\.jpg/i)).not.toBeInTheDocument();
@@ -210,7 +212,7 @@ describe('import/export media export UI', () => {
       byReason: { pending: 0, missing: 0, failed: 0, backing_missing: 1, legacy_materialization_unknown: 0 },
     });
     render(<ImportExportPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'download_zip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'download_backup' }));
 
     expect(await screen.findByText('media_export_backing_missing_hint')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'media_export_review_library' }));
