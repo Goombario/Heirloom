@@ -32,11 +32,4 @@ describe('date field layout contracts', () => {
         expect(marriageEditor).toContain('<div className="grid grid-cols-1 gap-3">');
         expect(marriageEditor).not.toContain('sm:grid-cols-[1fr_2fr]');
     });
-
-    it('stacks the new-person spouse marriage Date above Place', () => {
-        const suggestions = source('app/components/person-form/SuggestionsSection.tsx');
-
-        expect(suggestions).toContain('<div className="grid grid-cols-1 gap-2.5">');
-        expect(suggestions).not.toContain("gridTemplateColumns: '1fr 1fr'");
-    });
 });

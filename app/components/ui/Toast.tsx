@@ -16,7 +16,7 @@ import { AlertTriangle, Check, CheckCircle2, Info } from '@/lib/icons';
  * sole signal.
  *
  * Position is `top-center` at every breakpoint. Bottom-anchored toasts collide
- * with the sticky bottom action bars on `PersonFormMobile` / `FormTopBar`, and
+ * with the sticky bottom action bars on `FormTopBar`, and
  * sonner takes a single position — a responsive override would mean reaching
  * into its container element. The change toast (`showChangeToast`, #1043) is the
  * one bottom card: it has its own toaster, for the redesigned mobile screens.

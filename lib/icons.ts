@@ -81,7 +81,6 @@ export {
   Mail,            // Invite email field icon (share tree)
   GitMerge,        // Merge-with-another-place placeholder (places edit, deferred)
   CheckCircle2,    // Saved / success toast confirmation
-  Sparkles,        // Suggestions card header
   // Life-event medallion glyphs (Timeline / event types)
   Sprout,          // Birth
   Flower2,         // Death / Burial (memorial)

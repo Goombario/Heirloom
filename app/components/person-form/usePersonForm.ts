@@ -107,7 +107,7 @@ interface CitationRow {
 
 type CitationMap = Record<string, CitationRow[]>;
 
-export type AttachTarget = { factTable: string; factId: number; factLabel: string };
+type AttachTarget = { factTable: string; factId: number; factLabel: string };
 
 export type UsePersonFormProps =
     | { mode: 'new'; personId?: undefined; initialPerson?: undefined }

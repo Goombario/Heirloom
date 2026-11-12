@@ -72,19 +72,9 @@
       "count": 1
     }
   },
-  "app/components/person-form/PersonFormDesktop.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 3
-    }
-  },
   "app/components/person-form/RelationshipsSection.tsx": {
     "ds/no-arbitrary-font-size": {
       "count": 1
-    }
-  },
-  "app/components/person-form/SuggestionsSection.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 3
     }
   },
   "app/components/tree/PersonBarNode.tsx": {
