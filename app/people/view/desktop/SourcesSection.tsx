@@ -33,7 +33,7 @@ export function SourcesSection({ facts, title }: { facts: CitationFactDescriptor
   const numbers = numberSources(facts);
   return (
     <>
-      <SectionHeader headingId="sources-title" title={title} count={sources.length} />
+      <SectionHeader level="label" headingId="sources-title" title={title} count={sources.length} />
       {sources.length === 0 ? (
         <p className="m-0 text-sm text-text-muted">{td('no_sources')}</p>
       ) : (

@@ -134,6 +134,7 @@ backdrop derives its 0.88-alpha scrim from the stage tokens via `color-mix(… ,
   | Section, workspace | `.section`, `.title-workspace` | 18 | `SectionHeader level="section"`, `PageShell` `workspace` |
   | Rail | `.rail-title` | 16 | `SectionHeader level="rail"` |
   | Eyebrow | `.eyebrow` | 11 caps, +0.08em, sans | `SectionHeader level="eyebrow"` |
+  | Section label (v1.1 desktop) | `.eyebrow` + mono count | 11 caps, count beside it with no brackets ("LIFE EVENTS 8") | `SectionHeader level="label"` (h2; `as="h3"` in a rail) |
 
   Positive letter-spacing is only for uppercase eyebrows. Sentence text, helper text
   included, uses tracking 0 (TYPE-4).
@@ -348,8 +349,8 @@ so reach for these instead of re-deriving a shell/hero/rail:
 
   | Variant | Column | Title | Used by |
   |---|---|---|---|
-  | `list` | 1152, centred | `title` prop → page title `h1` (`.title`, 28), with `subtitle` and an `actions` CTA slot top-right | People, Families, Library, Cases, Places, Audit, Options, utility pages |
-  | `detail` | 1080, centred | the hero owns the record title (`.title-record`, 32; `.title-hero`, 40, on Person) | Person, Family, Case, Place, Source, and the add forms |
+  | `list` | 1240 with 28px gutters (the locked boards' column, shared with the top nav), centred | `title` prop → page title `h1` (`.title`, 28), with `subtitle` and an `actions` CTA slot top-right | People, Families, Library, Cases, Places, Audit, Options, utility pages |
+  | `detail` | 1240 with 28px gutters, centred | the hero owns the record title (`.title-record`, 32; `.title-hero`, 40, on Person) | Person, Family, Case, Place, Source, and the add forms |
   | `workspace` | full width | the toolbar owns it (`.title-workspace`, 18), aligned with the header wordmark | Tree; any future full-screen canvas |
 
   `PAGE_COLUMN[variant]` exports the column classes so full-width chrome can align with the
@@ -425,11 +426,16 @@ Phones don't use the kit: they keep `RecordBand` and their panes.
   - one main column, with sections separated by 40px of space and no dividers;
   - a right rail.
 
-  From 768px the rail stays beside the main column (260px, then 300px from 1024), so it never
-  drops to the bottom. `divided` draws the full-width hairline that closes the top section
-  (family, home).
+  From 768px the rail stays beside the main column, behind a vertical hairline (280px of
+  content from 1024, 56px from the main column), so it never drops to the bottom. `divided`
+  draws the edge-to-edge hairline that closes the top section (person, family, home). Main
+  sections are open on the parchment: a panel's own `.card` loses its fill and border there.
+  The section index is a list on a 1px left rule; the current entry darkens its stretch.
+- **`CoverBand`** runs edge to edge under the top bar (no radius, no shadow); its contents sit
+  on the page column. The person portrait hangs 104px over its foot with a parchment border.
+  The place map cover bleeds the same way.
 - **`DetailRail look="open"`** is the v1.1 rail: no cards and no bars, with sections separated
-  by 36px of space only. Its headings are `SectionHeader level="rail" rule={false}`. The
+  by 36px of space only. Its headings are `SectionHeader level="label" as="h3"`. The
   default `cards` look stays for the pages that haven't moved yet.
 - **`ActionLink`** applies the link glyph rule once:
   - `action` (›) acts on this page;

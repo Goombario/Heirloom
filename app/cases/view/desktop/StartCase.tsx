@@ -67,7 +67,7 @@ export function StartCase({ treeId }: { treeId: number | null }) {
 
     return (
         <PageShell variant="workspace" className="pb-10">
-            <div className="mx-auto w-full max-w-[1080px] px-4 md:px-7 py-6 grid gap-6">
+            <div className="mx-auto w-full max-w-[1240px] px-4 md:px-7 pb-6 grid gap-6">
                 <CoverBand variant="short" eyebrow={t('eyebrow')} title={t('start_title')} titleSize="record" meta={t('start_intro')} />
                 {error && <Banner tone="error">{error}</Banner>}
                 <form className={cx('rounded-panel', 'grid gap-7 bg-card border border-border p-6 md:p-8')} onSubmit={(e) => { e.preventDefault(); void start(); }}>

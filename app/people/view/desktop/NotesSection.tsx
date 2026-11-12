@@ -231,7 +231,7 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
 
   return (
     <div ref={wrap}>
-      <SectionHeader headingId="notes-title" title={tn('section_title')} count={rows.length} />
+      <SectionHeader level="label" headingId="notes-title" title={tn('section_title')} count={rows.length} />
       {rows.length === 0 && !canEdit ? (
         <p className="m-0 text-sm text-text-muted">{tn('empty')}</p>
       ) : (

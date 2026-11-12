@@ -46,7 +46,9 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
     return () => document.removeEventListener('keydown', onKey, true);
   }, []);
   return (
-    <div className={cx('list-toolbar flex flex-wrap items-center gap-x-3 gap-y-2.5', className)}>
+    // From 720px the main button keeps its place at the right; the chips wrap
+    // among themselves instead of pushing it onto a line of its own.
+    <div className={cx('list-toolbar flex flex-wrap min-[720px]:flex-nowrap items-center gap-x-3 gap-y-2.5', className)}>
       <Input
         ref={inputRef}
         type="search"
@@ -57,10 +59,10 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
         aria-label={searchLabel}
         aria-keyshortcuts="/"
         icon={<Search className="w-4 h-4" aria-hidden="true" />}
-        wrapClassName="w-full min-[720px]:w-[260px]"
+        wrapClassName="w-full min-[720px]:w-[260px] shrink-0"
       />
-      {filters && <div className="flex flex-wrap items-center gap-2">{filters}</div>}
-      {action && <div className="ml-auto flex items-center gap-2">{action}</div>}
+      {filters && <div className="flex flex-wrap items-center gap-2 min-w-0 min-[720px]:flex-1">{filters}</div>}
+      {action && <div className="ml-auto flex items-center gap-2 shrink-0 self-start">{action}</div>}
     </div>
   );
 }

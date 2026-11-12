@@ -86,6 +86,9 @@
   /* Surfaces - Warm stone backgrounds */
   --color-surface: #ECEAE5;
   --color-surface-2: #E2DFD8;
+  /* The family record row's tint (S6): a soft step off the page. */
+  --color-family-row: #E2DFD8;
+  --color-family-row-hover: #D6D3CC;
 
   /* Card backgrounds */
   --color-card: #FFFFFF;
@@ -449,6 +452,8 @@ html.dark {
   --color-link: #A7B4C6;
   --color-surface: #1C1917;
   --color-surface-2: #0C0A09;
+  --color-family-row: #2E2925;
+  --color-family-row-hover: #3A3430;
   --color-toast-bg: #F3ECE5;
   --color-toast-fg: #231B16;
   --color-toast-action: #9A4A1A;
@@ -545,6 +550,8 @@ html.dark {
     --color-link: #A7B4C6;
     --color-surface: #1C1917;
     --color-surface-2: #0C0A09;
+    --color-family-row: #2E2925;
+    --color-family-row-hover: #3A3430;
     --color-toast-bg: #F3ECE5;
     --color-toast-fg: #231B16;
     --color-toast-action: #9A4A1A;
@@ -1804,6 +1811,89 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 .detail-body__main > section[id], .detail-body__main .tl-med-ev[id], .rail-anchor { scroll-margin-top: 88px; }
 .rail-open { gap: 36px; }
 
+/* ── Mockup fidelity (S1–S6, 2026-11-12) ─────────────────────────────────────
+   The locked boards draw the band edge to edge under the top bar, label sections
+   with small caps and a mono count, leave sections open on the parchment with
+   hairlines between them, and mark the section index with a left rule. */
+/* S1: the band bleeds to the viewport edges; its contents stay on the column.
+   --sbw is the classic scrollbar's width (PageShell measures it), so the band
+   ends at the scrollbar, not under it. */
+[data-page-shell] { overflow-x: clip; }
+[data-page-shell='list'], [data-page-shell='detail'] { --shell-pad-top: 24px; }
+.cover {
+  --bleed: calc(50vw - 50% - var(--sbw, 0px) / 2);
+  --cover-gap: 32px;
+  margin-top: calc(-1 * var(--shell-pad-top, 0px));
+}
+.cover-band.hero-dark {
+  border-radius: 0;
+  box-shadow: none;
+  margin-inline: calc(-1 * var(--bleed));
+  padding: 24px var(--bleed) 22px;
+}
+.cover--portrait .cover-band.hero-dark { padding-left: calc(var(--bleed) + var(--cover-portrait-w) + var(--cover-gap)); }
+.cover-band--short.hero-dark { min-height: 124px; align-items: flex-end; padding-block: 26px 22px; }
+.cover-band--short .cover-band__title { font-size: 34px; line-height: 1.1; }
+.cover--short { margin-bottom: 20px; }
+.cover-band__eyebrow { color: rgba(255, 255, 255, 0.78); }
+.cover-band__meta { font-size: var(--text-base); }
+.cover-band__actions { align-self: center; }
+.cover-below { padding-inline: 0; }
+.cover-portrait {
+  margin-top: calc(var(--cover-portrait-w) * -0.325);
+  border-radius: 6px;
+  border-color: var(--color-surface);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+}
+/* The hairline closing the top section runs edge to edge too. */
+.detail-body--divided { border-top: 0; position: relative; }
+.detail-body--divided::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50vw + var(--sbw, 0px) / 2);
+  width: calc(100vw - var(--sbw, 0px));
+  height: 1px;
+  background: var(--color-border);
+}
+/* S2: section labels. */
+.section-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.section-label__n { font-family: var(--font-mono); font-weight: 400; letter-spacing: 0; margin-left: 6px; }
+.section-label__aside { font-size: var(--text-meta); color: var(--color-text-muted); }
+/* S3: open sections. The main column's panels lose their card; the rail sits
+   behind a vertical hairline. */
+.detail-body__main > section > .card,
+.detail-body__main > section > div > .card { background: transparent; border: 0; box-shadow: none; border-radius: 0; }
+@media (min-width: 768px) {
+  .detail-body--rail > .detail-body__rail { border-left: 1px solid var(--color-border); padding-left: 24px; }
+}
+@media (min-width: 1024px) {
+  .detail-body--rail { grid-template-columns: minmax(0, 1fr) 313px; column-gap: 56px; }
+  .detail-body--rail > .detail-body__rail { padding-left: 32px; }
+}
+@media (min-width: 1180px) {
+  .detail-body--index { grid-template-columns: 150px minmax(0, 1fr); column-gap: 56px; }
+  .detail-body--index.detail-body--rail { grid-template-columns: 150px minmax(0, 1fr) 313px; }
+}
+/* S4: the section index is a list on a left rule; the current entry darkens its stretch. */
+.detail-body__index { padding-top: 2px; }
+.detail-body__index ul { border-left: 1px solid var(--color-border); gap: 0; }
+.section-index__link,
+.section-index__link:hover,
+.section-index__link[aria-current] { background: transparent; border-radius: 0; }
+.section-index__link {
+  margin-left: -1px;
+  padding: 7px 0 7px 12px;
+  border-left: 2px solid transparent;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.section-index__link:hover { color: var(--color-text); }
+.section-index__link[aria-current] { color: var(--color-text); font-weight: 600; border-left-color: var(--color-text); }
+/* S6: the family row's tint, a soft step off the page in both themes. */
+.family-record-row { background: var(--color-family-row); }
+.family-record-row:hover { background: var(--color-family-row-hover); }
+
 .icon-tile { background: var(--color-card); border: 1px solid var(--color-text-muted); color: var(--color-text-secondary); }
 
 /* Empty slot (#55): the dashed edge uses the drop-zone token, 3:1+ on card and parchment. */
@@ -2710,3 +2800,42 @@ html.dark .react-flow__minimap-mask {
   mask-position: center;
   filter: blur(0.4px);
 }
+
+/* S5: the Research case workspace (board KsNav): a full-width bar, then three
+   full-height panes split by hairlines instead of floating cards. */
+.research-ws__band .cover { margin: 0; --bleed: 0px; }
+.research-ws__band .cover-band.hero-dark { min-height: 84px; padding: 14px 40px; align-items: center; }
+.research-ws__band .cover-band__title { font-size: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.research-ws__band .cover-band__actions { gap: 14px; }
+.research-ws__status {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px;
+  border-radius: 999px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: var(--text-sm); font-weight: 500; color: #fff; white-space: nowrap;
+}
+.research-ws__status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #6EE7A8; }
+.research-ws__opened { font-size: var(--text-sm); color: rgba(255, 255, 255, 0.75); white-space: nowrap; }
+.research-ws__panes {
+  flex: 1 1 auto; min-height: 0; display: grid;
+  grid-template-columns: 272px minmax(0, 1fr) 440px;
+}
+.research-ws__rail { min-height: 0; overflow-y: auto; padding: 20px 22px; border-right: 1px solid var(--color-border); }
+.research-ws__main { min-width: 0; min-height: 0; overflow-y: auto; padding: 28px 48px 40px; }
+.research-ws__inner { max-width: 900px; }
+.research-ws__side { min-width: 0; min-height: 0; overflow-y: auto; padding: 16px 28px 28px; background: var(--color-card); border-left: 1px solid var(--color-border); }
+@media (max-width: 1279px) {
+  .research-ws__panes { grid-template-columns: 240px minmax(0, 1fr) 360px; }
+  .research-ws__main { padding: 24px 28px 32px; }
+}
+.research-ws__status:not([data-status='in_progress'])::before { background: rgba(255, 255, 255, 0.6); }
+
+/* S1 on the place page: the map cover runs edge to edge too (board PlaceMapCover),
+   its name and actions on the page column. */
+.place-cover {
+  --gutter: max(28px, calc((100vw - var(--sbw, 0px) - 1184px) / 2));
+  margin-inline: calc(50% - 50vw + var(--sbw, 0px) / 2);
+  margin-top: calc(-1 * var(--shell-pad-top, 0px));
+  border-radius: 0;
+  box-shadow: none;
+}
+.place-cover__foot.hero-dark { padding: 56px var(--gutter) 26px; }
+.place-cover__drag { left: calc(var(--gutter) + 36px); right: var(--gutter); }

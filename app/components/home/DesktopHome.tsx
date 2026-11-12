@@ -140,12 +140,10 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, tr
             {band}
             {phase === 'loading' && <PickUpSkeleton />}
             {ready && resumed && <PickUp person={resumed} treeId={treeId} viewer={!canEdit} />}
-            <div className="border-t border-border pt-8">
-                <DetailBody rail={rail}>
-                    <RecentlyEdited people={data?.recentPeople ?? []} treeId={treeId} canEdit={canEdit} loading={phase === 'loading'} />
-                    <Research cases={data?.openCases ?? []} loading={phase === 'loading'} />
-                </DetailBody>
-            </div>
+            <DetailBody divided rail={rail}>
+                <RecentlyEdited people={data?.recentPeople ?? []} treeId={treeId} canEdit={canEdit} loading={phase === 'loading'} />
+                <Research cases={data?.openCases ?? []} loading={phase === 'loading'} />
+            </DetailBody>
         </div>
     );
 }
@@ -244,7 +242,7 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
     if (!loading && people.length === 0) return null;
     return (
         <section aria-labelledby="home-recent" className="mb-10">
-            <SectionHeader headingId="home-recent" title={canEdit ? t('mobile_recently_edited') : t('mobile_recently_updated')}
+            <SectionHeader level="label" headingId="home-recent" title={canEdit ? t('mobile_recently_edited') : t('mobile_recently_updated')}
                 action={<ActionLink href="/audit">{t('mobile_full_history')}</ActionLink>} />
             {loading ? <RowsSkeleton rows={4} /> : (
                 <ul className="m-0 grid list-none gap-x-6 p-0 min-[1100px]:grid-cols-2">
@@ -277,7 +275,7 @@ function Research({ cases, loading }: { cases: OpenCase[]; loading: boolean }) {
     const { activityTime } = useTimestamp();
     return (
         <section aria-labelledby="home-research">
-            <SectionHeader headingId="home-research" title={t('mobile_research')} action={<ActionLink href="/cases">{t('all_cases')}</ActionLink>} />
+            <SectionHeader level="label" headingId="home-research" title={t('mobile_research')} action={<ActionLink href="/cases">{t('all_cases')}</ActionLink>} />
             {loading ? <RowsSkeleton rows={2} /> : cases.length === 0 ? (
                 <p className="m-0 text-sm text-text-muted">{t('no_cases_in_progress')}</p>
             ) : (
@@ -320,7 +318,7 @@ function QuickAdd() {
     ];
     return (
         <section aria-labelledby="home-quick-add">
-            <SectionHeader level="rail" rule={false} headingId="home-quick-add" title={t('quick_add')} />
+            <SectionHeader level="label" as="h3" headingId="home-quick-add" title={t('quick_add')} />
             <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0">
                 {tiles.map((tile) => (
                     <li key={tile.href} className="grid"><TileLink href={tile.href} icon={tile.icon} label={tile.label} /></li>
@@ -340,7 +338,7 @@ function NeedsAttention({ canEdit, datesToCheck, duplicates, cases, ready }: { c
     ].filter(Boolean) as Array<{ href: string; label: string; count: number }>;
     return (
         <section aria-labelledby="home-attention">
-            <SectionHeader level="rail" rule={false} headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
+            <SectionHeader level="label" as="h3" headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
             <ul className="m-0 grid list-none p-0">
                 {rows.map((r) => (
                     <li key={r.href}>
@@ -363,7 +361,7 @@ function WhereTheyLived({ data }: { data: DashboardData }) {
     const { places, countries } = data.placeTotals;
     return (
         <section aria-labelledby="home-places">
-            <SectionHeader level="rail" rule={false} headingId="home-places" title={t('where_they_lived')} action={<ActionLink href="/places">{t('all_places')}</ActionLink>} />
+            <SectionHeader level="label" as="h3" headingId="home-places" title={t('where_they_lived')} action={<ActionLink href="/places">{t('all_places')}</ActionLink>} />
             <ul className="m-0 grid list-none gap-1 p-0">
                 {data.places.map((p) => {
                     const count = Number(p.person_count);

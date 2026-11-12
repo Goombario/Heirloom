@@ -30,7 +30,7 @@ export function Disagreements({ conflicts, isLocked, busy, onDecide }: {
 
     return (
         <section aria-labelledby="disagree-title" className="grid gap-2.5">
-            <SectionHeader level="section" headingId="disagree-title" title={t('disagree_title')} count={conflicts.length} />
+            <SectionHeader level="label" headingId="disagree-title" title={t('disagree_title')} count={conflicts.length} />
             {conflicts.map((c) => {
                 const locked = isLocked(c.a.finding, c.a.claim) || isLocked(c.b.finding, c.b.claim);
                 const about = joined(claimWhat(c.a.claim.What, t), c.a.claim.personLabel ?? c.a.claim.PersonName);

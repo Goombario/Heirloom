@@ -146,7 +146,7 @@ export function EvidenceView({ findings, leads, treeId, onOpenRecord, onOpenMedi
 
             {media.length > 0 && (
                 <section aria-labelledby="evidence-media" className="grid gap-2.5">
-                    <SectionHeader level="section" headingId="evidence-media" title={t('evidence_scans')} count={media.length} />
+                    <SectionHeader level="label" headingId="evidence-media" title={t('evidence_scans')} count={media.length} />
                     <ul className="m-0 p-0 list-none grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3">
                         {media.map(({ media: m, label }) => (
                             <li key={m.Id}>

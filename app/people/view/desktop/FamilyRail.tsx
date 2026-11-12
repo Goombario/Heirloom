@@ -87,7 +87,7 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
 
       {family.parentBlocks.length === 0 ? (
         <section id="parents" aria-labelledby="rail-parents" className="rail-anchor">
-          <SectionHeader level="rail" rule={false} headingId="rail-parents" title={t('parents')} />
+          <SectionHeader level="label" as="h3" headingId="rail-parents" title={t('parents')} />
           <p className="m-0 text-sm text-text-muted">{t('no_parents')}</p>
         </section>
       ) : family.parentBlocks.map((b, i) => (
@@ -136,7 +136,7 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
 
       {journeyCount > 0 && (
         <section aria-labelledby="rail-journey">
-          <SectionHeader level="rail" rule={false} headingId="rail-journey" title={t('journey')} />
+          <SectionHeader level="label" as="h3" headingId="rail-journey" title={t('journey')} />
           <p className="m-0 mb-1.5 text-sm text-text-secondary">{t('journey_places', { count: journeyCount })}</p>
           <ActionLink kind="leave" onClick={onShowJourney}>{t('journey_open')}</ActionLink>
         </section>
@@ -207,7 +207,7 @@ function ParentSection({ block, index, total, treeId, unlink, unlinkLabel }: {
   const sibRole = (s: SiblingEntry) => (s.kind === 'half' ? t('half_sibling') : s.kind === 'step' ? t('step_sibling') : null);
   return (
     <section id={index === 0 ? 'parents' : undefined} aria-labelledby={headingId} className="rail-anchor">
-      <SectionHeader level="rail" rule={false} headingId={headingId} title={ofTotal(t, heading, index, total)} />
+      <SectionHeader level="label" as="h3" headingId={headingId} title={ofTotal(t, heading, index, total)} />
       <div className="grid gap-1">
         <FamilyRecordRow
           density="desktop"
@@ -252,7 +252,7 @@ function PartnerSection({ block, index, total, treeId, given, unlinkSelf, unlink
     : null;
   return (
     <section aria-labelledby={headingId}>
-      <SectionHeader level="rail" rule={false} headingId={headingId} title={ofTotal(t, t('partner'), index, total)} />
+      <SectionHeader level="label" as="h3" headingId={headingId} title={ofTotal(t, t('partner'), index, total)} />
       <div className="grid gap-1">
         <FamilyRecordRow
           density="desktop"

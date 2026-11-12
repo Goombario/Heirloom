@@ -116,7 +116,7 @@ export function PlaceNotes({ placeId, treeId, canEdit, canDelete, run, refreshKe
 
     return (
         <section id="place-notes" aria-labelledby="place-notes-title" ref={wrap}>
-            <SectionHeader headingId="place-notes-title" title={tn('section_title')} count={list.length} />
+            <SectionHeader level="label" headingId="place-notes-title" title={tn('section_title')} count={list.length} />
             {notes == null ? (
                 <div className="skeleton h-16 rounded-card" aria-hidden="true" />
             ) : list.length === 0 && !canEdit ? (

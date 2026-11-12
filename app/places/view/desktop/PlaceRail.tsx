@@ -65,7 +65,7 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
         <DetailRail look="open">
             {people.length > 0 && (
                 <section aria-labelledby="place-people-title">
-                    <SectionHeader level="rail" headingId="place-people-title" title={tp('people_here')} count={people.length} />
+                    <SectionHeader level="label" as="h3" headingId="place-people-title" title={tp('people_here')} count={people.length} />
                     <ul className="m-0 p-0 list-none grid grid-cols-3 gap-x-2 gap-y-4">
                         {shownPeople.map((p) => {
                             const name = p.name || tp('person_fallback', { id: p.personId });
@@ -107,7 +107,7 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
 
             {within.length > 0 && (
                 <section aria-labelledby="place-within-title">
-                    <SectionHeader level="rail" headingId="place-within-title" title={tp('places_within_title')} count={within.length} />
+                    <SectionHeader level="label" as="h3" headingId="place-within-title" title={tp('places_within_title')} count={within.length} />
                     <ul className="m-0 p-0 list-none">
                         {shownPlaces.map((c) => (
                             <li key={c.id} className="border-b border-border-light last:border-0">
@@ -135,7 +135,7 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
 
             {editing ?? (
                 <section aria-labelledby="place-details-title">
-                    <SectionHeader level="rail" headingId="place-details-title" title={t('details')} />
+                    <SectionHeader level="label" as="h3" headingId="place-details-title" title={t('details')} />
                     <dl className="m-0 grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
                         {detail.displayName && (
                             <>

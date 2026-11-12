@@ -87,7 +87,7 @@ export function FamilyRecordRow({ href, title, sub, stack, treeId, arrow = true,
   );
   if (phone && !unlink) return className ? <div className={className}>{link}</div> : link;
   return (
-    <div className={cx('family-record-row row-host flex items-center gap-1 rounded-card bg-surface-2 hover:bg-[color:var(--color-border)] transition-colors', !phone && 'pr-2', className)}>
+    <div className={cx('family-record-row row-host flex items-center gap-1 rounded-card transition-colors', !phone && 'pr-2', className)}>
       {link}
       {unlink && (
         <RowActions compact>

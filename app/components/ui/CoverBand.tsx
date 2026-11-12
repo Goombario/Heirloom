@@ -63,7 +63,7 @@ export function CoverBand({
   const hasPortrait = variant === 'cover' && portrait != null;
   const size = titleSize ?? DEFAULT_TITLE[variant];
   return (
-    <header className={cx('cover', hasPortrait && 'cover--portrait', className)}>
+    <header className={cx('cover', `cover--${variant}`, hasPortrait && 'cover--portrait', className)}>
       <div className={cx('hero-dark cover-band', `cover-band--${variant}`)}>
         <div className="cover-band__text">
           {eyebrow && <div className="eyebrow cover-band__eyebrow">{eyebrow}</div>}

@@ -12,9 +12,13 @@ export interface SectionHeaderProps {
   subtitle?: React.ReactNode;
   /**
    * 'section' → h2, serif 18; 'rail' → h3, serif 16; 'eyebrow' → h3, sans 11
-   * caps (#687). This is the only way to render these headings.
+   * caps (#687). 'label' is the v1.1 desktop section label: sans 11 caps with
+   * the count in mono beside it ("LIFE EVENTS 8"), as an h2 (or h3 with
+   * `as="h3"`, for a rail). This is the only way to render these headings.
    */
-  level?: 'section' | 'rail' | 'eyebrow';
+  level?: 'section' | 'rail' | 'eyebrow' | 'label';
+  /** `label` only: the heading element. Main-column sections are h2, rail sections h3. */
+  as?: 'h2' | 'h3';
   className?: string;
   /** Id on the heading, for a region's `aria-labelledby`. */
   headingId?: string;
@@ -32,11 +36,26 @@ export interface SectionHeaderProps {
  * globals.css (`.section`, `.rail-title`, `.eyebrow`), the #687 type ramp. `rail` is the one rail-card
  * header anatomy: title left, action right, hairline under (#694).
  */
-export function SectionHeader({ title, count, action, subtitle, level = 'section', className = '', headingId, rule = true }: SectionHeaderProps) {
+export function SectionHeader({ title, count, action, subtitle, level = 'section', className = '', headingId, rule = true, as = 'h2' }: SectionHeaderProps) {
   const countSuffix =
     count != null && count > 0 ? (
       <span className="font-sans muted font-normal text-meta"> ({count})</span>
     ) : null;
+  if (level === 'label') {
+    const Tag = as;
+    return (
+      <div className={cx('section-label', className)}>
+        <div className="min-w-0">
+          <Tag id={headingId} className="eyebrow m-0">
+            {title}
+            {count != null && count > 0 && <span className="section-label__n">{count}</span>}
+          </Tag>
+          {subtitle && <div className="muted text-meta mt-0.5">{subtitle}</div>}
+        </div>
+        {action && <div className="section-label__aside">{action}</div>}
+      </div>
+    );
+  }
   const heading =
     level === 'eyebrow' ? (
       <h3 id={headingId} className="eyebrow m-0">{title}{countSuffix}</h3>

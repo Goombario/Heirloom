@@ -17,12 +17,12 @@ describe('PageShell', () => {
     expect(h1).toHaveClass('title');
     expect(container.textContent).toContain('19 people');
     expect(getByRole('button', { name: 'Add person' })).toBeInTheDocument();
-    expect(container.querySelector('main > div')!.className).toContain('max-w-6xl');
+    expect(container.querySelector('main > div')!.className).toContain('max-w-[1240px]');
   });
 
-  it('uses the 1080 column for detail and renders no h1 of its own', () => {
+  it('uses the 1240 column for detail and renders no h1 of its own', () => {
     const { container } = render(<PageShell variant="detail"><h1>Rosa</h1></PageShell>);
-    expect(container.querySelector('main > div')!.className).toContain('max-w-[1080px]');
+    expect(container.querySelector('main > div')!.className).toContain('max-w-[1240px]');
     expect(container.querySelectorAll('h1')).toHaveLength(1);
   });
 
@@ -46,6 +46,7 @@ describe('PageShell', () => {
   });
 
   it('exposes the column classes for chrome that aligns with it', () => {
-    expect(PAGE_COLUMN.workspace).toContain('container');
+    // The nav, the tree toolbar and every page share the boards' 1240 column.
+    expect(PAGE_COLUMN.workspace).toBe(PAGE_COLUMN.list);
   });
 });

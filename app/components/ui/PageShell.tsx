@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { cx } from './cx';
 import { usePageNotice } from './PageNotice';
 
@@ -9,15 +9,15 @@ export type PageShellVariant = 'list' | 'detail' | 'workspace';
  * The content column for each variant. Exported so full-width chrome that
  * sits outside the column (the sticky `FormTopBar`) can align its contents
  * with it.
- * - `list`: 1152 centred (list and utility pages).
- * - `detail`: 1080 centred (record pages and the forms that create them).
- * - `workspace`: the header's own container, so a toolbar title lines up with
+ * - `list` and `detail`: the locked boards' 1240 column with 28px gutters
+ *   (list and utility pages; record pages and the forms that create them).
+ * - `workspace`: the same column, shared with the top nav, so a toolbar title lines up with
  *   the wordmark (`TopRail`).
  */
 export const PAGE_COLUMN: Record<PageShellVariant, string> = {
-  list: 'mx-auto w-full max-w-6xl px-4 sm:px-6',
-  detail: 'mx-auto w-full max-w-[1080px] px-4 md:px-[28px]',
-  workspace: 'container mx-auto px-4',
+  list: 'mx-auto w-full max-w-[1240px] px-4 md:px-[28px]',
+  detail: 'mx-auto w-full max-w-[1240px] px-4 md:px-[28px]',
+  workspace: 'mx-auto w-full max-w-[1240px] px-4 md:px-[28px]',
 };
 
 const COLUMN_PADDING: Record<PageShellVariant, string> = {
@@ -56,6 +56,22 @@ export interface PageShellProps extends Omit<React.HTMLAttributes<HTMLElement>, 
 }
 
 /**
+ * Publishes the classic scrollbar's width as `--sbw` on the root, so the
+ * full-bleed band (`CoverBand`) stops at the scrollbar instead of running under it.
+ */
+function useScrollbarWidth() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const measure = () => root.style.setProperty('--sbw', `${Math.max(0, window.innerWidth - root.clientWidth)}px`);
+    measure();
+    window.addEventListener('resize', measure);
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(document.body);
+    return () => { window.removeEventListener('resize', measure); ro?.disconnect(); };
+  }, []);
+}
+
+/**
  * The page shell (#689). Renders the page's single `<main>` on the parchment
  * surface, a centred content column per variant, and, for `list` pages, the
  * title block (title and subtitle on the left, CTA top-right). There is no
@@ -80,6 +96,7 @@ export function PageShell({
   ...rest
 }: PageShellProps) {
   const notice = usePageNotice();
+  useScrollbarWidth();
   const titleBlock =
     title != null ? (
       <div className={cx('flex flex-wrap items-start justify-between gap-4 mb-5', titleClassName)}>

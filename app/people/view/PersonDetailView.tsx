@@ -421,6 +421,7 @@ export default function PersonDetailsClient() {
                 />
 
                 <DetailBody
+                    divided
                     index={[
                         { id: 'life-events', label: t('life_events') },
                         { id: 'media', label: tDesk('media') },
@@ -444,6 +445,7 @@ export default function PersonDetailsClient() {
                 >
                     <section ref={lifeEventsRef} id="life-events" aria-labelledby="life-events-title">
                         <SectionHeader
+                            level="label"
                             headingId="life-events-title"
                             title={t('life_events')}
                             count={lifeEventsCount}
@@ -503,6 +505,7 @@ export default function PersonDetailsClient() {
 
                     <section id="media" aria-labelledby="media-title">
                         <SectionHeader
+                            level="label"
                             headingId="media-title"
                             title={tDesk('media')}
                             count={media.length}
@@ -527,7 +530,7 @@ export default function PersonDetailsClient() {
                     </section>
 
                     <section id="names" aria-labelledby="names-title">
-                        <SectionHeader headingId="names-title" title={tDesk('names')} />
+                        <SectionHeader level="label" headingId="names-title" title={tDesk('names')} />
                         {variantsError && (
                             <InlineDataError message={variantsError} retryLabel={tc('retry')} onRetry={refreshVariants} className="mb-3" />
                         )}
