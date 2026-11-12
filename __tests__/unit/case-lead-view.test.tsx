@@ -25,6 +25,16 @@ function view(over: Partial<Parameters<typeof LeadView>[0]> = {}) {
 }
 
 describe('LeadView (#58)', () => {
+    it('draws a timeline of what the tree knows, what was found, and the years with no record', () => {
+        view({ facts: [{ PersonId: 7, Type: 'BIRT', Date: '1880' }, { PersonId: 99, Type: 'DEAT', Date: '1881' }] });
+        const timeline = screen.getByRole('region', { name: 'Timeline' });
+        expect(timeline).toHaveTextContent('1880: Birth · Anna Kowalski, in the tree');
+        // Someone not on the lead is left out.
+        expect(timeline).not.toHaveTextContent('1881: Death');
+        expect(timeline).toHaveTextContent('1882: Birth · St Mary parish register, baptisms 1880–1890, found');
+        expect(timeline).toHaveTextContent('1883: Birth · 1900 census, Duluth ward 3, found');
+    });
+
     it('puts two findings that disagree side by side, and Which holds? decides both claims', () => {
         const h = view();
         const panel = screen.getByRole('region', { name: /Two findings disagree/ });

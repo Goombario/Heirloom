@@ -227,6 +227,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                             key={open.lead.Id}
                             summary={open}
                             findings={ws.workspace.findings}
+                            facts={ws.workspace.facts}
                             requests={ws.workspace.requests}
                             comments={caseData.comments}
                             settledLeadIds={settledLeadIds}

@@ -1,5 +1,6 @@
 import { query } from '@/lib/db/connection';
 import type {
+    CaseTreeFact,
     CaseClaim, CaseClaimDecision, CaseClaimEvidence, CaseFinding, CaseInformation, CaseLead, CasePersonRef,
     CaseRequest, CaseRequestSentBy, CaseRequestState, CaseSourceNature, CaseWorkspace, Media,
 } from '../schema';
@@ -85,6 +86,21 @@ export async function getCaseWorkspace(caseId: number, treeId: number, exec: Que
         [caseId, treeId],
     );
     const requestRows = await exec.query(`SELECT * FROM "CaseRequests" WHERE "CaseId" = $1 ORDER BY "CreatedAt", "Id"`, [caseId]);
+    // What the tree knows about the leads' people, dated, for each lead's timeline.
+    const factRows = await exec.query(
+        `WITH lp AS (
+            SELECT DISTINCT lp."PersonId" FROM "CaseLeadPerson" lp JOIN "CaseLeads" l ON l."Id" = lp."LeadId" AND l."CaseId" = $1
+         )
+         SELECT p."Id" AS "PersonId", 'BIRT' AS "Type", p."BirthDate" AS "Date" FROM "People" p JOIN lp ON lp."PersonId" = p."Id"
+          WHERE p."TreeId" = $2 AND p."BirthDate" IS NOT NULL
+         UNION ALL
+         SELECT p."Id", 'DEAT', p."DeathDate" FROM "People" p JOIN lp ON lp."PersonId" = p."Id"
+          WHERE p."TreeId" = $2 AND p."DeathDate" IS NOT NULL
+         UNION ALL
+         SELECT e."PersonId", e."Type", e."Date" FROM "Events" e JOIN lp ON lp."PersonId" = e."PersonId"
+          WHERE e."TreeId" = $2 AND e."Date" IS NOT NULL`,
+        [caseId, treeId],
+    );
 
     const peopleByLead = new Map<number, CasePersonRef[]>();
     for (const r of leadPeople.rows as Row[]) {
@@ -190,7 +206,11 @@ export async function getCaseWorkspace(caseId: number, treeId: number, exec: Que
         CreatedAt: iso(r.CreatedAt)!,
     }));
 
-    return { leads, findings, requests };
+    const facts: CaseTreeFact[] = (factRows.rows as Row[]).map((r) => ({
+        PersonId: Number(r.PersonId), Type: String(r.Type), Date: String(r.Date),
+    }));
+
+    return { leads, findings, requests, facts };
 }
 
 function mediaFrom(r: Row): Media {

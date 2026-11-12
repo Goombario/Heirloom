@@ -92,6 +92,10 @@ describe('Answer and close (#58)', () => {
             { FactTable: 'Events', FactId: events[0].Id, Page: 'RG11/4567' },
         ]);
         expect(closed.workspace.findings[0].claims.every((c) => c.AppliedAt != null && c.undoable)).toBe(true);
+        // The leads' timelines see what the tree now knows.
+        expect(closed.workspace.facts).toEqual(expect.arrayContaining([
+            { PersonId: ada, Type: 'BIRT', Date: '1851' }, { PersonId: bert, Type: 'DEAT', Date: '1920' }, { PersonId: bert, Type: 'OCCU', Date: '1881' },
+        ]));
         // Each change is its own entry: three facts and three citations.
         const audit = await rows(`SELECT "EntityType", "Action" FROM "AuditLog" WHERE "EntityType" IN ('person', 'event', 'citation') ORDER BY "Id"`);
         expect(audit.map((a) => `${a.EntityType}:${a.Action}`)).toEqual([

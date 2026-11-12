@@ -3883,7 +3883,14 @@
     "disagree_title": "Две находки расходятся",
     "which_holds": "Что верно?",
     "which_holds_for": "Что верно: {what}",
-    "holds_both": "Верно и то, и другое"
+    "holds_both": "Верно и то, и другое",
+    "timeline": "Хронология",
+    "timeline_known": "В древе",
+    "timeline_found": "Найдено",
+    "timeline_gap": "Нет записей",
+    "timeline_known_item": "{year}: {what}, в древе",
+    "timeline_found_item": "{year}: {what}, найдено",
+    "timeline_gap_item": "Нет записей с {from} по {to}"
   },
   "citeSheet": {
     "cite_title": "Указать источник",

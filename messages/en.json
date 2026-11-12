@@ -3883,7 +3883,14 @@
     "disagree_title": "Two findings disagree",
     "which_holds": "Which holds?",
     "which_holds_for": "Which holds: {what}",
-    "holds_both": "Both can be true"
+    "holds_both": "Both can be true",
+    "timeline": "Timeline",
+    "timeline_known": "In the tree",
+    "timeline_found": "Found",
+    "timeline_gap": "No record",
+    "timeline_known_item": "{year}: {what}, in the tree",
+    "timeline_found_item": "{year}: {what}, found",
+    "timeline_gap_item": "No record from {from} to {to}"
   },
   "citeSheet": {
     "cite_title": "Cite a source",

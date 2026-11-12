@@ -9,10 +9,11 @@ import { Button, RecordMenu, SectionHeader, cx, type RecordMenuItem } from '@/ap
 import { Check, RotateCcw } from '@/lib/icons';
 import { initialsFromName } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
-import type { CaseClaim, CaseClaimDecision, CaseComment, CaseFinding, CaseRequest, Media } from '@/lib/db/schema';
+import type { CaseClaim, CaseClaimDecision, CaseComment, CaseFinding, CaseRequest, CaseTreeFact, Media } from '@/lib/db/schema';
 import { LeadStatusChip } from './LeadStatus';
 import { claimConflicts, claimRelations, claimWhat, type ClaimRelation } from './claims';
 import { Disagreements } from './Disagreements';
+import { LeadTimeline } from './LeadTimeline';
 import { yearsLabel } from './LeadsRail';
 import type { LeadSummary } from './useCaseWorkspace';
 
@@ -24,10 +25,12 @@ const shortDate = { month: 'short', day: 'numeric' } as const;
  * found as plain rows; and the lead's media. A settled lead locks its decisions
  * and offers Reopen lead.
  */
-export function LeadView({ summary, findings, requests, comments, settledLeadIds, treeId, canEdit, busy, actions, openRecordId, onOpenRecord, onEdit, onSettle, onReopen, onDrop, onDecide, onReply, onOpenMedia }: {
+export function LeadView({ summary, findings, facts = [], requests, comments, settledLeadIds, treeId, canEdit, busy, actions, openRecordId, onOpenRecord, onEdit, onSettle, onReopen, onDrop, onDecide, onReply, onOpenMedia }: {
     summary: LeadSummary;
     /** Every finding of the case: the lead's own are picked here. */
     findings: CaseFinding[];
+    /** What the tree knows about the case's lead people, for the timeline. */
+    facts?: CaseTreeFact[];
     requests: CaseRequest[];
     comments: CaseComment[];
     /** Leads that are settled: a finding filed under any of them is locked. */
@@ -147,6 +150,8 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
                     ))}
                 </section>
             )}
+
+            <LeadTimeline lead={lead} findings={mine} facts={facts} />
 
             {conflicts.length > 0 && (
                 <Disagreements conflicts={conflicts} busy={busy} onDecide={onDecide}

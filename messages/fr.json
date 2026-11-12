@@ -3883,7 +3883,14 @@
     "disagree_title": "Deux trouvailles se contredisent",
     "which_holds": "Laquelle tient ?",
     "which_holds_for": "Laquelle tient : {what}",
-    "holds_both": "Les deux peuvent être vraies"
+    "holds_both": "Les deux peuvent être vraies",
+    "timeline": "Chronologie",
+    "timeline_known": "Dans l’arbre",
+    "timeline_found": "Trouvé",
+    "timeline_gap": "Aucun acte",
+    "timeline_known_item": "{year} : {what}, dans l’arbre",
+    "timeline_found_item": "{year} : {what}, trouvé",
+    "timeline_gap_item": "Aucun acte de {from} à {to}"
   },
   "citeSheet": {
     "cite_title": "Citer une source",

@@ -631,10 +631,20 @@ export interface CaseRequest {
 }
 
 /** Everything the desktop workspace reads beyond the case itself (#58). */
+/** A dated fact the tree already holds about a lead's person, for the lead's timeline (#58). */
+export interface CaseTreeFact {
+    PersonId: number;
+    /** 'BIRT', 'DEAT', or an event's type. */
+    Type: string;
+    Date: string;
+}
+
 export interface CaseWorkspace {
     leads: CaseLead[];
     findings: CaseFinding[];
     requests: CaseRequest[];
+    /** What the tree knows about the leads' people, dated. */
+    facts?: CaseTreeFact[];
 }
 
 export interface CaseWithRelations extends Case {

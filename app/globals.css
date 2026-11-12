@@ -2111,6 +2111,11 @@ main#main-content:focus {
   align-items: center;
 }
 
+/* A research lead's timeline (#58): a stretch with no record, hatched. */
+.timeline-gap {
+  background: repeating-linear-gradient(135deg, var(--color-border) 0 2px, transparent 2px 6px);
+}
+
 /* Horizontal-scrolling strip (e.g. the library tab headers). Scrolls on narrow
    widths with no visible scrollbar, and pins overflow-y to hidden so the
    horizontal scrollbar's height can't spawn a spurious vertical scrollbar
