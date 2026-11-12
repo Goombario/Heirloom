@@ -545,10 +545,21 @@ export type NewMedia = Omit<Media, 'Id'>;
 // NewSource lives in lib/db/queries/sources.ts (see note above)
 
 // Extended types with relationships
+/**
+ * A child as a family lists them, with their link to each partner
+ * (`FamilyPerson."Partner1Relationship"` / `"Partner2Relationship"`, a
+ * `ChildRelationshipType`, #982). The person page reads it to tag a child
+ * "stepson" or a sibling "half-sibling" (#49). Never inferred.
+ */
+export type LinkedChild = Person & {
+    Partner1Relationship?: string | null;
+    Partner2Relationship?: string | null;
+};
+
 export interface SpouseRelation {
     person: Person | null;
     family: Family;
-    children: Person[];
+    children: LinkedChild[];
 }
 
 export interface ParentRelation {
@@ -565,7 +576,7 @@ export interface ParentRelation {
     partner1Relationship?: string | null;
     partner2Relationship?: string | null;
     /** The family's OTHER children — this person's siblings through this family. */
-    siblings: Person[];
+    siblings: LinkedChild[];
 }
 
 export interface PersonWithRelations extends PersonDisplay {

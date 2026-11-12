@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
@@ -9,7 +9,6 @@ import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { getDataClient } from '@/lib/data';
 import { isRecordGone } from '@/lib/utils/data-error';
 import { useErrorToast } from '@/app/components/useErrorToast';
-import SourcesCitedCard from '@/app/components/SourcesCitedCard';
 import { DetailSkeleton, Skeleton } from '@/app/components/SkeletonLoader';
 import RecordNotFound from '@/app/components/RecordNotFound';
 import CitationDrawer from '@/app/components/CitationDrawer';
@@ -24,22 +23,22 @@ import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { useLanguage } from '@/app/components/LanguageProvider';
 import LocationJourneyModal, { type JourneyStop } from '@/app/components/LocationJourneyModal';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
-import { RelationshipList } from '@/app/components/person-form/RelationshipList';
 import { NamesPanel } from '@/app/components/person-form/NamesPanel';
-import { AddRow, Button, PageShell, DetailRail, DetailSection, InlineDataError, SectionHeader } from '@/app/components/ui';
-import { cx } from '@/app/components/ui/cx';
-import { Plus } from '@/lib/icons';
+import { ActionLink, AddRow, DetailBody, PageShell, InlineDataError, SectionHeader } from '@/app/components/ui';
 import { canAddVitalEvent, compareTimelineItems, countDescendants, fullName } from './derive';
 import { usePersonDetail } from './usePersonDetail';
-import { PersonHero } from './PersonHero';
-import type { PersonIdentityPatch } from './HeroIdentityEditor';
-import { DEATH_DETAILS_CLEARED } from '@/app/components/person-form/vitalEvent';
-import { usePlaceResolutionFlush } from '@/app/components/usePlaceResolutionFlush';
 import { PersonSummaryView } from './PersonSummaryView';
 import { LifeEventsPanel } from './LifeEventsPanel';
-import { OwnerNotesCard, NoteCount, biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
-import { PrimaryNoteCard } from './PrimaryNoteCard';
+import { OwnerNotesCard, biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
 import type { NameVariantDates, Note } from '@/lib/data/types';
+import type { PersonGalleryMedia } from '@/lib/db/schema';
+import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
+import { useChange } from './mobile/useChange';
+import { timelineFacts as ownTimelineFacts } from './mobile/model';
+import { PersonCover } from './desktop/PersonCover';
+import { FamilyRail } from './desktop/FamilyRail';
+import { EditPersonDialog } from './desktop/EditPersonDialog';
+import { SourcesSection } from './desktop/SourcesSection';
 import { PersonGalleryCard } from './PersonGalleryCard';
 import { DescendantsPanel } from './DescendantsPanel';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
@@ -54,6 +53,7 @@ export default function PersonDetailsClient() {
     const tc = useTranslations('common');
     const tTypes = useTranslations('eventTypes');
     const tNotes = useTranslations('notes');
+    const tDesk = useTranslations('personDesktop');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
     const d = usePersonDetail();
@@ -86,7 +86,7 @@ export default function PersonDetailsClient() {
     // Preferred note, else the oldest imported or legacy one (`biographyNote`, #902).
     // The fallback matters for every person who predates the preferred concept: a
     // strict read would show an empty biography to people who plainly have one.
-    // Editing a fallback note promotes it (see PrimaryNoteCard), so the slot converges
+    // Editing a fallback note promotes it (see PersonCover's Biography), so the slot converges
     // on an explicit choice. Narrowed first: an imported birth note carrying
     // IsPrimary = 1 would otherwise be quoted as the person's biography.
     const primaryNote = biographyNote(railNotes);
@@ -97,6 +97,15 @@ export default function PersonDetailsClient() {
     const canDelete = activePermission === 'owner' || activePermission === 'edit';
     // The phone page cites through sheets (#1049); the desktop page keeps the sidebar.
     const phoneCites = useIsMobile();
+    // Desktop writes report the mobile way: reload, then the Undo toast (editors only).
+    const run = useChange({
+        treeId: activeTreeId,
+        canUndo: canDelete,
+        onChanged: async () => {
+            setNotesRefresh((n) => n + 1);
+            await Promise.all([fetchPerson(), fetchCitations(), refreshVariants(), fetchMedia()]);
+        },
+    });
 
     // Names & aliases (Task 7) — mutations call the data client directly (mirrors
     // usePersonForm's addNameVariant/removeNameVariant/updateNameVariant/
@@ -185,40 +194,13 @@ export default function PersonDetailsClient() {
         }
     }, [person, activeTreeId, variants, refreshVariants, reportError]);
 
-    // Hero inline editor: name, sex, living status, and birth and death date and
-    // place (#795). Relationships, names, and notes are edited elsewhere.
-    const [editing, setEditing] = useState(false);
-    const [savingIdentity, setSavingIdentity] = useState(false);
-    const flushPlaceResolution = usePlaceResolutionFlush(activeTreeId);
+    // Edit person (#49) and the delete confirm. Birth and death are edited on the timeline.
+    const [editOpen, setEditOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
-
-    const handleSaveIdentity = useCallback(async (patch: PersonIdentityPatch) => {
-        if (!person) return;
-        setSavingIdentity(true);
-        try {
-            const client = await getDataClient();
-            const saved = await client.people.update(person.Id, {
-                FirstName: patch.FirstName.trim() || null,
-                LastName: patch.LastName.trim() || null,
-                Sex: patch.Sex || null,
-                IsDeceased: patch.IsDeceased === '1' ? 1 : patch.IsDeceased === '0' ? 0 : null,
-                ...patch.vitals,
-                ...patch.placeIds,
-                ...(patch.clearDeath ? DEATH_DETAILS_CLEARED : {}),
-            }, activeTreeId);
-            await Promise.all([
-                flushPlaceResolution(patch.vitals.BirthPlace ?? person.BirthPlace ?? '', patch.placeResolutions.BirthPlace, saved.BirthPlaceId),
-                patch.clearDeath ? undefined : flushPlaceResolution(patch.vitals.DeathPlace ?? person.DeathPlace ?? '', patch.placeResolutions.DeathPlace, saved.DeathPlaceId),
-            ]);
-            await fetchPerson();
-            setEditing(false);
-        } catch (e) {
-            reportError(e);
-        } finally {
-            setSavingIdentity(false);
-        }
-    }, [person, activeTreeId, fetchPerson, flushPlaceResolution, reportError]);
+    // The portrait opens in the lightbox, where it can be changed (#49).
+    const [viewing, setViewing] = useState<PersonGalleryMedia | null>(null);
+    const lifeEventsRef = useRef<HTMLElement>(null);
 
     const handleDeletePerson = useCallback(async () => {
         if (!person) return;
@@ -329,13 +311,6 @@ export default function PersonDetailsClient() {
         fact: personCitationFacts.find(f => f.factTable === citationPreview.fact.factTable && f.factId === citationPreview.fact.factId) ?? citationPreview.fact,
     } : null;
 
-    // The footnote list shows only once the page cites something, with no skeleton
-    // for a card that may resolve to nothing (#904). The rail copy is the desktop
-    // one; the inline copy, after the timeline, is the one-column one.
-    const sourcesCited = (placement: 'sources-cited-rail' | 'sources-cited-inline') => (
-        <SourcesCitedCard facts={personCitationFacts} title={t('sources_cited')} className={placement} />
-    );
-
     const phoneCiteTarget: CiteSheetTarget | null = previewTarget
         ? { fact: previewTarget.fact, start: 'view', citationId: previewTarget.citation.Id }
         : attachTarget && attachFact && (canEdit || (attachTarget.initialView === 'search' && research))
@@ -399,6 +374,18 @@ export default function PersonDetailsClient() {
         />
     );
 
+    const lifeEventsCount = ownTimelineFacts(person).length;
+    const toVital = (which: 'birth' | 'death') => {
+        setEditOpen(false);
+        // After the dialog has closed and handed focus back, go to the row.
+        window.setTimeout(() => {
+            const section = lifeEventsRef.current;
+            const row = section?.querySelector<HTMLElement>(`#${which}`) ?? section;
+            row?.scrollIntoView({ block: 'center' });
+            row?.querySelector<HTMLElement>('button, a')?.focus({ preventScroll: true });
+        }, 0);
+    };
+
     return (
         <>
             <PageShell variant="detail" topBar={phonePage} contentClassName="max-md:hidden">
@@ -412,190 +399,137 @@ export default function PersonDetailsClient() {
                     />
                 )}
 
-                <PersonHero
+                <PersonCover
                     person={person}
                     media={media}
-                    citationMap={citationMap}
-                    placeCoords={placeCoords}
-                    id={id}
                     treeId={activeTreeId}
-                    canEdit={canEdit}
-                    canDelete={canDelete}
-                    hasJourney={journeyStops.length > 0}
-                    onShowJourney={() => setShowJourney(true)}
-                    onToggleDescendants={() => setShowDescendants(s => !s)}
-                    onAddPhoto={() => setShowUpload(true)}
-                    editing={editing}
-                    savingIdentity={savingIdentity}
-                    onStartEdit={() => setEditing(true)}
-                    onSaveIdentity={handleSaveIdentity}
-                    onCancelEdit={() => setEditing(false)}
-                    onRequestDelete={() => setShowDeleteConfirm(true)}
+                    role={role}
+                    datesToCheck={marks.open.length}
+                    biography={primaryNote}
+                    run={run}
+                    onEdit={() => setEditOpen(true)}
+                    hasDescendants={countDescendants(person) > 0}
+                    onDescendants={() => setShowDescendants(true)}
+                    onDelete={() => setShowDeleteConfirm(true)}
+                    onAddPortrait={() => setShowUpload(true)}
+                    onOpenPortrait={setViewing}
                 />
 
-                {/* The page body dims and goes inert while the hero edits, so Cancel
-                    plainly cancels only the hero (#759). */}
-                <div className={cx(editing && 'edit-dimmed')} inert={editing}>
-                {/* Biographical note — full-width editorial click-to-edit quote above the
-                    two-column body. Writes the person's PREFERRED note (ADR 0010/0012);
-                    creating one here also marks it preferred, so the slot is never a dead
-                    end. The full notes list lives in the rail. */}
-                {(primaryNote || canEdit) && (
-                    <div className="mb-6">
-                        <PrimaryNoteCard
-                            personId={parseInt(id, 10)}
-                            personName={person.FirstName || t('unknown')}
-                            treeId={activeTreeId}
-                            primaryNote={primaryNote}
-                            canEdit={canEdit}
-                            onChanged={() => setNotesRefresh((n) => n + 1)}
-                        />
-                    </div>
-                )}
-
-                {/* Two-column body — left stack, right rail (Relationships) */}
-                <div className="layout-2col-content mb-6">
-                    {/* Left column: Life events → Gallery → Names & aliases */}
-                    <div className="gap-6" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                        {/* Life events */}
-                        <DetailSection title={t('life_events')}>
-                            <LifeEventsPanel
-                                person={person}
-                                marks={marks}
-                                language={language}
-                                renderCitePin={renderNumberedCitePin}
-                                tTypes={tTypes}
-                                placeCoords={placeCoords}
-                                canEdit={canEdit}
-                                canDelete={canDelete}
-                                onChanged={() => { fetchPerson(); fetchCitations(); }}
-                                personNotes={notes}
-                                personMedia={media}
-                                onMediaChanged={fetchMedia}
-                                footer={canEdit && (showInlineEvent ? (
-                                    <div className="p-3">
-                                        <InlineEventEditor
-                                            target={{ kind: 'person', personId: parseInt(id, 10) }}
-                                            allowVital={{
-                                                birth: canAddVitalEvent(person, 'BIRT'),
-                                                death: canAddVitalEvent(person, 'DEAT'),
-                                            }}
-                                            onCancel={() => setShowInlineEvent(false)}
-                                            onRefresh={() => {
-                                                fetchPerson();
-                                                fetchCitations();
-                                            }}
-                                            onSaved={() => {
-                                                setShowInlineEvent(false);
-                                                fetchPerson();
-                                                fetchCitations();
-                                            }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <AddRow ref={addEventRef} label={t('add_event')} onClick={() => setShowInlineEvent(true)} className="rounded-b-card" />
-                                ))}
-                            />
-                        </DetailSection>
-
-                        {/* At one column, Sources cited follows the timeline (#904). */}
-                        {sourcesCited('sources-cited-inline')}
-
-                        {/* Gallery */}
-                        <DetailSection
-                                title={t('gallery')}
-                                count={media.length}
-                                action={canEdit && (
-                                    <Button variant="ghost" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setShowUpload(true)} className="text-meta">
-                                        {t('add_picture')}
-                                    </Button>
-                                )}
-                        >
-                            {mediaError && (
-                                <InlineDataError
-                                    message={mediaError}
-                                    retryLabel={tc('retry')}
-                                    onRetry={fetchMedia}
-                                    className="mx-4 mb-3"
-                                />
-                            )}
-                            {mediaError && media.length === 0 ? null : mediaLoading && media.length === 0 ? (
-                                <div className="card card-pad" aria-busy="true"><Skeleton className="h-28 w-full" /></div>
-                            ) : (
-                                <PersonGalleryCard
-                                    media={media}
-                                    personId={Number(id)}
-                                    treeId={activeTreeId}
-                                    canEdit={canEdit}
-                                    canDelete={canDelete}
-                                    onPrimaryChanged={fetchMedia}
-                                    onAddPhoto={() => setShowUpload(true)}
-                                />
-                            )}
-                        </DetailSection>
-
-                        {/* Names & aliases */}
-                        <DetailSection
-                            title={t('names_aliases')}
-                            count={variants.length}
-                            subtitle={t('names_subtitle', { name: person.FirstName || t('this_person') })}
-                        >
-                            {variantsError && (
-                                <InlineDataError
-                                    message={variantsError}
-                                    retryLabel={tc('retry')}
-                                    onRetry={refreshVariants}
-                                    className="mx-4 mb-3"
-                                />
-                            )}
-                            {variantsError && variants.length === 0 ? null : variantsLoading && variants.length === 0 ? (
-                                <div className="card card-pad" aria-busy="true"><Skeleton className="h-20 w-full" /></div>
-                            ) : (
-                                <NamesPanel
-                                    person={person}
-                                    variants={variants}
-                                    renderCitePin={renderNumberedCitePin}
-                                    canEdit={canEdit}
-                                    canDelete={canDelete}
-                                    onAdd={handleAddVariant}
-                                    onRename={handleRenameVariant}
-                                    onRemove={handleRemoveVariant}
-                                    onSetPrimary={handleSetPrimaryVariant}
-                                    busy={variantsBusy}
-                                />
-                            )}
-                        </DetailSection>
-
-                    </div>
-
-                    {/* Right column: Relationships + Sources cited (sticky).
-                        No outer shell — each card owns its header so its elevation reads. */}
-                    <DetailRail sticky>
-                        {/* Sources cited tops the rail, beside the chips it numbers (#904). */}
-                        {citationsError && (
-                            <InlineDataError
-                                message={citationsError}
-                                retryLabel={tc('retry')}
-                                onRetry={fetchCitations}
-                            />
-                        )}
-                        {sourcesCited('sources-cited-rail')}
-
-                        <RelationshipList
+                <DetailBody
+                    index={[
+                        { id: 'life-events', label: t('life_events') },
+                        { id: 'media', label: tDesk('media') },
+                        { id: 'names', label: tDesk('names') },
+                        { id: 'notes', label: tNotes('section_title') },
+                        { id: 'sources', label: tDesk('sources') },
+                    ]}
+                    rail={(
+                        <FamilyRail
                             person={person}
+                            portrait={media.find((m) => m.IsPersonPrimary)}
                             treeId={activeTreeId}
                             canEdit={canEdit}
                             canDelete={canDelete}
+                            journeyCount={journeyStops.length}
+                            onShowJourney={() => setShowJourney(true)}
                             onChanged={fetchPerson}
-                            title={t('relationships')}
                         />
+                    )}
+                >
+                    <section ref={lifeEventsRef} id="life-events" aria-labelledby="life-events-title">
+                        <SectionHeader headingId="life-events-title" title={t('life_events')} count={lifeEventsCount} />
+                        <LifeEventsPanel
+                            person={person}
+                            marks={marks}
+                            language={language}
+                            renderCitePin={renderNumberedCitePin}
+                            tTypes={tTypes}
+                            placeCoords={placeCoords}
+                            canEdit={canEdit}
+                            canDelete={canDelete}
+                            onChanged={() => { fetchPerson(); fetchCitations(); }}
+                            personNotes={notes}
+                            personMedia={media}
+                            onMediaChanged={fetchMedia}
+                            footer={canEdit && (showInlineEvent ? (
+                                <div className="p-3">
+                                    <InlineEventEditor
+                                        target={{ kind: 'person', personId: parseInt(id, 10) }}
+                                        allowVital={{
+                                            birth: canAddVitalEvent(person, 'BIRT'),
+                                            death: canAddVitalEvent(person, 'DEAT'),
+                                        }}
+                                        onCancel={() => setShowInlineEvent(false)}
+                                        onRefresh={() => {
+                                            fetchPerson();
+                                            fetchCitations();
+                                        }}
+                                        onSaved={() => {
+                                            setShowInlineEvent(false);
+                                            fetchPerson();
+                                            fetchCitations();
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <AddRow ref={addEventRef} label={t('add_event')} onClick={() => setShowInlineEvent(true)} className="rounded-b-card" />
+                            ))}
+                        />
+                    </section>
 
-                        {/* Notes — first-class Note + NoteLink rows (ADR 0010 / #407).
-                            Owns the fetch for the whole page: the hero quote above and
-                            the timeline's Birth/Death counts both read its report.
-                            Shows only the UNSCOPED ones; a note about the birth record
-                            is read on the birth row of the timeline, next to the fact it
-                            describes. */}
+                    <section id="media" aria-labelledby="media-title">
+                        <SectionHeader
+                            headingId="media-title"
+                            title={tDesk('media')}
+                            count={media.length}
+                            action={canEdit && <ActionLink onClick={() => setShowUpload(true)}>{tDesk('add_media')}</ActionLink>}
+                        />
+                        {mediaError && (
+                            <InlineDataError message={mediaError} retryLabel={tc('retry')} onRetry={fetchMedia} className="mb-3" />
+                        )}
+                        {mediaError && media.length === 0 ? null : mediaLoading && media.length === 0 ? (
+                            <div className="card card-pad" aria-busy="true"><Skeleton className="h-28 w-full" /></div>
+                        ) : (
+                            <PersonGalleryCard
+                                media={media}
+                                personId={Number(id)}
+                                treeId={activeTreeId}
+                                canEdit={canEdit}
+                                canDelete={canDelete}
+                                onPrimaryChanged={fetchMedia}
+                                onAddPhoto={() => setShowUpload(true)}
+                            />
+                        )}
+                    </section>
+
+                    <section id="names" aria-labelledby="names-title">
+                        <SectionHeader headingId="names-title" title={tDesk('names')} />
+                        {variantsError && (
+                            <InlineDataError message={variantsError} retryLabel={tc('retry')} onRetry={refreshVariants} className="mb-3" />
+                        )}
+                        {variantsError && variants.length === 0 ? null : variantsLoading && variants.length === 0 ? (
+                            <div className="card card-pad" aria-busy="true"><Skeleton className="h-20 w-full" /></div>
+                        ) : (
+                            <NamesPanel
+                                person={person}
+                                variants={variants}
+                                renderCitePin={renderNumberedCitePin}
+                                canEdit={canEdit}
+                                canDelete={canDelete}
+                                onAdd={handleAddVariant}
+                                onRename={handleRenameVariant}
+                                onRemove={handleRemoveVariant}
+                                onSetPrimary={handleSetPrimaryVariant}
+                                busy={variantsBusy}
+                            />
+                        )}
+                    </section>
+
+                    {/* Notes: first-class Note + NoteLink rows (ADR 0010 / #407). It owns
+                        the fetch for the whole page: the biography and the timeline's
+                        Birth/Death counts both read its report. It lists the unscoped
+                        notes; a note about the birth is read on the birth row. */}
+                    <section id="notes" aria-labelledby="notes-title">
                         <OwnerNotesCard
                             ownerTable="People"
                             ownerId={parseInt(id, 10)}
@@ -605,25 +539,21 @@ export default function PersonDetailsClient() {
                             factScope="unscoped"
                             onNotesChange={setNotes}
                             refreshKey={notesRefresh}
-                            // The hero shows the biography; the rail lists the rest (ED-3),
+                            // The band shows the biography; this lists the rest (ED-3),
                             // and its "preferred" action reads "Use as the biography" (#902).
                             shownElsewhereId={primaryNote?.Id ?? null}
                             preferredIsBiography
-                            headerRule
-                            header={
-                                <SectionHeader
-                                    level="rail"
-                                    className="mb-0"
-                                    // Always "Notes" (#902): "Other notes" read as if the
-                                    // note just added had gone somewhere else.
-                                    title={<>{tNotes('section_title')} <NoteCount count={railNotes.length - (primaryNote ? 1 : 0)} /></>}
-                                />
-                            }
+                            header={<SectionHeader headingId="notes-title" title={tNotes('section_title')} className="mb-0" />}
                         />
+                    </section>
 
-                    </DetailRail>
-                </div>
-                </div>
+                    <section id="sources" aria-labelledby="sources-title">
+                        {citationsError && (
+                            <InlineDataError message={citationsError} retryLabel={tc('retry')} onRetry={fetchCitations} className="mb-3" />
+                        )}
+                        <SourcesSection facts={personCitationFacts} title={t('sources_cited')} />
+                    </section>
+                </DetailBody>
             </PageShell>
 
             {/* Outside the content column, which phones hide behind their own page. */}
@@ -636,6 +566,34 @@ export default function PersonDetailsClient() {
                     onClose={() => setShowUpload(false)}
                     onMediaChanged={fetchMedia}
                     onAdded={() => setShowUpload(false)}
+                />
+            )}
+
+            <EditPersonDialog
+                open={editOpen}
+                onClose={() => setEditOpen(false)}
+                person={person}
+                treeId={activeTreeId}
+                language={language}
+                run={run}
+                onEditVital={toVital}
+            />
+
+            {viewing && (
+                <MediaLightbox
+                    items={[viewing]}
+                    index={0}
+                    treeId={activeTreeId}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    context="person"
+                    galleryPersonId={person.Id}
+                    galleryPersonName={person}
+                    onClose={() => setViewing(null)}
+                    onChangeIndex={() => {}}
+                    onPrimaryChanged={fetchMedia}
+                    onTagsChanged={fetchMedia}
+                    onDeleted={() => { setViewing(null); fetchMedia(); }}
                 />
             )}
 

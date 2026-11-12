@@ -20,7 +20,7 @@ type PlaceResolution = HierarchyLevel[] | null | undefined;
 /** What the hero's inline editor saves. `vitals` holds only the birth and death
  *  columns the user changed, with a blank value as `null`; they are the same
  *  People columns the timeline's Birth and Death rows edit (ED-5). */
-export interface PersonIdentityPatch {
+interface PersonIdentityPatch {
     FirstName: string;
     LastName: string;
     Sex: 'M' | 'F' | 'X' | '';
