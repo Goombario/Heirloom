@@ -36,7 +36,6 @@ vi.mock('@/app/components/useLoadPhase', () => ({ useLoadPhase: () => 'ready' })
 vi.mock('@/lib/data', () => ({ getDataClient: vi.fn() }));
 vi.mock('@/app/people/view/personCache', () => ({ cachePersonSummaries: vi.fn(), prefetchPerson: vi.fn() }));
 vi.mock('@/app/components/useErrorToast', () => ({ useErrorToast: () => ({ redirectIfUnauthorized: vi.fn() }) }));
-vi.mock('@/app/components/SearchBar', () => ({ default: () => null }));
 
 import PeoplePageClient from '@/app/people/PeoplePageClient';
 import { FaceStack } from '@/app/places/PinMark';

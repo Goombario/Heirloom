@@ -2100,7 +2100,16 @@
     "mobile_cite_a_source": "Cite a source",
     "mobile_photo_attached": "Photo attached",
     "mobile_attach_photo": "Attach a photo",
-    "mobile_add_tag_named": "Add “{tag}”"
+    "mobile_add_tag_named": "Add “{tag}”",
+    "col_question": "Question",
+    "col_status": "Status",
+    "col_people": "People",
+    "col_leads": "Leads",
+    "col_last_activity": "Last activity",
+    "leads_settled": "{settled} of {total} settled",
+    "cases_count": "{count, plural, one {# case in this tree} other {# cases in this tree}}",
+    "count_of": "{filtered} of {total}",
+    "search_label": "Search cases"
   },
   "importExport": {
     "export_preparing": "Preparing export…",

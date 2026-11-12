@@ -2100,7 +2100,16 @@
     "mobile_cite_a_source": "Citer une source",
     "mobile_photo_attached": "Photo jointe",
     "mobile_attach_photo": "Joindre une photo",
-    "mobile_add_tag_named": "Ajouter « {tag} »"
+    "mobile_add_tag_named": "Ajouter « {tag} »",
+    "col_question": "Question",
+    "col_status": "Statut",
+    "col_people": "Personnes",
+    "col_leads": "Pistes",
+    "col_last_activity": "Dernière activité",
+    "leads_settled": "{settled} sur {total} réglées",
+    "cases_count": "{count, plural, one {# dossier dans cet arbre} other {# dossiers dans cet arbre}}",
+    "count_of": "{filtered} sur {total}",
+    "search_label": "Rechercher des dossiers"
   },
   "importExport": {
     "export_preparing": "Préparation de l'export…",

@@ -4,31 +4,6 @@
       "count": 1
     }
   },
-  "app/cases/page.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 2
-    }
-  },
-  "app/cases/view/CaseEvidenceRail.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 2
-    }
-  },
-  "app/cases/view/CaseGuidedStart.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 1
-    }
-  },
-  "app/cases/view/CaseHeaderCard.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 2
-    }
-  },
-  "app/cases/view/CaseJournal.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 4
-    }
-  },
   "app/components/AttachSourceSidebar.tsx": {
     "ds/no-arbitrary-font-size": {
       "count": 8
@@ -105,11 +80,6 @@
   "app/components/ui/DataTable.tsx": {
     "ds/no-inline-static-literal": {
       "count": 2
-    }
-  },
-  "app/components/upload/UploadTile.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 1
     }
   },
   "app/library/RepositoryModal.tsx": {
