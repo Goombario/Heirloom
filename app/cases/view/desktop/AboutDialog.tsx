@@ -101,9 +101,9 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
                     <fieldset className="m-0 p-0 border-0 grid gap-1.5">
                         <legend className="mb-1.5 text-sm text-text-secondary">{t('years')}</legend>
                         <div className="flex items-center gap-2">
-                            <input aria-label={t('from_year')} inputMode="numeric" value={from} onChange={(e) => setFrom(e.target.value)} className={cx(fieldClass(), 'w-28 date-mono')} placeholder={t('from')} />
+                            <input aria-label={t('from_year')} inputMode="numeric" value={from} onChange={(e) => setFrom(e.target.value)} className={cx(fieldClass('md', 'w-28'), 'date-mono')} placeholder={t('from')} />
                             <span aria-hidden="true" className="text-text-muted">–</span>
-                            <input aria-label={t('to_year')} inputMode="numeric" value={to} onChange={(e) => setTo(e.target.value)} className={cx(fieldClass(), 'w-28 date-mono')} placeholder={t('to')} />
+                            <input aria-label={t('to_year')} inputMode="numeric" value={to} onChange={(e) => setTo(e.target.value)} className={cx(fieldClass('md', 'w-28'), 'date-mono')} placeholder={t('to')} />
                         </div>
                     </fieldset>
                     <label className="grid gap-1.5 text-sm text-text-secondary flex-1 min-w-48">

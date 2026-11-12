@@ -8,9 +8,6 @@ vi.mock('@/app/cases/view/useCaseDetail', () => ({ useCaseDetail: () => h.state 
 vi.mock('next-intl', () => ({ useTranslations: () => (k: string) => k }));
 vi.mock('@/app/hooks/useIsMobile', () => ({ useIsMobile: () => false }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
-vi.mock('@/app/cases/view/CaseHeaderCard', () => ({ default: () => null }));
-vi.mock('@/app/cases/view/CaseJournal', () => ({ default: () => null }));
-vi.mock('@/app/cases/view/CaseEvidenceRail', () => ({ default: () => null }));
 vi.mock('@/app/cases/view/MobileCasePage', () => ({ default: () => null }));
 vi.mock('@/app/cases/view/desktop/ResearchWorkspace', () => ({ ResearchWorkspace: () => null }));
 vi.mock('@/app/components/media/AddMediaModal', () => ({

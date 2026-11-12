@@ -7,7 +7,6 @@ export {
   Network,         // Tree + tree switcher
   BookOpen,        // Library
   Paperclip,       // Attach image to a journal entry
-  Compass,         // Case guided-start (new-case)
   MapPin,          // Places
   Circle,          // Places — "no location pin" mark
   FolderSearch,    // Cases
