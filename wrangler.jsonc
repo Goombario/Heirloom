@@ -13,6 +13,10 @@
   // Railway — this config is only used by the static build.
   "name": "heirloom",
   "compatibility_date": "2025-06-04",
+  // Non-production branch builds deploy with `npx wrangler preview`, which
+  // refuses to run without this block. It can stay empty: assets and
+  // compatibility settings above apply to previews too.
+  "previews": {},
   "assets": {
     "directory": "./out",
     // Serve index.html (HTTP 200) for any unmatched path so client-side routing
