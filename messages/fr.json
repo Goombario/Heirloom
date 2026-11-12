@@ -4456,5 +4456,13 @@
     "credits_link": "Composants open source et leurs licences",
     "file_loading": "Chargement…",
     "file_error": "Impossible de charger ce fichier. Réessayez plus tard."
+  },
+  "detailKit": {
+    "read_all": "Tout lire",
+    "show_less": "Afficher moins",
+    "open_in_tree": "Ouvrir dans l’arbre",
+    "starts_from": "Commence par {name}",
+    "more_actions_for": "Plus d’actions pour {name}",
+    "on_this_page": "Sur cette page"
   }
 }

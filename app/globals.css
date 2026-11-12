@@ -1670,6 +1670,90 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   border: 1px solid var(--color-border-light);
 }
 
+/* ── v1.1 desktop kit (#55) ────────────────────────────────────────────────
+   CoverBand, LeadText, DetailBody, the open rail, IconTile, RecordMenu. Desktop
+   only: the phone pages keep RecordBand and their panes. Every colour comes from
+   the hero and page tokens, so light mode is ink navy and dark mode warm umber. */
+.cover { --cover-portrait-w: 320px; --cover-band-h: 144px; --cover-gap: 28px; margin-bottom: 28px; }
+@media (max-width: 1023px) { .cover { --cover-portrait-w: 220px; --cover-gap: 22px; } }
+.cover-band {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 28px;
+}
+.cover-band--cover { min-height: var(--cover-band-h); align-items: flex-end; }
+.cover-band--short { padding-block: 20px; }
+.cover-band--flat { background: var(--color-hero-bg); }
+.cover--portrait .cover-band { padding-left: calc(28px + var(--cover-portrait-w) + var(--cover-gap)); }
+.cover-band__text { min-width: 0; display: grid; gap: 4px; }
+.cover-band__eyebrow { color: var(--color-text-muted); }
+.cover-band__title { color: var(--color-text); overflow-wrap: anywhere; text-wrap: balance; }
+.cover-band__meta { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.cover-band__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; align-self: flex-start; }
+.cover-below { display: flex; gap: var(--cover-gap); align-items: flex-start; padding-inline: 28px; }
+.cover--portrait .cover-below { min-height: calc(var(--cover-portrait-w) * 0.75 - var(--cover-band-h) * 0.6); }
+.cover-portrait {
+  width: var(--cover-portrait-w);
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
+  flex-shrink: 0;
+  /* Hangs over the band's lower edge and stays anchored there: the lead text
+     beside it grows the page downward, never moving the portrait. */
+  margin-top: calc(var(--cover-band-h) * -0.6);
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  border: 4px solid var(--color-card);
+  box-shadow: var(--shadow-card);
+  background: var(--color-card-alt);
+}
+.cover-portrait > * { width: 100%; height: 100%; }
+.cover-lead { flex: 1 1 auto; min-width: 0; padding-top: 18px; max-width: 68ch; }
+.lead-text__body {
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-line;
+}
+.lead-text__body[data-open] { display: block; -webkit-line-clamp: unset; overflow: visible; }
+
+.detail-body { display: grid; gap: 32px; grid-template-columns: minmax(0, 1fr); }
+.detail-body--divided { border-top: 1px solid var(--color-border); padding-top: 32px; }
+@media (min-width: 768px) {
+  .detail-body--rail { grid-template-columns: minmax(0, 1fr) 260px; gap: 28px; }
+}
+@media (min-width: 1024px) {
+  .detail-body--rail { grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; }
+}
+@media (min-width: 1180px) {
+  .detail-body--index { grid-template-columns: 168px minmax(0, 1fr); }
+  .detail-body--index.detail-body--rail { grid-template-columns: 168px minmax(0, 1fr) 300px; }
+}
+.detail-body__index { display: none; }
+@media (min-width: 1180px) {
+  .detail-body__index { display: block; position: sticky; top: 80px; align-self: start; }
+}
+.section-index__link { color: var(--color-text-secondary); }
+.section-index__link:hover { background: var(--color-hover-surface); color: var(--color-text); }
+.section-index__link[aria-current] { color: var(--color-text); font-weight: 600; background: var(--color-surface-2); }
+.detail-body__main { min-width: 0; display: flex; flex-direction: column; gap: 40px; }
+.detail-body__rail { min-width: 0; }
+.rail-open { gap: 36px; }
+
+.icon-tile { background: var(--color-card); border: 1px solid var(--color-text-muted); color: var(--color-text-secondary); }
+
+.record-menu--hover { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
+:hover > .record-menu--hover,
+:focus-within > .record-menu--hover { opacity: 1; }
+@media (hover: none) { .record-menu--hover { opacity: 1; } }
+
 /* Sources cited (#904). The desktop copy tops the sticky rail, its list capped so
    the rest of the rail stays reachable. At one column the rail copy hides and the
    copy after the timeline shows, dressed like a rail card. */

@@ -30,7 +30,7 @@ let baseUrl = process.env.BASE_URL || '';
 // box-shadow ring case), and the edit-mode surfaces (/a11y-harness, same
 // dev-only harness scripts/a11y-contrast-scan.mjs uses to reach inline
 // edit-mode components that aren't otherwise a URL).
-const ROUTES = ['/people', '/library', '/cases', '/options', '/audit', '/data-checks', '/a11y-harness'];
+const ROUTES = ['/people', '/library', '/cases', '/options', '/audit', '/data-checks', '/a11y-harness', '/dev/components'];
 const THEMES = ['light', 'dark'];
 
 // Real Tab keypresses can walk a long page; this is a safety bound on total

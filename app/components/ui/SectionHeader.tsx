@@ -18,6 +18,11 @@ export interface SectionHeaderProps {
   className?: string;
   /** Id on the heading, for a region's `aria-labelledby`. */
   headingId?: string;
+  /**
+   * The hairline under a `rail` heading. On by default; the v1.1 open rail
+   * (`DetailRail look="open"`, #55) turns it off, since its sections have no bars.
+   */
+  rule?: boolean;
 }
 
 /**
@@ -27,7 +32,7 @@ export interface SectionHeaderProps {
  * globals.css (`.section`, `.rail-title`, `.eyebrow`), the #687 type ramp. `rail` is the one rail-card
  * header anatomy: title left, action right, hairline under (#694).
  */
-export function SectionHeader({ title, count, action, subtitle, level = 'section', className = '', headingId }: SectionHeaderProps) {
+export function SectionHeader({ title, count, action, subtitle, level = 'section', className = '', headingId, rule = true }: SectionHeaderProps) {
   const countSuffix =
     count != null && count > 0 ? (
       <span className="font-sans muted font-normal text-meta"> ({count})</span>
@@ -44,7 +49,7 @@ export function SectionHeader({ title, count, action, subtitle, level = 'section
   // card reads the same whether or not its body starts with its own rule. It is the
   // heavier 2px rule, above the 1px hairlines between rows inside the card.
   return (
-    <div className={cx('flex items-baseline justify-between mb-3', level === 'rail' && 'pb-2 border-b border-border-light', className)}>
+    <div className={cx('flex items-baseline justify-between mb-3', level === 'rail' && rule && 'pb-2 border-b border-border-light', className)}>
       <div className="min-w-0">
         {heading}
         {subtitle && <div className="muted text-meta mt-0.5">{subtitle}</div>}

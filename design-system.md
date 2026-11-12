@@ -392,6 +392,62 @@ so reach for these instead of re-deriving a shell/hero/rail:
   `.overline` because Tailwind's `overline` utility drew a stray rule over it. It is the
   only way to render these headings (#687).
 
+### v1.1 desktop kit (#55)
+
+The v1.1 desktop pages (person, family, home, places, Research case, the list and Tools
+pages) are built from a second set of shared parts. They extend the primitives above. Every
+part is shown, in each role and both themes, on the dev-only **`/dev/components`** page (404
+in production builds, like `/a11y-harness`). The contrast and focus scans cover that page.
+Phones don't use the kit: they keep `RecordBand` and their panes.
+
+- **`CoverBand`** is the band at the top of a v1.1 page. It is a `.hero-dark` island, so its
+  colours come only from the hero tokens (ink navy in light mode, umber in dark). It has an
+  eyebrow, the page's `h1` and a meta line, in three variants:
+  - `cover`: 144px. With `portrait`, a 4:3 portrait (320px, 220px below 1024) hangs over the
+    band's lower edge, and `lead` sits beside it. Opening the lead text grows the page
+    downward and never moves the portrait.
+  - `short`: the list and Tools pages. It uses the same gradient as `cover`.
+  - `flat`: no gradient. Only a place with no pin uses it.
+
+  The optional **actions slot** sits top-right. It holds the ⋯ `RecordMenu` on Person, Family
+  and Place, and "Answer and close" plus ⋯ on a Research case. Home, the list pages and the
+  Tools pages leave it empty; their main button lives in the toolbar.
+- **`LeadText`**: serif lead text clamped to three lines. **Read all ⌄** shows only when the
+  text overflows and turns into Show less. The same label is used everywhere, including the
+  tree panel's preferred note. An optional Edit link follows it.
+- **`DetailBody`** holds the body under the band:
+  - an optional sticky section index ("On this page"), shown from 1180px;
+  - one main column, with sections separated by 40px of space and no dividers;
+  - a right rail.
+
+  From 768px the rail stays beside the main column (260px, then 300px from 1024), so it never
+  drops to the bottom. `divided` draws the full-width hairline that closes the top section
+  (family, home).
+- **`DetailRail look="open"`** is the v1.1 rail: no cards and no bars, with sections separated
+  by 36px of space only. Its headings are `SectionHeader level="rail" rule={false}`. The
+  default `cards` look stays for the pages that haven't moved yet.
+- **`ActionLink`** applies the link glyph rule once:
+  - `action` (›) acts on this page;
+  - `leave` (↗) leaves the page or opens a full-screen view (the default with an `href`);
+  - `expand` (⌄) expands in place, with `aria-expanded`.
+
+  Header actions such as "Full history ↗" use it in `SectionHeader`'s `action` slot, never
+  under the list.
+- **`RecordMenu`** is the one ⋯ menu for a record. It is a `role="menu"` popover with
+  `useMenuKeyboard`, portalled to `<body>` so that it is a white page menu even when opened
+  from a band.
+  - `tone="island"` on a band, `surface` elsewhere.
+  - `reveal="hover"` hides the trigger until its row is hovered or focused (journal entries).
+  - A disabled item stays visible with its reason under the label.
+  - Viewers pass no items and get no ⋯ at all. Contributors' menus leave out deletes.
+- **`OpenInTreeRow`**: "Open in tree · Starts from <first name> ↗", a bordered white row that
+  opens `/tree?rootId=…`. It sits at the top of the person and family rails and in Home's
+  pick-up card. It says "Starts from", not "Centred on", because the tree doesn't always put
+  its root in the middle.
+- **`IconTile`**: the outlined icon tile (a muted 1px edge, a secondary icon on the card
+  fill). It replaces the grey `--surface-2` tile, which failed contrast. Open in tree, Quick
+  add and the Tools menu use it.
+
 These primitives define the chrome of a **standalone entity-detail page**; they do not require
 the domain content inside them to share a state model. A light `DetailHero`, for example, may slot
 view, edit, or draft/autosave content while continuing to own the surface and elevation.

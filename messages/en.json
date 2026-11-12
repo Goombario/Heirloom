@@ -4456,5 +4456,13 @@
     "credits_link": "Open-source parts and their licences",
     "file_loading": "Loading…",
     "file_error": "This file couldn't be loaded. Try again later."
+  },
+  "detailKit": {
+    "read_all": "Read all",
+    "show_less": "Show less",
+    "open_in_tree": "Open in tree",
+    "starts_from": "Starts from {name}",
+    "more_actions_for": "More actions for {name}",
+    "on_this_page": "On this page"
   }
 }
