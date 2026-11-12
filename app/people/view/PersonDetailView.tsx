@@ -24,8 +24,9 @@ import { useLanguage } from '@/app/components/LanguageProvider';
 import LocationJourneyModal, { type JourneyStop } from '@/app/components/LocationJourneyModal';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
 import { NamesPanel } from '@/app/components/person-form/NamesPanel';
-import { ActionLink, AddRow, DetailBody, PageShell, InlineDataError, SectionHeader } from '@/app/components/ui';
-import { canAddVitalEvent, compareTimelineItems, countDescendants, fullName } from './derive';
+import { ActionLink, AddRow, DetailBody, PageShell, InlineDataError, SectionHeader, StatusMark } from '@/app/components/ui';
+import { canAddVitalEvent, compareTimelineItems, countDescendants, countSourcedFacts, countTotalFacts, fullName, hasDeathFact } from './derive';
+import { livingStatus } from '@/lib/living';
 import { usePersonDetail } from './usePersonDetail';
 import { PersonSummaryView } from './PersonSummaryView';
 import { LifeEventsPanel } from './LifeEventsPanel';
@@ -437,10 +438,28 @@ export default function PersonDetailsClient() {
                     )}
                 >
                     <section ref={lifeEventsRef} id="life-events" aria-labelledby="life-events-title">
-                        <SectionHeader headingId="life-events-title" title={t('life_events')} count={lifeEventsCount} />
+                        <SectionHeader
+                            headingId="life-events-title"
+                            title={t('life_events')}
+                            count={lifeEventsCount}
+                            // Relatives' rows aren't counted here or in "N of N sourced" (#49).
+                            action={lifeEventsCount > 0 && (
+                                <span className="text-meta text-text-muted tabular-nums">
+                                    {tDesk('sourced_of', { sourced: countSourcedFacts(person, citationMap), total: countTotalFacts(person) })}
+                                </span>
+                            )}
+                        />
+                        {/* With no death recorded, the status needs a home every role can see (#49). */}
+                        {!hasDeathFact(person) && (
+                            <p className="m-0 mb-3 inline-flex items-center gap-1.5 text-sm text-text-secondary">
+                                <StatusMark status={livingStatus(person)} />
+                                {livingStatus(person) === 'living' ? tDesk('status_living') : tDesk('status_unknown')}
+                            </p>
+                        )}
                         <LifeEventsPanel
                             person={person}
                             marks={marks}
+                            run={run}
                             language={language}
                             renderCitePin={renderNumberedCitePin}
                             tTypes={tTypes}

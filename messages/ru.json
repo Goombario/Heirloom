@@ -4578,6 +4578,14 @@
     "add_family": "Добавить родственника",
     "journey": "Путь",
     "journey_places": "{count, plural, one {# место на карте} few {# места на карте} many {# мест на карте} other {# места на карте}}",
-    "journey_open": "Смотреть путь"
+    "journey_open": "Смотреть путь",
+    "rel_marriage_to": "Брак с {name}",
+    "rel_partnership_with": "Союз с {name}",
+    "rel_marriage": "Брак",
+    "rel_partnership": "Союз",
+    "rel_birth_of": "Рождение: {name}",
+    "sourced_of": "С источником: {sourced} из {total}",
+    "status_living": "Жив(а)",
+    "status_unknown": "Неизвестно, жив(а) ли"
   }
 }

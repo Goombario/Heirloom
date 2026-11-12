@@ -4578,6 +4578,14 @@
     "add_family": "Ajouter de la famille",
     "journey": "Parcours",
     "journey_places": "{count, plural, one {# lieu sur la carte} other {# lieux sur la carte}}",
-    "journey_open": "Voir le parcours"
+    "journey_open": "Voir le parcours",
+    "rel_marriage_to": "Mariage avec {name}",
+    "rel_partnership_with": "Union avec {name}",
+    "rel_marriage": "Mariage",
+    "rel_partnership": "Union",
+    "rel_birth_of": "Naissance de {name}",
+    "sourced_of": "{sourced} sur {total} avec source",
+    "status_living": "En vie",
+    "status_unknown": "Statut vital inconnu"
   }
 }

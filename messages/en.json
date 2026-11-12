@@ -4578,6 +4578,14 @@
     "add_family": "Add family",
     "journey": "Journey",
     "journey_places": "{count, plural, one {# place on the map} other {# places on the map}}",
-    "journey_open": "See the journey"
+    "journey_open": "See the journey",
+    "rel_marriage_to": "Marriage to {name}",
+    "rel_partnership_with": "Partnership with {name}",
+    "rel_marriage": "Marriage",
+    "rel_partnership": "Partnership",
+    "rel_birth_of": "Birth of {name}",
+    "sourced_of": "{sourced} of {total} sourced",
+    "status_living": "Living",
+    "status_unknown": "Living status unknown"
   }
 }

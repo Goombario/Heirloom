@@ -957,6 +957,9 @@ body::after {
    The row gets the gutter's padding back so the medallion doesn't touch the card
    edge, and the spine centres on the node again: padding (10px) + half node (17px).
    (#897) */
+/* A relative's read-only row (#49): a quieter medallion, so the person's own facts lead. */
+.tl-med-ev.is-relative .tl-med-node { opacity: 0.7; }
+.tl-med-ev.is-relative .tl-med-title { font-weight: 500; }
 .tl-med--no-age .tl-med-ev { grid-template-columns: 34px 1fr; padding-left: 10px; }
 .tl-med--no-age .tl-med-ev::before { left: calc(10px + 17px); }
 .tl-med--no-age .tl-med-chapter { grid-column: 2; }
