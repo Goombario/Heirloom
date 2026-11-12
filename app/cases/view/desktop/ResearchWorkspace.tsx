@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
 import { Banner, Button, CoverBand, PageShell, RecordMenu, showSuccessToast, type RecordMenuItem } from '@/app/components/ui';
@@ -24,12 +24,14 @@ import { EvidenceView } from './EvidenceView';
 import { AnswerClose } from './AnswerClose';
 import { ClosedAnswer } from './ClosedAnswer';
 import { AddMediaDialog } from './AddMediaDialog';
+import { CasePrint, ExportDialog } from './CaseExport';
 
 type Dialog =
     | { kind: 'new-lead' }
     | { kind: 'edit-lead'; leadId: number }
     | { kind: 'reply'; request: CaseRequest }
     | { kind: 'about' }
+    | { kind: 'export' }
     | { kind: 'add-media'; leadId: number }
     | { kind: 'drop'; leadId: number };
 
@@ -53,6 +55,9 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
     const [lightbox, setLightbox] = useState<Media | null>(null);
     const [panel, setPanel] = useState<Panel | null>(null);
     const [tab, setTab] = useState<SideTab>('record');
+    // Each PDF export lays the case out to print afresh; 0 while none is printing.
+    const [printing, setPrinting] = useState(0);
+    const printed = useCallback(() => setPrinting(0), []);
     const manage = cd.activePermission !== 'view';
 
     const settledLeadIds = useMemo(() => new Set(ws.summaries.filter((s) => s.status === 'settled').map((s) => s.lead.Id)), [ws.summaries]);
@@ -111,18 +116,20 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
         if (ok) showSuccessToast(t('change_undone'));
     };
 
-    const caseMenu: RecordMenuItem[] = !manage ? [] : [
-        ...(!closed ? [{ label: t('edit_question'), onSelect: () => setDialog({ kind: 'about' }) }] : []),
-        ...(!closed ? [caseData.Status === 'on_hold'
+    // Copy link and Export are for anyone who can read the case; the rest takes managing it.
+    const caseMenu: RecordMenuItem[] = [
+        ...(manage && !closed ? [{ label: t('edit_question'), onSelect: () => setDialog({ kind: 'about' }) }] : []),
+        ...(manage && !closed ? [caseData.Status === 'on_hold'
             ? { label: t('resume_case'), onSelect: () => { void cd.patchCase({ Status: 'in_progress' }); } }
             : { label: t('put_on_hold'), onSelect: () => { void cd.patchCase({ Status: 'on_hold' }); } }] : []),
-        ...(closed ? [{ label: t('reopen_case'), onSelect: () => { void cd.patchCase({ Status: 'in_progress' }); } }] : []),
+        ...(manage && closed ? [{ label: t('reopen_case'), onSelect: () => { void cd.patchCase({ Status: 'in_progress' }); } }] : []),
         {
-            label: t('copy_link'), separated: true, onSelect: () => {
+            label: t('copy_link'), separated: manage, onSelect: () => {
                 void navigator.clipboard?.writeText(window.location.href).then(() => showSuccessToast(t('link_copied')));
             },
         },
-        ...(canDelete && !changedTree ? [{ label: t('delete_case'), danger: true, separated: true, onSelect: () => cd.setShowDeleteConfirm(true) }] : []),
+        ...(ws.workspace ? [{ label: t('export_case'), onSelect: () => setDialog({ kind: 'export' }) }] : []),
+        ...(manage && canDelete && !changedTree ? [{ label: t('delete_case'), danger: true, separated: true, onSelect: () => cd.setShowDeleteConfirm(true) }] : []),
     ];
 
     const closedOn = format.dateTime(new Date(caseData.ClosedAt ?? caseData.UpdatedAt), { dateStyle: 'medium' });
@@ -342,6 +349,12 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     />
                 ) : null;
             })()}
+            {dialog?.kind === 'export' && ws.workspace && (
+                <ExportDialog caseData={caseData} workspace={ws.workspace} onClose={() => setDialog(null)} onPrint={() => setPrinting((n) => n + 1)} />
+            )}
+            {printing > 0 && ws.workspace && (
+                <CasePrint key={printing} caseData={caseData} workspace={ws.workspace} summaries={ws.summaries} onDone={printed} />
+            )}
             {dialog?.kind === 'about' && (
                 <AboutDialog caseData={caseData} treeId={activeTreeId} onClose={() => setDialog(null)} onSave={saveAbout} />
             )}

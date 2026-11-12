@@ -2116,6 +2116,33 @@ main#main-content:focus {
   background: repeating-linear-gradient(135deg, var(--color-border) 0 2px, transparent 2px 6px);
 }
 
+/* A research case laid out to print, so Export saves it as a PDF (#58). Hidden on
+   screen; while it is in the page, printing shows only it, black on white. */
+.case-print { display: none; }
+@media print {
+  body:has(> .case-print) > :not(.case-print) { display: none !important; }
+  body:has(> .case-print) { background: white; }
+  .case-print { display: block; color: black; font-family: var(--font-sans); font-size: 10.5pt; line-height: 1.45; }
+  .case-print h1, .case-print h2 { font-family: var(--font-serif); font-weight: 600; margin: 0; }
+  .case-print h1 { font-size: 20pt; margin-top: 2pt; }
+  .case-print h2 { font-size: 13.5pt; margin-top: 16pt; padding-top: 8pt; border-top: 0.5pt solid #999; break-after: avoid; }
+  .case-print h3 { font-size: 10.5pt; margin: 8pt 0 0; }
+  .case-print p { margin: 3pt 0; }
+  .case-print ul { margin: 6pt 0 0; padding-left: 14pt; }
+  .case-print li { margin-bottom: 6pt; break-inside: avoid; }
+  .case-print dl { display: grid; grid-template-columns: max-content 1fr; gap: 2pt 12pt; margin: 10pt 0 0; }
+  .case-print dt { color: #555; }
+  .case-print dd { margin: 0; white-space: pre-wrap; }
+  .case-print table { border-collapse: collapse; width: 100%; margin-top: 3pt; }
+  .case-print td { border-top: 0.5pt solid #ccc; padding: 2pt 6pt 2pt 0; vertical-align: top; }
+  .case-print td:first-child { width: 22%; color: #555; }
+  .case-print td:last-child { width: 22%; }
+  .case-print blockquote { margin: 3pt 0; padding-left: 8pt; border-left: 1.5pt solid #ccc; white-space: pre-wrap; }
+  .case-print-muted { color: #555; }
+  .case-print-body { white-space: pre-wrap; }
+  .case-print-struck .case-print-body { text-decoration: line-through; }
+}
+
 /* Horizontal-scrolling strip (e.g. the library tab headers). Scrolls on narrow
    widths with no visible scrollbar, and pins overflow-y to hidden so the
    horizontal scrollbar's height can't spawn a spurious vertical scrollbar
