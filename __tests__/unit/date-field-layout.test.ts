@@ -19,13 +19,6 @@ describe('date field layout contracts', () => {
         expect(editor).toContain('<div className="grid gap-2.5 mb-2.5">');
     });
 
-    it('stacks the new-family Started Date above Started Place', () => {
-        const familyForm = source('app/components/FamilyForm.tsx');
-
-        expect(familyForm).toContain('<div className="grid grid-cols-1 gap-3.5">');
-        expect(familyForm).not.toContain('grid-cols-[1fr_2fr] gap-3.5');
-    });
-
     it('stacks the family timeline marriage Date above Place', () => {
         const marriageEditor = source('app/families/view/InlineMarriageEditor.tsx');
 

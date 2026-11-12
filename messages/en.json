@@ -4619,5 +4619,20 @@
     "find_partner": "Find a partner",
     "find_partner_hint": "A spouse or partner of {name}",
     "more_on_page": "Children, notes and the cause of death are added on their page after saving."
+  },
+  "newFamilyDialog": {
+    "save_open": "Save and open",
+    "open": "Open",
+    "born_year": "Born {year}",
+    "partner_hint": "Search the tree, or create someone new",
+    "partner_hint_other": "Someone {name} married or partnered with",
+    "shared": "These two already have a family: {family}",
+    "ended_inactive": "Only for an ended family",
+    "ended_death": "Ended when {name} died{year, select, none {} other {, {year}}}{place, select, none {} other {, {place}}}. It comes from their page.",
+    "likely_reason": "No parents yet; same last name; born {from}–{to}",
+    "add_n_children": "Add {count, plural, one {# child} other {# children}}",
+    "children_hint": "Children of {names}, or someone new",
+    "children_hint_alone": "Find people in the tree, or create someone new",
+    "more_on_page": "Notes, media and more events are added on the family’s page after saving."
   }
 }

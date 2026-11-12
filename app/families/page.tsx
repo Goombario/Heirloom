@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { unstable_rethrow } from 'next/navigation';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
@@ -9,7 +10,7 @@ export default async function FamiliesPage() {
     // No server to render on in the static export — the client's own fetch
     // (PGlite, warmed in parallel by DbWarmup) handles this. Short-circuits
     // BEFORE any dynamic API so the static export can fully prerender the shell.
-    return <FamiliesPageClient initialFamilies={null} />;
+    return <Suspense fallback={null}><FamiliesPageClient initialFamilies={null} /></Suspense>;
   }
 
   // Opt this route out of static prerendering for the hosted build so it runs
@@ -39,5 +40,6 @@ export default async function FamiliesPage() {
     initialFamilies = null;
   }
 
-  return <FamiliesPageClient initialFamilies={initialFamilies} />;
+  // useSearchParams (`?add=1`) needs a Suspense boundary.
+  return <Suspense fallback={null}><FamiliesPageClient initialFamilies={initialFamilies} /></Suspense>;
 }

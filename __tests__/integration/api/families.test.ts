@@ -489,12 +489,15 @@ describeIf('API /api/families', () => {
   });
 
   describe('FamiliesPage (Server Component)', () => {
-    // The Server Component returns
-    // `<FamiliesPageClient initialFamilies={...} initialOwnerId={...} />`.
-    // Awaiting it yields that element; `initialFamilies` is the server fetch's
-    // result and `initialOwnerId` is the owner it was fetched for — the client
-    // seeds its cache under exactly that owner's key and no other.
+    // useSearchParams (`?add=1`) requires the client component to sit under
+    // Suspense. Awaiting the Server Component therefore yields the boundary, whose
+    // child is `<FamiliesPageClient initialFamilies={...} />`.
     type ClientProps = { initialFamilies: ListFamiliesResult | null };
+    type PageProps = { children: ReactElement<ClientProps> };
+
+    function clientProps(element: ReactElement<PageProps>): ClientProps {
+      return element.props.children.props;
+    }
 
     it('renders with server-fetched initial families data for the authenticated user', async () => {
       // Seed through the API routes, which use the same mocked (own-tree) user
@@ -506,8 +509,7 @@ describeIf('API /api/families', () => {
         body: { HusbandId: husband.Id, WifeId: wife.Id, MarriageDate: '1950' },
       }));
 
-      const element = (await FamiliesPage()) as ReactElement<ClientProps>;
-      const { initialFamilies } = element.props;
+      const { initialFamilies } = clientProps((await FamiliesPage()) as ReactElement<PageProps>);
 
       expect(initialFamilies).not.toBeNull();
       expect(initialFamilies!.count).toBe(1);
@@ -524,9 +526,7 @@ describeIf('API /api/families', () => {
       // override the globally-mocked getUserFromRequest for this call only.
       vi.mocked(getUserFromRequest).mockResolvedValueOnce(null);
 
-      const element = (await FamiliesPage()) as ReactElement<ClientProps>;
-
-      expect(element.props.initialFamilies).toBeNull();
+      expect(clientProps((await FamiliesPage()) as ReactElement<PageProps>).initialFamilies).toBeNull();
     });
   });
 });

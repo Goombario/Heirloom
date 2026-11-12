@@ -314,8 +314,8 @@ function Research({ cases, loading }: { cases: OpenCase[]; loading: boolean }) {
 function QuickAdd() {
     const t = useTranslations('home');
     const tiles = [
-        { href: '/people/new', label: t('new_person'), icon: <UserRound className="w-[18px] h-[18px]" /> },
-        { href: '/families/new', label: t('new_family'), icon: <Users className="w-[18px] h-[18px]" /> },
+        { href: '/people?add=1', label: t('new_person'), icon: <UserRound className="w-[18px] h-[18px]" /> },
+        { href: '/families?add=1', label: t('new_family'), icon: <Users className="w-[18px] h-[18px]" /> },
         { href: '/cases/new', label: t('new_case'), icon: <FolderSearch className="w-[18px] h-[18px]" /> },
     ];
     return (

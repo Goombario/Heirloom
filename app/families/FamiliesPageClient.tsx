@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { Button, CopperPill, DataTable, Pagination, EmptyState, MobileListHeader, PageShell, type Column } from '@/app/components/ui';
 import { useTree } from '@/app/contexts/TreeContext';
@@ -32,6 +32,8 @@ import { useLanguage } from '@/app/components/LanguageProvider';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { NewFamilySheet, afterSheetStep } from './new/mobile/NewFamilySheet';
+import { NewFamilyDialog } from './NewFamilyDialog';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
 
 type FilterKey = 'all' | FamilyFilterKey;
 type Translator = ReturnType<typeof useTranslations>;
@@ -192,8 +194,12 @@ export default function FamiliesPageClient({
     type SortKey = FamilySortKey;
     const [sortKey, setSortKey] = useState<SortKey>('partner');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-    // The phone's Add family opens the New family sheet over this list (#1066).
+    // New family is a sheet over this list on a phone (#1066) and a quick-add dialog on
+    // a wider screen (#52). `?add=1` opens it, which is where /families/new sends everyone.
     const [adding, setAdding] = useState(false);
+    const phone = useIsMobile();
+    const searchParams = useSearchParams();
+    const wantsAdd = searchParams.get('add') === '1';
     const { redirectIfUnauthorized } = useErrorToast();
 
     function toggleSort(key: SortKey) {
@@ -258,6 +264,18 @@ export default function FamiliesPageClient({
     }, [families]);
 
     const canEdit = activePermission !== 'view';
+    // Opened once per `?add=1`, as soon as the permission is known.
+    const [addSeen, setAddSeen] = useState(false);
+    if (wantsAdd !== addSeen && (!wantsAdd || activePermission !== null)) {
+        setAddSeen(wantsAdd);
+        if (wantsAdd && canEdit) setAdding(true);
+    }
+    useEffect(() => {
+        if (!wantsAdd || activePermission === null) return;
+        const rest = new URLSearchParams(searchParams.toString());
+        rest.delete('add');
+        router.replace(rest.size > 0 ? `/families?${rest}` : '/families', { scroll: false });
+    }, [wantsAdd, activePermission, router, searchParams]);
     // Skeleton-first, with "user still resolving" (currentUserId === null) treated
     // as loading so the prerendered HTML ships the skeleton rather than an empty
     // body. Gated on families.length so a cache hit with data skips the skeleton.
@@ -277,7 +295,7 @@ export default function FamiliesPageClient({
     // One create path per screen (FL-2): the copper pill takes over below md.
     const actionsNode = activePermission !== null && canEdit && (
         <div className="hidden md:block">
-            <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => router.push('/families/new')} className="text-sm">{t('new_partnership')}</Button>
+            <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)} className="text-sm">{t('new_partnership')}</Button>
         </div>
     );
     // Below md the dark header names the page and the list runs edge to edge (#1064).
@@ -495,7 +513,7 @@ export default function FamiliesPageClient({
                                             <CopperPill icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_family')}</CopperPill>
                                         </span>
                                         <span className="hidden md:inline">
-                                            <Button variant="outline" size="sm" onClick={() => router.push('/families/new')}>{t('new_partnership')}</Button>
+                                            <Button variant="outline" size="sm" onClick={() => setAdding(true)}>{t('new_partnership')}</Button>
                                         </span>
                                     </>
                                 ) : undefined}
@@ -568,14 +586,22 @@ export default function FamiliesPageClient({
                 </>
             )}
             {activePermission !== null && canEdit && (
-                <NewFamilySheet
-                    open={adding}
-                    onClose={() => setAdding(false)}
-                    onCreated={(id) => {
-                        setAdding(false);
-                        afterSheetStep(() => router.push(`/families/view?id=${id}`));
-                    }}
-                />
+                phone ? (
+                    <NewFamilySheet
+                        open={adding}
+                        onClose={() => setAdding(false)}
+                        onCreated={(id) => {
+                            setAdding(false);
+                            afterSheetStep(() => router.push(`/families/view?id=${id}`));
+                        }}
+                    />
+                ) : (
+                    <NewFamilyDialog
+                        open={adding}
+                        onClose={() => setAdding(false)}
+                        onCreated={(id) => { setAdding(false); router.push(`/families/view?id=${id}`); }}
+                    />
+                )
             )}
         </PageShell>
     );

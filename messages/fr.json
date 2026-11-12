@@ -4619,5 +4619,20 @@
     "find_partner": "Trouver un conjoint",
     "find_partner_hint": "Un conjoint ou partenaire de {name}",
     "more_on_page": "Les enfants, les notes et la cause du décès s’ajoutent sur sa page après l’enregistrement."
+  },
+  "newFamilyDialog": {
+    "save_open": "Enregistrer et ouvrir",
+    "open": "Ouvrir",
+    "born_year": "Né(e) en {year}",
+    "partner_hint": "Cherchez dans l’arbre ou créez une nouvelle personne",
+    "partner_hint_other": "Une personne mariée ou en couple avec {name}",
+    "shared": "Ces deux personnes ont déjà une famille : {family}",
+    "ended_inactive": "Seulement pour une famille terminée",
+    "ended_death": "Terminée au décès de {name}{year, select, none {} other {, {year}}}{place, select, none {} other {, {place}}}. Cela vient de sa page.",
+    "likely_reason": "Pas encore de parents ; même nom de famille ; né(e) en {from}–{to}",
+    "add_n_children": "Ajouter {count, plural, one {# enfant} other {# enfants}}",
+    "children_hint": "Enfants de {names}, ou une nouvelle personne",
+    "children_hint_alone": "Cherchez dans l’arbre ou créez une nouvelle personne",
+    "more_on_page": "Les notes, les médias et d’autres événements s’ajoutent sur la page de la famille après l’enregistrement."
   }
 }
