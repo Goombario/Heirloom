@@ -30,14 +30,13 @@ const summary = {
 } as unknown as PersonSummary;
 
 describe('PersonSummaryView', () => {
-    it('paints the known identity (name, dates, place, sex) plus body skeletons', () => {
+    it('paints the known identity (name, dates, place) plus body skeletons', () => {
         const { container, getByText } = render(<PersonSummaryView summary={summary} treeId={1} />);
 
         // Identity the summary knows, painted immediately.
         expect(getByText('Ada Lovelace')).toBeInTheDocument();
         expect(container.textContent).toContain('1815');
         expect(container.textContent).toContain('London'); // BirthPlace short form
-        expect(getByText('sex_female')).toBeInTheDocument(); // sex badge (key via mock)
 
         // Deceased ⇒ no "living" badge.
         expect(container.textContent).not.toContain('living');

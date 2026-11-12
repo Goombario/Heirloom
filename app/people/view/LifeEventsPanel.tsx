@@ -488,6 +488,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
         return {
             ...marked,
             key: item.key,
+            // "#birth", "#death", "#event-44": Home's Next steps link straight to the row (#53).
+            anchor: item.key,
             icon: <Icon size={15} strokeWidth={2} aria-hidden="true" />,
             title: displayTitle,
             citations: item.citation,

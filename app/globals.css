@@ -1671,7 +1671,9 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   transition: opacity var(--dur-fast);
 }
 .hero-portrait-frame:hover .hero-portrait-invite,
-.hero-portrait-frame:focus-within .hero-portrait-invite {
+.hero-portrait-frame:focus-within .hero-portrait-invite,
+.cover-portrait:hover .hero-portrait-invite,
+.cover-portrait:focus-within .hero-portrait-invite {
   opacity: 1;
 }
 .hero-portrait-invite:focus-visible {
@@ -1762,6 +1764,9 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 .section-index__link[aria-current] { color: var(--color-text); font-weight: 600; background: var(--color-surface-2); }
 .detail-body__main { min-width: 0; display: flex; flex-direction: column; gap: 40px; }
 .detail-body__rail { min-width: 0; }
+/* In-page links (the section list, Home's Next steps, "Edit in timeline") land
+   clear of the sticky top nav (#49, #53). */
+.detail-body__main > section[id], .detail-body__main .tl-med-ev[id], .rail-anchor { scroll-margin-top: 88px; }
 .rail-open { gap: 36px; }
 
 .icon-tile { background: var(--color-card); border: 1px solid var(--color-text-muted); color: var(--color-text-secondary); }

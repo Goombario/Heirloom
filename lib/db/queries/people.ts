@@ -1,7 +1,7 @@
 import { query, getClient } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
 import { factPlaceColumnFor, factPlaceRefChanges, factPlaceRefs, factPlaceTextColumns, factPlaceTextSql, type FactPlacePick } from './place-links';
-import type { Person, PersonDisplay, NewPerson, PersonWithRelations, Family, GedcomEvent, SpouseRelation, ParentRelation, PersonResult } from '../schema';
+import type { Person, PersonDisplay, NewPerson, PersonWithRelations, Family, GedcomEvent, SpouseRelation, ParentRelation, PersonResult, LinkedChild } from '../schema';
 import { NotFoundError } from '@/lib/data/errors';
 import { hasEditPermission } from './sharing';
 import { auditCreate, auditUpdate, auditDelete, withAuditIds, type Audited } from './audit-capture';
@@ -258,15 +258,17 @@ async function getPeopleByIds(ids: number[], treeId: number): Promise<Map<number
 /**
  * Fetch the children of many families in one query, grouped by family id. Rows
  * are ordered by birth date within each family, matching the per-family
- * children/sibling queries this replaces.
+ * children/sibling queries this replaces. Each child carries its link to each
+ * partner, so the person page can say "stepson" or "half-sibling" (#49).
  */
-async function getChildrenByFamilyIds(familyIds: number[], treeId: number): Promise<Map<number, Person[]>> {
-    const map = new Map<number, Person[]>();
+async function getChildrenByFamilyIds(familyIds: number[], treeId: number): Promise<Map<number, LinkedChild[]>> {
+    const map = new Map<number, LinkedChild[]>();
     if (familyIds.length === 0) return map;
     const result = await query(
         `SELECT p.*, ${personPlaces('p')}, ${effectiveFirstName('p')} AS "EffectiveFirstName",
                 ${primaryNickname('p')} AS "Nickname",
                 fp."FamiliesAsChildId" AS "FamilyId",
+                fp."Partner1Relationship", fp."Partner2Relationship",
                 m."Id" AS "PrimaryMediaId", m."FocalX", m."FocalY", m."FocalRadius"
          FROM "People" p
          INNER JOIN "FamilyPerson" fp ON p."Id" = fp."ChildrenId"
@@ -275,11 +277,11 @@ async function getChildrenByFamilyIds(familyIds: number[], treeId: number): Prom
          ORDER BY fp."FamiliesAsChildId", p."BirthDate"`,
         [familyIds, treeId]
     );
-    for (const row of result.rows as (Person & { FamilyId: number })[]) {
+    for (const row of result.rows as (LinkedChild & { FamilyId: number })[]) {
         const { FamilyId, ...person } = row;
         const list = map.get(FamilyId);
-        if (list) list.push(person as Person);
-        else map.set(FamilyId, [person as Person]);
+        if (list) list.push(person);
+        else map.set(FamilyId, [person]);
     }
     return map;
 }

@@ -377,9 +377,8 @@ so reach for these instead of re-deriving a shell/hero/rail:
     instead, and app-wide breadcrumbs are #732's call.
 
   Edit is **`HeroEditButton`** on both: an outline button reading "Edit", no icon, top-right
-  (#694, LAY-3). The person hero is the one exception: Edit leads its action row as
-  `Button variant="tonal"` (a translucent copper wash, no icon) ahead of View in tree and
-  Descendants (2026-09-23). On a dark island every outline is the same weight, drawn with
+  (#694, LAY-3). The v1.1 desktop person page has no Edit button: Edit person,
+  Descendants and Delete person sit in the band's one ⋯ menu (#49). On a dark island every outline is the same weight, drawn with
   `--color-control-border` (55% white).
 - **`DetailRail`** — the right column, one recipe everywhere (Person, Family, Case, Place,
   Home; #764): shadowless hairline cards on the page background (via `.person-rail > .card`),
@@ -618,10 +617,13 @@ A detail page edits in exactly two ways: the record's **identity** in its hero, 
    changes** (the panel's one coloured fill) and **Cancel** on the right, which is
    `EditorActions` (#797) and ends every record editor, hero or inline. While it is
    open the page body carries `.edit-dimmed` plus `inert`, so Cancel plainly cancels
-   only the hero. Person and family share it; case, place and source move onto it
-   when next reworked. The person hero also carries birth and death date and place
-   (#795): they duplicate the timeline's vital rows on purpose, because they are the
-   fields people most often fix, and both write the same People columns.
+   only the hero. Family uses it; case, place and source move onto it when next
+   reworked. The v1.1 desktop person page (#49) edits its identity in a `FormDialog`
+   from the ⋯ menu instead: first and last name, sex and living status. Birth and
+   death are edited on their timeline rows only, and the dialog shows them as
+   read-only lines with "Edit in timeline ›" (this supersedes the #795 hero editor,
+   which repeated them). With a death recorded, Living or Unknown asks first whether
+   to delete it.
 2. **Collections** (`RowActions`, `AddRow`, `.inline-panel`). Each row shows **Edit**
    and **Delete** (or **Remove**, when it only unlinks) on hover or focus, always on
    touch; the row carries `row-host` (a timeline row is already a host). Name each

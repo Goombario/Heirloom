@@ -191,15 +191,3 @@ export function splitFirstName(firstName: string | null): { firstWord: string; r
     const parts = (firstName ?? '').trim().split(/\s+/).filter(Boolean);
     return { firstWord: parts[0] ?? '', rest: parts.slice(1).join(' ') };
 }
-
-export function personRoleLabel(p: PersonWithRelations, t: (k: string) => string): string {
-    const hasPartner = (p.spouses?.length ?? 0) > 0 || (p.familiesAsSpouse?.length ?? 0) > 0;
-    const childCount = p.spouses?.reduce((sum, s) => sum + (s.children?.length ?? 0), 0) ?? 0;
-    const isParent = childCount > 0;
-    if (hasPartner && isParent) {
-        return p.Sex === 'F' ? t('role_spouse_mother') : p.Sex === 'M' ? t('role_spouse_father') : t('role_spouse_parent');
-    }
-    if (hasPartner) return t('role_spouse');
-    if (isParent) return p.Sex === 'F' ? t('role_mother') : p.Sex === 'M' ? t('role_father') : t('role_parent');
-    return t('role_person');
-}
