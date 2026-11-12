@@ -414,7 +414,7 @@
     "cases": "Cases",
     "tools": "Tools",
     "relationship_trace": "Relationship calculator",
-    "import_export": "Import/export",
+    "import_export": "Import and export",
     "audit_log": "Audit log",
     "data_checks": "Data checks",
     "search": "Search",
@@ -439,11 +439,17 @@
     "newTreeTitle": "New tree",
     "treeNamePlaceholder": "Tree name",
     "go_to": "Go to",
-    "your_tree": "Your tree"
+    "your_tree": "Your tree",
+    "research": "Research",
+    "hint_relationship": "How two people are related",
+    "hint_import_export": "GEDCOM files, spreadsheets, backups",
+    "hint_audit": "Every change, and undoing one",
+    "hint_data_checks": "Dates that don’t add up",
+    "data_checks_count": "{count, plural, one {# date to check} other {# dates to check}}"
   },
   "userMenu": {
     "options": "Options",
-    "share_tree": "Share tree",
+    "share_tree": "Share this tree",
     "sign_out": "Sign out",
     "sign_in": "Sign in",
     "account": "Account",
@@ -1861,7 +1867,8 @@
     "summary_place_names": "Other names of {place}",
     "summary_names_added": "added {names}",
     "summary_names_changed": "changed {names}",
-    "summary_names_removed": "removed {names}"
+    "summary_names_removed": "removed {names}",
+    "revert_n": "Revert {count, plural, one {# change} other {# changes}}"
   },
   "cases": {
     "research_journal": "Research journal",
@@ -3182,7 +3189,12 @@
     "find_relationship": "Find relationship",
     "steps_apart": "{count, plural, one {# step apart} other {# steps apart}}",
     "path_heading": "Relationship path",
-    "clear_person": "Clear {name}"
+    "clear_person": "Clear {name}",
+    "path_child_of": "child of",
+    "path_parent_of": "parent of",
+    "path_partner_of": "partner of",
+    "shared_ancestor": "Shared ancestor: {name}",
+    "show_in_tree": "Show in the tree"
   },
   "lifespan": {
     "born": "b. <d>{date}</d>",

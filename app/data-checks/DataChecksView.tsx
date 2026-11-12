@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { EmptyState, FilterChip, InlineDataError, Input, PageShell, SegmentedControl, Select, cx, showSuccessToast } from '@/app/components/ui';
+import { CoverBand, EmptyState, FilterChip, InlineDataError, Input, PageShell, SegmentedControl, Select, cx, showSuccessToast } from '@/app/components/ui';
 import { SkeletonList } from '@/app/components/SkeletonLoader';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { useTree } from '@/app/contexts/TreeContext';
@@ -37,6 +37,7 @@ const KIND_GROUP: Record<DataCheckKind, string> = { impossible: 'group_impossibl
 export default function DataChecksView() {
     const t = useTranslations('dataChecks');
     const tCommon = useTranslations('common');
+    const tNav = useTranslations('nav');
     useDocumentTitle(t('title'));
     const { activeTreeId, activePermission } = useTree();
     const { redirectIfUnauthorized } = useErrorToast();
@@ -182,6 +183,8 @@ export default function DataChecksView() {
         ...counts.map((c) => ({ key: c.rule, value: c.rule as DataCheckRuleId | null, label: text.ruleName(c.rule), meta: c.count, group: t(KIND_GROUP[c.kind]) })),
     ];
     const clean = DATA_CHECK_RULES.length - counts.length;
+    const openTotal = useMemo(() => entriesInTab(data.problems, 'open').length, [data.problems]);
+    const confirmedTotal = useMemo(() => entriesInTab(data.problems, 'confirmed').length, [data.problems]);
 
     if (isMobile) {
         if (shown && current) {
@@ -221,8 +224,26 @@ export default function DataChecksView() {
     }
 
     return (
-        <PageShell title={t('title')} subtitle={t('subtitle')} busy={result == null && !error}>
-            <div className={cx('flex flex-wrap items-center gap-2 mb-4', shown && 'hidden md:flex')}>
+        <PageShell busy={result == null && !error}>
+            {/* The Tools pages' short band (#59), then the toolbar: the To check / Confirmed
+                switch with counts, the search, then the Show select. */}
+            <div className="mb-4">
+                <CoverBand variant="short" eyebrow={tNav('tools')} title={t('title')}
+                    meta={result == null ? t('subtitle') : <span className="tabular-nums">{tNav('data_checks_count', { count: openTotal })}</span>} />
+            </div>
+            <div className={cx('flex flex-wrap items-center gap-2.5 mb-4', shown && 'hidden md:flex')}>
+                <SegmentedControl
+                    aria-label={t('status_label')}
+                    value={tab}
+                    onChange={(v) => { setTab(v as DataCheckTab); setRule(null); setPage(1); }}
+                    options={[
+                        { v: 'open', l: result == null ? t('tab_open') : `${t('tab_open')} · ${openTotal}` },
+                        { v: 'confirmed', l: result == null ? t('tab_confirmed') : `${t('tab_confirmed')} · ${confirmedTotal}` },
+                    ]}
+                />
+                <Input size="md" type="search" value={query} placeholder={t('search_placeholder')} aria-label={t('search_label')}
+                    icon={<Search className="w-4 h-4" aria-hidden="true" />} wrapClassName="w-full md:w-[260px]"
+                    onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
                 <Select
                     label={t('filter_label')}
                     valueLabel={activeRule ? text.ruleName(activeRule) : t('all_checks')}
@@ -231,21 +252,11 @@ export default function DataChecksView() {
                     onSelect={(v) => { setRule(v); setPage(1); }}
                     footer={tab === 'open' && clean > 0 ? t('clean_checks', { count: clean }) : undefined}
                 />
-                <SegmentedControl
-                    aria-label={t('status_label')}
-                    value={tab}
-                    onChange={(v) => { setTab(v as DataCheckTab); setRule(null); setPage(1); }}
-                    options={[{ v: 'open', l: t('tab_open') }, { v: 'confirmed', l: t('tab_confirmed') }]}
-                />
                 {familyId != null && (
                     <FilterChip active label={t('family_filter_label', { names: familyNames || tCommon('unknown') })}
                         dismissible dismissLabel={t('remove_family_filter')}
                         onDismiss={() => { setPage(1); router.replace('/data-checks'); }} />
                 )}
-                <span className="hidden md:block flex-1" />
-                <Input size="sm" type="search" value={query} placeholder={t('search_placeholder')} aria-label={t('search_label')}
-                    icon={<Search className="w-4 h-4" aria-hidden="true" />} wrapClassName="w-full md:w-60"
-                    onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
             </div>
 
             {error ? (
@@ -259,7 +270,7 @@ export default function DataChecksView() {
             ) : entries.length === 0 ? (
                 <EmptyState variant="filtered" message={t('empty_filtered')} clearLabel={t('clear_filters')} onClear={resetFilters} />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[372px_minmax(0,1fr)] md:rounded-2xl md:border md:border-border md:bg-card md:overflow-hidden md:shadow-[var(--panel-shadow)]">
+                <div className="grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[380px_minmax(0,1fr)] md:rounded-2xl md:border md:border-border md:bg-card md:overflow-hidden md:shadow-[var(--panel-shadow)]">
                     <div className={cx(
                         '-mx-4 sm:mx-0 bg-card border-y border-border md:border-y-0 md:border-r',
                         shown && 'hidden md:block',
@@ -267,6 +278,10 @@ export default function DataChecksView() {
                         <DataCheckList groups={groups} selectedId={current?.id ?? null} hrefFor={hrefFor}
                             onOpen={(id) => { focusDetail.current = id; }}
                             page={shownPage} pages={pages} onPage={(p) => setPage(p)} text={text} treeId={activeTreeId} />
+                        {/* "N other checks found nothing" closes the list (#59). */}
+                        {tab === 'open' && clean > 0 && (
+                            <p className="m-0 border-t border-border-light px-4 py-2.5 text-meta text-text-muted">{t('clean_checks', { count: clean })}</p>
+                        )}
                     </div>
                     {current && (
                         <div className={cx(!shown && 'hidden md:block')}>

@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/people' }));
 vi.mock('@/app/hooks/useDesktopMode', () => ({ useDesktopMode: () => false, useDesktopModeResolved: () => true }));
 vi.mock('@/app/hooks/useIsMobile', () => ({ useIsMobile: () => true }));
 vi.mock('@/app/hooks/useMembersAdmin', () => ({ useMembersAdmin: () => false }));
+vi.mock('@/app/contexts/TreeContext', () => ({ useTree: () => ({ activePermission: 'owner', activeTreeId: null, currentUserId: 1 }) }));
 vi.mock('@/app/components/ShareTreeButton', () => ({ default: () => null }));
 vi.mock('@/app/components/nav/TreeSwitcher', () => ({ default: () => null }));
 vi.mock('@/app/components/backup/useBackupStatus', () => ({ useBackupOverdue: () => ({ overdue: false, lastBackup: null }) }));

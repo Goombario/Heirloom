@@ -414,7 +414,7 @@
     "cases": "Дела",
     "tools": "Инструменты",
     "relationship_trace": "Калькулятор родства",
-    "import_export": "Импорт/Экспорт",
+    "import_export": "Импорт и экспорт",
     "audit_log": "Журнал аудита",
     "data_checks": "Проверка дат",
     "search": "Поиск",
@@ -439,11 +439,17 @@
     "newTreeTitle": "Новое дерево",
     "treeNamePlaceholder": "Название дерева",
     "go_to": "Перейти",
-    "your_tree": "Ваше древо"
+    "your_tree": "Ваше древо",
+    "research": "Исследования",
+    "hint_relationship": "Как связаны два человека",
+    "hint_import_export": "Файлы GEDCOM, таблицы, резервные копии",
+    "hint_audit": "Все изменения и их отмена",
+    "hint_data_checks": "Даты, которые не сходятся",
+    "data_checks_count": "{count, plural, one {# дата для проверки} few {# даты для проверки} many {# дат для проверки} other {# даты для проверки}}"
   },
   "userMenu": {
     "options": "Настройки",
-    "share_tree": "Поделиться деревом",
+    "share_tree": "Поделиться этим деревом",
     "sign_out": "Выйти",
     "sign_in": "Войти",
     "account": "Аккаунт",
@@ -1861,7 +1867,8 @@
     "summary_place_names": "Другие названия места {place}",
     "summary_names_added": "добавлено: {names}",
     "summary_names_changed": "изменено: {names}",
-    "summary_names_removed": "удалено: {names}"
+    "summary_names_removed": "удалено: {names}",
+    "revert_n": "Отменить {count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}"
   },
   "cases": {
     "research_journal": "Журнал исследования",
@@ -3182,7 +3189,12 @@
     "find_relationship": "Определить родство",
     "steps_apart": "{count, plural, one {# шаг родства} few {# шага родства} many {# шагов родства} other {# шага родства}}",
     "path_heading": "Путь родства",
-    "clear_person": "Убрать: {name}"
+    "clear_person": "Убрать: {name}",
+    "path_child_of": "ребёнок",
+    "path_parent_of": "родитель",
+    "path_partner_of": "партнёр",
+    "shared_ancestor": "Общий предок: {name}",
+    "show_in_tree": "Показать в дереве"
   },
   "lifespan": {
     "born": "р. <d>{date}</d>",

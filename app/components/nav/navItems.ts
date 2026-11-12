@@ -25,6 +25,29 @@ export const SECONDARY_DESTINATIONS: NavItem[] = [
 /** Phone drawer only: the redesigned phone screens hide the app top bar, whose brand links home. */
 export const HOME_ITEM: NavItem = { href: '/', labelKey: 'home_nav', icon: Home, exact: true };
 
+/**
+ * The desktop top bar's destinations, in the v1.1 order (#59): Home, Tree, People,
+ * Families, Places, Library, Research. Tools follows them as a menu. Research is the
+ * Cases list; the phone drawer still names it Cases.
+ */
+export const DESKTOP_DESTINATIONS: NavItem[] = [
+  HOME_ITEM,
+  { href: '/tree',     labelKey: 'tree',     icon: Network },
+  { href: '/people',   labelKey: 'people',   icon: Users },
+  { href: '/families', labelKey: 'families', icon: Heart },
+  { href: '/places',   labelKey: 'places',   icon: MapPin },
+  { href: '/library',  labelKey: 'library',  icon: BookOpen },
+  { href: '/cases',    labelKey: 'research', icon: FolderSearch },
+];
+
+/** The Tools menu's one-line hints (#59), by the item's label key. */
+export const UTILITY_HINTS: Record<string, string> = {
+  relationship_trace: 'hint_relationship',
+  import_export: 'hint_import_export',
+  audit_log: 'hint_audit',
+  data_checks: 'hint_data_checks',
+};
+
 export const OPTIONS_ITEM: NavItem = { href: '/options', labelKey: 'options_nav', icon: Settings };
 
 export const UTILITY_ITEMS: NavItem[] = [

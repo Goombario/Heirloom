@@ -414,7 +414,7 @@
     "cases": "Dossiers",
     "tools": "Outils",
     "relationship_trace": "Calculateur de parenté",
-    "import_export": "Import/export",
+    "import_export": "Import et export",
     "audit_log": "Journal d'audit",
     "data_checks": "Vérification des dates",
     "search": "Rechercher",
@@ -439,11 +439,17 @@
     "newTreeTitle": "Nouvel arbre",
     "treeNamePlaceholder": "Nom de l'arbre",
     "go_to": "Aller à",
-    "your_tree": "Votre arbre"
+    "your_tree": "Votre arbre",
+    "research": "Recherche",
+    "hint_relationship": "Le lien entre deux personnes",
+    "hint_import_export": "Fichiers GEDCOM, tableurs, sauvegardes",
+    "hint_audit": "Chaque modification, et comment l’annuler",
+    "hint_data_checks": "Les dates qui ne concordent pas",
+    "data_checks_count": "{count, plural, one {# date à vérifier} other {# dates à vérifier}}"
   },
   "userMenu": {
     "options": "Options",
-    "share_tree": "Partager l'arbre",
+    "share_tree": "Partager cet arbre",
     "sign_out": "Se déconnecter",
     "sign_in": "Se connecter",
     "account": "Compte",
@@ -1861,7 +1867,8 @@
     "summary_place_names": "Autres noms de {place}",
     "summary_names_added": "ajouté {names}",
     "summary_names_changed": "modifié {names}",
-    "summary_names_removed": "retiré {names}"
+    "summary_names_removed": "retiré {names}",
+    "revert_n": "Annuler {count, plural, one {# modification} other {# modifications}}"
   },
   "cases": {
     "research_journal": "Journal de recherche",
@@ -3182,7 +3189,12 @@
     "find_relationship": "Trouver la parenté",
     "steps_apart": "{count, plural, one {# degré d'écart} other {# degrés d'écart}}",
     "path_heading": "Chemin de parenté",
-    "clear_person": "Retirer {name}"
+    "clear_person": "Retirer {name}",
+    "path_child_of": "enfant de",
+    "path_parent_of": "parent de",
+    "path_partner_of": "partenaire de",
+    "shared_ancestor": "Ancêtre commun : {name}",
+    "show_in_tree": "Voir dans l’arbre"
   },
   "lifespan": {
     "born": "n. <d>{date}</d>",

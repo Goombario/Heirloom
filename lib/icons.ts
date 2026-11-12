@@ -29,7 +29,6 @@ export {
   Search,
   SearchX,         // RecordNotFound (#697)
   ArrowLeft,       // RecordNotFound back link
-  ArrowDown,       // Relationship path step
   ArrowLeftRight,  // Relationship swap
   ChevronDown,
   ChevronLeft,
