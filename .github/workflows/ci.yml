@@ -2,9 +2,10 @@ name: CI
 
 # No paths filter: CI is a required check on `main`, and a filtered-out run never
 # reports, which would leave a docs-only PR unmergeable.
+# No branches filter either: a stacked PR targets the branch below it, not `main`,
+# and still needs its checks before review.
 on:
   pull_request:
-    branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -24,8 +25,8 @@ jobs:
   # PR validation, split into parallel jobs. Runners have 2 vCPU and the test
   # tiers saturate them, so one serial job took 9–16 min while each extra job's
   # own checkout + `npm ci` costs only ~30s. Only the Postgres tier starts the
-  # service container; the unit suite runs as two shards. Every PR targets
-  # `main`, so every PR gets every job.
+  # service container; the unit suite runs as two shards. Every PR, stacked
+  # or not, gets every job.
   lint:
     runs-on: ubuntu-latest
     permissions:
