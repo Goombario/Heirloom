@@ -19,6 +19,7 @@ import CaseHeaderCard from './CaseHeaderCard';
 import CaseJournal from './CaseJournal';
 import CaseEvidenceRail from './CaseEvidenceRail';
 import MobileCasePage, { MobileCaseSkeleton } from './MobileCasePage';
+import { ResearchWorkspace } from './desktop/ResearchWorkspace';
 
 export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: boolean }) {
     const cd = useCaseDetail({ forceDraft });
@@ -96,7 +97,10 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
 
     return (
         <>
-            {isMobile ? <MobileCasePage cd={cd} /> : <PageShell variant="detail">{detailContent}</PageShell>}
+            {isMobile ? <MobileCasePage cd={cd} />
+                // A saved case opens the research workspace (#58); a new case's draft keeps the guided start.
+                : cd.isDraft ? <PageShell variant="detail">{detailContent}</PageShell>
+                    : <ResearchWorkspace cd={cd} />}
 
             {/* Add media: upload, and the case's people's media (#926, #1204). */}
             {showUploadModal && (

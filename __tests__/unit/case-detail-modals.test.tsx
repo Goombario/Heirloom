@@ -12,6 +12,7 @@ vi.mock('@/app/cases/view/CaseHeaderCard', () => ({ default: () => null }));
 vi.mock('@/app/cases/view/CaseJournal', () => ({ default: () => null }));
 vi.mock('@/app/cases/view/CaseEvidenceRail', () => ({ default: () => null }));
 vi.mock('@/app/cases/view/MobileCasePage', () => ({ default: () => null }));
+vi.mock('@/app/cases/view/desktop/ResearchWorkspace', () => ({ ResearchWorkspace: () => null }));
 vi.mock('@/app/components/media/AddMediaModal', () => ({
     default: ({ target }: { target: { kind: string; caseId: number; source: { key: string } } }) => (
         <div data-testid="add-media" data-case={target.caseId} data-source={target.source.key} />

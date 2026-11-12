@@ -9,7 +9,7 @@ import type { CaseComment } from '@/lib/db/schema';
 import type { CaseDetailState } from './useCaseDetail';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
 import CaseGuidedStart from './CaseGuidedStart';
-import { writtenEntries } from './case-detail-helpers';
+import { loggedEntryText, writtenEntries } from './case-detail-helpers';
 
 /**
  * Research-journal main column: composer (Attach + Cite + Add entry) and a
@@ -116,13 +116,14 @@ export default function CaseJournal({ cd, bare = false }: { cd: CaseDetailState;
                     {[...comments].reverse().map((comment: CaseComment, i: number) => {
                         const recent = i === 0; // newest entry gets the ink dot
                         const author = comment.UserName || comment.UserEmail || `#${comment.UserId}`;
-                        if (comment.Kind === 'status') {
-                            // A status change the app logged (#801): one quiet line, no dot fill.
+                        const logged = loggedEntryText(comment, t);
+                        if (logged != null) {
+                            // A line the app logged (#801, #58): one quiet line, no dot fill.
                             return (
                                 <div key={comment.Id} className="relative mb-4 last:mb-0" data-entry-kind="status">
                                     <span className="absolute -left-5 top-1 w-2 h-2 rounded-full border-2 border-border bg-card" aria-hidden="true" />
                                     <p className="m-0 text-xs text-text-muted">
-                                        <span className="font-medium text-text-2">{t(`journal_status_${comment.Body}`)}</span>
+                                        <span className="font-medium text-text-2">{logged}</span>
                                         {' · '}<span className="tabular-nums">{timestamp(comment.CreatedAt)}</span>
                                         {' · '}{author}
                                     </p>

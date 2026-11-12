@@ -18,7 +18,7 @@ import { useTimestamp } from '@/app/hooks/useTimestamp';
 import { initialsFromName } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
 import type { CaseDetailState } from './useCaseDetail';
-import { writtenEntries } from './case-detail-helpers';
+import { loggedEntryText, writtenEntries } from './case-detail-helpers';
 
 const STATUSES = ['in_progress', 'on_hold', 'closed'] as const;
 
@@ -282,10 +282,11 @@ function Journal({ cd, editor, numberOf, sources, onCompose, onPeople, onNote }:
     const rest = newest.filter((c) => c !== conclusion);
     const entry = (c: CaseComment, i: number) => {
         const author = c.UserName || c.UserEmail || `#${c.UserId}`;
-        if (c.Kind === 'status') {
+        const logged = loggedEntryText(c, t);
+        if (logged != null) {
             return (
                 <li key={c.Id} className={cx('px-4 py-2.5 text-meta text-text-muted', i > 0 && 'border-t border-border')} data-entry-kind="status">
-                    <span className="font-medium text-text-secondary">{t(`journal_status_${c.Body}`)}</span> · <span className="tabular-nums">{timestamp(c.CreatedAt)}</span> · {author}
+                    <span className="font-medium text-text-secondary">{logged}</span> · <span className="tabular-nums">{timestamp(c.CreatedAt)}</span> · {author}
                 </li>
             );
         }
