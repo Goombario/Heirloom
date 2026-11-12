@@ -2100,7 +2100,16 @@
     "mobile_cite_a_source": "Сослаться на источник",
     "mobile_photo_attached": "Фото прикреплено",
     "mobile_attach_photo": "Прикрепить фото",
-    "mobile_add_tag_named": "Добавить «{tag}»"
+    "mobile_add_tag_named": "Добавить «{tag}»",
+    "col_question": "Вопрос",
+    "col_status": "Статус",
+    "col_people": "Люди",
+    "col_leads": "Зацепки",
+    "col_last_activity": "Последнее действие",
+    "leads_settled": "Решено {settled} из {total}",
+    "cases_count": "{count, plural, one {# дело в этом древе} few {# дела в этом древе} many {# дел в этом древе} other {# дела в этом древе}}",
+    "count_of": "{filtered} из {total}",
+    "search_label": "Искать дела"
   },
   "importExport": {
     "export_preparing": "Подготовка экспорта…",

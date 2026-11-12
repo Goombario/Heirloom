@@ -261,14 +261,32 @@ export async function getAllCases(
     const cases = result.rows as Case[];
     const caseIds = cases.map(c => c.Id);
 
-    const [peopleMap, mediaMap, citationsMap, commentsMap] = await Promise.all([
+    const [peopleMap, mediaMap, citationsMap, commentsMap, leadsMap] = await Promise.all([
         fetchPeopleForCases(caseIds, treeId),
         fetchMediaForCases(caseIds, treeId),
         fetchCitationsForCases(caseIds, treeId),
         fetchCommentsForCases(caseIds, treeId),
+        fetchLeadTallies(caseIds, treeId),
     ]);
 
-    return cases.map(c => buildCaseWithRelations(c, peopleMap, mediaMap, citationsMap, commentsMap));
+    return cases.map(c => ({
+        ...buildCaseWithRelations(c, peopleMap, mediaMap, citationsMap, commentsMap),
+        leads: leadsMap.get(c.Id) ?? { total: 0, settled: 0 },
+    }));
+}
+
+/** Each case's leads for the Research list (#59): the ones not dropped, and how many are settled. */
+async function fetchLeadTallies(caseIds: number[], treeId: number): Promise<Map<number, { total: number; settled: number }>> {
+    if (caseIds.length === 0) return new Map();
+    const result = await query(
+        `SELECT l."CaseId", COUNT(*)::int AS "total", COUNT(l."SettledAt")::int AS "settled"
+         FROM "CaseLeads" l
+         JOIN "Cases" c ON c."Id" = l."CaseId" AND c."TreeId" = $2
+         WHERE l."CaseId" = ANY($1) AND l."DroppedAt" IS NULL
+         GROUP BY l."CaseId"`,
+        [caseIds, treeId]
+    );
+    return new Map(result.rows.map((r) => [r.CaseId as number, { total: Number(r.total), settled: Number(r.settled) }]));
 }
 
 /**

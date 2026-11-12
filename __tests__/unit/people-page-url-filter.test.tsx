@@ -44,7 +44,6 @@ vi.mock('@/app/people/view/personCache', () => ({ cachePersonSummaries: vi.fn(),
 vi.mock('@/lib/utils/data-error', () => ({ errorToastKey: vi.fn().mockReturnValue('error_generic') }));
 vi.mock('@/app/components/useErrorToast', () => ({ useErrorToast: () => ({ redirectIfUnauthorized: vi.fn() }) }));
 vi.mock('@/app/components/PersonAvatar', () => ({ default: () => null }));
-vi.mock('@/app/components/SearchBar', () => ({ default: () => null }));
 vi.mock('@/app/components/SkeletonLoader', () => ({ SkeletonList: () => null, Skeleton: () => null }));
 vi.mock('@/app/components/ui', async () => ({
   ...(await vi.importActual<typeof import('@/app/components/ui')>('@/app/components/ui')),

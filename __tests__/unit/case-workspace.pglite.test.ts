@@ -4,7 +4,7 @@ import { newEmptyClusterDb } from '../setup/pglite-snapshot';
 import { query, __setTestDb } from '@/lib/db/connection.pglite';
 import { truncateAllTables } from '../setup/pglite-truncate';
 import { initializeSchema } from '@/lib/db/init-schema';
-import { createCaseService, addCommentService, getCaseService, updateCaseService } from '@/lib/services/cases';
+import { createCaseService, addCommentService, getCaseService, listCasesService, updateCaseService } from '@/lib/services/cases';
 import {
     addClaimService, addFindingService, addLeadService, addRequestService, changeLeadService, decideClaimService,
     getCaseWorkspaceService, replyToRequestService,
@@ -164,6 +164,22 @@ describe('the research workspace (#58)', () => {
         expect(dropped.workspace.leads[0].DroppedAt).toBeTruthy();
         expect(dropped.workspace.findings).toHaveLength(1);
         await expect(addCommentService({ id: caseId, body: 'note', leadIds: [leadId], ...as(OWNER) })).rejects.toThrow(/not in this case/);
+    });
+
+    it('tallies each case’s leads for the Research list, settled of not dropped (#59)', async () => {
+        const caseId = await newCase();
+        const empty = await newCase('Where did Bert go?');
+        const first = (await getCaseWorkspaceService({ caseId, ...as(OWNER) })).leads[0].Id;
+        const second = (await addLeadService({ caseId, ...as(OWNER), body: { question: 'Find Bert in 1881' } })).id!;
+        await addLeadService({ caseId, ...as(OWNER), body: { question: 'Check the parish' } });
+        await changeLeadService({ caseId, leadId: first, ...as(OWNER), body: { action: 'settle' } });
+        await changeLeadService({ caseId, leadId: second, ...as(OWNER), body: { action: 'drop' } });
+        await query(`DELETE FROM "CaseLeads" WHERE "CaseId" = $1`, [empty]);
+
+        const { cases } = await listCasesService({ requestedTreeId: TREE, requestedOwnerId: null, currentUserId: VIEWER });
+        expect(cases.find((c) => c.Id === caseId)?.leads).toEqual({ total: 2, settled: 1 });
+        expect(cases.find((c) => c.Id === empty)?.leads).toEqual({ total: 0, settled: 0 });
+        expect((await listCasesService({ requestedTreeId: OTHER_TREE, requestedOwnerId: null, currentUserId: OTHER })).cases).toEqual([]);
     });
 
     it('tracks a request: its lead waits until the reply is logged', async () => {

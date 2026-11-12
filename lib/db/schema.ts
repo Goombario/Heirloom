@@ -664,6 +664,8 @@ export interface CaseWithRelations extends Case {
     citations: CaseCitation[];
     comments: CaseComment[];
     latestComment?: CaseComment | null;
+    /** The case's leads, not counting dropped ones: set on the Research list only (#59). */
+    leads?: { total: number; settled: number };
 }
 
 export type AuditEntityType =
