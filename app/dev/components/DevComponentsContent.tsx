@@ -14,17 +14,23 @@ import {
     CoverBand,
     DetailBody,
     DetailRail,
+    EmptySlot,
+    FamilyRecordRow,
     IconTile,
     LeadText,
     OpenInTreeRow,
     PageShell,
+    PersonIdentity,
+    PersonRow,
     RecordMenu,
     SectionHeader,
     SegmentedControl,
+    SuggestionRow,
     type RecordMenuItem,
 } from '@/app/components/ui';
 import { useTheme } from '@/app/components/ThemeProvider';
-import { Pencil, Trash2, Users, UserRound, FolderSearch } from '@/lib/icons';
+import { Timeline } from '@/app/components/Timeline';
+import { Heart, Sprout, Pencil, Trash2, Users, UserRound, FolderSearch } from '@/lib/icons';
 
 type Role = 'editor' | 'contributor' | 'viewer';
 
@@ -208,6 +214,85 @@ export default function DevComponentsContent() {
                     <IconTile size={32}><UserRound className="w-4 h-4" /></IconTile>
                     <IconTile><Users className="w-[18px] h-[18px]" /></IconTile>
                     <IconTile size={40}><FolderSearch className="w-5 h-5" /></IconTile>
+                </div>
+            </Board>
+
+            <Board title="PersonRow" note="PersonIdentity in a link, role tag after the years, hover Edit and unlink beside the link (never inside it). Serif names on v1.1 rows (C9). Contributors get Edit only; viewers get neither.">
+                <div className="grid gap-1 max-w-[420px]">
+                    {[
+                        { id: 11, name: 'Erik Berg', sex: 'M', years: '1864–1930', role: null },
+                        { id: 12, name: 'Maja Berg', sex: 'F', years: '1893–1977', role: 'foster child' },
+                        { id: 13, name: 'Nils Berg', sex: 'M', years: '1895–1902', role: 'stepson' },
+                        { id: 14, name: 'Bartholomew-Alexander Lindqvist-Holmström', sex: 'X', years: '1901–', role: 'half-sibling' },
+                    ].map((p) => (
+                        <PersonRow
+                            key={p.id}
+                            href={`/people/view?id=${p.id}`}
+                            name={p.name}
+                            initials={p.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                            sex={p.sex}
+                            nameStyle="serif"
+                            lifespan={<span className="date-mono">{p.years}</span>}
+                            role={p.role}
+                            edit={canWrite ? { label: `Edit ${p.name}`, onClick: noop } : undefined}
+                            unlink={editor ? { label: `Remove ${p.name} from this family`, onClick: noop } : undefined}
+                        />
+                    ))}
+                </div>
+            </Board>
+
+            <Board title="FamilyRecordRow" note="The phone's B2 row, shared. Desktop rail: no ↗, hover unlink for editors. Long names wrap (#48).">
+                <div className="grid gap-3 md:grid-cols-2">
+                    <FamilyRecordRow
+                        density="desktop"
+                        arrow={false}
+                        href="/families/view?id=100"
+                        title="Johan & Kristina’s family"
+                        sub="Marriage · 1862 · 5 children"
+                        treeId={null}
+                        stack={[{ Id: 1, FirstName: 'Johan', LastName: 'Lindqvist', Sex: 'M' }, { Id: 2, FirstName: 'Kristina', LastName: 'Holm', Sex: 'F' }, { Id: 3, FirstName: 'Anna', LastName: 'Lindqvist', Sex: 'F' }]}
+                        unlink={editor ? { label: 'Remove Anna from this family', onClick: noop } : undefined}
+                    />
+                    <FamilyRecordRow
+                        density="desktop"
+                        arrow={false}
+                        href="/families/view?id=101"
+                        title="with Carl-Gustaf Wilhelmsson Lindqvist-Holmström"
+                        sub="Civil union · 1921"
+                        treeId={null}
+                        stack={[{ Id: 4, FirstName: 'Carl', LastName: 'Holmström', Sex: 'M' }]}
+                        unlink={editor ? { label: 'Remove Anna from this family', onClick: noop } : undefined}
+                    />
+                </div>
+            </Board>
+
+            <Board title="SuggestionRow and EmptySlot" note="A suggestion acts in one click and says why. An empty slot opens its finder.">
+                <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-1">
+                        <SuggestionRow
+                            onClick={noop}
+                            reason="Same last name; born 7 years after the marriage"
+                            identity={<PersonIdentity as="span" name="Maja Berg" initials="MB" sex="F" lifespan={<span className="date-mono">1893–1977</span>} />}
+                        />
+                        <SuggestionRow
+                            onClick={noop}
+                            reason="No parents yet; born 16 years after the marriage"
+                            identity={<PersonIdentity as="span" name="Nils Berg" initials="NB" sex="M" lifespan={<span className="date-mono">1895–1902</span>} />}
+                        />
+                    </div>
+                    <div className="grid gap-3 content-start">
+                        <EmptySlot title="Partner unknown" hint="Find or add someone" onClick={noop} />
+                        <EmptySlot title="Add a partner" onClick={noop} />
+                    </div>
+                </div>
+            </Board>
+
+            <Board title="Timeline: a relative's read-only row" note="A child's birth on the family page links to the child (↗) and takes no Edit or Delete.">
+                <div className="max-w-[640px]">
+                    <Timeline items={[
+                        { key: 'm', icon: <Heart className="w-4 h-4" />, title: 'Marriage', meta: <><span className="date-mono">12 Jun 1862</span> · Österbybruk</>, actions: canWrite ? <span className="text-meta text-text-muted">(row actions)</span> : undefined },
+                        { key: 'b', icon: <Sprout className="w-4 h-4" />, title: 'Birth of Anna', meta: <><span className="date-mono">3 Mar 1868</span> · Österbybruk</>, href: '/people/view?id=1' },
+                    ]} />
                 </div>
             </Board>
 

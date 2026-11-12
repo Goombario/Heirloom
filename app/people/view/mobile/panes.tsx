@@ -18,14 +18,12 @@ import { groupCitationFactsBySource, type SourceNumbers } from '@/app/components
 import { useTimelineMarks, type DataCheckMarks } from '@/app/components/data-checks/marks';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import MediaGallery from '@/app/components/media/MediaGallery';
-import GuardedLink from '@/app/components/GuardedLink';
-import ProfileImage from '@/app/components/ProfileImage';
-import { Badge, CopperPill, Lifespan, MobileRow, SegmentedControl, citeClass, cx } from '@/app/components/ui';
+import { Badge, CopperPill, FamilyRecordRow, Lifespan, MobileRow, SegmentedControl, citeClass, cx } from '@/app/components/ui';
 import { mediaFactLabel } from '@/app/components/media/mediaFactLabel';
 import { WarningDot } from '@/app/components/ui/DatesToCheckFlag';
-import { ArrowUpRight, Camera, Network, Pencil, Plus, Users } from '@/lib/icons';
+import { Camera, Network, Pencil, Plus, Users } from '@/lib/icons';
 import { kindKey } from '@/app/families/view/mobile/model';
-import { familyMembers, nameBarParts, timelineFacts, vitalBirth, vitalDeath, type FamilyCard, type FamilyMember, type JourneyPlace, type MobileFact, type MobileFamily, type ParentLink, type PortraitPerson, type Relation } from './model';
+import { familyMembers, nameBarParts, timelineFacts, vitalBirth, vitalDeath, type FamilyCard, type FamilyMember, type JourneyPlace, type MobileFact, type MobileFamily, type ParentLink, type Relation } from './model';
 import { noteDate, useAboutLabel } from './ProfileSheets';
 import { JourneyRow } from './JourneyPage';
 import type { EventFlow, EventFocus } from './EventSheet';
@@ -168,35 +166,7 @@ function PersonRow({ person, sub, divided }: { person: Person; sub?: string; div
     );
 }
 
-/** The photo stack's cards, front first: a slight fan, like prints dropped on a table. */
-const STACK_CARD = ['left-0 top-[3px] -rotate-3', 'left-[8px] top-px rotate-[5deg]', 'left-4 top-1 rotate-[11deg]'];
-
-function FamilyStack({ people, treeId }: { people: PortraitPerson[]; treeId: number | null }) {
-    // Painted back to front, so the first face lands on top.
-    const cards = people.map((p, i) => ({ p, cls: STACK_CARD[i] })).reverse();
-    return (
-        <span aria-hidden="true" className="relative w-[54px] h-12 shrink-0">
-            {cards.map(({ p, cls }) => (
-                <span key={p.Id} className={cx('absolute w-9 h-[42px] rounded-[4px] border-2 border-card overflow-hidden shadow-sm bg-card', cls)}>
-                    {p.PrimaryMediaId
-                        ? <ProfileImage mediaId={p.PrimaryMediaId} treeId={treeId} alt="" focalX={p.FocalX ?? 50} focalY={p.FocalY ?? 50} focalRadius={p.FocalRadius ?? null}
-                            containerWidth={32} containerHeight={38} circular={false} />
-                        : (
-                            <span className={cx(avatarClass(p.Sex), 'grid place-items-center w-full h-full text-xs font-semibold text-[color:var(--color-on-media)]')}>
-                                {getInitials(p.FirstName, p.LastName)}
-                            </span>
-                        )}
-                </span>
-            ))}
-        </span>
-    );
-}
-
-/**
- * The way into a family record (#1098): a tinted row with a photo stack, so it reads
- * as a family, not one more person. "Anders & Greta’s family", "Marriage · 1902 · 3 children".
- */
-function FamilyRecordRow({ card, c }: { card: FamilyCard; c: PaneContext }) {
+function PersonFamilyRow({ card, c }: { card: FamilyCard; c: PaneContext }) {
     const t = useTranslations('mobilePerson');
     const tk = useTranslations('familyPhone');
     const f = useFormat(c);
@@ -207,17 +177,7 @@ function FamilyRecordRow({ card, c }: { card: FamilyCard; c: PaneContext }) {
         f.year(card.startDate),
         card.childCount > 0 ? t('children_count', { count: card.childCount }) : '',
     ].filter(Boolean).join(' · ');
-    return (
-        <GuardedLink href={`/families/view?id=${card.familyId}`}
-            className="flex w-full min-h-[72px] items-center gap-3 px-4 py-3 bg-surface-2 active:bg-border text-text no-underline focus-ring-inset transition-colors">
-            {card.stack.length > 0 && <FamilyStack people={card.stack} treeId={c.treeId} />}
-            <span className="flex-1 min-w-0 grid gap-px">
-                <span className="serif font-semibold text-md leading-snug">{title}</span>
-                <span className="text-meta text-text-muted">{sub}</span>
-            </span>
-            <ArrowUpRight className="w-[18px] h-[18px] shrink-0 text-text-muted" aria-hidden="true" />
-        </GuardedLink>
-    );
+    return <FamilyRecordRow href={`/families/view?id=${card.familyId}`} title={title} sub={sub} stack={card.stack} treeId={c.treeId} />;
 }
 
 export function useRelationLabel() {
@@ -712,7 +672,7 @@ export function FamilyPane({ c }: { c: PaneContext }) {
             {(parents.length > 0 || editor) && (
                 <Section first={!editor && c.descendants === 0}>
                     <Head title={t('parents')} />
-                    {c.family.parentFamilies.map((card) => <FamilyRecordRow key={card.familyId} card={card} c={c} />)}
+                    {c.family.parentFamilies.map((card) => <PersonFamilyRow key={card.familyId} card={card} c={c} />)}
                     {parents.length > 0
                         ? parents.map((m, i) => <PersonRow key={m.person.Id} person={m.person} sub={relation(m.relation, m.parentLink)} divided={i > 0} />)
                         : (
@@ -727,7 +687,7 @@ export function FamilyPane({ c }: { c: PaneContext }) {
             {partners.map((g, i) => (
                 <Section key={g.familyId} first={i === 0 && parents.length === 0 && !editor && c.descendants === 0}>
                     <Head title={t('partner')} />
-                    <FamilyRecordRow card={g.card} c={c} />
+                    <PersonFamilyRow card={g.card} c={c} />
                     {g.partner
                         ? <PersonRow person={g.partner} sub={g.marriageDate ? t('married_short', { date: f.year(g.marriageDate) }) : undefined} />
                         : <p className="m-0 px-4 pt-2.5 pb-1 text-base text-text-muted">{t('partner_unknown')}</p>}

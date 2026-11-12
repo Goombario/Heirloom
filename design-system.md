@@ -115,7 +115,8 @@ backdrop derives its 0.88-alpha scrim from the stage tokens via `color-mix(… ,
   blocks new `text-[Npx]` classes (existing ones are baselined in `eslint-suppressions.json`).
   Fonts: `--font-serif/-sans/-mono`.
 - **Serif scope (#763):** Fraunces is for names as card titles, headings and the biography
-  pull-quote. Note bodies, controls (the tree switcher), pickers and chips are Inter. A
+  pull-quote. On the v1.1 desktop pages a person's name is also serif in rail rows and table
+  name cells (`PersonIdentity nameStyle="serif"`, #55 C9); pickers, finders and chips stay Inter. Note bodies, controls (the tree switcher), pickers and chips are Inter. A
   section count "(2)" is Inter 12 muted after any heading (`SectionHeader`). In activity
   and audit rows only the record's name is 600 (`EntityLabelText`).
 - **Heading ramp:** every heading is serif 600 except the sans eyebrow. Use the owner,
@@ -447,6 +448,22 @@ Phones don't use the kit: they keep `RecordBand` and their panes.
 - **`IconTile`**: the outlined icon tile (a muted 1px edge, a secondary icon on the card
   fill). It replaces the grey `--surface-2` tile, which failed contrast. Open in tree, Quick
   add and the Tools menu use it.
+
+- **Rows** (part 2 of #55):
+  - **`PersonRow`** is `PersonIdentity` (which gained `role` and `nameStyle`) inside a link,
+    with its hover actions beside the link, never inside it: Edit for contributors and
+    editors, and unlink (`Link2Off`) for editors. The role tag ("foster child",
+    "half-sibling", "stepson") is muted text after the years, not a badge. It is used for
+    rail partners, children and siblings, Home's Recently edited, form child rows and finder
+    results.
+  - **`FamilyRecordRow`** is the phone's B2 family row, promoted to `ui/` and shared by the
+    phone Family tab and the desktop rails. On desktop (`density="desktop"`) it has no ↗ and a
+    hover unlink. Its title wraps rather than being cut off (#48).
+  - **`SuggestionRow`** is a plus row that acts in one click and gives a one-line reason.
+  - **`EmptySlot`** is the dashed "Partner unknown · Find or add someone" button. Its dashed
+    edge is `--color-drop-edge`.
+  - A **`Timeline` row with `href`** is a relative's event shown read-only (a child's birth on
+    the family page). Its title links to the relative with ↗, and it takes no row actions.
 
 These primitives define the chrome of a **standalone entity-detail page**; they do not require
 the domain content inside them to share a state model. A light `DetailHero`, for example, may slot

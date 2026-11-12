@@ -1749,6 +1749,10 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 
 .icon-tile { background: var(--color-card); border: 1px solid var(--color-text-muted); color: var(--color-text-secondary); }
 
+/* Empty slot (#55): the dashed edge uses the drop-zone token, 3:1+ on card and parchment. */
+.empty-slot, .empty-slot__disc { border-color: var(--color-drop-edge); }
+.empty-slot__disc { color: var(--color-text-secondary); }
+
 .record-menu--hover { opacity: 0; transition: opacity var(--dur-fast) var(--ease); }
 :hover > .record-menu--hover,
 :focus-within > .record-menu--hover { opacity: 1; }

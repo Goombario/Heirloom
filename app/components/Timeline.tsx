@@ -11,6 +11,8 @@
  */
 
 import type { ReactNode } from 'react';
+import GuardedLink from '@/app/components/GuardedLink';
+import { ArrowUpRight } from '@/lib/icons';
 
 export interface TimelineItem {
     key: string;
@@ -47,6 +49,12 @@ export interface TimelineItem {
     /** A panel under the title block, above `extra`, that `mark` discloses. It follows
      *  the mark in focus order, before `actions`. */
     callout?: ReactNode;
+    /**
+     * A relative's event shown read-only here (#55): a child's birth on the family
+     * page, a marriage on the person page. The title links to where it is edited,
+     * with ↗. Such a row takes no `actions`.
+     */
+    href?: string;
 }
 
 /**
@@ -104,15 +112,25 @@ export function Timeline({ items }: { items: TimelineItem[] }) {
                                     nesting them outside the stack. */}
                                 <div className="tl-med-head">
                                     <div className="tl-med-title">
-                                        {it.citations
-                                            ? <span className="inline-flex items-center gap-1.5 flex-wrap">{it.title}{it.citations}</span>
-                                            : it.title}
+                                        {(() => {
+                                            const title = it.href
+                                                ? (
+                                                    <GuardedLink href={it.href} className="tl-med-link inline-flex items-center gap-1 text-text no-underline hover:underline focus-ring rounded-sm">
+                                                        {it.title}
+                                                        <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-text-muted" aria-hidden="true" />
+                                                    </GuardedLink>
+                                                )
+                                                : it.title;
+                                            return it.citations
+                                                ? <span className="inline-flex items-center gap-1.5 flex-wrap">{title}{it.citations}</span>
+                                                : title;
+                                        })()}
                                     </div>
                                     {it.meta && <div className="tl-med-meta">{it.meta}</div>}
                                     {it.note && <div className="tl-med-note">{it.note}</div>}
                                     {it.mark && <div className="tl-med-mark">{it.mark}</div>}
                                     {it.callout && <div className="tl-med-callout">{it.callout}</div>}
-                                    {it.actions && <div className="tl-med-actions">{it.actions}</div>}
+                                    {it.actions && !it.href && <div className="tl-med-actions">{it.actions}</div>}
                                 </div>
                                 {/* `extra` (the map) is a sibling of the head, so it spans the
                                     body's full width — nested beside the actions it rendered

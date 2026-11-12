@@ -63,8 +63,9 @@ the source of truth when this guide and the stylesheet disagree.
   `FormTopBarTitle` (22), sections and rails through `SectionHeader`. Never hand-type heading sizes.
 - Text sizes come from the ramp: `text-xs` 11, `text-meta` 12, `text-sm` 13, `text-base` 14,
   `text-md` 16. `ds/no-arbitrary-font-size` blocks new `text-[Npx]` classes.
-- Person names are serif only when the name is a card's title; they are sans in tables and
-  dense lists (TYPE-5).
+- Person names are serif when the name is a card's title, and on the v1.1 desktop pages also in
+  rail rows and table name cells (`PersonIdentity nameStyle="serif"`, #55 C9). They stay sans
+  in pickers, finders, chips and the pages not yet moved to v1.1 (TYPE-5).
 - Labels/metadata (dates, roles like "Mother"): `text-text-muted`. Descriptive facts (sex,
   role) are a muted text line, never `Badge`s; tags are for states only.
 - Living status: `StatusMark` (a dot; `†` / `?` only with the Accessibility option on) beside
