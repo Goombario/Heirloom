@@ -377,6 +377,19 @@ describe('usePersonForm — staged people from the phone pickers (#1065)', () =>
         expect(result.current.error).toBeNull();
     });
 
+    it('adds the child to a picked family with a link per parent (blended family)', async () => {
+        peopleCreate.mockResolvedValueOnce({ Id: 123 });
+        const { result } = renderHook(() => usePersonForm(newProps));
+        act(() => {
+            result.current.setField('FirstName', 'Grace');
+            result.current.setSelectedFamily({ Id: 10, MarriageDate: null, husbandName: 'A', wifeName: 'B', childCount: 0 });
+            result.current.setAttachAsChild(true);
+            result.current.setParentLinks({ partner1: 'Birth', partner2: 'Step' });
+        });
+        await act(async () => { await result.current.submit({ addAnother: false }); });
+        expect(familiesAddChild).toHaveBeenCalledWith(10, 123, { partner1: 'Birth', partner2: 'Step' }, 99);
+    });
+
     it('without a partner the children join a family whose other parent is unknown', async () => {
         peopleCreate.mockResolvedValueOnce({ Id: 123 });
         familiesCreate.mockResolvedValueOnce({ Id: 32 });

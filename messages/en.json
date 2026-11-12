@@ -4599,5 +4599,25 @@
     "note_added": "Note added",
     "note_deleted": "Note deleted",
     "note_now_biography": "Note is now the biography"
+  },
+  "addPersonDialog": {
+    "title": "Add a person",
+    "save_open": "Save and open",
+    "save_another": "Save and add another",
+    "cite": "Cite a source",
+    "add_name": "Add another name",
+    "add_name_button": "Add name",
+    "star": "Show {name} as the first name",
+    "unstar": "Stop showing {name} as the first name",
+    "remove_name": "Remove {name}",
+    "remove": "Remove {name}",
+    "died_living": "Living people have no death.",
+    "duplicate": "Already in the tree? {name}{year, select, none {} other {, {year}}}",
+    "open": "Open",
+    "find_parents": "Find their parents",
+    "find_parents_hint": "The family {name} was born or adopted into",
+    "find_partner": "Find a partner",
+    "find_partner_hint": "A spouse or partner of {name}",
+    "more_on_page": "Children, notes and the cause of death are added on their page after saving."
   }
 }

@@ -4599,5 +4599,25 @@
     "note_added": "Note ajoutée",
     "note_deleted": "Note supprimée",
     "note_now_biography": "La note est maintenant la biographie"
+  },
+  "addPersonDialog": {
+    "title": "Ajouter une personne",
+    "save_open": "Enregistrer et ouvrir",
+    "save_another": "Enregistrer et en ajouter une autre",
+    "cite": "Citer une source",
+    "add_name": "Ajouter un autre nom",
+    "add_name_button": "Ajouter le nom",
+    "star": "Afficher {name} comme prénom",
+    "unstar": "Ne plus afficher {name} comme prénom",
+    "remove_name": "Retirer {name}",
+    "remove": "Retirer {name}",
+    "died_living": "Une personne vivante n’a pas de décès.",
+    "duplicate": "Déjà dans l’arbre ? {name}{year, select, none {} other {, {year}}}",
+    "open": "Ouvrir",
+    "find_parents": "Trouver ses parents",
+    "find_parents_hint": "La famille où {name} est né·e ou a été adopté·e",
+    "find_partner": "Trouver un conjoint",
+    "find_partner_hint": "Un conjoint ou partenaire de {name}",
+    "more_on_page": "Les enfants, les notes et la cause du décès s’ajoutent sur sa page après l’enregistrement."
   }
 }

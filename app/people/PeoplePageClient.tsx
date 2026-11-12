@@ -33,6 +33,8 @@ import { cycleTri, flagFromUrlFilter, matchesSexBucket, matchesTri, sexBucketsPr
 import { foldForSearch } from '@/lib/utils/search-fold';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { AddPersonSheet } from './AddPersonSheet';
+import { AddPersonDialog } from './AddPersonDialog';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
 
 type SortColumn = PeopleSortColumn;
 type SortDirection = 'asc' | 'desc';
@@ -141,13 +143,13 @@ export default function PeoplePageClient({
     const canEdit = activePermission !== 'view';
     const { redirectIfUnauthorized } = useErrorToast();
 
-    // The phone's Add person is a sheet over this list (#1065). `?add=1` opens it, which
-    // is where /people/new and the home page send a phone; a wider screen gets the page.
+    // Add person is a sheet over this list on a phone (#1065) and a quick-add dialog on
+    // a wider screen (#52). `?add=1` opens it, which is where /people/new sends everyone.
     const [adding, setAdding] = useState(false);
+    const phone = useIsMobile();
     const wantsAdd = searchParams.get('add') === '1';
     useEffect(() => {
         if (!wantsAdd) return;
-        if (!window.matchMedia('(max-width: 767px)').matches) { router.replace('/people/new'); return; }
         if (canEdit) setAdding(true);
         const rest = new URLSearchParams(searchParams.toString());
         rest.delete('add');
@@ -390,7 +392,7 @@ export default function PeoplePageClient({
                         <CopperPill icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</CopperPill>
                     </span>
                     <span className="hidden md:inline">
-                        <Button variant="outline" size="sm" onClick={() => router.push('/people/new')}>{t('add_person_outline')}</Button>
+                        <Button variant="outline" size="sm" onClick={() => setAdding(true)}>{t('add_person_outline')}</Button>
                     </span>
                 </>
             ) : undefined}
@@ -511,7 +513,7 @@ export default function PeoplePageClient({
             // One create path per screen (FL-2): the FAB takes over below md.
             actions={canEdit && (
                 <div className="hidden md:block">
-                    <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => router.push('/people/new')}>{t('add_person')}</Button>
+                    <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</Button>
                 </div>
             )}
         >
@@ -759,7 +761,9 @@ export default function PeoplePageClient({
                     <CopperPill floating icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</CopperPill>
                 </>
             )}
-            {canEdit && <AddPersonSheet open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />}
+            {canEdit && (phone
+                ? <AddPersonSheet open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />
+                : <AddPersonDialog open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />)}
         </PageShell>
     );
 }
