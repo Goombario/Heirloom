@@ -4463,6 +4463,14 @@
     "open_in_tree": "Открыть в древе",
     "starts_from": "Начинается с: {name}",
     "more_actions_for": "Другие действия: {name}",
-    "on_this_page": "На этой странице"
+    "on_this_page": "На этой странице",
+    "finder_placeholder": "Поиск по имени",
+    "finder_create": "Создать «{name}» как нового человека",
+    "finder_suggested": "Предложения",
+    "finder_searching": "Поиск…",
+    "finder_failed": "Поиск не удался. Попробуйте ещё раз.",
+    "finder_none": "В этом древе нет совпадений с «{query}»",
+    "finder_add_n": "Добавить {count, plural, one {# человека} few {# человек} many {# человек} other {# человека}}",
+    "finder_cancel": "Отмена"
   }
 }

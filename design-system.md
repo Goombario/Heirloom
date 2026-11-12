@@ -465,6 +465,28 @@ Phones don't use the kit: they keep `RecordBand` and their panes.
   - A **`Timeline` row with `href`** is a relative's event shown read-only (a child's birth on
     the family page). Its title links to the relative with ↗, and it takes no row actions.
 
+- **Overlays** (part 3 of #55):
+  - **`PersonFinder`** is the one way to pick a person. It is a popover (`role="dialog"`)
+    anchored under the link or `EmptySlot` that opens it, on top of the page or dialog and
+    never replacing what is under it. It has a search box (a combobox over a listbox with
+    `aria-activedescendant`), then "Create “…” as a new person" first once something is
+    typed, then matches. Before anyone types it lists `suggestions`, each with a reason.
+    `excludeIds` leaves out people already in place. With `multiple`, rows take checkboxes and
+    the footer adds them together ("Add 2 children"). Escape closes it without reaching an
+    outer dialog and returns focus to the trigger; tabbing out closes it. The trigger is a
+    render prop: spread its props onto an `ActionLink`, `EmptySlot` or button. Used by Find
+    their parents, Find a partner, Add children, Add child, Partner unknown and Add family.
+  - **`InlinePanel`** is the inline edit panel: it opens in place under its row, focuses its
+    first field and ends in `EditorActions size="sm"`, with Delete as red text on the left
+    for editors. Escape and navigation ask before dropping unsaved changes. The opener keeps
+    `useEditorFocusReturn`. Event, name, note, biography, child relationship, Move and Edit
+    family panels are built on it.
+  - **`ParentRelationshipSelects`** is one select per partner in the stored vocabulary
+    (ADR 0027). With one partner there is one select and it sets both slots.
+  - **`useUndoRemoval`** is the one Undo: an unlink or removal shows a toast with Undo, which
+    reverts the change's own audit entries. Pass several changes when one action made
+    several; one Undo reverts them all. Desktop unlinks use it instead of a confirm dialog.
+
 These primitives define the chrome of a **standalone entity-detail page**; they do not require
 the domain content inside them to share a state model. A light `DetailHero`, for example, may slot
 view, edit, or draft/autosave content while continuing to own the surface and elevation.

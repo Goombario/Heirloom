@@ -17,9 +17,13 @@ import {
     EmptySlot,
     FamilyRecordRow,
     IconTile,
+    InlinePanel,
+    Input,
     LeadText,
     OpenInTreeRow,
     PageShell,
+    ParentRelationshipSelects,
+    PersonFinder,
     PersonIdentity,
     PersonRow,
     RecordMenu,
@@ -30,6 +34,8 @@ import {
 } from '@/app/components/ui';
 import { useTheme } from '@/app/components/ThemeProvider';
 import { Timeline } from '@/app/components/Timeline';
+import type { PersonResult } from '@/lib/db/schema';
+import type { ChildRelationships } from '@/lib/child-relationship';
 import { Heart, Sprout, Pencil, Trash2, Users, UserRound, FolderSearch } from '@/lib/icons';
 
 type Role = 'editor' | 'contributor' | 'viewer';
@@ -38,6 +44,86 @@ const BIO = 'Anna grew up on the Österby ironworks, where her father was a smit
 const SHORT_BIO = 'Anna kept a boarding house in Duluth for thirty years.';
 
 const noop = () => {};
+
+/** Finder fixtures: the dev page never touches the tree. */
+const FIXTURE_PEOPLE: PersonResult[] = [
+    { Id: 901, FirstName: 'Maja', LastName: 'Berg', Sex: 'F', BirthDate: '1893', DeathDate: '1977' },
+    { Id: 902, FirstName: 'Nils', LastName: 'Berg', Sex: 'M', BirthDate: '1895', DeathDate: '1902' },
+    { Id: 903, FirstName: 'Greta', LastName: 'Holm', Sex: 'F', BirthDate: '1871', DeathDate: null },
+    { Id: 904, FirstName: 'Erik', LastName: 'Lindqvist', Sex: 'M', BirthDate: '1866', DeathDate: '1931' },
+];
+const fixtureSearch = async (q: string) => {
+    await new Promise((r) => setTimeout(r, 200));
+    const needle = q.toLowerCase();
+    return FIXTURE_PEOPLE.filter((p) => `${p.FirstName} ${p.LastName}`.toLowerCase().includes(needle));
+};
+
+function OverlayBoards({ canWrite }: { canWrite: boolean }) {
+    const [picked, setPicked] = useState<string>('nobody yet');
+    const [panelOpen, setPanelOpen] = useState(false);
+    const [place, setPlace] = useState('Österbybruk');
+    const [rel, setRel] = useState<ChildRelationships>({ partner1: 'Birth', partner2: 'Step' });
+    const [solo, setSolo] = useState<ChildRelationships>({ partner1: 'Birth', partner2: 'Birth' });
+    return (
+        <>
+            <Board title="PersonFinder · single" note="A popover under its link, over the page. Create first once you type; suggestions with reasons before you type. Try “berg”. ↑/↓, Enter, Escape.">
+                <div className="flex flex-wrap items-start gap-6">
+                    <PersonFinder
+                        title="Find a partner"
+                        treeId={null}
+                        search={fixtureSearch}
+                        suggestions={[{ person: FIXTURE_PEOPLE[2], reason: 'Godparent at Anna’s baptism' }]}
+                        onCreate={(name) => setPicked(`new person “${name}”`)}
+                        onPick={(p) => setPicked(`${p.FirstName} ${p.LastName}`)}
+                        trigger={(tp) => <ActionLink kind="action" {...tp}>Find a partner</ActionLink>}
+                    />
+                    <span className="text-meta text-text-muted">Picked: {picked}</span>
+                </div>
+            </Board>
+
+            <Board title="PersonFinder · multiple" note="Add children: rows take checkboxes and the footer adds them all.">
+                <PersonFinder
+                    multiple
+                    title="Add children"
+                    treeId={null}
+                    search={fixtureSearch}
+                    excludeIds={[904]}
+                    suggestions={FIXTURE_PEOPLE.slice(0, 2).map((person) => ({ person, reason: 'Same last name; born after the marriage' }))}
+                    onPickMany={(ps) => setPicked(ps.map((p) => p.FirstName).join(', '))}
+                    addManyLabel={(n) => (n === 1 ? 'Add 1 child' : `Add ${n} children`)}
+                    trigger={(tp) => <EmptySlot {...tp} title="Add children" hint="Find people already in the tree" />}
+                />
+            </Board>
+
+            <Board title="InlinePanel" note="Opens in place under its row and focuses its first field. Escape asks before dropping changes. Delete is red text on the left, editors only.">
+                <div className="max-w-[640px]">
+                    {panelOpen ? (
+                        <InlinePanel
+                            label="Edit Birth"
+                            dirty={place !== 'Österbybruk'}
+                            saving={false}
+                            onSave={() => setPanelOpen(false)}
+                            onCancel={() => { setPlace('Österbybruk'); setPanelOpen(false); }}
+                            onDelete={canWrite ? () => setPanelOpen(false) : undefined}
+                            deleteLabel="Delete event"
+                        >
+                            <Input size="sm" label="Place" value={place} onChange={(e) => setPlace(e.target.value)} />
+                        </InlinePanel>
+                    ) : (
+                        <Button size="sm" variant="outline" onClick={() => setPanelOpen(true)}>Edit Birth</Button>
+                    )}
+                </div>
+            </Board>
+
+            <Board title="ParentRelationshipSelects" note="One select per partner (ADR 0027); with one partner, one select sets both.">
+                <div className="grid gap-4 max-w-[640px]">
+                    <ParentRelationshipSelects value={rel} onChange={setRel} partner1Name="Johan" partner2Name="Kristina" />
+                    <ParentRelationshipSelects value={solo} onChange={setSolo} partner1Name="Johan" />
+                </div>
+            </Board>
+        </>
+    );
+}
 
 function personMenu(role: Role): RecordMenuItem[] {
     if (role === 'viewer') return [];
@@ -286,6 +372,8 @@ export default function DevComponentsContent() {
                     </div>
                 </div>
             </Board>
+
+            <OverlayBoards canWrite={canWrite} />
 
             <Board title="Timeline: a relative's read-only row" note="A child's birth on the family page links to the child (↗) and takes no Edit or Delete.">
                 <div className="max-w-[640px]">

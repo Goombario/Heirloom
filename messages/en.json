@@ -4463,6 +4463,14 @@
     "open_in_tree": "Open in tree",
     "starts_from": "Starts from {name}",
     "more_actions_for": "More actions for {name}",
-    "on_this_page": "On this page"
+    "on_this_page": "On this page",
+    "finder_placeholder": "Search by name",
+    "finder_create": "Create “{name}” as a new person",
+    "finder_suggested": "Suggested",
+    "finder_searching": "Searching…",
+    "finder_failed": "Search failed. Try again.",
+    "finder_none": "No one in this tree matches “{query}”",
+    "finder_add_n": "Add {count, plural, one {# person} other {# people}}",
+    "finder_cancel": "Cancel"
   }
 }

@@ -22,8 +22,18 @@ interface BaseProps {
   'aria-label'?: string;
 }
 
-type ButtonProps = BaseProps & { href?: undefined; onClick: () => void; expanded?: boolean; controls?: string };
-type LinkProps = BaseProps & { href: string; onClick?: () => void; expanded?: undefined; controls?: undefined };
+type ButtonProps = BaseProps & {
+  href?: undefined;
+  onClick: () => void;
+  expanded?: boolean;
+  controls?: string;
+  /** A popover trigger (`PersonFinder`'s trigger props spread here). */
+  ref?: React.Ref<HTMLButtonElement>;
+  'aria-haspopup'?: 'dialog' | 'menu';
+  'aria-expanded'?: boolean;
+  'aria-controls'?: string;
+};
+type LinkProps = BaseProps & { href: string; onClick?: () => void; expanded?: undefined; controls?: undefined; ref?: undefined };
 
 const GLYPH = { action: ChevronRight, leave: ArrowUpRight, expand: ChevronDown } as const;
 
@@ -33,7 +43,7 @@ const GLYPH = { action: ChevronRight, leave: ArrowUpRight, expand: ChevronDown }
  * is a button and defaults to `action`. Use it for header actions ("Full history ↗"),
  * "Read all ⌄", "Cite ›" and the like, so the glyph rule is applied in one place.
  */
-export function ActionLink(props: ButtonProps | LinkProps) {
+export function ActionLink({ ref, ...props }: ButtonProps | LinkProps) {
   const { children, className, title } = props;
   const kind: ActionLinkKind = props.kind ?? (props.href != null ? 'leave' : 'action');
   const showGlyph = props.glyph ?? !(kind === 'action' && props.href == null && props.kind == null);
@@ -58,13 +68,15 @@ export function ActionLink(props: ButtonProps | LinkProps) {
   }
   return (
     <button
+      ref={ref}
       type="button"
       onClick={props.onClick}
       className={cx(cls, 'bg-transparent border-0 p-0')}
       title={title}
       aria-label={props['aria-label']}
-      aria-expanded={kind === 'expand' ? Boolean(props.expanded) : undefined}
-      aria-controls={props.controls}
+      aria-haspopup={props['aria-haspopup']}
+      aria-expanded={kind === 'expand' ? Boolean(props.expanded) : props['aria-expanded']}
+      aria-controls={props.controls ?? props['aria-controls']}
     >
       {children}{glyph}
     </button>

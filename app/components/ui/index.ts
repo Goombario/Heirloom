@@ -46,3 +46,6 @@ export { OpenInTreeRow, IconTile } from './OpenInTreeRow';
 export { DetailBody } from './DetailBody';
 export { PersonRow } from './PersonRow';
 export { FamilyRecordRow } from './FamilyRecordRow';
+export { InlinePanel } from './InlinePanel';
+export { PersonFinder } from './PersonFinder';
+export { ParentRelationshipSelects } from './ParentRelationshipSelects';

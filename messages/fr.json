@@ -4463,6 +4463,14 @@
     "open_in_tree": "Ouvrir dans l’arbre",
     "starts_from": "Commence par {name}",
     "more_actions_for": "Plus d’actions pour {name}",
-    "on_this_page": "Sur cette page"
+    "on_this_page": "Sur cette page",
+    "finder_placeholder": "Rechercher par nom",
+    "finder_create": "Créer « {name} » comme nouvelle personne",
+    "finder_suggested": "Suggestions",
+    "finder_searching": "Recherche…",
+    "finder_failed": "La recherche a échoué. Réessayez.",
+    "finder_none": "Personne dans cet arbre ne correspond à « {query} »",
+    "finder_add_n": "Ajouter {count, plural, one {# personne} other {# personnes}}",
+    "finder_cancel": "Annuler"
   }
 }
