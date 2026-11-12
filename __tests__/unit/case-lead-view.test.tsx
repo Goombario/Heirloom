@@ -25,6 +25,19 @@ function view(over: Partial<Parameters<typeof LeadView>[0]> = {}) {
 }
 
 describe('LeadView (#58)', () => {
+    it('puts two findings that disagree side by side, and Which holds? decides both claims', () => {
+        const h = view();
+        const panel = screen.getByRole('region', { name: /Two findings disagree/ });
+        expect(panel).toHaveTextContent('12 Mar 1882, Kraków');
+        expect(panel).toHaveTextContent('Mar 1883, Austria');
+        const holds = within(panel).getByRole('radiogroup', { name: 'Which holds: Birth, Anna Kowalski' });
+        // Claim 31 is accepted and 33 undecided: not yet a choice.
+        expect(within(holds).getByRole('radio', { name: 'Undecided' })).toHaveAttribute('aria-checked', 'true');
+        fireEvent.click(within(holds).getByRole('radio', { name: '1900 census, Duluth ward 3' }));
+        expect(h.onDecide).toHaveBeenCalledWith(expect.objectContaining({ Id: 31 }), 'rejected');
+        expect(h.onDecide).toHaveBeenCalledWith(expect.objectContaining({ Id: 33 }), 'accepted');
+    });
+
     it('shows the lead with its status, years, undecided count and people', () => {
         view();
         expect(screen.getByRole('heading', { level: 2, name: 'Find her baptism in the parish books' })).toBeInTheDocument();

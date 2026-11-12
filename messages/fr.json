@@ -3879,7 +3879,11 @@
     "closed_with_changes": "{count, plural, one {Dossier fermé, # changement ajouté à l’arbre} other {Dossier fermé, # changements ajoutés à l’arbre}}",
     "closed_toast": "Dossier fermé",
     "change_undone": "Changement annulé",
-    "closed_outcome": "Fermé · {outcome} · {date}"
+    "closed_outcome": "Fermé · {outcome} · {date}",
+    "disagree_title": "Deux trouvailles se contredisent",
+    "which_holds": "Laquelle tient ?",
+    "which_holds_for": "Laquelle tient : {what}",
+    "holds_both": "Les deux peuvent être vraies"
   },
   "citeSheet": {
     "cite_title": "Citer une source",

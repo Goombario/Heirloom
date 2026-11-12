@@ -3879,7 +3879,11 @@
     "closed_with_changes": "{count, plural, one {Case closed, # change added to the tree} other {Case closed, # changes added to the tree}}",
     "closed_toast": "Case closed",
     "change_undone": "Change undone",
-    "closed_outcome": "Closed · {outcome} · {date}"
+    "closed_outcome": "Closed · {outcome} · {date}",
+    "disagree_title": "Two findings disagree",
+    "which_holds": "Which holds?",
+    "which_holds_for": "Which holds: {what}",
+    "holds_both": "Both can be true"
   },
   "citeSheet": {
     "cite_title": "Cite a source",

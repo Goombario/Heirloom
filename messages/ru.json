@@ -3879,7 +3879,11 @@
     "closed_with_changes": "{count, plural, one {Исследование закрыто, # изменение внесено} few {Исследование закрыто, # изменения внесены} many {Исследование закрыто, # изменений внесено} other {Исследование закрыто, # изменения внесены}}",
     "closed_toast": "Исследование закрыто",
     "change_undone": "Изменение отменено",
-    "closed_outcome": "Закрыто · {outcome} · {date}"
+    "closed_outcome": "Закрыто · {outcome} · {date}",
+    "disagree_title": "Две находки расходятся",
+    "which_holds": "Что верно?",
+    "which_holds_for": "Что верно: {what}",
+    "holds_both": "Верно и то, и другое"
   },
   "citeSheet": {
     "cite_title": "Указать источник",

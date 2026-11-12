@@ -43,3 +43,45 @@ export function claimRelations(findings: readonly CaseFinding[]): Map<number, Cl
     }
     return out;
 }
+
+export interface ClaimSide { claim: CaseClaim; finding: CaseFinding }
+export interface ClaimConflict { key: string; a: ClaimSide; b: ClaimSide }
+
+/**
+ * Pairs of claims from different findings about the same thing and the same
+ * person that say different things (#58, "Two findings disagree"), oldest
+ * finding first. Two claims both rejected no longer disagree about anything.
+ */
+export function claimConflicts(findings: readonly CaseFinding[]): ClaimConflict[] {
+    const sides = findings.flatMap((finding) => finding.claims.map((claim) => ({ claim, finding })));
+    const out: ClaimConflict[] = [];
+    for (let i = 0; i < sides.length; i++) {
+        for (let j = i + 1; j < sides.length; j++) {
+            const a = sides[i];
+            const b = sides[j];
+            if (a.finding.Id === b.finding.Id || a.claim.What !== b.claim.What || subject(a.claim) !== subject(b.claim)) continue;
+            if (says(a.claim) === says(b.claim)) continue;
+            if (a.claim.Decision === 'rejected' && b.claim.Decision === 'rejected') continue;
+            out.push({ key: `${a.claim.Id}-${b.claim.Id}`, a, b });
+        }
+    }
+    return out;
+}
+
+/** Which holds, read back from the two decisions. */
+export type Holds = 'a' | 'b' | 'both' | 'undecided';
+export function whichHolds(c: ClaimConflict): Holds {
+    const [x, y] = [c.a.claim.Decision, c.b.claim.Decision];
+    if (x === 'accepted' && y === 'accepted') return 'both';
+    if (x === 'accepted' && y === 'rejected') return 'a';
+    if (x === 'rejected' && y === 'accepted') return 'b';
+    return 'undecided';
+}
+
+/** The two decisions that say which holds. */
+export function holdsDecisions(holds: Holds): [CaseClaim['Decision'], CaseClaim['Decision']] {
+    if (holds === 'a') return ['accepted', 'rejected'];
+    if (holds === 'b') return ['rejected', 'accepted'];
+    if (holds === 'both') return ['accepted', 'accepted'];
+    return ['undecided', 'undecided'];
+}

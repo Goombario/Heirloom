@@ -11,7 +11,8 @@ import { initialsFromName } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
 import type { CaseClaim, CaseClaimDecision, CaseComment, CaseFinding, CaseRequest, Media } from '@/lib/db/schema';
 import { LeadStatusChip } from './LeadStatus';
-import { claimRelations, claimWhat, type ClaimRelation } from './claims';
+import { claimConflicts, claimRelations, claimWhat, type ClaimRelation } from './claims';
+import { Disagreements } from './Disagreements';
 import { yearsLabel } from './LeadsRail';
 import type { LeadSummary } from './useCaseWorkspace';
 
@@ -57,6 +58,8 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
     const nothing = mine.filter((f) => f.Kind === 'nothing');
     const waiting = requests.filter((r) => r.LeadId === lead.Id && r.State === 'waiting');
     const relations = useMemo(() => claimRelations(records), [records]);
+    const conflicts = useMemo(() => claimConflicts(records), [records]);
+    const locked = (f: CaseFinding) => !canEdit || f.leadIds.some((id) => settledLeadIds.has(id));
     const years = yearsLabel(lead.FromYear, lead.ToYear);
 
     // The lead's media: scans from its findings, then photos posted in its journal.
@@ -145,6 +148,11 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
                 </section>
             )}
 
+            {conflicts.length > 0 && (
+                <Disagreements conflicts={conflicts} busy={busy} onDecide={onDecide}
+                    isLocked={(f, c) => locked(f) || c.AppliedAt != null} />
+            )}
+
             <section aria-labelledby="findings-title" className="grid gap-2.5">
                 <SectionHeader level="section" headingId="findings-title" title={t('findings')} count={records.length + nothing.length} />
                 {records.length + nothing.length === 0 ? (
@@ -156,7 +164,7 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
                                 key={f.Id}
                                 finding={f}
                                 relations={relations}
-                                locked={!canEdit || f.leadIds.some((id) => settledLeadIds.has(id))}
+                                locked={locked(f)}
                                 busy={busy}
                                 otherLeads={f.leadIds.length - 1}
                                 onDecide={onDecide}
