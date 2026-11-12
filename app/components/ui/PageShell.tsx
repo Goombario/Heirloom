@@ -15,7 +15,7 @@ export type PageShellVariant = 'list' | 'detail' | 'workspace';
  *   the wordmark (`TopRail`).
  */
 export const PAGE_COLUMN: Record<PageShellVariant, string> = {
-  list: 'mx-auto w-full max-w-[1240px] px-4 md:px-[28px]',
+  list: 'mx-auto w-full max-w-[1240px] px-4 sm:px-6 md:px-[28px]',
   detail: 'mx-auto w-full max-w-[1240px] px-4 md:px-[28px]',
   workspace: 'mx-auto w-full max-w-[1240px] px-4 md:px-[28px]',
 };

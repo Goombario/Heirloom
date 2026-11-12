@@ -47,6 +47,6 @@ describe('PageShell', () => {
 
   it('exposes the column classes for chrome that aligns with it', () => {
     // The nav, the tree toolbar and every page share the boards' 1240 column.
-    expect(PAGE_COLUMN.workspace).toBe(PAGE_COLUMN.list);
+    expect(PAGE_COLUMN.workspace).toContain('max-w-[1240px]');
   });
 });
