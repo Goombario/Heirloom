@@ -1,4 +1,4 @@
-import { getClient } from '@/lib/db/connection';
+import { getClient, query } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import {
@@ -18,11 +18,13 @@ import {
   type LeadInput,
   type RequestInput,
 } from '@/lib/db/queries/case-workspace';
-import type { Queryable } from '@/lib/db/queries/audit-capture';
+import { auditUpdate, type Queryable } from '@/lib/db/queries/audit-capture';
+import { applyChanges, caseChanges, undoApplied, type ApplyChoice } from '@/lib/db/queries/case-apply';
+import { ALLOWED_CASE_FIELDS, recordStatusChange } from '@/lib/db/queries/cases';
 import { validateStringField, ValidationError } from '@/lib/validation';
 import { AccessError, NotFoundError } from '@/lib/data/errors';
 import type {
-  CaseClaimDecision, CaseClaimEvidence, CaseInformation, CaseRequestSentBy, CaseRequestState, CaseSourceNature, CaseWorkspace,
+  CaseChange, CaseClaimDecision, CaseClaimEvidence, CaseInformation, CaseOutcome, CaseRequestSentBy, CaseRequestState, CaseSourceNature, CaseWorkspace,
 } from '@/lib/db/schema';
 
 /*
@@ -287,4 +289,87 @@ export async function replyToRequestService(params: WorkspaceScopeParams & { req
     await replyToRequest(exec, params.caseId, params.requestId, state, note, params.currentUserId);
     return null;
   });
+}
+
+// ─── Answer and close (#58, ADR 0046) ────────────────────────────────────────
+
+const OUTCOMES: readonly CaseOutcome[] = ['answered', 'ruled_out', 'unresolved'];
+
+/** GET /api/cases/[id]/close: what Answer and close would change in the tree. */
+export async function getCaseChangesService(params: WorkspaceScopeParams): Promise<CaseChange[]> {
+  const scope = await scopeFor(params, false);
+  if (!(await caseInTree(params.caseId, scope.treeId))) throw new NotFoundError('Case not found');
+  return caseChanges({ query: (sql, values) => query(sql, values) }, params.caseId, scope.treeId);
+}
+
+function applyChoices(value: unknown): ApplyChoice[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > MAX_LIST) throw new ValidationError('apply must be a list');
+  const seen = new Set<number>();
+  return value.map((item) => {
+    const raw = body(item);
+    const claimId = id(raw.claimId, 'claimId');
+    if (claimId == null) throw new ValidationError('claimId is required');
+    if (seen.has(claimId)) throw new ValidationError('A claim is listed twice');
+    seen.add(claimId);
+    return { claimId, replace: raw.replace === true };
+  });
+}
+
+/**
+ * POST /api/cases/[id]/close: the answer, the outcome, and the changes to make.
+ * One transaction: each ticked claim goes into the tree as its own audited change
+ * with its citation, then the case closes with the answer as its last entry.
+ */
+export async function closeCaseService(params: WorkspaceScopeParams & { body: unknown }): Promise<WorkspaceWrite> {
+  const raw = body(params.body);
+  const conclusion = required(raw.conclusion, 'conclusion', LONG);
+  const outcome = oneOf<CaseOutcome>(raw.outcome, OUTCOMES, 'outcome');
+  if (!outcome) throw new ValidationError('outcome is required');
+  const choices = applyChoices(raw.apply);
+  return inCase(params, async (exec, scope) => {
+    await applyChanges(exec, params.caseId, scope, params.currentUserId, choices);
+    const before = await exec.query(`SELECT * FROM "Cases" WHERE "Id" = $1`, [params.caseId]);
+    const existing = before.rows[0] as Record<string, unknown>;
+    await exec.query(`UPDATE "Cases" SET "Status" = 'closed', "UpdatedAt" = CURRENT_TIMESTAMP WHERE "Id" = $1`, [params.caseId]);
+    await recordStatusChange(exec, params.caseId, params.currentUserId, String(existing.Status), 'closed', conclusion, outcome);
+    const after = await exec.query(`SELECT * FROM "Cases" WHERE "Id" = $1`, [params.caseId]);
+    await auditUpdate('case', existing, after.rows[0] as Record<string, unknown>, ALLOWED_CASE_FIELDS, Number(existing.UserId), params.currentUserId, exec);
+    return null;
+  });
+}
+
+/**
+ * POST /api/cases/[id]/claims/[claimId]/undo: put back what Answer and close
+ * changed for one claim. The case stays closed. Undo is a revert, so it takes the
+ * same Edit access as reverting from the audit log.
+ */
+export async function undoAppliedClaimService(params: WorkspaceScopeParams & { claimId: number }): Promise<WorkspaceWrite> {
+  const scope = await scopeFor(params, true);
+  if (scope.permission === 'contribute') throw new AccessError('You do not have permission to revert changes in this tree');
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const res = await client.query(`SELECT "Status" FROM "Cases" WHERE "Id" = $1 AND "TreeId" = $2 FOR UPDATE`, [params.caseId, scope.treeId]);
+    const row = res.rows[0] as { Status: string } | undefined;
+    if (!row) throw new NotFoundError('Case not found');
+    try {
+      await undoApplied(client, params.caseId, params.claimId, { treeId: scope.treeId, ownerId: scope.ownerId }, params.currentUserId);
+    } catch (err) {
+      // A revert names a record that has gone since as a plain error.
+      if (err instanceof Error && !(err instanceof ValidationError) && /no longer exists|not found|outside the selected tree/i.test(err.message)) {
+        throw new ValidationError('What this changed has been edited or deleted since, so it can\'t be undone here.');
+      }
+      throw err;
+    }
+    await client.query(`UPDATE "Cases" SET "UpdatedAt" = CURRENT_TIMESTAMP WHERE "Id" = $1`, [params.caseId]);
+    const workspace = await getCaseWorkspace(params.caseId, scope.treeId, client);
+    await client.query('COMMIT');
+    return { id: null, workspace };
+  } catch (err) {
+    await safeRollback(client);
+    throw err;
+  } finally {
+    client.release();
+  }
 }

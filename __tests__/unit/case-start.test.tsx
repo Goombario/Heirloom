@@ -9,7 +9,8 @@ import { StartCase } from '@/app/cases/view/desktop/StartCase';
 
 const replace = vi.fn();
 const create = vi.fn();
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push: vi.fn() }) }));
+let search = new URLSearchParams();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ replace, push: vi.fn() }), useSearchParams: () => search }));
 vi.mock('@/lib/data', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/lib/data')>()),
     getDataClient: async () => ({ cases: { create } }),
@@ -32,7 +33,7 @@ const question = () => screen.getByRole('textbox', { name: /^Question/ }) as HTM
 const startButton = () => screen.getByRole('button', { name: 'Start the case' });
 
 describe('StartCase (#58)', () => {
-    beforeEach(() => { replace.mockReset(); create.mockReset(); });
+    beforeEach(() => { replace.mockReset(); create.mockReset(); search = new URLSearchParams(); });
 
     it('fills the question in from the details until it is edited, and waits for its gaps', () => {
         view();
@@ -72,5 +73,13 @@ describe('StartCase (#58)', () => {
         fireEvent.change(screen.getByRole('textbox', { name: 'To year' }), { target: { value: '1890' } });
         expect(screen.getByRole('alert')).toHaveTextContent(en.caseResearch.years_invalid);
         expect(startButton()).toBeDisabled();
+    });
+
+    it('starts from a lead a closed case left open', () => {
+        search = new URLSearchParams({ q: 'Where did Bert go after 1881?' });
+        view();
+        expect(screen.getByRole('radio', { name: /My own question/ })).toBeChecked();
+        expect(question().value).toBe('Where did Bert go after 1881?');
+        expect(startButton()).toBeEnabled();
     });
 });

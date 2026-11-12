@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Banner, Button, CoverBand, PageShell, PersonFinder, cx, fieldClass } from '@/app/components/ui';
 import { Plus, X } from '@/lib/icons';
 import { displayFullName } from '@/lib/utils/names';
@@ -18,19 +18,21 @@ const yearOrNull = (s: string): number | null => (/^\d{1,4}$/.test(s.trim()) ? N
  * Start a case (#58): full width, with no side column and no ⋯ menu. Pick the
  * kind of question, who it is about, the years and a focus place; the question
  * fills itself in from them until it is edited. Start the case creates it and
- * opens the workspace on its first lead.
+ * opens the workspace on its first lead. A lead a closed case left open starts
+ * one here as its own question (`?q=`).
  */
 export function StartCase({ treeId }: { treeId: number | null }) {
     const t = useTranslations('caseResearch');
     const router = useRouter();
     const id = useId();
-    const [kind, setKind] = useState<Kind | null>(null);
+    const asked = useSearchParams()?.get('q')?.trim().slice(0, 500) || null;
+    const [kind, setKind] = useState<Kind | null>(asked ? 'own' : null);
     const [people, setPeople] = useState<Array<{ id: number; name: string }>>([]);
     const [from, setFrom] = useState('');
     const [to, setTo] = useState('');
     const [place, setPlace] = useState('');
     const [event, setEvent] = useState('');
-    const [ownQuestion, setOwnQuestion] = useState<string | null>(null);
+    const [ownQuestion, setOwnQuestion] = useState<string | null>(asked);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 

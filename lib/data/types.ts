@@ -24,7 +24,7 @@ import type { ActivityRow } from '@/lib/utils/activity-groups';
 import type { PinChainRow } from '@/lib/services/places';
 import type { FaceConfirmBatchResult, FaceGroup } from '@/lib/services/media-faces';
 import type { FaceDismissReason } from '@/lib/db/schema';
-import type { CaseClaimDecision, CaseClaimEvidence, CaseInformation, CaseOutcome, CaseRequestSentBy, CaseRequestState, CaseSourceNature, CaseWorkspace } from '@/lib/db/schema';
+import type { CaseChange, CaseClaimDecision, CaseClaimEvidence, CaseInformation, CaseOutcome, CaseRequestSentBy, CaseRequestState, CaseSourceNature, CaseWorkspace } from '@/lib/db/schema';
 import type { FaceSuggestionSnapshot } from '@/lib/db/queries/media-faces';
 import type { MediaDeleteBatchResult } from '@/lib/services/media';
 import type { PeopleFlag } from '@/lib/db/queries/data-quality';
@@ -1090,6 +1090,11 @@ export interface CaseRequestInput {
   askedFor: string; leadId?: number | null; holder?: string | null; sentBy?: CaseRequestSentBy | null;
   sentOn?: string | null; reference?: string | null; remindOn?: string | null;
 }
+/** Answer and close (#58): the answer, how it ended, and the claims to put into the tree. */
+export interface CloseCaseInput {
+  conclusion: string; outcome: CaseOutcome;
+  apply: Array<{ claimId: number; replace?: boolean }>;
+}
 /** A workspace write's answer: the new row's id when it made one, and the workspace after it. */
 export interface CaseWorkspaceWrite { id: number | null; workspace: CaseWorkspace; }
 export interface LinkMediaInput { mediaIds: number[]; }
@@ -1117,6 +1122,12 @@ export interface CasesClient {
   decideClaim(id: number, claimId: number, decision: CaseClaimDecision, treeId?: number | null): Promise<CaseWorkspaceWrite>;
   addRequest(id: number, input: CaseRequestInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
   replyToRequest(id: number, requestId: number, reply: { state: CaseRequestState; note?: string | null }, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  /** What Answer and close would change in the tree (#58, ADR 0046). */
+  getChanges(id: number, treeId?: number | null): Promise<CaseChange[]>;
+  /** Close the case with its answer, putting the chosen claims into the tree. */
+  close(id: number, input: CloseCaseInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  /** Put back what Answer and close changed for one claim. */
+  undoApplied(id: number, claimId: number, treeId?: number | null): Promise<CaseWorkspaceWrite>;
 }
 
 export type { Source, SourceWithCitationCount } from '@/lib/db/queries/sources';

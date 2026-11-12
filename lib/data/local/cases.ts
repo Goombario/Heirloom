@@ -1,11 +1,11 @@
 import type {
   Audited, CaseNoteStrike, CasesClient, ListCasesOptions, CreateCaseInput, UpdateCaseInput, AddCommentInput, LinkMediaInput,
-  CaseClaimInput, CaseFindingInput, CaseLeadChange, CaseLeadInput, CaseRequestInput, CaseWorkspaceWrite,
+  CaseClaimInput, CaseFindingInput, CaseLeadChange, CaseLeadInput, CaseRequestInput, CaseWorkspaceWrite, CloseCaseInput,
 } from '../types';
-import type { Case, CaseClaimDecision, CaseComment, CaseRequestState, CaseWithRelations, CaseWorkspace, MediaWithPerson } from '@/lib/db/schema';
+import type { Case, CaseChange, CaseClaimDecision, CaseComment, CaseRequestState, CaseWithRelations, CaseWorkspace, MediaWithPerson } from '@/lib/db/schema';
 import {
-  addClaimService, addFindingService, addLeadService, addRequestService, changeLeadService, decideClaimService,
-  getCaseWorkspaceService, replyToRequestService,
+  addClaimService, addFindingService, addLeadService, addRequestService, changeLeadService, closeCaseService, decideClaimService,
+  getCaseChangesService, getCaseWorkspaceService, replyToRequestService, undoAppliedClaimService,
 } from '@/lib/services/case-workspace';
 import {
   listCasesService,
@@ -145,5 +145,17 @@ export class LocalCasesClient implements CasesClient {
 
   async replyToRequest(id: number, requestId: number, reply: { state: CaseRequestState; note?: string | null }, treeId?: number | null): Promise<CaseWorkspaceWrite> {
     return replyToRequestService({ ...(await this.scope(id, treeId)), requestId, body: reply });
+  }
+
+  async getChanges(id: number, treeId?: number | null): Promise<CaseChange[]> {
+    return getCaseChangesService(await this.scope(id, treeId));
+  }
+
+  async close(id: number, input: CloseCaseInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return closeCaseService({ ...(await this.scope(id, treeId)), body: input });
+  }
+
+  async undoApplied(id: number, claimId: number, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return undoAppliedClaimService({ ...(await this.scope(id, treeId)), claimId });
   }
 }

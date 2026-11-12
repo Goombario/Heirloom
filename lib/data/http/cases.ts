@@ -1,8 +1,8 @@
 import type {
   Audited, CaseNoteStrike, CasesClient, ListCasesOptions, CreateCaseInput, UpdateCaseInput, AddCommentInput, LinkMediaInput,
-  CaseClaimInput, CaseFindingInput, CaseLeadChange, CaseLeadInput, CaseRequestInput, CaseWorkspaceWrite,
+  CaseClaimInput, CaseFindingInput, CaseLeadChange, CaseLeadInput, CaseRequestInput, CaseWorkspaceWrite, CloseCaseInput,
 } from '../types';
-import type { Case, CaseClaimDecision, CaseComment, CaseRequestState, CaseWithRelations, CaseWorkspace, MediaWithPerson } from '@/lib/db/schema';
+import type { Case, CaseChange, CaseClaimDecision, CaseComment, CaseRequestState, CaseWithRelations, CaseWorkspace, MediaWithPerson } from '@/lib/db/schema';
 
 async function send(method: 'POST' | 'PATCH', url: string, body: unknown): Promise<CaseWorkspaceWrite> {
   const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -126,5 +126,19 @@ export class HttpCasesClient implements CasesClient {
 
   async replyToRequest(id: number, requestId: number, reply: { state: CaseRequestState; note?: string | null }, treeId?: number | null): Promise<CaseWorkspaceWrite> {
     return send('PATCH', `/api/cases/${id}/requests/${requestId}${treeQuery(treeId)}`, reply);
+  }
+
+  async getChanges(id: number, treeId?: number | null): Promise<CaseChange[]> {
+    const res = await fetch(`/api/cases/${id}/close${treeQuery(treeId)}`);
+    if (!res.ok) await throwForStatus(res);
+    return ((await res.json()) as { changes: CaseChange[] }).changes;
+  }
+
+  async close(id: number, input: CloseCaseInput, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return send('POST', `/api/cases/${id}/close${treeQuery(treeId)}`, input);
+  }
+
+  async undoApplied(id: number, claimId: number, treeId?: number | null): Promise<CaseWorkspaceWrite> {
+    return send('POST', `/api/cases/${id}/claims/${claimId}/undo${treeQuery(treeId)}`, {});
   }
 }

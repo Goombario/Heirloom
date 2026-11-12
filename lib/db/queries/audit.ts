@@ -1513,3 +1513,25 @@ export async function revertAuditEntries(ids: number[], treeId: number, treeOwne
         client.release();
     }
 }
+
+/**
+ * Revert audit entries inside the caller's transaction, newest first: Undo on a
+ * closed case (#58, ADR 0046) puts back what Answer and close changed. The caller
+ * checks permission and locks what it needs; each revert is logged as usual.
+ */
+export async function revertAuditEntriesWith(
+    exec: AuditExecutor,
+    ids: number[],
+    treeId: number,
+    treeOwnerId: number,
+    userId: number,
+): Promise<void> {
+    if (ids.length === 0) return;
+    const result = await exec.query(
+        `SELECT * FROM "AuditLog" WHERE "Id" = ANY($1::int[]) AND "TreeId" = $2 ORDER BY "CreatedAt" DESC, "Id" DESC`,
+        [ids, treeId],
+    );
+    const entries = result.rows as AuditLogEntry[];
+    if (entries.length !== new Set(ids).size) throw new Error('Audit entry not found');
+    for (const entry of entries) await revertSingleEntry(entry, treeOwnerId, userId, exec);
+}

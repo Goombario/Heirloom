@@ -5,7 +5,7 @@ import type {
 } from '../schema';
 import type { Media } from '../schema';
 import { hasEditPermission } from './sharing';
-import { auditCreate, auditUpdate, auditDelete } from './audit-capture';
+import { auditCreate, auditUpdate, auditDelete, type Queryable } from './audit-capture';
 import { primaryPhotoJoin } from './media-tags';
 import { effectiveFirstName, primaryNickname } from './people';
 import type { DbExecutor } from './owner-links';
@@ -394,6 +394,40 @@ export async function createCase(
  * `actingUserId` defaults to the tree owner for callers that predate the
  * scope split.
  */
+/**
+ * A case's status changed (#801, #58): closing records when and how it ended,
+ * reopening clears both, and the journal logs the change, with the answer as the
+ * final entry when it closes. Runs in the caller's transaction after the
+ * "Status" column is written.
+ */
+export async function recordStatusChange(
+    exec: Queryable,
+    id: number,
+    actor: number,
+    from: string,
+    to: string,
+    conclusion: string | null,
+    outcome: CaseOutcome | null,
+): Promise<void> {
+    const closing = to === 'closed';
+    if (closing) {
+        await exec.query(`UPDATE "Cases" SET "ClosedAt" = CURRENT_TIMESTAMP, "Outcome" = $2 WHERE "Id" = $1`, [id, outcome]);
+    } else if (from === 'closed') {
+        await exec.query(`UPDATE "Cases" SET "ClosedAt" = NULL, "Outcome" = NULL WHERE "Id" = $1`, [id]);
+    }
+    const entry: CaseStatusEntry = from === 'closed' ? 'reopened' : to as CaseStatusEntry;
+    await exec.query(
+        `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'status')`,
+        [id, actor, entry]
+    );
+    if (closing) {
+        await exec.query(
+            `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'conclusion')`,
+            [id, actor, conclusion]
+        );
+    }
+}
+
 export async function updateCase(
     id: number,
     updates: Partial<Omit<NewCase, 'UserId'>>,
@@ -462,25 +496,8 @@ export async function updateCase(
             );
         }
 
-        // Closing records when and how it ended (#58); reopening clears both.
-        if (closing) {
-            await client.query(`UPDATE "Cases" SET "ClosedAt" = CURRENT_TIMESTAMP, "Outcome" = $2 WHERE "Id" = $1`, [id, outcome]);
-        } else if (statusChanged && existing.Status === 'closed') {
-            await client.query(`UPDATE "Cases" SET "ClosedAt" = NULL, "Outcome" = NULL WHERE "Id" = $1`, [id]);
-        }
-
         if (statusChanged && nextStatus) {
-            const entry: CaseStatusEntry = existing.Status === 'closed' ? 'reopened' : nextStatus;
-            await client.query(
-                `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'status')`,
-                [id, actor, entry]
-            );
-            if (closing) {
-                await client.query(
-                    `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "Kind") VALUES ($1, $2, $3, 'conclusion')`,
-                    [id, actor, conclusion]
-                );
-            }
+            await recordStatusChange(client, id, actor, existing.Status, nextStatus, conclusion, outcome);
         }
 
         const updatedResult = await client.query(`SELECT * FROM "Cases" WHERE "Id" = $1`, [id]);
@@ -523,6 +540,15 @@ export async function deleteCase(id: number, treeId: number, actingUserId?: numb
     const client = await getClient();
     try {
         await client.query('BEGIN');
+
+        // A case that put something into the tree keeps its record of it (#58, ADR 0046):
+        // undo those changes first.
+        const applied = await client.query(
+            `SELECT 1 FROM "CaseClaims" cl JOIN "CaseFindings" f ON f."Id" = cl."FindingId"
+              WHERE f."CaseId" = $1 AND cl."AppliedAt" IS NOT NULL LIMIT 1`,
+            [id],
+        );
+        if (applied.rows.length > 0) throw new ValidationError('This case has changed the tree. Undo its changes before deleting it.');
 
         await auditDelete(
             'case',

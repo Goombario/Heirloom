@@ -7,10 +7,9 @@ import { Banner, Button, CoverBand, PageShell, RecordMenu, showSuccessToast, typ
 import { CheckCircle2, Search, X } from '@/lib/icons';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { getDataClient } from '@/lib/data';
-import type { CaseRequest, Media } from '@/lib/db/schema';
-import type { CaseFindingInput, CaseRequestInput, UpdateCaseInput } from '@/lib/data/types';
+import type { CaseClaim, CaseRequest, Media } from '@/lib/db/schema';
+import type { CaseFindingInput, CaseRequestInput, CloseCaseInput, UpdateCaseInput } from '@/lib/data/types';
 import type { CaseDetailState } from '../useCaseDetail';
-import CloseCaseDialog from '../CloseCaseDialog';
 import { LeadsRail } from './LeadsRail';
 import { LeadView } from './LeadView';
 import { LeadDialog } from './LeadDialog';
@@ -22,13 +21,14 @@ import { RecordView } from './RecordView';
 import { ResearchSide, type SideTab } from './ResearchSide';
 import { WorkspaceJournal } from './WorkspaceJournal';
 import { EvidenceView } from './EvidenceView';
+import { AnswerClose } from './AnswerClose';
+import { ClosedAnswer } from './ClosedAnswer';
 
 type Dialog =
     | { kind: 'new-lead' }
     | { kind: 'edit-lead'; leadId: number }
     | { kind: 'reply'; request: CaseRequest }
     | { kind: 'about' }
-    | { kind: 'close' }
     | { kind: 'drop'; leadId: number };
 
 /** What the right column's first tab holds: Find a record for a lead, or one finding's record. */
@@ -45,12 +45,12 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
     const format = useFormatter();
     const { caseData, activeTreeId, canEdit, canDelete } = cd;
     const caseId = caseData?.Id ?? 0;
-    const ws = useCaseWorkspace(caseId, activeTreeId, caseData?.UpdatedAt);
+    const closed = caseData?.Status === 'closed';
+    const ws = useCaseWorkspace(caseId, activeTreeId, caseData?.UpdatedAt, closed);
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [lightbox, setLightbox] = useState<Media | null>(null);
     const [panel, setPanel] = useState<Panel | null>(null);
     const [tab, setTab] = useState<SideTab>('record');
-    const closed = caseData?.Status === 'closed';
     const manage = cd.activePermission !== 'view';
 
     const settledLeadIds = useMemo(() => new Set(ws.summaries.filter((s) => s.status === 'settled').map((s) => s.lead.Id)), [ws.summaries]);
@@ -93,6 +93,22 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
         }
     };
 
+    // A case that changed the tree can't be deleted until those changes are undone (ADR 0046).
+    const changedTree = (ws.workspace?.findings ?? []).some((f) => f.claims.some((c) => c.AppliedAt != null));
+    const firstLead = () => { if (ws.summaries[0]) ws.open({ kind: 'lead', leadId: ws.summaries[0].lead.Id }); };
+
+    const closeCase = async (input: CloseCaseInput) => {
+        const ok = after(await ws.run(async () => (await client()).cases.close(caseId, input, activeTreeId)));
+        if (ok) {
+            ws.open({ kind: 'answer' });
+            showSuccessToast(input.apply.length > 0 ? t('closed_with_changes', { count: input.apply.length }) : t('closed_toast'));
+        }
+    };
+    const undo = async (claim: CaseClaim) => {
+        const ok = after(await ws.run(async () => (await client()).cases.undoApplied(caseId, claim.Id, activeTreeId)));
+        if (ok) showSuccessToast(t('change_undone'));
+    };
+
     const caseMenu: RecordMenuItem[] = !manage ? [] : [
         ...(!closed ? [{ label: t('edit_question'), onSelect: () => setDialog({ kind: 'about' }) }] : []),
         ...(!closed ? [caseData.Status === 'on_hold'
@@ -104,12 +120,15 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                 void navigator.clipboard?.writeText(window.location.href).then(() => showSuccessToast(t('link_copied')));
             },
         },
-        ...(canDelete ? [{ label: t('delete_case'), danger: true, separated: true, onSelect: () => cd.setShowDeleteConfirm(true) }] : []),
+        ...(canDelete && !changedTree ? [{ label: t('delete_case'), danger: true, separated: true, onSelect: () => cd.setShowDeleteConfirm(true) }] : []),
     ];
 
-    const statusLine = closed
-        ? t('closed_on', { date: format.dateTime(new Date(caseData.ClosedAt ?? caseData.UpdatedAt), { dateStyle: 'medium' }) })
-        : tCases(`status_${caseData.Status}`);
+    const closedOn = format.dateTime(new Date(caseData.ClosedAt ?? caseData.UpdatedAt), { dateStyle: 'medium' });
+    const statusLine = !closed
+        ? tCases(`status_${caseData.Status}`)
+        : caseData.Outcome
+            ? t('closed_outcome', { outcome: t(`outcome_${caseData.Outcome}`), date: closedOn })
+            : t('closed_on', { date: closedOn });
 
     return (
         <PageShell variant="workspace" className="pb-10">
@@ -131,7 +150,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     actions={(
                         <>
                             {canEdit && !closed && (
-                                <Button icon={<CheckCircle2 className="w-4 h-4" aria-hidden="true" />} onClick={() => setDialog({ kind: 'close' })}>{t('answer_and_close')}</Button>
+                                <Button icon={<CheckCircle2 className="w-4 h-4" aria-hidden="true" />} onClick={() => ws.open({ kind: 'close' })}>{t('answer_and_close')}</Button>
                             )}
                             <RecordMenu recordName={caseData.Title} items={caseMenu} tone="island" />
                         </>
@@ -158,7 +177,8 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     summaries={ws.summaries}
                     view={ws.view}
                     evidenceCount={ws.evidenceCount}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !closed}
+                    closed={closed}
                     onOpen={ws.open}
                     onNewLead={() => setDialog({ kind: 'new-lead' })}
                     onEditAbout={() => setDialog({ kind: 'about' })}
@@ -171,6 +191,28 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                 <section aria-label={t('main_label')} className="min-w-0 rounded-panel bg-card border border-border p-6">
                     {!ws.workspace ? (
                         <p className="m-0 text-sm text-text-muted" role="status">{t('loading')}</p>
+                    ) : ws.view?.kind === 'close' ? (
+                        <AnswerClose
+                            caseId={caseId}
+                            treeId={activeTreeId}
+                            leads={ws.workspace.leads}
+                            summaries={ws.summaries}
+                            busy={ws.busy}
+                            onGoToLead={(leadId) => ws.open({ kind: 'lead', leadId })}
+                            onCancel={firstLead}
+                            onClose={(input) => { void closeCase(input); }}
+                        />
+                    ) : ws.view?.kind === 'answer' ? (
+                        <ClosedAnswer
+                            caseData={caseData}
+                            findings={ws.workspace.findings}
+                            summaries={ws.summaries}
+                            canUndo={cd.activePermission === 'owner' || cd.activePermission === 'edit'}
+                            canReopen={manage}
+                            busy={ws.busy || cd.saving}
+                            onUndo={(claim) => { void undo(claim); }}
+                            onReopen={() => { void cd.patchCase({ Status: 'in_progress' }).then((ok) => { if (ok) firstLead(); }); }}
+                        />
                     ) : ws.view?.kind === 'evidence' ? (
                         <EvidenceView
                             findings={ws.workspace.findings}
@@ -188,7 +230,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                             comments={caseData.comments}
                             settledLeadIds={settledLeadIds}
                             treeId={activeTreeId}
-                            canEdit={canEdit}
+                            canEdit={canEdit && !closed}
                             busy={ws.busy}
                             onEdit={() => setDialog({ kind: 'edit-lead', leadId: open.lead.Id })}
                             onSettle={() => { void ws.run(async () => (await client()).cases.changeLead(caseId, open.lead.Id, { action: 'settle' }, activeTreeId)).then(after); }}
@@ -276,15 +318,6 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
             )}
             {dialog?.kind === 'about' && (
                 <AboutDialog caseData={caseData} treeId={activeTreeId} onClose={() => setDialog(null)} onSave={saveAbout} />
-            )}
-            {dialog?.kind === 'close' && (
-                <CloseCaseDialog
-                    busy={cd.saving}
-                    onCancel={() => setDialog(null)}
-                    onConfirm={async (conclusion) => {
-                        if (await cd.patchCase({ Status: 'closed', Conclusion: conclusion })) setDialog(null);
-                    }}
-                />
             )}
             {dialog?.kind === 'drop' && (
                 <DropLeadConfirm

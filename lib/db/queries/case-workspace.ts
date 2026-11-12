@@ -140,6 +140,7 @@ export async function getCaseWorkspace(caseId: number, treeId: number, exec: Que
             Decision: r.Decision as CaseClaimDecision,
             DecidedAt: iso(r.DecidedAt),
             AppliedAt: iso(r.AppliedAt),
+            undoable: r.AppliedAt != null && r.AppliedAuditId != null,
         });
         claimsByFinding.set(Number(r.FindingId), list);
     }

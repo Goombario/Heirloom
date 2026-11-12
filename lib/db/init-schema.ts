@@ -22,7 +22,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 69;
+export const SCHEMA_VERSION = 70;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -710,6 +710,12 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
     SELECT made."Id", cp."PersonId" FROM made JOIN "CasePerson" cp ON cp."CaseId" = made."CaseId"
     ON CONFLICT DO NOTHING;
   `);
+
+  // ── v70: Answer and close cites its source on what it changed (#58, ADR 0046) ─
+  // A claim applied to the tree makes up to two audited changes: the fact itself
+  // ("AppliedAuditId", v69) and the citation of the record on it. Undo on the
+  // closed case reverts both, so the citation's entry is kept too. Additive.
+  await pool.query(`ALTER TABLE "CaseClaims" ADD COLUMN IF NOT EXISTS "AppliedCitationAuditId" INTEGER;`);
 
   // #789 (and #727): the last zone-less timestamps become TIMESTAMPTZ. Drivers
   // read a TIMESTAMP in whatever zone they like (node-pg: the Node process's;

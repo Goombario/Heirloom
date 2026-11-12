@@ -544,6 +544,37 @@ export interface CaseClaim {
     Decision: CaseClaimDecision;
     DecidedAt: string | null;
     AppliedAt: string | null;
+    /** Applied by Answer and close in this database, so its changes can be undone (#58, ADR 0046). */
+    undoable?: boolean;
+}
+
+/**
+ * What Answer and close would do with one accepted claim (#58, ADR 0046):
+ * - `fill`: put its date or place on an empty birth or death (and, when ticked, replace what differs);
+ * - `event`: add it to the person as a new event;
+ * - `cite`: the tree already says it, so cite the record on that fact;
+ * - `in_tree`: already said and cited, nothing to do;
+ * - `by_hand`: a marriage, parents, free text or someone not in the tree, left to enter by hand.
+ */
+export type CaseChangeKind = 'fill' | 'event' | 'cite' | 'in_tree' | 'by_hand';
+
+export interface CaseChange {
+    claimId: number;
+    findingId: number;
+    leadIds: number[];
+    kind: CaseChangeKind;
+    what: string;
+    personId: number | null;
+    /** The tree's name for the person, or the record's name for someone not in it. */
+    personLabel: string | null;
+    says: string | null;
+    date: string | null;
+    place: string | null;
+    /** `fill`: which of the claim's fields go into empty ones. */
+    fills: { date: boolean; place: boolean };
+    /** `fill`: what the tree says where the claim says otherwise; replaced only when ticked. */
+    differs: { date: string | null; place: string | null };
+    sourceTitle: string | null;
 }
 
 export type CaseSourceNature = 'original' | 'derivative' | 'authored';

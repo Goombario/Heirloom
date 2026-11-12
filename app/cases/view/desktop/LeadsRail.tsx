@@ -25,13 +25,15 @@ export function yearsLabel(from: number | null | undefined, to: number | null | 
  * name, status; the open one filled navy) with + New lead by the heading; the
  * case's own pages; and About this case, a quiet panel with its edit pencil.
  */
-export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, canEdit, onOpen, onNewLead, onEditAbout, onAddPhotos, onOpenPhoto, onCite, onOpenCitation }: {
+export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, canEdit, closed = false, onOpen, onNewLead, onEditAbout, onAddPhotos, onOpenPhoto, onCite, onOpenCitation }: {
     caseData: CaseWithRelations;
     treeId: number | null;
     summaries: LeadSummary[];
     view: WorkspaceView | null;
     evidenceCount: number;
     canEdit: boolean;
+    /** A closed case leads with its answer, and takes no new leads. */
+    closed?: boolean;
     onOpen: (view: WorkspaceView) => void;
     onNewLead: () => void;
     onEditAbout: () => void;
@@ -51,7 +53,7 @@ export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, ca
                     <h2 id="leads-title" className="eyebrow m-0">
                         {t('leads')} <span className="font-mono font-normal tracking-normal">{summaries.length}</span>
                     </h2>
-                    {canEdit && (
+                    {canEdit && !closed && (
                         <Button variant="ghost" size="sm" icon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />} onClick={onNewLead}>
                             {t('new_lead')}
                         </Button>
@@ -77,6 +79,11 @@ export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, ca
 
             <section aria-labelledby="case-pages-title" className="grid gap-2">
                 <h2 id="case-pages-title" className="eyebrow m-0">{t('case_section')}</h2>
+                {closed && (
+                    <RailButton current={view?.kind === 'answer'} onClick={() => onOpen({ kind: 'answer' })} plain>
+                        <span className="text-sm font-medium min-w-0 flex-1">{t('the_answer')}</span>
+                    </RailButton>
+                )}
                 <RailButton current={view?.kind === 'evidence'} onClick={() => onOpen({ kind: 'evidence' })} plain>
                     <span className="text-sm font-medium min-w-0 flex-1">{t('all_evidence')}</span>
                     <span className={cx('font-mono text-meta', view?.kind === 'evidence' ? 'text-on-segment/70' : 'text-text-muted')}>{evidenceCount}</span>

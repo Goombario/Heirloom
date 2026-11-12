@@ -126,7 +126,9 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // "Cases" gains FromYear/ToYear/Place/QuestionKind/Outcome/ClosedAt and "CaseComments"
 // FindingId/RequestId; the Kind check becomes casecomments_kind_check with the new
 // kinds; every case gets its question as a first lead. Additive.
-const EXPECTED_FINGERPRINT = '2b577ae1c7207ce13bc84e4e6cb0de903eee2311d60779be82830cb50b878db3';
+// v70 — Answer and close (#58, ADR 0046): "CaseClaims"."AppliedCitationAuditId", the audit
+// entry of the citation an applied claim put on the tree, so Undo reverts it too. Additive.
+const EXPECTED_FINGERPRINT = 'cb7ec1f6ce14392da8af5b03b3b593fada11b1df59754ad2fc7b1cacd8769362';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

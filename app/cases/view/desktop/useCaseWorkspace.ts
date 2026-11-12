@@ -6,8 +6,12 @@ import { leadStatus, undecidedOnLead, type LeadStatus } from '@/lib/cases/lead-s
 import type { CaseLead, CaseWorkspace } from '@/lib/db/schema';
 import type { CaseWorkspaceWrite } from '@/lib/data/types';
 
+/** The case's own pages: All evidence, Answer and close, and a closed case's answer. */
+type CasePage = 'evidence' | 'close' | 'answer';
+const CASE_PAGES: readonly string[] = ['evidence', 'close', 'answer'];
+
 /** What the main column shows: a lead, or a page of the case. */
-export type WorkspaceView = { kind: 'lead'; leadId: number } | { kind: 'evidence' };
+export type WorkspaceView = { kind: 'lead'; leadId: number } | { kind: CasePage };
 
 const VIEW_EVENT = 'heirloom:case-view';
 
@@ -32,7 +36,7 @@ function writeView(view: WorkspaceView) {
     url.searchParams.delete('lead');
     url.searchParams.delete('page');
     if (view.kind === 'lead') url.searchParams.set('lead', String(view.leadId));
-    else url.searchParams.set('page', 'evidence');
+    else url.searchParams.set('page', view.kind);
     window.history.pushState(window.history.state, '', url);
     window.dispatchEvent(new Event(VIEW_EVENT));
 }
@@ -48,7 +52,7 @@ export interface LeadSummary {
  * the open lead or page, and the writes. Each write answers with the whole
  * workspace, so the page redraws from that one answer.
  */
-export function useCaseWorkspace(caseId: number, treeId: number | null, refreshKey: unknown) {
+export function useCaseWorkspace(caseId: number, treeId: number | null, refreshKey: unknown, closed = false) {
     const [workspace, setWorkspace] = useState<CaseWorkspace | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
@@ -97,13 +101,15 @@ export function useCaseWorkspace(caseId: number, treeId: number | null, refreshK
             }));
     }, [workspace]);
 
-    // The open lead: the address's, else the first one in play.
+    // The open lead or page: the address's, else a closed case's answer, else the first lead in play.
+    // Answer and close is only for an open case, and the answer only for a closed one.
     const view = useMemo<WorkspaceView | null>(() => {
-        if (raw === 'evidence') return { kind: 'evidence' };
+        if (CASE_PAGES.includes(raw) && (raw === 'evidence' || (raw === 'answer') === closed)) return { kind: raw as CasePage };
         const asked = Number(raw);
-        if (Number.isInteger(asked) && summaries.some((s) => s.lead.Id === asked)) return { kind: 'lead', leadId: asked };
+        if (raw !== '' && Number.isInteger(asked) && summaries.some((s) => s.lead.Id === asked)) return { kind: 'lead', leadId: asked };
+        if (closed) return { kind: 'answer' };
         return summaries[0] ? { kind: 'lead', leadId: summaries[0].lead.Id } : null;
-    }, [raw, summaries]);
+    }, [raw, summaries, closed]);
 
     /** The new sources the case found, across every lead: what All evidence counts. */
     const evidenceCount = useMemo(() => {
