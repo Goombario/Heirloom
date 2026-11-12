@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { X } from '@/lib/icons';
 import { InlineDataError } from '@/app/components/ui';
 import { useFocusTrap } from '@/app/hooks/useFocusTrap';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useTreePersonEditor } from './person-sidebar/useTreePersonEditor';
 import { SidebarContent } from './person-sidebar/SidebarContent';
 
@@ -36,6 +37,8 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
   // panel is a non-modal side editor — the tree behind it stays interactive — so
   // it gets dialog semantics + Escape but no focus trap / aria-modal.
   const trapRef = useFocusTrap<HTMLDivElement>(isMobile);
+  // lg and up: the v1.1 person panel (#71), with its close button in the navy head.
+  const panel = !useIsMobile('lg') && !isMobile;
 
   // Escape closes the sidebar (honoring the unsaved-changes confirm in handleClose).
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
           <InlineDataError message={mediaError} retryLabel={tCommon('retry')} onRetry={retryMedia} />
         </div>
       )}
-      <SidebarContent editor={editor} personId={personId} onFocusPerson={onFocusPerson} />
+      <SidebarContent editor={editor} personId={personId} onFocusPerson={onFocusPerson} panel={panel} onClose={panel ? handleClose : undefined} />
     </>
   );
 
@@ -127,10 +130,12 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
       // two cannot drift — the panels slide clear by exactly this width.
       style={{ width: 'var(--tree-sidebar-w)' }}
     >
-      {/* Close button */}
-      <button onClick={handleClose} className="absolute top-3 left-3 btn-close z-30" aria-label={tCommon('close')} title={tCommon('close')}>
-        <X className="w-5 h-5" aria-hidden="true" />
-      </button>
+      {/* Close button (the v1.1 panel draws its own, in the navy head) */}
+      {!(panel && person) && (
+        <button onClick={handleClose} className="absolute top-3 left-3 btn-close z-30" aria-label={tCommon('close')} title={tCommon('close')}>
+          <X className="w-5 h-5" aria-hidden="true" />
+        </button>
+      )}
       {loadingOverlay}
       {body}
     </div>

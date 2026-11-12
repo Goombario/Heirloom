@@ -3121,8 +3121,8 @@
     "WILL": "Testament"
   },
   "treeSidebar": {
-    "full_profile": "Profil complet",
-    "focus_person": "Centrer sur cette personne",
+    "full_profile": "Ouvrir la page de la personne",
+    "focus_person": "Centrer ici",
     "date_of_birth": "Date de naissance",
     "place_of_birth": "Lieu de naissance",
     "date_of_death": "Date de décès",
@@ -3138,7 +3138,8 @@
     "saving": "Enregistrement…",
     "save_changes": "Enregistrer",
     "person_not_found": "Personne introuvable",
-    "unknown_person": "Inconnu"
+    "unknown_person": "Inconnu",
+    "note": "Note"
   },
   "dateInput": {
     "placeholder": "ex. 1945, mars 1945, 15 mars 1945, 15/3/1945",

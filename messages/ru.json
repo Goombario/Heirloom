@@ -3121,8 +3121,8 @@
     "WILL": "Завещание"
   },
   "treeSidebar": {
-    "full_profile": "Полный профиль",
-    "focus_person": "Сфокусироваться",
+    "full_profile": "Открыть страницу человека",
+    "focus_person": "Фокус сюда",
     "date_of_birth": "Дата рождения",
     "place_of_birth": "Место рождения",
     "date_of_death": "Дата смерти",
@@ -3138,7 +3138,8 @@
     "saving": "Сохранение…",
     "save_changes": "Сохранить",
     "person_not_found": "Человек не найден",
-    "unknown_person": "Неизвестно"
+    "unknown_person": "Неизвестно",
+    "note": "Заметка"
   },
   "dateInput": {
     "placeholder": "напр. 1945, март 1945, 15 марта 1945, 15/3/1945",

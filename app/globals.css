@@ -2420,6 +2420,8 @@ html.dark .react-flow__minimap-mask {
    which covers neither panel, and the minimap/controls are display:none there
    anyway. --tree-panel-inset is set per-render by TreeVisualization. */
 :root { --tree-sidebar-w: 300px; }
+/* The v1.1 person panel (#71) pairs fields two to a row, so it is wider from lg. */
+@media (min-width: 1024px) { :root { --tree-sidebar-w: 340px; } }
 
 @media (min-width: 768px) {
   .tree-canvas .react-flow__panel.right {

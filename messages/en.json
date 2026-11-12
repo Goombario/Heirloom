@@ -3121,8 +3121,8 @@
     "WILL": "Will"
   },
   "treeSidebar": {
-    "full_profile": "Full profile",
-    "focus_person": "Focus person",
+    "full_profile": "Open person page",
+    "focus_person": "Focus here",
     "date_of_birth": "Date of birth",
     "place_of_birth": "Place of birth",
     "date_of_death": "Date of death",
@@ -3138,7 +3138,8 @@
     "saving": "Saving…",
     "save_changes": "Save changes",
     "person_not_found": "Person not found",
-    "unknown_person": "Unknown"
+    "unknown_person": "Unknown",
+    "note": "Note"
   },
   "dateInput": {
     "placeholder": "e.g. 1945, Mar 1945, 15 Mar 1945, 3/15/1945",

@@ -434,6 +434,14 @@ The loading overlay is debounced: it only appears after 300ms of loading to avoi
   the tree out again. The bar's popovers (Find's list, Display) are portalled to
   `<body>` so they stay white page popovers rather than inherit the island's
   tokens. Below lg the white header and the Display sheet stay as they were.
+- **Desktop person panel (#71, lg and up).** `PersonSidebar` passes `panel` to
+  `SidebarContent`: a navy head (photo, serif name, years; close at top right),
+  Open person page and Focus here, the person's preferred note (from #555; serif,
+  clamped by `LeadText`, read with one `notes.listForOwner` call only while the
+  Notes row is shut), then the quick edit two fields to a row with Sex as a select
+  and Living status under it, the Notes row (no count) and a pinned Discard / Save.
+  The panel is 340px from lg (`--tree-sidebar-w`). Below lg and on the phone the
+  old layout renders unchanged.
 - **Flash-free "no tree" state.** `useLoadPhase(loading)`
   (`app/components/useLoadPhase.ts`) gates the empty-state card so a fast load can
   never flash "no tree" before data lands; the skeleton covers `pending` and
