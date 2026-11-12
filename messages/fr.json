@@ -4586,6 +4586,18 @@
     "rel_birth_of": "Naissance de {name}",
     "sourced_of": "{sourced} sur {total} avec source",
     "status_living": "En vie",
-    "status_unknown": "Statut vital inconnu"
+    "status_unknown": "Statut vital inconnu",
+    "cited_for": "{type} · Cité pour <b>{facts}</b>{more, plural, =0 {} one { et # autre} other { et # autres}}",
+    "note_biography": "Biographie",
+    "note_about_person": "Sur {name}",
+    "note_about_general": "{name} en général",
+    "note_about": "Sujet",
+    "note_edit": "Modifier la note",
+    "note_placeholder": "Notes de recherche, histoires de famille, points à vérifier",
+    "note_delete": "Supprimer la note",
+    "note_saved": "Note enregistrée",
+    "note_added": "Note ajoutée",
+    "note_deleted": "Note supprimée",
+    "note_now_biography": "La note est maintenant la biographie"
   }
 }

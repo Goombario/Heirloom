@@ -12,6 +12,19 @@ export type FamilyRole = 'parent' | 'partner' | 'child' | 'sibling';
 
 export const FAMILY_ROLES: readonly FamilyRole[] = ['parent', 'partner', 'child', 'sibling'];
 
+/** The child types a person picks for their own child; Guardian and Unknown are
+ *  set from the family page (#982). */
+export const CHILD_TYPES: readonly ChildRelationshipType[] = ['Birth', 'Adoption', 'Foster', 'Step'];
+
+/** The partnership types the family editor offers, in its order. */
+export const PARTNERSHIP_TYPES: readonly { v: FamilyType; key: 'marriage' | 'civil_union' | 'common_law' | 'other' | 'unknown' }[] = [
+    { v: 'Marriage', key: 'marriage' },
+    { v: 'Civil union', key: 'civil_union' },
+    { v: 'Common-law', key: 'common_law' },
+    { v: 'Other', key: 'other' },
+    { v: 'Unknown', key: 'unknown' },
+];
+
 /** A candidate's birth year minus this person's, for each role: the plausible window and its likeliest gap. */
 const WINDOW: Record<FamilyRole, { min: number; max: number; ideal: number }> = {
     parent: { min: -70, max: -14, ideal: -28 },

@@ -1,5 +1,5 @@
 import type { Audited, NotesClient } from '../types';
-import type { Note, NoteOwnerFact } from '@/lib/db/queries/notes';
+import type { Note, NoteLinkEnd, NoteOwnerFact } from '@/lib/db/queries/notes';
 import type { LinkOwnerTable } from '@/lib/db/fact-tables';
 import {
   listNotesForOwnerService,
@@ -7,6 +7,7 @@ import {
   updateNoteService,
   removeNoteService,
   setPrimaryNoteService,
+  moveNoteService,
 } from '@/lib/services/notes';
 import { ensureLocalUser } from '../local-user';
 
@@ -40,5 +41,10 @@ export class LocalNotesClient implements NotesClient {
     const currentUserId = await ensureLocalUser();
     // Clearing is owner-scoped, so it passes null rather than this note's id.
     return setPrimaryNoteService({ id: isPrimary ? id : null, ownerTable, ownerId, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
+  }
+
+  async move(id: number, from: NoteLinkEnd, to: NoteLinkEnd, treeId?: number | null): Promise<Audited> {
+    const currentUserId = await ensureLocalUser();
+    return moveNoteService({ id, from, to, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 }

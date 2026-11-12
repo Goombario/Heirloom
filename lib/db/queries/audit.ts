@@ -1362,6 +1362,23 @@ async function revertNote(
             );
             action = 'update';
             changes = { fields: { IsPrimary: { old: fields.IsPrimary.new, new: flag } }, snapshot: snap };
+        } else if (fields.OwnerFact) {
+            // A note moved between facts on one record (ADR 0043): move it back.
+            const fact = (v: unknown) => (v == null ? null : (NOTE_OWNER_FACTS as readonly unknown[]).includes(v) ? v as string : undefined);
+            const was = fact(fields.OwnerFact.old);
+            const now = fact(fields.OwnerFact.new);
+            if (was === undefined || now === undefined) throw new Error(`Audit entry #${entry.Id} has a malformed note scope`);
+            const moved = await executor.query(
+                `UPDATE "NoteLink" SET "OwnerFact" = $1
+                 WHERE "NoteId" = $2 AND "OwnerTable" = $3 AND "OwnerId" = $4 AND COALESCE("OwnerFact", '') = COALESCE($5, '')`,
+                [was, snap.NoteId, snap.OwnerTable, snap.RecordId, now],
+            );
+            if ((moved.rowCount ?? 0) === 0) throw new Error(`Note #${snap.NoteId} has moved again since`);
+            action = 'update';
+            changes = {
+                fields: { OwnerFact: { old: now, new: was } },
+                snapshot: { ...snap, Links: snap.Links.map((l) => (l.OwnerFact === now ? { ...l, OwnerFact: was as NoteAuditSnapshot['Links'][number]['OwnerFact'] } : l)) },
+            };
         } else {
             throw new Error(`Audit entry #${entry.Id} has no revertible fields`);
         }

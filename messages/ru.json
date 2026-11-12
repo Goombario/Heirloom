@@ -4586,6 +4586,18 @@
     "rel_birth_of": "Рождение: {name}",
     "sourced_of": "С источником: {sourced} из {total}",
     "status_living": "Жив(а)",
-    "status_unknown": "Неизвестно, жив(а) ли"
+    "status_unknown": "Неизвестно, жив(а) ли",
+    "cited_for": "{type} · Цитируется для: <b>{facts}</b>{more, plural, =0 {} one { и ещё #} few { и ещё #} many { и ещё #} other { и ещё #}}",
+    "note_biography": "Биография",
+    "note_about_person": "О человеке: {name}",
+    "note_about_general": "{name} в целом",
+    "note_about": "О чём",
+    "note_edit": "Изменить заметку",
+    "note_placeholder": "Заметки об исследовании, семейные истории, что проверить",
+    "note_delete": "Удалить заметку",
+    "note_saved": "Заметка сохранена",
+    "note_added": "Заметка добавлена",
+    "note_deleted": "Заметка удалена",
+    "note_now_biography": "Заметка теперь биография"
   }
 }

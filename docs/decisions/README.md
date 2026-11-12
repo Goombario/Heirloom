@@ -117,3 +117,5 @@ What this makes easy, what it makes hard, and what invariant must now be maintai
 | [0039](0039-a-pdf-is-media-drawn-in-the-browser.md) | A PDF is media, drawn in the browser and viewed in the browser's own viewer | media |
 | [0041](0041-a-tree-can-be-shared-before-the-person-has-an-account.md) | A tree can be shared before the person has an account | auth / sharing |
 | [0042](0042-case-journal-entries-are-append-only.md) | Case journal entries are append-only: struck out, never edited or deleted | cases / data-integrity |
+| [0043](0043-a-note-can-move-to-another-thing-it-is-about.md) | A note can move to another thing it is about (supersedes 0016 decision 3) | notes / people |
+| [0044](0044-sources-cited-names-what-each-source-is-cited-for.md) | Sources cited names what each source is cited for (supersedes 0020's "lists no facts") | citations / people |

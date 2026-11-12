@@ -23,7 +23,7 @@ vi.mock('@/app/components/GuardedLink', () => ({
 vi.mock('@/app/components/ProfileImage', () => ({ default: () => <img alt="" /> }));
 vi.mock('@/app/components/PersonAvatar', () => ({ default: () => <span /> }));
 vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en' }) }));
-vi.mock('@/app/people/view/RelationshipAddPanel', () => ({ RelationshipAddPanel: () => <div>add panel</div> }));
+vi.mock('@/app/people/view/desktop/AddFamilyPanel', () => ({ AddFamilyPanel: () => <div>add panel</div> }));
 
 const person = (Id: number, FirstName: string, Sex: string, extra: Partial<Person> = {}): Person =>
   ({ Id, FirstName, LastName: 'Lind', Sex, BirthDate: null, DeathDate: null, ...extra } as unknown as Person);
@@ -53,7 +53,7 @@ const wrap = (ui: ReactNode) => render(<NextIntlClientProvider locale="en" messa
 
 describe('desktop person rail (#49)', () => {
   const rail = (canDelete: boolean) => wrap(
-    <FamilyRail person={anna} treeId={1} canEdit canDelete={canDelete} journeyCount={3} onShowJourney={() => {}} onChanged={() => {}} />,
+    <FamilyRail person={anna} treeId={1} canEdit canDelete={canDelete} journeyCount={3} onShowJourney={() => {}} onChanged={() => {}} run={vi.fn()} />,
   );
 
   it('opens with Open in tree, then parents with siblings inside, then each partnership', () => {

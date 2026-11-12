@@ -30,7 +30,7 @@ import { livingStatus } from '@/lib/living';
 import { usePersonDetail } from './usePersonDetail';
 import { PersonSummaryView } from './PersonSummaryView';
 import { LifeEventsPanel } from './LifeEventsPanel';
-import { OwnerNotesCard, biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
+import { biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
 import type { NameVariantDates, Note } from '@/lib/data/types';
 import type { PersonGalleryMedia } from '@/lib/db/schema';
 import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
@@ -40,6 +40,7 @@ import { PersonCover } from './desktop/PersonCover';
 import { FamilyRail } from './desktop/FamilyRail';
 import { EditPersonDialog } from './desktop/EditPersonDialog';
 import { SourcesSection } from './desktop/SourcesSection';
+import { NotesSection } from './desktop/NotesSection';
 import { PersonGalleryCard } from './PersonGalleryCard';
 import { DescendantsPanel } from './DescendantsPanel';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
@@ -73,12 +74,14 @@ export default function PersonDetailsClient() {
     const marks = useDataCheckMarks({ personId: Number.isInteger(personId) && personId > 0 ? personId : undefined }, person);
     // "+ Add event" unmounts while its panel is open; closing hands focus back (#690).
     const addEventRef = useReturnFocus(showInlineEvent);
-    // Mirrored from OwnerNotesCard so the hero quote can render the preferred note
+    // Mirrored from NotesSection so the hero quote can render the preferred note
     // without a second fetch of the same rows (ADR 0010/0012). The hero writes
     // through its own client calls, so it bumps notesRefresh to pull the list back
     // in sync rather than the two surfaces each holding their own copy.
     const [notes, setNotes] = useState<Note[]>([]);
     const [notesRefresh, setNotesRefresh] = useState(0);
+    // Notes → Biography opens the cover's biography editor.
+    const [bioRequest, setBioRequest] = useState(0);
     // The rail reports the person's WHOLE list, fact-scoped rows included, because the
     // timeline needs those to count its Birth/Death notes. Everything the rail itself
     // shows — its heading count, and the hero quote below — reads this narrowed view
@@ -407,6 +410,7 @@ export default function PersonDetailsClient() {
                     role={role}
                     datesToCheck={marks.open.length}
                     biography={primaryNote}
+                    bioRequest={bioRequest}
                     run={run}
                     onEdit={() => setEditOpen(true)}
                     hasDescendants={countDescendants(person) > 0}
@@ -434,6 +438,7 @@ export default function PersonDetailsClient() {
                             journeyCount={journeyStops.length}
                             onShowJourney={() => setShowJourney(true)}
                             onChanged={fetchPerson}
+                            run={run}
                         />
                     )}
                 >
@@ -544,25 +549,19 @@ export default function PersonDetailsClient() {
                         )}
                     </section>
 
-                    {/* Notes: first-class Note + NoteLink rows (ADR 0010 / #407). It owns
-                        the fetch for the whole page: the biography and the timeline's
-                        Birth/Death counts both read its report. It lists the unscoped
-                        notes; a note about the birth is read on the birth row. */}
+                    {/* Notes: every note about the person, labelled by what it is about
+                        (ADR 0043). It owns the fetch for the whole page: the biography and
+                        the timeline's Birth/Death counts both read its report. */}
                     <section id="notes" aria-labelledby="notes-title">
-                        <OwnerNotesCard
-                            ownerTable="People"
-                            ownerId={parseInt(id, 10)}
+                        <NotesSection
+                            person={person}
                             treeId={activeTreeId}
                             canEdit={canEdit}
                             canDelete={canDelete}
-                            factScope="unscoped"
-                            onNotesChange={setNotes}
+                            run={run}
                             refreshKey={notesRefresh}
-                            // The band shows the biography; this lists the rest (ED-3),
-                            // and its "preferred" action reads "Use as the biography" (#902).
-                            shownElsewhereId={primaryNote?.Id ?? null}
-                            preferredIsBiography
-                            header={<SectionHeader headingId="notes-title" title={tNotes('section_title')} className="mb-0" />}
+                            onNotesChange={setNotes}
+                            onEditBiography={() => setBioRequest((n) => n + 1)}
                         />
                     </section>
 

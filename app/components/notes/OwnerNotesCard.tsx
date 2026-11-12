@@ -75,8 +75,8 @@ export function OwnerNotesCard({
      * fact's notes AND creates new ones already scoped to it, which is what those
      * timeline rails mount.
      *
-     * There is still no re-scope control (ADR 0016, decision 3) — a note's fact is
-     * fixed at creation, and this only decides where it is read and written.
+     * This card has no re-scope control; this only decides where a note is read and
+     * written. (The desktop person page's Notes can move a note, ADR 0043.)
      */
     factScope?: NoteOwnerFact | 'unscoped';
     /**
@@ -690,9 +690,8 @@ function excerpt(text: string, max = 40): string {
 }
 
 /**
- * Translates a note's `OwnerFact` into its overline label. There is no
- * re-scope control (ADR 0016, decision 3) — this only renders what the note
- * was already scoped to at creation.
+ * Translates a note's `OwnerFact` into its overline label. It only renders
+ * the note's current scope; this card can't change it.
  */
 function scopeLabel(t: ReturnType<typeof useTranslations>, fact: NoteOwnerFact): string {
     switch (fact) {

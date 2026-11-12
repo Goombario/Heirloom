@@ -39,7 +39,7 @@ type VitalGuardInput = {
  * predicate must agree, or the app denies the existence of a death its own
  * export contains (and offers "Add event → Death", which then overwrites it).
  */
-function hasBirthFact(p: { BirthDate?: string | null; BirthPlace?: string | null }): boolean {
+export function hasBirthFact(p: { BirthDate?: string | null; BirthPlace?: string | null }): boolean {
     return Boolean(p.BirthDate || p.BirthPlace);
 }
 

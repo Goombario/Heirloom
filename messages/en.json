@@ -4586,6 +4586,18 @@
     "rel_birth_of": "Birth of {name}",
     "sourced_of": "{sourced} of {total} sourced",
     "status_living": "Living",
-    "status_unknown": "Living status unknown"
+    "status_unknown": "Living status unknown",
+    "cited_for": "{type} · Cited for <b>{facts}</b>{more, plural, =0 {} one { and # more} other { and # more}}",
+    "note_biography": "Biography",
+    "note_about_person": "About {name}",
+    "note_about_general": "{name} in general",
+    "note_about": "About",
+    "note_edit": "Edit note",
+    "note_placeholder": "Research notes, family stories, things to check",
+    "note_delete": "Delete note",
+    "note_saved": "Note saved",
+    "note_added": "Note added",
+    "note_deleted": "Note deleted",
+    "note_now_biography": "Note is now the biography"
   }
 }

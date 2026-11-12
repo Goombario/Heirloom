@@ -8,7 +8,7 @@ import type { scoreSuggestions } from '@/lib/family-suggestions';
 import type { TreeData } from '@/app/components/tree/types';
 import type { Source } from '@/lib/db/queries/sources';
 import type { Citation, CitedByRow } from '@/lib/db/queries/citations';
-import type { Note, NoteOwnerFact } from '@/lib/db/queries/notes';
+import type { Note, NoteLinkEnd, NoteOwnerFact } from '@/lib/db/queries/notes';
 import type { PlaceUses } from '@/lib/db/queries/places';
 import type { Repository, RepositoryWithCount } from '@/lib/db/queries/repositories';
 import type { FactTableValue, LinkOwnerTable, MediaOwnerFact, MediaOwnerTable } from '@/lib/db/fact-tables';
@@ -727,12 +727,14 @@ export interface RepositoriesClient {
 /** Notes attached to an owner record (family / source / …) via NoteLink. */
 export interface NotesClient {
   listForOwner(ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null): Promise<Note[]>;
-  /** `ownerFact` scopes the note to a promoted vital fact (ADR 0016 — set from context, never re-scoped). */
+  /** `ownerFact` scopes the note to a promoted vital fact (set from context; `move` changes it later, ADR 0043). */
   create(ownerTable: LinkOwnerTable, ownerId: number, text: string, treeId?: number | null, ownerFact?: NoteOwnerFact): Promise<Audited<Note>>;
   update(id: number, ownerTable: LinkOwnerTable, ownerId: number, text: string, treeId?: number | null): Promise<Audited<Note>>;
   remove(id: number, ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null): Promise<Audited>;
   /** Mark this note as the owner's primary, or clear the owner's primary (`false`). */
   setPrimary(id: number, ownerTable: LinkOwnerTable, ownerId: number, isPrimary: boolean, treeId?: number | null): Promise<Audited>;
+  /** Move one link of a note to another record or fact it is about (ADR 0043). */
+  move(id: number, from: NoteLinkEnd, to: NoteLinkEnd, treeId?: number | null): Promise<Audited>;
 }
 
 export interface AuditListOptions {
@@ -1074,7 +1076,7 @@ export interface CasesClient {
 
 export type { Source, SourceWithCitationCount } from '@/lib/db/queries/sources';
 export type { Citation, CitedByRow } from '@/lib/db/queries/citations';
-export type { Note, NoteOwnerFact } from '@/lib/db/queries/notes';
+export type { Note, NoteLinkEnd, NoteOwnerFact } from '@/lib/db/queries/notes';
 export type { Repository, RepositoryWithCount } from '@/lib/db/queries/repositories';
 export type { AuditLogEntryWithUser } from '@/lib/db/schema';
 export type { Case, CaseComment, CaseWithRelations } from '@/lib/db/schema';
