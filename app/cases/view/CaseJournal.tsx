@@ -75,7 +75,7 @@ export default function CaseJournal({ cd, bare = false }: { cd: CaseDetailState;
                                 <Quote className="w-3.5 h-3.5" aria-hidden="true" />{t('cite')}
                             </button>
                         )}
-                        <Button variant="primary" size="sm" className="ml-auto" onClick={postComment} disabled={!caseReady || postingComment || !commentBody.trim()}>
+                        <Button variant="primary" size="sm" className="ml-auto" onClick={() => { void postComment(); }} disabled={!caseReady || postingComment || !commentBody.trim()}>
                             {postingComment ? t('posting') : t('add_entry')}
                         </Button>
                     </div>

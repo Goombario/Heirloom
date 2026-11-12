@@ -321,7 +321,8 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
     }
 
     // Comments. Resolves whether the entry was posted.
-    async function postComment(): Promise<boolean> {
+    /** Posts the composer's entry; `leadIds` files it under those leads (#58), none for the whole case. */
+    async function postComment(leadIds?: number[]): Promise<boolean> {
         if (!commentBody.trim()) return false;
         setPostingComment(true);
         try {
@@ -338,7 +339,7 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
                 }
             }
             const client = await getDataClient();
-            const comment = await client.cases.addComment(Number(id), { body: commentBody.trim(), mediaId }, activeTreeId);
+            const comment = await client.cases.addComment(Number(id), { body: commentBody.trim(), mediaId, ...(leadIds ? { leadIds } : {}) }, activeTreeId);
             // Attach the queued source to this entry (comment-level citation).
             if (pendingCommentCite && comment?.Id) {
                 try {

@@ -10,7 +10,6 @@ import { getDataClient } from '@/lib/data';
 import type { CaseRequest, Media } from '@/lib/db/schema';
 import type { CaseFindingInput, CaseRequestInput, UpdateCaseInput } from '@/lib/data/types';
 import type { CaseDetailState } from '../useCaseDetail';
-import CaseJournal from '../CaseJournal';
 import CloseCaseDialog from '../CloseCaseDialog';
 import { LeadsRail } from './LeadsRail';
 import { LeadView } from './LeadView';
@@ -21,6 +20,7 @@ import { useCaseWorkspace } from './useCaseWorkspace';
 import { FindRecord, type FindStart } from './FindRecord';
 import { RecordView } from './RecordView';
 import { ResearchSide, type SideTab } from './ResearchSide';
+import { WorkspaceJournal } from './WorkspaceJournal';
 
 type Dialog =
     | { kind: 'new-lead' }
@@ -209,7 +209,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                         tab={tab}
                         onTab={setTab}
                         onCloseRecord={() => setPanel(null)}
-                        journal={<CaseJournal cd={cd} />}
+                        journal={<WorkspaceJournal cd={cd} leads={ws.workspace?.leads ?? []} openLeadId={open?.lead.Id ?? null} />}
                         record={findLead && panel?.kind === 'find' ? (
                             <FindRecord
                                 key={`${findLead.Id}:${panel.start.mode}:${panel.start.requestId ?? ''}`}
