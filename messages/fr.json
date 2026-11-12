@@ -3890,7 +3890,16 @@
     "timeline_gap": "Aucun acte",
     "timeline_known_item": "{year} : {what}, dans l’arbre",
     "timeline_found_item": "{year} : {what}, trouvé",
-    "timeline_gap_item": "Aucun acte de {from} à {to}"
+    "timeline_gap_item": "Aucun acte de {from} à {to}",
+    "add_media": "Ajouter un média",
+    "add_media_save": "Ajouter à la piste",
+    "add_media_file": "Scan ou photo (image ou PDF)",
+    "add_media_title": "De quoi il s’agit",
+    "add_media_title_hint": "Par exemple, une lettre de la paroisse, 1902",
+    "add_media_note": "Il est classé sous cette piste, noté dans le journal et listé avec les preuves du dossier. Ajoutez ses affirmations sur sa fiche.",
+    "no_lead_media": "Aucun scan ni photo sur cette piste pour l’instant.",
+    "media_added": "Ajouté à la piste",
+    "claim_added": "Affirmation ajoutée"
   },
   "citeSheet": {
     "cite_title": "Citer une source",

@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import MediaImg from '@/app/components/MediaImg';
 import { Button, RecordMenu, SectionHeader, cx, type RecordMenuItem } from '@/app/components/ui';
-import { Check, RotateCcw } from '@/lib/icons';
+import { Check, Plus, RotateCcw } from '@/lib/icons';
 import { initialsFromName } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
-import type { CaseClaim, CaseClaimDecision, CaseComment, CaseFinding, CaseRequest, CaseTreeFact, Media } from '@/lib/db/schema';
+import type { CaseClaim, CaseClaimDecision, CaseComment, CaseFinding, CasePersonRef, CaseRequest, CaseTreeFact, Media } from '@/lib/db/schema';
+import type { CaseClaimInput } from '@/lib/data/types';
+import { ClaimForm } from './ClaimForm';
 import { LeadStatusChip } from './LeadStatus';
 import { claimConflicts, claimRelations, claimWhat, type ClaimRelation } from './claims';
 import { Disagreements } from './Disagreements';
@@ -25,7 +27,7 @@ const shortDate = { month: 'short', day: 'numeric' } as const;
  * found as plain rows; and the lead's media. A settled lead locks its decisions
  * and offers Reopen lead.
  */
-export function LeadView({ summary, findings, facts = [], requests, comments, settledLeadIds, treeId, canEdit, busy, actions, openRecordId, onOpenRecord, onEdit, onSettle, onReopen, onDrop, onDecide, onReply, onOpenMedia }: {
+export function LeadView({ summary, findings, facts = [], requests, comments, settledLeadIds, treeId, canEdit, busy, actions, openRecordId, onOpenRecord, onEdit, onSettle, onReopen, onDrop, onDecide, onReply, onOpenMedia, onAddMedia, onAddClaim, casePeople = [] }: {
     summary: LeadSummary;
     /** Every finding of the case: the lead's own are picked here. */
     findings: CaseFinding[];
@@ -51,10 +53,17 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
     onDecide: (claim: CaseClaim, decision: CaseClaimDecision) => void;
     onReply: (request: CaseRequest) => void;
     onOpenMedia: (media: Media) => void;
+    /** + Add media: a scan or photo added straight to the lead. */
+    onAddMedia?: () => void;
+    /** Add a claim to one of the lead's records; resolves false when it failed. */
+    onAddClaim?: (finding: CaseFinding, claim: CaseClaimInput) => Promise<boolean>;
+    /** The case's people, after the lead's own, for who a new claim is about. */
+    casePeople?: CasePersonRef[];
 }) {
     const t = useTranslations('caseResearch');
     const format = useFormatter();
     const { lead, status, undecided } = summary;
+    const people = useMemo(() => [...lead.people, ...casePeople.filter((p) => !lead.people.some((l) => l.Id === p.Id))], [lead.people, casePeople]);
     const settled = status === 'settled';
     const mine = useMemo(() => findings.filter((f) => f.leadIds.includes(lead.Id)), [findings, lead.Id]);
     const records = mine.filter((f) => f.Kind === 'record');
@@ -175,6 +184,8 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
                                 onDecide={onDecide}
                                 open={openRecordId === f.Id}
                                 onOpenRecord={onOpenRecord}
+                                people={people}
+                                onAddClaim={onAddClaim && !locked(f) ? (claim) => onAddClaim(f, claim) : undefined}
                             />
                         ))}
                         {nothing.map((f) => (
@@ -190,10 +201,16 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
                 )}
             </section>
 
-            {media.length > 0 && (
+            {(media.length > 0 || (canEdit && !settled && onAddMedia)) && (
                 <section aria-labelledby="lead-media-title" className="grid gap-2.5">
-                    <SectionHeader level="section" headingId="lead-media-title" title={t('media')} count={media.length} />
-                    <ul className="m-0 p-0 list-none grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3">
+                    <SectionHeader level="section" headingId="lead-media-title" title={t('media')} count={media.length}
+                        action={canEdit && !settled && onAddMedia && (
+                            <Button variant="ghost" size="sm" icon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />} onClick={onAddMedia} disabled={busy}>
+                                {t('add_media')}
+                            </Button>
+                        )} />
+                    {media.length === 0 && <p className="m-0 text-sm text-text-muted">{t('no_lead_media')}</p>}
+                    {media.length > 0 && <ul className="m-0 p-0 list-none grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-3">
                         {media.map(({ media: m, from, label }) => (
                             <li key={m.Id}>
                                 <button type="button" onClick={() => onOpenMedia(m)} className="grid w-full gap-1.5 bg-transparent border-0 p-0 text-left cursor-pointer focus-ring rounded-btn">
@@ -207,7 +224,7 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
                                 </button>
                             </li>
                         ))}
-                    </ul>
+                    </ul>}
                 </section>
             )}
         </article>
@@ -215,8 +232,11 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
 }
 
 /** One source with its claims, each decided in place. Claim rows are divided by straight lines. */
-function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide, open, onOpenRecord }: {
+function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide, open, onOpenRecord, people, onAddClaim }: {
     finding: CaseFinding;
+    people: CasePersonRef[];
+    /** Add a claim to this record; left out while it is locked. */
+    onAddClaim?: (claim: CaseClaimInput) => Promise<boolean>;
     open: boolean;
     onOpenRecord?: (finding: CaseFinding) => void;
     relations: Map<number, ClaimRelation>;
@@ -229,6 +249,7 @@ function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide, o
     const format = useFormatter();
     const title = finding.citation?.sourceTitle || t('untitled_record');
     const sub = [finding.citation?.sourceRepo, finding.citation?.Page].filter(Boolean).join(' · ');
+    const [adding, setAdding] = useState(false);
     return (
         <article className={cx('rounded-card', 'border bg-card overflow-hidden', open ? 'border-text' : 'border-border')} aria-label={title}>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 pt-3 pb-2.5">
@@ -271,6 +292,18 @@ function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide, o
                     })}
                 </ul>
             )}
+            {onAddClaim && (adding ? (
+                <div className="border-t border-border-light bg-card px-4 py-3">
+                    <ClaimForm people={people} onCancel={() => setAdding(false)}
+                        onAdd={(claim) => { void onAddClaim(claim).then((ok) => { if (ok) setAdding(false); }); }} />
+                </div>
+            ) : (
+                <div className="border-t border-border-light bg-card px-4 py-2">
+                    <Button variant="ghost" size="sm" icon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />} onClick={() => setAdding(true)} disabled={busy}>
+                        {t('add_claim')}
+                    </Button>
+                </div>
+            ))}
         </article>
     );
 }

@@ -23,12 +23,14 @@ import { WorkspaceJournal } from './WorkspaceJournal';
 import { EvidenceView } from './EvidenceView';
 import { AnswerClose } from './AnswerClose';
 import { ClosedAnswer } from './ClosedAnswer';
+import { AddMediaDialog } from './AddMediaDialog';
 
 type Dialog =
     | { kind: 'new-lead' }
     | { kind: 'edit-lead'; leadId: number }
     | { kind: 'reply'; request: CaseRequest }
     | { kind: 'about' }
+    | { kind: 'add-media'; leadId: number }
     | { kind: 'drop'; leadId: number };
 
 /** What the right column's first tab holds: Find a record for a lead, or one finding's record. */
@@ -241,6 +243,13 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                             onDecide={(claim, decision) => { void ws.run(async () => (await client()).cases.decideClaim(caseId, claim.Id, decision, activeTreeId)); }}
                             onReply={(request) => setDialog({ kind: 'reply', request })}
                             onOpenMedia={setLightbox}
+                            onAddMedia={() => setDialog({ kind: 'add-media', leadId: open.lead.Id })}
+                            onAddClaim={async (finding, claim) => {
+                                const ok = after(await ws.run(async () => (await client()).cases.addClaim(caseId, finding.Id, claim, activeTreeId)));
+                                if (ok) showSuccessToast(t('claim_added'));
+                                return ok;
+                            }}
+                            casePeople={caseData.people}
                             openRecordId={recordFinding?.Id ?? null}
                             onOpenRecord={(f) => openPanel({ kind: 'record', findingId: f.Id })}
                             actions={canEdit && !closed && (
@@ -318,6 +327,21 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     }}
                 />
             )}
+            {dialog?.kind === 'add-media' && (() => {
+                const lead = ws.workspace?.leads.find((l) => l.Id === dialog.leadId);
+                return lead ? (
+                    <AddMediaDialog
+                        lead={lead}
+                        treeId={activeTreeId}
+                        onClose={() => setDialog(null)}
+                        onSave={async (input) => {
+                            const ok = after(await ws.run(async () => (await client()).cases.addFinding(caseId, input, activeTreeId)));
+                            if (ok) showSuccessToast(t('media_added'));
+                            return ok;
+                        }}
+                    />
+                ) : null;
+            })()}
             {dialog?.kind === 'about' && (
                 <AboutDialog caseData={caseData} treeId={activeTreeId} onClose={() => setDialog(null)} onSave={saveAbout} />
             )}

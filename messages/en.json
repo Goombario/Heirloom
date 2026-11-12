@@ -3890,7 +3890,16 @@
     "timeline_gap": "No record",
     "timeline_known_item": "{year}: {what}, in the tree",
     "timeline_found_item": "{year}: {what}, found",
-    "timeline_gap_item": "No record from {from} to {to}"
+    "timeline_gap_item": "No record from {from} to {to}",
+    "add_media": "Add media",
+    "add_media_save": "Add to the lead",
+    "add_media_file": "Scan or photo (image or PDF)",
+    "add_media_title": "What it is",
+    "add_media_title_hint": "For example, a letter from the parish, 1902",
+    "add_media_note": "It is filed under this lead, logged in the journal and listed with the case’s evidence. Add its claims on its card.",
+    "no_lead_media": "No scans or photos on this lead yet.",
+    "media_added": "Added to the lead",
+    "claim_added": "Claim added"
   },
   "citeSheet": {
     "cite_title": "Cite a source",

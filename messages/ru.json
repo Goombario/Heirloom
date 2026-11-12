@@ -3890,7 +3890,16 @@
     "timeline_gap": "Нет записей",
     "timeline_known_item": "{year}: {what}, в древе",
     "timeline_found_item": "{year}: {what}, найдено",
-    "timeline_gap_item": "Нет записей с {from} по {to}"
+    "timeline_gap_item": "Нет записей с {from} по {to}",
+    "add_media": "Добавить медиа",
+    "add_media_save": "Добавить к зацепке",
+    "add_media_file": "Скан или фото (изображение или PDF)",
+    "add_media_title": "Что это",
+    "add_media_title_hint": "Например, письмо из прихода, 1902",
+    "add_media_note": "Он будет отнесён к этой зацепке, записан в журнал и показан среди доказательств дела. Утверждения добавьте на его карточке.",
+    "no_lead_media": "У этой зацепки пока нет сканов и фото.",
+    "media_added": "Добавлено к зацепке",
+    "claim_added": "Утверждение добавлено"
   },
   "citeSheet": {
     "cite_title": "Указать источник",

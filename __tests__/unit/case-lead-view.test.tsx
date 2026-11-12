@@ -90,6 +90,26 @@ describe('LeadView (#58)', () => {
         for (const b of within(parish).getAllByRole('button', { name: 'Reject' })) expect(b).toBeEnabled();
     });
 
+    it('+ Add media opens from the Media section, and a record takes a new claim on its card', async () => {
+        const onAddMedia = vi.fn();
+        const onAddClaim = vi.fn().mockResolvedValue(true);
+        view({ onAddMedia, onAddClaim });
+        fireEvent.click(screen.getByRole('button', { name: 'Add media' }));
+        expect(onAddMedia).toHaveBeenCalled();
+        const parish = screen.getByRole('article', { name: 'St Mary parish register, baptisms 1880–1890' });
+        fireEvent.click(within(parish).getByRole('button', { name: 'Add a claim' }));
+        fireEvent.change(within(parish).getByLabelText('It says'), { target: { value: 'Godparents Jan and Maria' } });
+        const adds = within(parish).getAllByRole('button', { name: 'Add a claim' });
+        fireEvent.click(adds[adds.length - 1]);
+        expect(onAddClaim).toHaveBeenCalledWith(expect.objectContaining({ Id: findings[0].Id }), expect.objectContaining({ says: 'Godparents Jan and Maria' }));
+    });
+
+    it('a viewer gets no Add media or Add a claim', () => {
+        view({ canEdit: false, onAddMedia: vi.fn(), onAddClaim: vi.fn() });
+        expect(screen.queryByRole('button', { name: 'Add media' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Add a claim' })).not.toBeInTheDocument();
+    });
+
     it('a settled lead says so and offers Reopen', () => {
         const h = view({ summary: { ...summary, status: 'settled', undecided: 0, lead: { ...summary.lead, SettledAt: '2026-11-12T12:00:00Z' } }, settledLeadIds: new Set([11]) });
         expect(screen.getByText(/This lead is settled/)).toBeInTheDocument();
