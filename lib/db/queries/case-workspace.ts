@@ -441,6 +441,11 @@ export interface FindingInput {
     note: string | null;
     requestId: number | null;
     claims: ClaimInput[];
+    /**
+     * A record made from a journal note's photo or citation (#58): the note is its
+     * journal entry, so no "Record found" line is added, and the note points at it.
+     */
+    commentId?: number | null;
 }
 
 /**
@@ -449,7 +454,18 @@ export interface FindingInput {
  * source is); the finding, its citation and claims are case work and are not.
  */
 export async function insertFinding(exec: Queryable, caseId: number, treeId: number, ownerId: number, userId: number, input: FindingInput): Promise<number> {
-    const leadIds = await caseLeads(exec, caseId, input.leadIds, true);
+    const commentId = input.kind === 'record' ? input.commentId ?? null : null;
+    if (commentId != null) {
+        const res = await exec.query(
+            `SELECT "Kind", "FindingId" FROM "CaseComments" WHERE "Id" = $1 AND "CaseId" = $2 FOR UPDATE`,
+            [commentId, caseId],
+        );
+        const note = res.rows[0] as { Kind: string | null; FindingId: number | null } | undefined;
+        if (!note || note.Kind != null) throw new ValidationError('That journal note is not in this case');
+        if (note.FindingId != null) throw new ValidationError('That journal note is already a record');
+    }
+    // A note may be filed under a settled lead; its record is then locked there like any other.
+    const leadIds = await caseLeads(exec, caseId, input.leadIds, commentId == null);
     let sourceId: number | null = null;
     let sourceTitle = '';
     if (input.kind === 'record') {
@@ -505,6 +521,11 @@ export async function insertFinding(exec: Queryable, caseId: number, treeId: num
         );
     }
     if (input.kind === 'record') await insertClaims(exec, findingId, treeId, input.claims);
+    if (commentId != null) {
+        await exec.query(`UPDATE "CaseComments" SET "FindingId" = $1 WHERE "Id" = $2`, [findingId, commentId]);
+        await touchCase(exec, caseId);
+        return findingId;
+    }
     await addJournalEntry(exec, {
         caseId, userId, findingId,
         kind: input.kind === 'record' ? 'finding' : 'search',

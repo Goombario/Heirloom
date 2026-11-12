@@ -1081,6 +1081,8 @@ export type CaseFindingInput = {
   sourceNature?: CaseSourceNature | null; information?: CaseInformation | null; note?: string | null;
   requestId?: number | null;
   claims?: CaseClaimInput[];
+  /** A journal note whose photo or citation this record is (#58). */
+  commentId?: number | null;
 } | {
   kind: 'nothing';
   leadIds?: number[];

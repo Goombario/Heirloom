@@ -67,7 +67,7 @@ describe('WorkspaceJournal (#58)', () => {
         const cd = journal();
         expect(screen.getByRole('button', { name: /Filed under/ })).toHaveTextContent('Find her baptism');
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add note' })); });
-        expect(cd.postComment).toHaveBeenCalledWith([11]);
+        expect(cd.postComment).toHaveBeenCalledWith([11], true);
         expect(screen.queryByText(/Added under/)).not.toBeInTheDocument();
     });
 
@@ -76,7 +76,7 @@ describe('WorkspaceJournal (#58)', () => {
         fireEvent.click(screen.getByRole('button', { name: /Filed under/ }));
         fireEvent.click(screen.getByRole('checkbox', { name: 'The whole case' }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add note' })); });
-        expect(cd.postComment).toHaveBeenCalledWith([]);
+        expect(cd.postComment).toHaveBeenCalledWith([], true);
         expect(screen.getByRole('status')).toHaveTextContent('Added under The whole case');
         fireEvent.click(screen.getByRole('button', { name: 'Show' }));
         expect(list()).toHaveTextContent('A whole-case note');

@@ -116,6 +116,30 @@ describe('the research workspace (#58)', () => {
         ]));
     });
 
+    it('makes a journal note’s photo or citation a record under its leads, logged once, by the note', async () => {
+        const caseId = await newCase();
+        const leadId = (await getCaseWorkspaceService({ caseId, ...as(OWNER) })).leads[0].Id;
+        const note = await addCommentService({ id: caseId, body: 'Aunt May’s letter names her father', leadIds: [leadId], ...as(OWNER) });
+        const made = await addFindingService({ caseId, ...as(OWNER), body: { kind: 'record', leadIds: [leadId], source: { id: census }, page: 'f. 12', commentId: note.Id } });
+        expect(made.workspace.findings.find((f) => f.Id === made.id)).toMatchObject({ leadIds: [leadId], claims: [], citation: { SourceId: census, Page: 'f. 12' } });
+        // The note is its journal entry: no "Record found" line, and the note points at the record.
+        const journal = (await getCaseService({ id: caseId, ...as(OWNER) })).comments;
+        expect(journal.filter((c) => c.Kind === 'finding')).toEqual([]);
+        expect(journal.find((c) => c.Id === note.Id)?.FindingId).toBe(made.id);
+        // Claims are added on its card later.
+        const claimed = await addClaimService({ caseId, findingId: made.id!, ...as(OWNER), body: { what: 'Father', personName: 'John Moss' } });
+        expect(claimed.workspace.findings.find((f) => f.Id === made.id)!.claims).toHaveLength(1);
+
+        // A note becomes one record only, and an app-written entry never does.
+        await expect(addFindingService({ caseId, ...as(OWNER), body: { kind: 'record', source: { id: census }, commentId: note.Id } })).rejects.toThrow(/already a record/);
+        await addFindingService({ caseId, ...as(OWNER), body: { kind: 'nothing', leadIds: [leadId], searched: '1871 census' } });
+        const logged = (await getCaseService({ id: caseId, ...as(OWNER) })).comments.find((c) => c.Kind === 'search')!;
+        await expect(addFindingService({ caseId, ...as(OWNER), body: { kind: 'record', source: { id: census }, commentId: logged.Id } })).rejects.toThrow(/not in this case/);
+        const other = await newCase('Another question');
+        const elsewhere = await addCommentService({ id: other, body: 'Elsewhere', ...as(OWNER) });
+        await expect(addFindingService({ caseId, ...as(OWNER), body: { kind: 'record', source: { id: census }, commentId: elsewhere.Id } })).rejects.toThrow(/not in this case/);
+    });
+
     it('settles a lead only when every claim is decided, then locks its claims until reopened', async () => {
         const caseId = await newCase();
         const leadId = (await getCaseWorkspaceService({ caseId, ...as(OWNER) })).leads[0].Id;

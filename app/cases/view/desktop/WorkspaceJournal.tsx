@@ -70,7 +70,7 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
 
     const post = async () => {
         const ids = filed;
-        if (await postComment(ids)) { setAdded(ids); setChoosing(false); }
+        if (await postComment(ids, true)) { setAdded(ids); setChoosing(false); }
     };
     const toggleFiled = (id: number | 'case') => {
         const next = id === 'case' ? [] : filed.includes(id) ? filed.filter((x) => x !== id) : [...filed, id];

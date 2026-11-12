@@ -24,6 +24,12 @@ import { showChangeToast } from '@/app/components/ui';
  * from CaseDetailView during the logic-first decomposition — behaviour is
  * unchanged. Presentational sections consume the returned object.
  */
+/** A journal note's first line, as the title of the source its photo becomes (#58). */
+function noteTitle(body: string): string {
+    const line = body.trim().split('\n')[0].trim();
+    return line.length > 120 ? `${line.slice(0, 119).trimEnd()}…` : line;
+}
+
 export function useCaseDetail(options?: { forceDraft?: boolean }) {
     const params = useSearchParams();
     const router = useRouter();
@@ -321,8 +327,13 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
     }
 
     // Comments. Resolves whether the entry was posted.
-    /** Posts the composer's entry; `leadIds` files it under those leads (#58), none for the whole case. */
-    async function postComment(leadIds?: number[]): Promise<boolean> {
+    /**
+     * Posts the composer's entry; `leadIds` files it under those leads (#58), none for
+     * the whole case. With `asRecord` (the desktop workspace), a photo or citation on
+     * the entry also becomes a record with no claims yet, under the same leads, so it
+     * is a source in All evidence; the note stays its journal entry.
+     */
+    async function postComment(leadIds?: number[], asRecord = false): Promise<boolean> {
         if (!commentBody.trim()) return false;
         setPostingComment(true);
         try {
@@ -341,12 +352,29 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
             const client = await getDataClient();
             const comment = await client.cases.addComment(Number(id), { body: commentBody.trim(), mediaId, ...(leadIds ? { leadIds } : {}) }, activeTreeId);
             // Attach the queued source to this entry (comment-level citation).
+            let citedSourceId: number | null = null;
             if (pendingCommentCite && comment?.Id) {
                 try {
-                    await attachPendingCommentCitation(client, pendingCommentCite, comment.Id, activeTreeId);
+                    citedSourceId = await attachPendingCommentCitation(client, pendingCommentCite, comment.Id, activeTreeId);
                 } catch (citeErr) {
                     console.error('Failed to attach citation to entry:', citeErr);
                     setSaveError(t('failed_add_citation'));
+                }
+            }
+            if (asRecord && comment?.Id && (mediaId != null || citedSourceId != null)) {
+                const cite = citedSourceId != null ? pendingCommentCite : null;
+                try {
+                    await client.cases.addFinding(Number(id), {
+                        kind: 'record',
+                        leadIds: comment.leadIds ?? leadIds ?? [],
+                        source: citedSourceId != null ? { id: citedSourceId } : { title: noteTitle(commentBody) },
+                        page: cite?.page ?? null, url: cite?.url ?? null, transcription: cite?.dataText ?? null,
+                        mediaId,
+                        commentId: comment.Id,
+                    }, activeTreeId);
+                } catch (recordErr) {
+                    console.error('Failed to make a record of the entry:', recordErr);
+                    setSaveError(recordErr instanceof Error ? recordErr.message : t('failed_post_comment'));
                 }
             }
             setCommentBody('');

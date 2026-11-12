@@ -205,6 +205,7 @@ function findingInput(raw: Record<string, unknown>): FindingInput {
     searched: null, site: null, note: text(raw.note, 'note', LONG),
     requestId: id(raw.requestId, 'requestId'),
     claims: claims.map(claimInput),
+    commentId: id(raw.commentId, 'commentId'),
   };
 }
 
