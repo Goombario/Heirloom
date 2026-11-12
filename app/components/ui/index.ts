@@ -42,7 +42,7 @@ export { LeadText } from './LeadText';
 export { ActionLink } from './ActionLink';
 export { RecordMenu } from './RecordMenu';
 export type { RecordMenuItem } from './RecordMenu';
-export { OpenInTreeRow, IconTile } from './OpenInTreeRow';
+export { OpenInTreeRow, IconTile, TileLink } from './OpenInTreeRow';
 export { DetailBody } from './DetailBody';
 export { PersonRow } from './PersonRow';
 export { FamilyRecordRow } from './FamilyRecordRow';

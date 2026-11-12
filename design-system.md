@@ -451,6 +451,8 @@ Phones don't use the kit: they keep `RecordBand` and their panes.
 - **`IconTile`**: the outlined icon tile (a muted 1px edge, a secondary icon on the card
   fill). It replaces the grey `--surface-2` tile, which failed contrast. Open in tree, Quick
   add and the Tools menu use it.
+- **`TileLink`**: an `IconTile` over a short label, the whole tile one link. Home's Quick add
+  (New person, New family, New case) uses it.
 
 - **Rows** (part 2 of #55):
   - **`PersonRow`** is `PersonIdentity` (which gained `role` and `nameStyle`) inside a link,

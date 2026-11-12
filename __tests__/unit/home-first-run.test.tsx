@@ -11,7 +11,9 @@ vi.mock('@/app/hooks/useTimestamp', () => ({
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 vi.mock('next/link', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({ useTranslations: () => Object.assign((key: string) => key, { rich: (key: string) => key }) }));
+vi.mock('@/app/hooks/useActiveTreeName', () => ({ useActiveTreeName: () => 'Lindqvist family' }));
+vi.mock('@/app/components/GuardedLink', () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 vi.mock('@/app/contexts/TreeContext', () => ({
   useTree: () => ({ activeTreeId: 7, activePermission: 'edit', currentUserId: 1 }),
 }));
@@ -37,6 +39,8 @@ function dashboardWith(people: number) {
     openCases: [],
     recentActivity: [],
     places: [],
+    placeTotals: { places: 0, countries: 0 },
+    yearSpan: { first: null, last: null },
     resumedPerson: null,
     recentPeople: [],
   };
@@ -45,22 +49,23 @@ function dashboardWith(people: number) {
 describe('home first run (FR-1)', () => {
   beforeEach(() => { push.mockClear(); });
 
-  it('offers Import a GEDCOM on an empty tree and hides the empty cards', () => {
+  it('offers Import a GEDCOM on an empty tree and hides the empty sections', () => {
     dashboard = dashboardWith(0);
     render(<Home />);
+    expect(screen.getByRole('heading', { level: 1, name: 'welcome_first_run' })).toBeInTheDocument();
     screen.getByRole('button', { name: 'import_gedcom' }).click();
     expect(push).toHaveBeenCalledWith('/import-export');
-    expect(screen.queryByRole('button', { name: 'view_tree_plain' })).toBeNull();
-    expect(screen.queryByText('cases_in_progress_title')).toBeNull();
-    expect(screen.queryByText('recent_activity_plain')).toBeNull();
+    expect(screen.queryByText('mobile_research')).toBeNull();
+    expect(screen.queryByText('quick_add')).toBeNull();
   });
 
-  it('keeps View tree and the dashboard cards once the tree has people', () => {
+  it('shows the tree, Research and the rail once the tree has people', () => {
     dashboard = dashboardWith(3);
     render(<Home />);
     expect(screen.queryByRole('button', { name: 'import_gedcom' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'view_tree_plain' })).toBeInTheDocument();
-    expect(screen.getByText('cases_in_progress_title')).toBeInTheDocument();
-    expect(screen.getByText('recent_activity_plain')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Lindqvist family' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'mobile_research' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'quick_add' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /all_cases/ })).toHaveAttribute('href', '/cases');
   });
 });

@@ -1,5 +1,6 @@
 import type { PlaceKey } from '@/lib/places/place-key';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
+import type { NextStep } from '@/lib/db/queries/home';
 import type { Person, PersonWithRelations, Family, FamilyWithRelations, GedcomEvent, EventWithMedia, Media, MediaWithPerson, MediaLinkOwner, MediaTag, MediaTagWithPerson, PersonGalleryMedia, OwnerGalleryMedia, AuditLogEntryWithUser, Case, CaseComment, CaseWithRelations, Tree, MediaImportItem, MediaImportFailureCode } from '@/lib/db/schema';
 import type { FamilyWithSpouseNames } from '@/lib/db/queries/families';
 import type { ChildRelationshipType, ChildRelationshipInput } from '@/lib/child-relationship';
@@ -810,6 +811,8 @@ export interface AuditClient {
 // ---- Dashboard ----
 export interface OpenCase {
   Id: number; Title: string; Status: string; Tags: string[]; UpdatedAt: string; LastComment: string | null;
+  /** The last comment's time and author (#53), null with no comment. */
+  LastCommentAt: string | null; LastCommentUserId: number | null; LastCommentAuthor: string | null;
 }
 export interface ResumedPerson {
   Id: number; FirstName: string | null; LastName: string | null; EffectiveFirstName: string | null;
@@ -819,6 +822,8 @@ export interface ResumedPerson {
   partnershipCount: number; childrenCount: number;
   /** Same rules as the person hero's "X/Y sourced" tag: birth, death and each event. */
   totalFacts: number; sourcedFacts: number;
+  /** The desktop home's "Next for <name>" (#53): up to three gaps, and how many in all. */
+  nextSteps: { steps: NextStep[]; total: number };
   lastChange: { Action: string; EntityLabel: string | null; Changes: { fields?: Record<string, { old: unknown; new: unknown }> }; CreatedAt: string };
 }
 /** A recently edited person and their latest change (the phone home's "Recently edited"). */
@@ -834,9 +839,13 @@ export interface DashboardData {
   openCases: OpenCase[];
   recentActivity: ActivityRow[];
   /** `own_count` < `person_count` means the total includes gazetteer sub-places. */
-  places: Array<{ place_id: number; place_name: string; person_count: string; own_count: string }>;
+  places: Array<{ place_id: number; place_name: string; person_count: string; own_count: string; country: string | null }>;
+  /** How many places the tree's facts name, in how many known countries (#53). */
+  placeTotals: { places: number; countries: number };
+  /** The earliest and latest birth or death year (#53's band). */
+  yearSpan: { first: number | null; last: number | null };
   resumedPerson: ResumedPerson | null;
-  /** Up to four other recently edited people, newest first, skipping `resumedPerson`. */
+  /** Up to six other recently edited people, newest first, skipping `resumedPerson`. */
   recentPeople: RecentPerson[];
 }
 export interface Suggestion {

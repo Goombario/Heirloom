@@ -54,3 +54,23 @@ export function OpenInTreeRow({ personId, firstName, className }: {
     </GuardedLink>
   );
 }
+
+/**
+ * A quick-create tile (#53): an outlined `IconTile` over a short label, the whole
+ * tile one link. Home's Quick add rail (New person, New family, New case) uses it.
+ */
+export function TileLink({ href, icon, label, className }: { href: string; icon: React.ReactNode; label: string; className?: string }) {
+  return (
+    <GuardedLink
+      href={href}
+      className={cx(
+        'tile-link grid justify-items-center gap-1.5 rounded-card border border-border bg-card px-2 py-3 text-center',
+        'text-meta font-semibold text-text no-underline transition-colors hover:bg-hover-surface focus-ring',
+        className,
+      )}
+    >
+      <IconTile size={32}>{icon}</IconTile>
+      {label}
+    </GuardedLink>
+  );
+}
