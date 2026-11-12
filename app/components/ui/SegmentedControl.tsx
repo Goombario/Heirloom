@@ -52,7 +52,7 @@ export interface SegmentedControlProps {
  * Disabled options are skipped by the arrows and the letter jump.
  *
  * Selected = the neutral ink fill a selected FilterChip uses (#691, decision 5):
- * `bg-text text-card`, ink on white in light and off-white on ink in dark, so the
+ * `bg-segment-on text-on-segment`: ink navy in light (#55 C6) and off-white on ink in dark, so the
  * choice reads at ≥14:1 instead of the old card-on-track 1.06:1 in dark. The track
  * is a hairline outline; unselected segments are muted with a hover wash. The fill
  * reads through `--color-segment-on` / `--color-on-segment` (text/card by default) because a dark

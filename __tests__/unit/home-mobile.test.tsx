@@ -26,6 +26,7 @@ const resumed = {
   Id: 1, FirstName: 'Greta', LastName: 'Lindqvist', EffectiveFirstName: 'Greta', Nickname: null, Sex: 'F',
   BirthDate: '1871', BirthPlace: null, DeathDate: '1948', DeathPlace: null, IsDeceased: 1, PrimaryMediaId: null,
   FocalX: null, FocalY: null, FocalRadius: null, partnershipCount: 0, childrenCount: 0, totalFacts: 0, sourcedFacts: 0,
+  nextSteps: { steps: [], total: 0 },
   lastChange: { ...change, EntityLabel: 'Greta Lindqvist' },
 } satisfies ResumedPerson;
 const recent = (Id: number, FirstName: string): RecentPerson => ({
@@ -37,6 +38,7 @@ function dashboard(people: number): DashboardData {
   return {
     stats: { people, families: 4, events: 0, sources: 0, casesInProgress: 2 },
     openCases: [], recentActivity: [], places: [],
+    placeTotals: { places: 0, countries: 0 }, yearSpan: { first: null, last: null },
     resumedPerson: people ? resumed : null,
     recentPeople: people ? [recent(2, 'Anders'), recent(3, 'Ingrid'), recent(4, 'Nils'), recent(5, 'Elsa')] : [],
   };

@@ -27,6 +27,8 @@ const ROUTES = [
   // fixture props, since edit mode is client state on /people/view rather
   // than a URL the fixed route list above can reach. See app/a11y-harness.
   '/a11y-harness',
+  // Dev-only v1.1 desktop components page (#55), same 404-in-production rule.
+  '/dev/components',
 ];
 const THEMES = ['light', 'dark'];
 

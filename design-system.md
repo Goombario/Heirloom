@@ -49,8 +49,11 @@ Slate is chrome (warm charcoal in dark mode), copper is the main action, slate i
 | Drop-zone edge (Add media's dashed drop strip, #1204) | `--color-drop-edge` (`border-drop-edge`) | `#8C857C` (3.3:1 on card-alt) | `#9C958C` (3.5:1 on card-alt) |
 
 Selected states use a **neutral** fill, not a colour: colour fill means the main action only.
-A selected choice in a control (`SegmentedControl` segment, active `FilterChip`) is the ink
-fill `bg-text text-card`, weight 600 (#691, decision 5). It reads at ≥14:1 in both themes.
+A selected choice in a control (`SegmentedControl` segment, active `FilterChip`, a ticked
+finder row) is the selected fill `bg-segment-on text-on-segment`, weight 600 (#691,
+decision 5). In light mode it is the ink navy `#1F2B3D` of the v1.1 band (#55 C6); dark mode
+keeps the ink fill (off-white on ink). Navy is a neutral, not a colour: it is the chrome's
+ink, never a main action. It reads at ≥14:1 in both themes, guarded in `contrast-tokens.test.ts`.
 Build mode switches and pickers from `SegmentedControl`, which also takes `icon`, `sub`,
 per-option `disabled` and `orientation="vertical"`, instead of hand-rolling selected styles.
 A selected row in a list or menu stays the quieter `bg-surface-2`.
@@ -115,7 +118,8 @@ backdrop derives its 0.88-alpha scrim from the stage tokens via `color-mix(… ,
   blocks new `text-[Npx]` classes (existing ones are baselined in `eslint-suppressions.json`).
   Fonts: `--font-serif/-sans/-mono`.
 - **Serif scope (#763):** Fraunces is for names as card titles, headings and the biography
-  pull-quote. Note bodies, controls (the tree switcher), pickers and chips are Inter. A
+  pull-quote. On the v1.1 desktop pages a person's name is also serif in rail rows and table
+  name cells (`PersonIdentity nameStyle="serif"`, #55 C9); pickers, finders and chips stay Inter. Note bodies, controls (the tree switcher), pickers and chips are Inter. A
   section count "(2)" is Inter 12 muted after any heading (`SectionHeader`). In activity
   and audit rows only the record's name is 600 (`EntityLabelText`).
 - **Heading ramp:** every heading is serif 600 except the sans eyebrow. Use the owner,
@@ -392,6 +396,125 @@ so reach for these instead of re-deriving a shell/hero/rail:
   `.overline` because Tailwind's `overline` utility drew a stray rule over it. It is the
   only way to render these headings (#687).
 
+### v1.1 desktop kit (#55)
+
+The v1.1 desktop pages (person, family, home, places, Research case, the list and Tools
+pages) are built from a second set of shared parts. They extend the primitives above. Every
+part is shown, in each role and both themes, on the dev-only **`/dev/components`** page (404
+in production builds, like `/a11y-harness`). The contrast and focus scans cover that page.
+Phones don't use the kit: they keep `RecordBand` and their panes.
+
+- **`CoverBand`** is the band at the top of a v1.1 page. It is a `.hero-dark` island, so its
+  colours come only from the hero tokens (ink navy in light mode, umber in dark). It has an
+  eyebrow, the page's `h1` and a meta line, in three variants:
+  - `cover`: 144px. With `portrait`, a 4:3 portrait (320px, 220px below 1024) hangs over the
+    band's lower edge, and `lead` sits beside it. Opening the lead text grows the page
+    downward and never moves the portrait.
+  - `short`: the list and Tools pages. It uses the same gradient as `cover`.
+  - `flat`: no gradient. Only a place with no pin uses it.
+
+  The optional **actions slot** sits top-right. It holds the ⋯ `RecordMenu` on Person, Family
+  and Place, and "Answer and close" plus ⋯ on a Research case. Home, the list pages and the
+  Tools pages leave it empty; their main button lives in the toolbar.
+- **`LeadText`**: serif lead text clamped to three lines. **Read all ⌄** shows only when the
+  text overflows and turns into Show less. The same label is used everywhere, including the
+  tree panel's preferred note. An optional Edit link follows it.
+- **`DetailBody`** holds the body under the band:
+  - an optional sticky section index ("On this page"), shown from 1180px;
+  - one main column, with sections separated by 40px of space and no dividers;
+  - a right rail.
+
+  From 768px the rail stays beside the main column (260px, then 300px from 1024), so it never
+  drops to the bottom. `divided` draws the full-width hairline that closes the top section
+  (family, home).
+- **`DetailRail look="open"`** is the v1.1 rail: no cards and no bars, with sections separated
+  by 36px of space only. Its headings are `SectionHeader level="rail" rule={false}`. The
+  default `cards` look stays for the pages that haven't moved yet.
+- **`ActionLink`** applies the link glyph rule once:
+  - `action` (›) acts on this page;
+  - `leave` (↗) leaves the page or opens a full-screen view (the default with an `href`);
+  - `expand` (⌄) expands in place, with `aria-expanded`.
+
+  Header actions such as "Full history ↗" use it in `SectionHeader`'s `action` slot, never
+  under the list.
+- **`RecordMenu`** is the one ⋯ menu for a record. It is a `role="menu"` popover with
+  `useMenuKeyboard`, portalled to `<body>` so that it is a white page menu even when opened
+  from a band.
+  - `tone="island"` on a band, `surface` elsewhere.
+  - `reveal="hover"` hides the trigger until its row is hovered or focused (journal entries).
+  - A disabled item stays visible with its reason under the label.
+  - Viewers pass no items and get no ⋯ at all. Contributors' menus leave out deletes.
+- **`OpenInTreeRow`**: "Open in tree · Starts from <first name> ↗", a bordered white row that
+  opens `/tree?rootId=…`. It sits at the top of the person and family rails and in Home's
+  pick-up card. It says "Starts from", not "Centred on", because the tree doesn't always put
+  its root in the middle.
+- **`IconTile`**: the outlined icon tile (a muted 1px edge, a secondary icon on the card
+  fill). It replaces the grey `--surface-2` tile, which failed contrast. Open in tree, Quick
+  add and the Tools menu use it.
+- **`TileLink`**: an `IconTile` over a short label, the whole tile one link. Home's Quick add
+  (New person, New family, New case) uses it.
+
+- **Rows** (part 2 of #55):
+  - **`PersonRow`** is `PersonIdentity` (which gained `role` and `nameStyle`) inside a link,
+    with its hover actions beside the link, never inside it: Edit for contributors and
+    editors, and unlink (`Link2Off`) for editors. The role tag ("foster child",
+    "half-sibling", "stepson") is muted text after the years, not a badge. It is used for
+    rail partners, children and siblings, Home's Recently edited, form child rows and finder
+    results.
+  - **`FamilyRecordRow`** is the phone's B2 family row, promoted to `ui/` and shared by the
+    phone Family tab and the desktop rails. On desktop (`density="desktop"`) it has no ↗ and a
+    hover unlink. Its title wraps rather than being cut off (#48).
+  - **`SuggestionRow`** is a plus row that acts in one click and gives a one-line reason.
+  - **`EmptySlot`** is the dashed "Partner unknown · Find or add someone" button. Its dashed
+    edge is `--color-drop-edge`.
+  - A **`Timeline` row with `href`** is a relative's event shown read-only (a child's birth on
+    the family page). Its title links to the relative with ↗, and it takes no row actions.
+
+- **Overlays** (part 3 of #55):
+  - **`PersonFinder`** is the one way to pick a person. It is a popover (`role="dialog"`)
+    anchored under the link or `EmptySlot` that opens it, on top of the page or dialog and
+    never replacing what is under it. It has a search box (a combobox over a listbox with
+    `aria-activedescendant`), then "Create “…” as a new person" first once something is
+    typed, then matches. Before anyone types it lists `suggestions`, each with a reason.
+    `excludeIds` leaves out people already in place. With `multiple`, rows take checkboxes and
+    the footer adds them together ("Add 2 children"). Escape closes it without reaching an
+    outer dialog and returns focus to the trigger; tabbing out closes it. The trigger is a
+    render prop: spread its props onto an `ActionLink`, `EmptySlot` or button. Used by Find
+    their parents, Find a partner, Add children, Add child, Partner unknown and Add family.
+  - **`InlinePanel`** is the inline edit panel: it opens in place under its row, focuses its
+    first field and ends in `EditorActions size="sm"`, with Delete as red text on the left
+    for editors. Escape and navigation ask before dropping unsaved changes. The opener keeps
+    `useEditorFocusReturn`. Event, name, note, biography, child relationship, Move and Edit
+    family panels are built on it.
+  - **`ParentRelationshipSelects`** is one select per partner in the stored vocabulary
+    (ADR 0027). With one partner there is one select and it sets both slots.
+  - **`useUndoRemoval`** is the one Undo: an unlink or removal shows a toast with Undo, which
+    reverts the change's own audit entries. Pass several changes when one action made
+    several; one Undo reverts them all. Desktop unlinks use it instead of a confirm dialog.
+
+- **Dialogs and lists** (part 4 of #55):
+  - **`FormDialog`** is the 640px form dialog over the page it was opened from: a title
+    with ×, a scrolling body, and a footer bar with an optional left slot ("Save and add
+    another") and the right slot (Cancel, then the one copper main action). Opening it
+    focuses the first field. With `dirty`, ×, Cancel (the footer gets the guarded close),
+    Escape, the backdrop and navigation all ask before dropping changes; `busy` blocks
+    closing while saving. The quick-add forms, New lead, "Search the map again" and
+    Import's preflight use it.
+  - **`FormBlock`** is a form section: an eyebrow heading with an optional action on the
+    right ("Cite ›"), separated by space, never boxed.
+  - **`FieldColumns`** + **`FieldColumn`** put two facts side by side (Born | Died). An
+    `inactive` column is a disabled fieldset whose fields take the surface fill, with its
+    reason in the heading row in place of the action, so both columns stay level. The
+    heading and reason are muted text, which still meets AA.
+  - **`RecordBlock`** is a linked person in a form: a tinted block with the × right after
+    the name, then that link's own fields (relationship selects, the marriage date).
+  - **`WarningLine`** is the one-line form warning ("These two already have a family"). It
+    uses the orange warning tokens with a left edge (C11), never amber.
+  - **`ListToolbar`** is the list page toolbar: search (`/` focuses it), then chips with
+    counts and selects, then the one copper main button on the right (C5).
+  - **`TablePanel`** is the white panel that holds the `DataTable`, with the pager in its
+    footer ("1–25 of 412" and ‹ ›), hidden on one page.
+
 These primitives define the chrome of a **standalone entity-detail page**; they do not require
 the domain content inside them to share a state model. A light `DetailHero`, for example, may slot
 view, edit, or draft/autosave content while continuing to own the surface and elevation.
@@ -614,7 +737,7 @@ under `PageShell` above until their screen issue lands.
   the word "Cite ›", which opens `CiteFactSheet`.
 - **Citation chips** keep the desktop rule: page-local footnote numbers, never a count. On a
   form group they sit after the group title, never beside "Cite ›".
-- **Selections** use the ink fill, as on desktop: `SegmentedControl` and `FilterChip`, an
+- **Selections** use the selected fill, as on desktop: `SegmentedControl` and `FilterChip`, an
   active chip with ✕. Chips are drawn at 34px with a 44px hit. A segmented control is 40px
   overall on phones (32px segments): its segments sit edge to edge and are wide, so it is the
   one exception to the 44px floor.

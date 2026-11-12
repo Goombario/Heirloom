@@ -22,6 +22,16 @@ interface PersonIdentityProps {
   treeId?: number | null;
   size?: 'sm' | 'md';
   /**
+   * The relationship tag after the lifespan ("foster child", "half-sibling",
+   * "stepson"), muted text, not a badge (#55).
+   */
+  role?: string | null;
+  /**
+   * `serif` for a name that titles its row: rail rows and table name cells on the
+   * v1.1 desktop pages (C9 on #55). Pickers, finders and chips stay `sans`.
+   */
+  nameStyle?: 'sans' | 'serif';
+  /**
    * Pass `span` whenever this sits in a phrasing context — inside a `<button>`
    * or `<span>`. EVERY wrapper follows it, not just the avatar: a `<div>` inside
    * a `<button>` is invalid HTML and React will not warn about it.
@@ -60,6 +70,8 @@ export function PersonIdentity({
   focalRadius,
   treeId,
   size = 'md',
+  role = null,
+  nameStyle = 'sans',
   as = 'div',
   className = '',
 }: PersonIdentityProps) {
@@ -82,16 +94,18 @@ export function PersonIdentity({
         focalRadius={focalRadius}
       />
       <Box className={cx(stack, 'min-w-0')}>
-        <Box className={cx(stack, 'font-semibold text-base leading-tight text-text truncate')}>
+        <Box className={cx(stack, 'font-semibold leading-tight text-text truncate', nameStyle === 'serif' ? 'serif text-md' : 'text-base')}>
           {name}
         </Box>
-        {(meta || lifespan || detail) && (
+        {(meta || lifespan || detail || role) && (
           <Box className={cx(stack, 'text-meta truncate')}>
             {meta && <span className="text-text-secondary">{meta}</span>}
             {meta && lifespan && <span className="text-border"> · </span>}
             {lifespan}
             {(meta || lifespan) && detail && <span className="text-border"> · </span>}
             {detail && <span className="text-text-secondary">{detail}</span>}
+            {(meta || lifespan || detail) && role && <span className="text-border"> · </span>}
+            {role && <span className="text-text-muted">{role}</span>}
           </Box>
         )}
       </Box>

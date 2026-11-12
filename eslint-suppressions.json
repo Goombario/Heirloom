@@ -142,11 +142,6 @@
       "count": 1
     }
   },
-  "app/page.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 2
-    }
-  },
   "app/people/view/DescendantsPanel.tsx": {
     "ds/no-inline-static-literal": {
       "count": 1

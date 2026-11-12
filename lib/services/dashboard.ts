@@ -7,6 +7,7 @@ import { getTopPlacesByRecordCount } from '@/lib/db/queries/places';
 import { factPlaceTextColumns } from '@/lib/db/queries/place-links';
 import { getLikelyDuplicates } from '@/lib/db/queries/data-quality';
 import { getRecentlyEditedPeople } from '@/lib/db/queries/recent-people';
+import { getPersonNextSteps, getPlaceCountries, getTreeYearSpan } from '@/lib/db/queries/home';
 import type { DashboardData, Suggestion } from '@/lib/data/types';
 import { groupActivityRuns } from '@/lib/utils/activity-groups';
 import { liveChildLinkSql, liveEventSql } from '@/lib/db/queries/live-owner';
@@ -31,7 +32,7 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
 
   // Every read here depends only on the tree, so they share one round-trip wave
   // instead of five sequential ones (#1268).
-  const [statsRows, casesRows, topPlaces, auditLog, lastPersonRow] = await Promise.all([
+  const [statsRows, casesRows, topPlaces, auditLog, lastPersonRow, yearSpan] = await Promise.all([
     query(
       `SELECT
           (SELECT COUNT(*) FROM "People" WHERE "TreeId" = $1)::int AS people,
@@ -43,10 +44,16 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
     ),
     query(
       `SELECT c."Id", c."Title", c."Status", c."Tags", c."UpdatedAt",
-              (SELECT cc."Body" FROM "CaseComments" cc
-               WHERE cc."CaseId" = c."Id" AND cc."StruckAt" IS NULL
-               ORDER BY cc."CreatedAt" DESC LIMIT 1) AS "LastComment"
+              lc."Body" AS "LastComment", lc."CreatedAt" AS "LastCommentAt",
+              lc."UserId" AS "LastCommentUserId", lc."UserName" AS "LastCommentAuthor"
        FROM "Cases" c
+       -- The case's last comment and who wrote it (#53: author, time, quote).
+       LEFT JOIN LATERAL (
+         SELECT cc."Body", cc."CreatedAt", cc."UserId", u."Name" AS "UserName"
+           FROM "CaseComments" cc LEFT JOIN "Users" u ON u."Id" = cc."UserId"
+          WHERE cc."CaseId" = c."Id" AND cc."StruckAt" IS NULL
+          ORDER BY cc."CreatedAt" DESC LIMIT 1
+       ) lc ON TRUE
        WHERE c."TreeId" = $1 AND c."Status" = 'in_progress'
        ORDER BY c."UpdatedAt" DESC
        LIMIT 5`,
@@ -64,6 +71,7 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
        ORDER BY "CreatedAt" DESC LIMIT 1`,
       [treeId]
     ),
+    getTreeYearSpan(treeId),
   ]);
 
   const { entries: auditWindow, total: auditTotal } = auditLog;
@@ -78,7 +86,7 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
   const lastPersonAudit = lastPersonRow.rows[0];
   const lastPersonId = lastPersonAudit?.EntityId as number | undefined;
   if (lastPersonId) {
-    const [r, sourcing] = await Promise.all([query(
+    const [r, sourcing, nextSteps] = await Promise.all([query(
       `SELECT
           p."Id", p."FirstName", p."LastName", p."Sex",
           ${effectiveFirstName('p')} AS "EffectiveFirstName",
@@ -105,12 +113,13 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
        WHERE p."Id" = $1 AND p."TreeId" = $2
        LIMIT 1`,
       [lastPersonId, treeId]
-    ), getPersonSourcing(lastPersonId, treeId)]);
+    ), getPersonSourcing(lastPersonId, treeId), getPersonNextSteps(lastPersonId, treeId)]);
     const row = r.rows[0];
     if (row && sourcing) {
       resumedPerson = {
         ...row,
         ...sourcing,
+        nextSteps,
         lastChange: {
           Action: lastPersonAudit.Action,
           EntityLabel: lastPersonAudit.EntityLabel,
@@ -121,8 +130,12 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
     }
   }
 
-  // The phone home's "Recently edited" (#1061): the next people after the resumed one.
-  const recentPeople = await getRecentlyEditedPeople(treeId, resumedPerson?.Id ?? null, 4);
+  // "Recently edited" (#1061 phone, four; #53 desktop, six in two columns): the
+  // next people after the resumed one. The phone shows the first four.
+  const [recentPeople, placeCountries] = await Promise.all([
+    getRecentlyEditedPeople(treeId, resumedPerson?.Id ?? null, 6),
+    getPlaceCountries(treeId, topPlaces.map((p) => p.place_id)),
+  ]);
 
   return {
     stats: {
@@ -134,7 +147,9 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
     },
     openCases: casesRows.rows,
     recentActivity,
-    places: topPlaces,
+    places: topPlaces.map((p) => ({ ...p, country: placeCountries.countries.get(p.place_id) ?? null })),
+    placeTotals: { places: placeCountries.placeCount, countries: placeCountries.countryCount },
+    yearSpan,
     resumedPerson,
     recentPeople,
   };

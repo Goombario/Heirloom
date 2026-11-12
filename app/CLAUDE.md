@@ -63,8 +63,9 @@ the source of truth when this guide and the stylesheet disagree.
   `FormTopBarTitle` (22), sections and rails through `SectionHeader`. Never hand-type heading sizes.
 - Text sizes come from the ramp: `text-xs` 11, `text-meta` 12, `text-sm` 13, `text-base` 14,
   `text-md` 16. `ds/no-arbitrary-font-size` blocks new `text-[Npx]` classes.
-- Person names are serif only when the name is a card's title; they are sans in tables and
-  dense lists (TYPE-5).
+- Person names are serif when the name is a card's title, and on the v1.1 desktop pages also in
+  rail rows and table name cells (`PersonIdentity nameStyle="serif"`, #55 C9). They stay sans
+  in pickers, finders, chips and the pages not yet moved to v1.1 (TYPE-5).
 - Labels/metadata (dates, roles like "Mother"): `text-text-muted`. Descriptive facts (sex,
   role) are a muted text line, never `Badge`s; tags are for states only.
 - Living status: `StatusMark` (a dot; `†` / `?` only with the Accessibility option on) beside
@@ -83,8 +84,9 @@ the source of truth when this guide and the stylesheet disagree.
 - Links: `text-link` (slate ink) at regular weight with `hover:underline`. A link inside running
   text is always underlined: slate is close to muted text in lightness, so colour alone can't mark it. Entity names in lists (people,
   partners, children) stay `text-text` with a hover underline.
-- Selected states: neutral, never a colour. A selected choice in a control is the ink fill
-  `bg-text text-card` (`SegmentedControl`, active `FilterChip`; #691); a selected list or menu row is `bg-surface-2`.
+- Selected states: neutral, never a colour. A selected choice in a control is the selected fill
+  `bg-segment-on text-on-segment` (`SegmentedControl`, active `FilterChip`; #691): ink navy in light
+  mode (#55 C6), the ink fill in dark. A selected list or menu row is `bg-surface-2`.
 - Slate is chrome and, as slate ink, links and focus; copper is the main-action fill; amber is evidence. Reserve `text-evidence`,
   `bg-evidence-soft` and `.date-mono` for dates, citations and complete sourcing — never for
   links, buttons, selection, emphasis or warnings (warnings use the orange `warning-*` tokens).

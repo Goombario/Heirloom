@@ -7,7 +7,8 @@ import { useDocumentScrollLock } from '@/app/hooks/useDocumentScrollLock';
 interface ModalProps {
     open: boolean;
     onClose: () => void;
-    size?: 'sm' | 'md' | 'lg' | 'xl';
+    /** `form` is the 640px v1.1 form dialog (#55). */
+    size?: 'sm' | 'md' | 'lg' | 'xl' | 'form';
     disableClose?: boolean;
     labelledBy?: string;
     describedBy?: string;
@@ -23,6 +24,7 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
     md: 'max-w-md',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
+    form: 'max-w-[640px]',
 };
 
 export default function Modal({

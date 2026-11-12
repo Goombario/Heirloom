@@ -7,6 +7,8 @@ export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElem
   icon?: React.ReactNode;
   size?: 'sm' | 'md';
   wrapClassName?: string;
+  /** React 19 passes `ref` as a prop; it lands on the `<input>`. */
+  ref?: React.Ref<HTMLInputElement>;
 }
 
 const FIELD_CHROME =

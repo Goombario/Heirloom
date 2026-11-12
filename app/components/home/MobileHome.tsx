@@ -9,7 +9,6 @@ import ProfileImage from '@/app/components/ProfileImage';
 import { openAppMenu, openGlobalSearch } from '@/app/components/nav/appEvents';
 import { CopperPill, GlassButton, Lifespan, MobileRow, SectionHeader, cx } from '@/app/components/ui';
 import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
-import { useTimestamp } from '@/app/hooks/useTimestamp';
 import type { LoadPhase } from '@/app/components/useLoadPhase';
 import type { DashboardData, RecentPerson, ResumedPerson } from '@/lib/data/types';
 import { livingStatus } from '@/lib/living';
@@ -17,7 +16,7 @@ import { ArrowUpRight, CalendarDays, FolderSearch, Menu, Network, Plus, Search, 
 import { avatarClass } from '@/lib/utils/avatar';
 import { getInitials } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
-import { formatAction } from './formatAction';
+import { useChangeLine } from './useChangeLine';
 
 /*
  * The home page on phones (#1061, umbrella #1067): a compact dark band instead of the
@@ -201,17 +200,6 @@ function Counted({ label, count }: { label: string; count: number }) {
             <span className="font-mono text-sm font-medium text-text-muted">{count.toLocaleString()}</span>
         </span>
     );
-}
-
-function useChangeLine() {
-    const t = useTranslations('home');
-    const tAudit = useTranslations('audit');
-    const { activityTime } = useTimestamp();
-    return (change: RecentPerson['lastChange']) => {
-        // The change words are made for mid-sentence ("added to tree"); this line starts with them.
-        const words = formatAction(change, t, tAudit);
-        return t('mobile_change_when', { change: words.charAt(0).toLocaleUpperCase() + words.slice(1), time: activityTime(change.CreatedAt) });
-    };
 }
 
 /** "Pick up where you left off": the last person edited, with a 3:4 portrait. */

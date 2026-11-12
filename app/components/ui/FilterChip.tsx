@@ -25,15 +25,16 @@ export type FilterChipProps = FilterChipBaseProps & FilterChipDismissProps;
 // with an optional count badge — deliberately its own primitive (not Button or
 // Badge). Styled with Tailwind utilities (the old .filter-chip CSS class is retired).
 const COUNT = 'text-xs tabular-nums';
-// Count colour on an ACTIVE chip. The active chip inverts to `bg-text text-card`,
-// so this is --color-card composited over --color-text at this alpha. It must clear
+// Count colour on an ACTIVE chip. The active chip takes the selected fill
+// (`bg-segment-on text-on-segment`: navy in light, ink in dark; #55 C6), so this is
+// --color-on-segment composited over --color-segment-on at this alpha. It must clear
 // WCAG AA (4.5:1 — 12px text) in BOTH themes, and dark is the tight side: the chip
 // background is the near-white --color-text (#FAFAF9) and the count is the dark
 // --color-card (#292524), so a low alpha washes toward mid-grey. At the previous
 // 55% that composited to #878584 = 3.51:1 — a real AA failure. 70% gives 9.02:1
 // light / 5.53:1 dark while staying visibly de-emphasised against the chip label.
 // Guarded by the composited case in __tests__/unit/contrast-tokens.test.ts.
-const COUNT_ACTIVE = 'text-card/70';
+const COUNT_ACTIVE = 'text-on-segment/70';
 
 // The pill's own box — shared by the plain chip and by the wrapper used when a
 // dismiss control is present, so both render identically. One fixed height (28px,
@@ -44,7 +45,7 @@ const SHELL = 'inline-flex items-center shrink-0 h-7 rounded-full border-[1.5px]
 const TEXT = 'text-sm font-medium leading-none whitespace-nowrap cursor-pointer';
 const FOCUS = 'focus-ring';
 const tone = (active: boolean) =>
-  active ? 'bg-text text-card border-text' : 'bg-card text-text-2 border-border hover:bg-surface-2';
+  active ? 'bg-segment-on text-on-segment border-segment-on' : 'bg-card text-text-2 border-border hover:bg-surface-2';
 
 export function FilterChip({ active = false, count = null, label, loading = false, icon, dismissible = false, onDismiss, dismissLabel, className = '', children, ...rest }: FilterChipProps) {
   const bodyRef = React.useRef<HTMLButtonElement>(null);
