@@ -4,11 +4,11 @@ import { useMemo, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
 import { Banner, Button, CoverBand, PageShell, RecordMenu, showSuccessToast, type RecordMenuItem } from '@/app/components/ui';
-import { CheckCircle2, X } from '@/lib/icons';
+import { CheckCircle2, Search, X } from '@/lib/icons';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { getDataClient } from '@/lib/data';
 import type { CaseRequest, Media } from '@/lib/db/schema';
-import type { UpdateCaseInput } from '@/lib/data/types';
+import type { CaseFindingInput, CaseRequestInput, UpdateCaseInput } from '@/lib/data/types';
 import type { CaseDetailState } from '../useCaseDetail';
 import CaseJournal from '../CaseJournal';
 import CloseCaseDialog from '../CloseCaseDialog';
@@ -18,6 +18,9 @@ import { LeadDialog } from './LeadDialog';
 import { ReplyDialog } from './ReplyDialog';
 import { AboutDialog } from './AboutDialog';
 import { useCaseWorkspace } from './useCaseWorkspace';
+import { FindRecord, type FindStart } from './FindRecord';
+import { RecordView } from './RecordView';
+import { ResearchSide, type SideTab } from './ResearchSide';
 
 type Dialog =
     | { kind: 'new-lead' }
@@ -26,6 +29,9 @@ type Dialog =
     | { kind: 'about' }
     | { kind: 'close' }
     | { kind: 'drop'; leadId: number };
+
+/** What the right column's first tab holds: Find a record for a lead, or one finding's record. */
+type Panel = { kind: 'find'; leadId: number; start: FindStart } | { kind: 'record'; findingId: number };
 
 /**
  * The desktop research workspace (#58, K1b): the case header with Answer and
@@ -41,6 +47,8 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
     const ws = useCaseWorkspace(caseId, activeTreeId, caseData?.UpdatedAt);
     const [dialog, setDialog] = useState<Dialog | null>(null);
     const [lightbox, setLightbox] = useState<Media | null>(null);
+    const [panel, setPanel] = useState<Panel | null>(null);
+    const [tab, setTab] = useState<SideTab>('record');
     const closed = caseData?.Status === 'closed';
     const manage = cd.activePermission !== 'view';
 
@@ -50,6 +58,28 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
     if (!caseData) return null;
     const client = () => getDataClient();
     const after = (ok: number | null | false) => { if (ok !== false) void cd.fetchCase(); return ok !== false; };
+
+    const openPanel = (next: Panel) => { setPanel(next); setTab('record'); };
+    const openLeads = (ws.workspace?.leads ?? []).filter((l) => !settledLeadIds.has(l.Id));
+    // Find a record follows the lead it was opened for; switching leads closes it.
+    const findLead = panel?.kind === 'find' && open?.lead.Id === panel.leadId ? open.lead : null;
+    const recordFinding = panel?.kind === 'record' ? ws.workspace?.findings.find((f) => f.Id === panel.findingId) : undefined;
+    const sideLabel = findLead ? t('find_record') : recordFinding ? t('record') : null;
+
+    const addFinding = async (input: CaseFindingInput) => {
+        const id = await ws.run(async () => (await client()).cases.addFinding(caseId, input, activeTreeId));
+        const ok = after(id);
+        if (ok) {
+            showSuccessToast(input.kind === 'record' ? t('record_added') : t('nothing_saved'));
+            if (input.kind === 'record' && typeof id === 'number') openPanel({ kind: 'record', findingId: id });
+        }
+        return ok;
+    };
+    const addRequest = async (input: CaseRequestInput) => {
+        const ok = after(await ws.run(async () => (await client()).cases.addRequest(caseId, input, activeTreeId)));
+        if (ok) { showSuccessToast(t('request_saved')); setPanel(null); }
+        return ok;
+    };
 
     const saveAbout = async (patch: UpdateCaseInput) => {
         try {
@@ -160,14 +190,41 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                             onDecide={(claim, decision) => { void ws.run(async () => (await client()).cases.decideClaim(caseId, claim.Id, decision, activeTreeId)); }}
                             onReply={(request) => setDialog({ kind: 'reply', request })}
                             onOpenMedia={setLightbox}
+                            openRecordId={recordFinding?.Id ?? null}
+                            onOpenRecord={(f) => openPanel({ kind: 'record', findingId: f.Id })}
+                            actions={canEdit && !closed && (
+                                <Button icon={<Search className="w-4 h-4" aria-hidden="true" />} onClick={() => openPanel({ kind: 'find', leadId: open.lead.Id, start: { mode: 'search' } })}>
+                                    {t('find_record')}
+                                </Button>
+                            )}
                         />
                     ) : (
                         <p className="m-0 text-sm text-text-muted">{t('no_leads')}</p>
                     )}
                 </section>
 
-                <aside aria-label={t('journal')} className="min-w-0">
-                    <CaseJournal cd={cd} />
+                <aside aria-label={t('side_label')} className="min-w-0">
+                    <ResearchSide
+                        recordLabel={sideLabel}
+                        tab={tab}
+                        onTab={setTab}
+                        onCloseRecord={() => setPanel(null)}
+                        journal={<CaseJournal cd={cd} />}
+                        record={findLead && panel?.kind === 'find' ? (
+                            <FindRecord
+                                key={`${findLead.Id}:${panel.start.mode}:${panel.start.requestId ?? ''}`}
+                                lead={findLead}
+                                leads={openLeads}
+                                caseData={caseData}
+                                treeId={activeTreeId}
+                                start={panel.start}
+                                onAddFinding={addFinding}
+                                onAddRequest={(input) => addRequest({ ...input, leadId: findLead.Id })}
+                            />
+                        ) : recordFinding ? (
+                            <RecordView finding={recordFinding} leads={ws.workspace?.leads ?? []} treeId={activeTreeId} onOpenMedia={setLightbox} />
+                        ) : null}
+                    />
                 </aside>
             </div>
 
@@ -199,7 +256,15 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                 <ReplyDialog
                     request={dialog.request}
                     onClose={() => setDialog(null)}
-                    onSave={async (reply) => after(await ws.run(async () => (await client()).cases.replyToRequest(caseId, dialog.request.Id, reply, activeTreeId)))}
+                    onSave={async (reply) => {
+                        const request = dialog.request;
+                        const ok = after(await ws.run(async () => (await client()).cases.replyToRequest(caseId, request.Id, reply, activeTreeId)));
+                        // They sent it: go on to add the record, tied to the request.
+                        if (ok && reply.state === 'received' && request.LeadId != null) {
+                            openPanel({ kind: 'find', leadId: request.LeadId, start: { mode: 'have', requestId: request.Id, repository: request.Holder ?? undefined } });
+                        }
+                        return ok;
+                    }}
                 />
             )}
             {dialog?.kind === 'about' && (

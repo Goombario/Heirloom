@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { familyResearchSubject, personResearchSubject } from '@/lib/research/subject';
+import { familyResearchSubject, leadResearchSubject, personResearchSubject } from '@/lib/research/subject';
 
 const person = {
     FirstName: 'Edith May',
@@ -100,5 +100,24 @@ describe('familyResearchSubject', () => {
             .toEqual({ kind: 'marriage', date: '1890', place: 'Toronto', marriage: { date: '1890', spouse: husband } });
         expect(familyResearchSubject(detail, 'Events', 6, 2026)!.input.fact).toEqual({ kind: 'other', date: '1910', place: null });
         expect(familyResearchSubject(detail, 'Events', 7, 2026)).toBeNull();
+    });
+});
+
+describe('leadResearchSubject (#58)', () => {
+    it('searches the lead years and the case place as a residence', () => {
+        const s = leadResearchSubject(personPage, { fromYear: 1890, toYear: 1900, place: 'Toronto' }, 2026);
+        expect(s.input.fact).toEqual({ kind: 'residence', date: 'BET 1890 AND 1900', place: 'Toronto' });
+        expect(s.input.marriages).toEqual([{ date: '3 JUN 1890', spouse: walter }]);
+        expect(s.firstName).toBe('Edith');
+    });
+
+    it('takes one year, or one open end', () => {
+        expect(leadResearchSubject(person, { fromYear: 1901, toYear: 1901, place: null }, 2026).input.fact.date).toBe('1901');
+        expect(leadResearchSubject(person, { fromYear: 1901, toYear: null, place: null }, 2026).input.fact.date).toBe('AFT 1901');
+        expect(leadResearchSubject(person, { fromYear: null, toYear: 1901, place: null }, 2026).input.fact.date).toBe('BEF 1901');
+    });
+
+    it('searches the name with no years and no place', () => {
+        expect(leadResearchSubject(person, { fromYear: null, toYear: null, place: null }, 2026).input.fact).toEqual({ kind: 'name', date: null, place: null });
     });
 });

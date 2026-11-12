@@ -1,7 +1,7 @@
 import type { CaseClaim, CaseFinding } from '@/lib/db/schema';
 
 /** The fact keys a claim can name, each with a `caseResearch.what_*` label (#58). Anything else is the researcher's own words. */
-const CLAIM_KEYS = ['BIRT', 'BAPM', 'DEAT', 'BURI', 'MARR', 'RESI', 'OCCU', 'CENS', 'EMIG', 'IMMI', 'NATU', 'PARENTS'] as const;
+export const CLAIM_KEYS = ['BIRT', 'BAPM', 'DEAT', 'BURI', 'MARR', 'RESI', 'OCCU', 'CENS', 'EMIG', 'IMMI', 'NATU', 'PARENTS'] as const;
 const KEYS: ReadonlySet<string> = new Set(CLAIM_KEYS);
 
 /** A claim's "what", translated when it is a known key. */

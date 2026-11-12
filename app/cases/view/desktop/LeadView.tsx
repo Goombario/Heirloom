@@ -23,7 +23,7 @@ const shortDate = { month: 'short', day: 'numeric' } as const;
  * found as plain rows; and the lead's media. A settled lead locks its decisions
  * and offers Reopen lead.
  */
-export function LeadView({ summary, findings, requests, comments, settledLeadIds, treeId, canEdit, busy, actions, onEdit, onSettle, onReopen, onDrop, onDecide, onReply, onOpenMedia }: {
+export function LeadView({ summary, findings, requests, comments, settledLeadIds, treeId, canEdit, busy, actions, openRecordId, onOpenRecord, onEdit, onSettle, onReopen, onDrop, onDecide, onReply, onOpenMedia }: {
     summary: LeadSummary;
     /** Every finding of the case: the lead's own are picked here. */
     findings: CaseFinding[];
@@ -36,6 +36,10 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
     busy: boolean;
     /** The lead's main action and anything beside it (Find a record). */
     actions?: React.ReactNode;
+    /** The finding shown in the Record tab, marked here. */
+    openRecordId?: number | null;
+    /** Show a finding's record in the right column. */
+    onOpenRecord?: (finding: CaseFinding) => void;
     onEdit: () => void;
     onSettle: () => void;
     onReopen: () => void;
@@ -156,6 +160,8 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
                                 busy={busy}
                                 otherLeads={f.leadIds.length - 1}
                                 onDecide={onDecide}
+                                open={openRecordId === f.Id}
+                                onOpenRecord={onOpenRecord}
                             />
                         ))}
                         {nothing.map((f) => (
@@ -196,8 +202,10 @@ export function LeadView({ summary, findings, requests, comments, settledLeadIds
 }
 
 /** One source with its claims, each decided in place. Claim rows are divided by straight lines. */
-function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide }: {
+function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide, open, onOpenRecord }: {
     finding: CaseFinding;
+    open: boolean;
+    onOpenRecord?: (finding: CaseFinding) => void;
     relations: Map<number, ClaimRelation>;
     locked: boolean;
     busy: boolean;
@@ -209,9 +217,14 @@ function FindingCard({ finding, relations, locked, busy, otherLeads, onDecide }:
     const title = finding.citation?.sourceTitle || t('untitled_record');
     const sub = [finding.citation?.sourceRepo, finding.citation?.Page].filter(Boolean).join(' · ');
     return (
-        <article className={cx('rounded-card', 'border border-border bg-card overflow-hidden')} aria-label={title}>
+        <article className={cx('rounded-card', 'border bg-card overflow-hidden', open ? 'border-text' : 'border-border')} aria-label={title}>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 pt-3 pb-2.5">
-                <h3 className="m-0 text-base font-semibold text-text break-words">{title}</h3>
+                <h3 className="m-0 text-base font-semibold text-text break-words">
+                    {onOpenRecord ? (
+                        <button type="button" onClick={() => onOpenRecord(finding)} aria-expanded={open}
+                            className="bg-transparent border-0 p-0 text-left font-semibold text-text hover:underline cursor-pointer focus-ring rounded-sm">{title}</button>
+                    ) : title}
+                </h3>
                 <span className="font-mono text-meta text-text-muted">{format.dateTime(new Date(finding.CreatedAt), shortDate)}</span>
                 {(sub || otherLeads > 0) && (
                     <p className="m-0 col-span-2 text-meta text-text-muted">
