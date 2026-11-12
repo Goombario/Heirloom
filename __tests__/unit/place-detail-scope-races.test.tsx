@@ -94,7 +94,7 @@ describe('PlaceDetail scope races', () => {
     render(<PlaceDetailClient />);
     await screen.findByRole('heading', { name: 'Paris' });
     expect(detail).toHaveBeenCalledWith(7, 1);
-    await user.click(screen.getByRole('button', { name: 'edit' }));
+    await user.click(screen.getByRole('button', { name: 'fix_location' }));
     await user.click(screen.getAllByRole('button', { name: 'save' })[0]!);
     await waitFor(() => expect(updateCoordinates).toHaveBeenCalledWith(7, 1, 2, 1));
     expect(replace).not.toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe('PlaceDetail scope races', () => {
     const view = render(<PlaceDetailClient />);
 
     await screen.findByRole('heading', { name: 'Alpha' });
-    await user.click(screen.getByRole('button', { name: 'edit' }));
+    await user.click(screen.getByRole('button', { name: 'fix_location' }));
     await user.click(screen.getAllByRole('button', { name: 'save' })[0]!);
     await waitFor(() => expect(updateCoordinates).toHaveBeenCalledWith('Alpha', 1, 2, 1));
 

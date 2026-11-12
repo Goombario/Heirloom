@@ -17,6 +17,7 @@ import { initialsFromName } from '@/lib/utils/initials';
 import { useCachedResource } from '@/app/components/useCachedResource';
 import { placeDetailKey } from '@/lib/places/prefetch';
 import { eventTypeLabel } from '@/lib/places/eventTypes';
+import { factTally } from '@/app/places/factTally';
 import { usePlaceFactReason } from '../usePlaceFactReason';
 import { groupFactLinks } from './groupFactLinks';
 import { prefetchPerson } from '@/app/people/view/personCache';
@@ -103,15 +104,11 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace }: Explo
     return link.placeName.split(',')[0]?.trim() ?? link.placeName;
   }, [placeName]);
 
-  const eventCounts = useMemo(() => {
-    if (!detail) return [] as { type: string; label: string; count: number }[];
-    const tally = new Map<string, number>();
-    for (const e of detail.eventCounts) tally.set(e.type, (tally.get(e.type) ?? 0) + e.count);
-    if (detail.familyCount > 0) tally.set('MARR', (tally.get('MARR') ?? 0) + detail.familyCount);
-    return Array.from(tally.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([type, count]) => ({ type, label: eventTypeLabel(type, t), count }));
-  }, [detail, t]);
+  // Every record here by type, births and deaths included (#56).
+  const eventCounts = useMemo(
+    () => factTally(detail?.factLinks ?? []).map(({ type, count }) => ({ type, label: eventTypeLabel(type, t), count })),
+    [detail, t],
+  );
 
   // The selected place's first and last dated record, for the summary line and Years.
   const years = useMemo(() => {

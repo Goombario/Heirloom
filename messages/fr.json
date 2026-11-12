@@ -908,9 +908,6 @@
     "records_total": "{count, plural, one {# enregistrement au total} other {# enregistrements au total}}",
     "not_geocoded": "Non géocodé",
     "geocoded": "Géocodé",
-    "role_born_here": "né(e) ici",
-    "role_died_here": "décédé(e) ici",
-    "role_born_died_here": "né(e) et décédé(e) ici",
     "explore_all_places": "Tous les lieux",
     "explore_subplaces": "{count, plural, one {# lieu à l'intérieur} other {# lieux à l'intérieur}}",
     "explore_places_in": "{count, plural, one {# lieu dans {parent}} other {# lieux dans {parent}}}",
@@ -1142,7 +1139,8 @@
     "empty_import": "Importer un fichier GEDCOM",
     "empty_add_person": "Ajouter une personne",
     "part_of_chain": "Fait partie de {chain}",
-    "no_records_here": "Aucun document ici pour l’instant."
+    "no_records_here": "Aucun document ici pour l’instant.",
+    "rename_or_merge": "Renommer ou fusionner"
   },
   "mobilePlaces": {
     "filter_places": "Filtrer les lieux",
@@ -4674,5 +4672,33 @@
     "children_hint": "Enfants de {names}, ou une nouvelle personne",
     "children_hint_alone": "Cherchez dans l’arbre ou créez une nouvelle personne",
     "more_on_page": "Les notes, les médias et d’autres événements s’ajoutent sur la page de la famille après l’enregistrement."
+  },
+  "placeDesktop": {
+    "cover_people": "{count, plural, one {# personne} other {# personnes}}",
+    "cover_records": "{count, plural, one {# enregistrement} other {# enregistrements}}",
+    "cover_within": "{count, plural, one {# lieu à l’intérieur} other {# lieux à l’intérieur}}",
+    "chain_more": "{count, plural, one {# autre lieu} other {# autres lieux}}",
+    "not_inside_yet": "Pas encore rattaché à un lieu plus grand",
+    "not_on_map_yet": "Pas encore sur la carte",
+    "put_on_map": "Le placer sur la carte",
+    "fix_location": "Corriger l’emplacement",
+    "borrowed_note": "{place} n’a pas encore d’épingle. Affichage de {parent}, le lieu qui le contient.",
+    "details": "Détails",
+    "on_map_as": "Sur la carte comme",
+    "no_other_names": "Aucun pour l’instant",
+    "names_more": "+{count} de plus",
+    "edit": "Modifier",
+    "edit_other_names": "Modifier les autres noms",
+    "delete_blocked_records": "Seulement si aucun enregistrement ne l’utilise. {count, plural, one {# l’utilise} other {# l’utilisent}}.",
+    "delete_blocked": "Seulement si rien ne l’utilise.",
+    "what_happened": "Ce qui s’est passé ici",
+    "nothing_yet": "Rien ne s’est encore passé ici : aucun enregistrement ne cite ce lieu.",
+    "nothing_yet_delete": "Vous pouvez le supprimer depuis le menu ⋯.",
+    "note_edit": "Modifier la note",
+    "note_delete": "Supprimer la note",
+    "note_placeholder": "Que savez-vous de ce lieu ?",
+    "note_saved": "Note enregistrée",
+    "note_added": "Note ajoutée",
+    "note_deleted": "Note supprimée"
   }
 }

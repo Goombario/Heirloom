@@ -908,9 +908,6 @@
     "records_total": "{count, plural, one {# запись всего} few {# записи всего} many {# записей всего} other {# записей всего}}",
     "not_geocoded": "Без геокодирования",
     "geocoded": "С координатами",
-    "role_born_here": "родился здесь",
-    "role_died_here": "умер здесь",
-    "role_born_died_here": "родился и умер здесь",
     "explore_all_places": "Все места",
     "explore_subplaces": "{count, plural, one {# место внутри} few {# места внутри} many {# мест внутри} other {# места внутри}}",
     "explore_places_in": "{count, plural, one {# место в {parent}} few {# места в {parent}} many {# мест в {parent}} other {# мест в {parent}}}",
@@ -1142,7 +1139,8 @@
     "empty_import": "Импортировать файл GEDCOM",
     "empty_add_person": "Добавить человека",
     "part_of_chain": "Входит в {chain}",
-    "no_records_here": "Здесь пока нет записей."
+    "no_records_here": "Здесь пока нет записей.",
+    "rename_or_merge": "Переименовать или объединить"
   },
   "mobilePlaces": {
     "filter_places": "Фильтр мест",
@@ -4674,5 +4672,33 @@
     "children_hint": "Дети {names} или новый человек",
     "children_hint_alone": "Найдите людей в древе или создайте нового человека",
     "more_on_page": "Заметки, медиа и другие события добавляются на странице семьи после сохранения."
+  },
+  "placeDesktop": {
+    "cover_people": "{count, plural, one {# человек} few {# человека} many {# человек} other {# человека}}",
+    "cover_records": "{count, plural, one {# запись} few {# записи} many {# записей} other {# записи}}",
+    "cover_within": "{count, plural, one {# место внутри} few {# места внутри} many {# мест внутри} other {# места внутри}}",
+    "chain_more": "{count, plural, one {ещё # место} few {ещё # места} many {ещё # мест} other {ещё # места}}",
+    "not_inside_yet": "Пока не входит в более крупное место",
+    "not_on_map_yet": "Пока нет на карте",
+    "put_on_map": "Отметить на карте",
+    "fix_location": "Исправить местоположение",
+    "borrowed_note": "У места {place} пока нет метки. Показано {parent} — место, в которое оно входит.",
+    "details": "Сведения",
+    "on_map_as": "На карте как",
+    "no_other_names": "Пока нет",
+    "names_more": "ещё {count}",
+    "edit": "Изменить",
+    "edit_other_names": "Изменить другие названия",
+    "delete_blocked_records": "Только если его не используют записи. {count, plural, one {Используется в # записи} few {Используется в # записях} many {Используется в # записях} other {Используется в # записи}}.",
+    "delete_blocked": "Только если его ничто не использует.",
+    "what_happened": "Что здесь происходило",
+    "nothing_yet": "Здесь пока ничего не происходило: ни одна запись не называет это место.",
+    "nothing_yet_delete": "Его можно удалить в меню ⋯.",
+    "note_edit": "Изменить заметку",
+    "note_delete": "Удалить заметку",
+    "note_placeholder": "Что вы знаете об этом месте?",
+    "note_saved": "Заметка сохранена",
+    "note_added": "Заметка добавлена",
+    "note_deleted": "Заметка удалена"
   }
 }

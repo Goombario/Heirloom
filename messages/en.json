@@ -908,9 +908,6 @@
     "records_total": "{count, plural, one {# record total} other {# records total}}",
     "not_geocoded": "Not geocoded",
     "geocoded": "Geocoded",
-    "role_born_here": "born here",
-    "role_died_here": "died here",
-    "role_born_died_here": "born & died here",
     "explore_all_places": "All places",
     "explore_subplaces": "{count, plural, one {# place inside} other {# places inside}}",
     "explore_places_in": "{count, plural, one {# place in {parent}} other {# places in {parent}}}",
@@ -1142,7 +1139,8 @@
     "empty_import": "Import a GEDCOM file",
     "empty_add_person": "Add a person",
     "part_of_chain": "Part of {chain}",
-    "no_records_here": "No records here yet."
+    "no_records_here": "No records here yet.",
+    "rename_or_merge": "Rename or merge"
   },
   "mobilePlaces": {
     "filter_places": "Filter places",
@@ -4674,5 +4672,33 @@
     "children_hint": "Children of {names}, or someone new",
     "children_hint_alone": "Find people in the tree, or create someone new",
     "more_on_page": "Notes, media and more events are added on the family’s page after saving."
+  },
+  "placeDesktop": {
+    "cover_people": "{count, plural, one {# person} other {# people}}",
+    "cover_records": "{count, plural, one {# record} other {# records}}",
+    "cover_within": "{count, plural, one {# place within} other {# places within}}",
+    "chain_more": "{count, plural, one {# more place} other {# more places}}",
+    "not_inside_yet": "Not inside a larger place yet",
+    "not_on_map_yet": "Not on the map yet",
+    "put_on_map": "Put it on the map",
+    "fix_location": "Fix the location",
+    "borrowed_note": "{place} has no pin yet. Showing {parent}, the place it's in.",
+    "details": "Details",
+    "on_map_as": "On the map as",
+    "no_other_names": "None yet",
+    "names_more": "+{count} more",
+    "edit": "Edit",
+    "edit_other_names": "Edit other names",
+    "delete_blocked_records": "Only when no records use it. {count, plural, one {# does} other {# do}}.",
+    "delete_blocked": "Only when nothing uses it.",
+    "what_happened": "What happened here",
+    "nothing_yet": "Nothing has happened here yet: no records name this place.",
+    "nothing_yet_delete": "You can delete it from the ⋯ menu.",
+    "note_edit": "Edit note",
+    "note_delete": "Delete note",
+    "note_placeholder": "What do you know about this place?",
+    "note_saved": "Note saved",
+    "note_added": "Note added",
+    "note_deleted": "Note deleted"
   }
 }

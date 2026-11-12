@@ -45,6 +45,9 @@ interface LocationMapProps {
   gestures?: boolean;
   /** A tap on the map itself, not on a pin. */
   onBackgroundClick?: () => void;
+  /** Space kept clear of pins when framing them, in pixels: the place page's cover lays
+   *  its name over the map's foot (#56), so the pins frame above it. */
+  insets?: { top: number; right: number; bottom: number; left: number };
 }
 
 /** Stable empty default — a fresh `[]` in the parameter list would be a new array every
@@ -168,6 +171,7 @@ export default function LocationMap({
   onMarkerDragEnd,
   gestures = false,
   onBackgroundClick,
+  insets,
 }: LocationMapProps) {
   const t = useTranslations('common');
   const { resolvedTheme } = useTheme();
@@ -179,6 +183,8 @@ export default function LocationMap({
   // marker values actually change. Read live markers via ref.
   const markersRef = useRef(markers);
   markersRef.current = markers;
+  // Read once, when the map is built: the cover's insets never change.
+  const insetsRef = useRef(insets);
   const markersKey = markers
     .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}`)
     .join(';');
@@ -250,6 +256,7 @@ export default function LocationMap({
         });
         map.on('error', () => { if (!cancelled) setFailed(true); });
         collapseCompactAttribution(map);
+        if (insetsRef.current) map.setPadding(insetsRef.current);
 
         // Pins stop their own clicks, so this is only ever the map itself.
         map.on('click', () => backgroundClickRef.current?.());

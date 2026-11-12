@@ -1,34 +1,27 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useTree } from '@/app/contexts/TreeContext';
 import { getDataClient } from '@/lib/data';
-import { displayFullName } from '@/lib/utils/names';
 import { dataCache } from '@/lib/data/cache';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { useLoadPhase } from '@/app/components/useLoadPhase';
-import LocationMap from '@/app/components/LocationMap';
 import { Card } from '@/app/components/ui/Card';
-import { Badge } from '@/app/components/ui/Badge';
 import { Button } from '@/app/components/ui/Button';
-import PersonAvatar from '@/app/components/PersonAvatar';
-import { initialsFromName } from '@/lib/utils/initials';
 import { warmThumbnails } from '@/lib/media/warmThumbnails';
-import { PageShell, DetailHero, HeroEditButton, DetailRail, SectionHeader, InlineDataError, Lifespan, showErrorToast, showSuccessToast } from '@/app/components/ui';
-import { MapPin, Pencil, ChevronRight, X, Check } from '@/lib/icons';
+import { PageShell, DetailBody, SectionHeader, InlineDataError, showErrorToast, showSuccessToast, type RecordMenuItem } from '@/app/components/ui';
+import { Pencil, X, Check } from '@/lib/icons';
 import PlaceEditFields, { parseCoords } from './PlaceEditFields';
 import PlaceDetailSkeleton from './PlaceDetailSkeleton';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
-import { OwnerNotesCard, NoteCount } from '@/app/components/notes/OwnerNotesCard';
-import { placeRoleLabel } from '@/lib/places/placeRole';
 import { placeDetailKey, usePrefetchPlaceDetail } from '@/lib/places/prefetch';
 import { placeHref, type PlaceKey } from '@/lib/places/place-key';
 import { parseIdParam } from '@/lib/utils/parse-id';
 import { eventTypeLabel } from '@/lib/places/eventTypes';
-import { PinMark } from '../PinMark';
+import { factTally } from '@/app/places/factTally';
+import { groupFactLinks } from '@/app/places/explore/groupFactLinks';
 import { chainFromCandidate, type PhotonCandidate } from '@/lib/geocode/photon';
 import type { PlaceDetail } from '@/lib/data/types';
 import RecordNotFound from '@/app/components/RecordNotFound';
@@ -36,22 +29,19 @@ import { isMissingPlace } from './missingPlace';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { MobilePlacePage, MobilePlaceSkeleton } from './mobile/MobilePlacePage';
 import { MoveRecordsDialog } from './MoveRecords';
-import { PlaceInUseHint, placeUnused } from './PlaceInUse';
+import { placeUnused } from './PlaceInUse';
 import {
-    OtherNamesCard, OtherNamesEditor, OtherNamesSubtitle, RenameChoices, blankDraft, draftsBlocked, draftsChanged, draftsFor, draftsToSave,
+    OtherNamesEditor, RenameChoices, blankDraft, draftsBlocked, draftsChanged, draftsFor, draftsToSave,
     type NameDraft, type RenameChoice,
 } from './OtherNames';
 import { buildPlaceNameIndex, mergeTargetNames, type PlaceNameIndex } from '@/lib/places/other-names';
 import { recordedAsByPerson } from './recordedAs';
 import { ValidationError } from '@/lib/validation';
-
-
-/** Connected people listed before the "Show all" row. */
-const PEOPLE_PAGE = 12;
-
-/** Avatar diameter in the connected-people list — also the width the thumbnail
- *  warm targets, so the prefetch and the render ask for the same variant. */
-const PERSON_AVATAR_SIZE = 36;
+import { sortableYear } from '@/lib/date-utils';
+import { useChange } from '@/app/people/view/mobile/useChange';
+import { PlaceCover, type CoverMap } from './desktop/PlaceCover';
+import { PlaceRail, RAIL_AVATAR_SIZE } from './desktop/PlaceRail';
+import { PlaceNotes } from './desktop/PlaceNotes';
 
 // Owner-scoped cache key for a place-detail payload (see lib/places/prefetch.ts —
 // single source of truth, shared with the hover/focus prefetch). Served from the
@@ -73,7 +63,7 @@ export default function PlaceDetailClient() {
     const router = useRouter();
     const t = useTranslations('places');
     const tc = useTranslations('common');
-    const tNotes = useTranslations('notes');
+    const tDesk = useTranslations('placeDesktop');
     const { activeTreeId, activePermission, currentUserId } = useTree();
     const { redirectIfUnauthorized } = useErrorToast();
     const prefetchPlace = usePrefetchPlaceDetail();
@@ -100,7 +90,6 @@ export default function PlaceDetailClient() {
     const [coordsError, setCoordsError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const [noteCount, setNoteCount] = useState(0);
 
     // Rename / merge state (CRUD §1.2).
     const [nameInput, setNameInput] = useState('');
@@ -166,7 +155,6 @@ export default function PlaceDetailClient() {
         setNameDrafts([]);
         setNameIndex(null);
         setMovingRecords(false);
-        setNoteCount(0);
         wasEditingRef.current = false;
     }, [scopeKey]);
 
@@ -232,8 +220,8 @@ export default function PlaceDetailClient() {
     useEffect(() => {
         if (!detail) return;
         warmThumbnails(
-            detail.people.map((p) => ({ mediaId: p.PrimaryMediaId, focalRadius: p.FocalRadius })),
-            { containerWidth: PERSON_AVATAR_SIZE, treeId: activeTreeId },
+            groupFactLinks(detail.factLinks).map((p) => ({ mediaId: p.primaryMediaId, focalRadius: p.focalRadius })),
+            { containerWidth: RAIL_AVATAR_SIZE, treeId: activeTreeId },
         );
     }, [detail, activeTreeId]);
 
@@ -241,31 +229,28 @@ export default function PlaceDetailClient() {
 
     const totalCount = detail ? detail.people.length + detail.eventCount + detail.familyCount : 0;
     const recordedNames = useMemo(() => (detail ? recordedAsByPerson(detail) : new Map<number, string>()), [detail]);
-    const peopleCount = detail?.people.length ?? 0;
-    // A busy place listed everyone in one column (74 people made the page 4,938px
-    // tall), so the list shows a first page and a "Show all" row (#765, LY-3).
-    // Keyed to the place, so following a "Part of" link starts collapsed again.
-    const [showAllPeopleFor, setShowAllPeopleFor] = useState<string | null>(null);
-    const visiblePeople = !detail ? [] : showAllPeopleFor === scopeKey ? detail.people : detail.people.slice(0, PEOPLE_PAGE);
-    const hiddenPeople = peopleCount - visiblePeople.length;
+    // Everyone a record here names, once each: the cover's count and the rail's faces.
+    const personGroups = useMemo(() => groupFactLinks(detail?.factLinks ?? []), [detail]);
+    const peopleCount = personGroups.length;
     const geocoded = detail != null && detail.latitude != null && detail.longitude != null;
+    // The first and last dated record here, for the cover's counts line.
+    const years = useMemo(() => {
+        const ys = (detail?.factLinks ?? []).map((f) => sortableYear(f.date)).filter((y): y is number => y != null);
+        return ys.length > 0 ? { first: Math.min(...ys), last: Math.max(...ys) } : null;
+    }, [detail]);
+    // Note writes reload the place (its note count is a use) and offer Undo to editors.
+    const [notesVersion, setNotesVersion] = useState(0);
+    const afterChange = useCallback(async () => {
+        setNotesVersion((v) => v + 1);
+        await fetchDetail();
+    }, [fetchDetail]);
+    const run = useChange({ treeId: activeTreeId, canUndo: canDelete, onChanged: afterChange });
 
-    // Localize the server-aggregated per-type event counts for the right-rail
-    // "Events here" card, folding marriages in as MARR.
-    const eventCounts = useMemo(() => {
-        if (!detail) return [] as { type: string; label: string; count: number }[];
-        const tally = new Map<string, number>();
-        for (const e of detail.eventCounts) {
-            tally.set(e.type, (tally.get(e.type) ?? 0) + e.count);
-        }
-        // Marriages arrive as a family count, not event rows.
-        if (detail.familyCount > 0) {
-            tally.set('MARR', (tally.get('MARR') ?? 0) + detail.familyCount);
-        }
-        return Array.from(tally.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(([type, count]) => ({ type, label: eventTypeLabel(type, t), count }));
-    }, [detail, t]);
+    // Every record here by type, births and deaths included (#56).
+    const eventCounts = useMemo(
+        () => factTally(detail?.factLinks ?? []).map(({ type, count }) => ({ type, label: eventTypeLabel(type, t), count })),
+        [detail, t],
+    );
 
     // While editing, the map shows the EDIT BUFFER, not the saved row: typing coordinates
     // moves the pin, and dragging the pin writes them back (#566). Debounced, because the
@@ -392,6 +377,15 @@ export default function PlaceDetailClient() {
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
     }, [editing, handleCancel]);
+
+    // Rename or merge opens the panel on its name field, not the coordinates.
+    const editPanelRef = useRef<HTMLElement>(null);
+    const focusNameRef = useRef(false);
+    useEffect(() => {
+        if (!editing || !focusNameRef.current) return;
+        focusNameRef.current = false;
+        editPanelRef.current?.querySelector('input')?.focus();
+    }, [editing]);
 
     // Return focus to the Edit button after the edit panel closes.
     useEffect(() => {
@@ -577,100 +571,86 @@ export default function PlaceDetailClient() {
             </div>
         );
 
+    // The cover's map: the place's own pin (or the one being typed or dragged), the
+    // pins of the places within it, a parent's pin, or nothing at all (#56).
+    const coverMap: CoverMap = editPoint || geocoded
+        ? { kind: 'pins', markers: [{ lat: mapPoint!.lat, lng: mapPoint!.lng, label: placeShort }], draggable: editing, onDrag: handlePinDrag }
+        : descendantMarkers.length > 0
+            ? { kind: 'pins', markers: descendantMarkers, draggable: false }
+            : detail?.inheritedFrom
+                ? { kind: 'borrowed', markers: [{ lat: detail.inheritedFrom.lat, lng: detail.inheritedFrom.lng, label: detail.inheritedFrom.name.split(',')[0]?.trim() || detail.inheritedFrom.name }], from: detail.inheritedFrom.name, draggable: editing, onDrag: handlePinDrag }
+                : { kind: 'none' };
+
+    // Opens the edit panel with its name field focused (Rename or merge).
+    const startRename = () => {
+        focusNameRef.current = true;
+        handleEdit();
+    };
+    const inUse = detail?.uses ? !placeUnused(detail.uses) : false;
+    const menu: RecordMenuItem[] = canEdit && detail?.id != null ? [
+        { label: t('rename_or_merge'), onSelect: startRename },
+        { label: t('move_records_title'), onSelect: () => setMovingRecords(true) },
+        ...(canDelete ? [{
+            label: t('delete_place'),
+            danger: true,
+            separated: true,
+            disabled: inUse,
+            disabledReason: inUse && detail.uses
+                ? (detail.uses.records > 0 ? tDesk('delete_blocked_records', { count: detail.uses.records }) : tDesk('delete_blocked'))
+                : undefined,
+            onSelect: () => setConfirmingDelete(true),
+        }] : []),
+    ] : [];
+
+    const editPanel = editing && detail ? (
+        <section ref={editPanelRef} aria-labelledby="place-edit-title">
+            <SectionHeader level="rail" headingId="place-edit-title" title={<span className="inline-flex items-center gap-1.5"><Pencil size={12} aria-hidden="true" />{t('editing_place')}</span>} />
+            <PlaceEditFields
+                placeName={placeName}
+                displayName={detail.displayName}
+                coordsValue={coordsInput}
+                onCoordsChange={(v) => { setCoordsInput(v); if (coordsError) setCoordsError(null); }}
+                coordsError={coordsError}
+                draggableHint={coverMap.kind !== 'none'}
+                pinAdjusted={pinAdjusted}
+                nameValue={nameInput}
+                onNameChange={setNameInput}
+                otherPlaces={otherPlaces}
+                onApplyName={handleApplyName}
+                renaming={renaming}
+                onRematch={handleRematch}
+                rematching={rematching}
+                separate={renameChoice.separate}
+                renameChoices={
+                    <RenameChoices
+                        from={placeName}
+                        to={nameInput.trim()}
+                        target={otherPlaces.includes(nameInput.trim()) ? nameInput.trim() : null}
+                        records={detail.ownNameRecords ?? 0}
+                        choice={renameChoice}
+                        onChoice={setRenameChoice}
+                        disabled={renaming}
+                    />
+                }
+                otherNames={detail.id != null && (
+                    <OtherNamesEditor drafts={nameDrafts} onChange={setNameDrafts} placeName={placeName} index={nameIndex} disabled={saving} />
+                )}
+            />
+            {saveError && <p role="alert" className="mt-3 text-xs text-error">{saveError}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+                <Button variant="outline" size="sm" icon={<X size={13} aria-hidden="true" />} onClick={handleCancel} disabled={saving}>
+                    {tc('cancel')}
+                </Button>
+                <Button variant="primary" size="sm" icon={<Check size={13} aria-hidden="true" />} onClick={handleSave} disabled={saving || namesBlocked}>
+                    {saving ? t('saving') : t('save')}
+                </Button>
+            </div>
+        </section>
+    ) : null;
+
     return (
         <>
             <PageShell variant="detail" topBar={phonePage} contentClassName="max-md:hidden">
-                {/* Anchored header — light DetailHero (tier-1, light tone) */}
-                <DetailHero tone="light" className={editing ? 'ring-2 ring-[color:var(--color-text)]' : undefined}>
-                    <div className="flex justify-between items-start gap-4 flex-wrap">
-                        <div className="flex-1 min-w-0">
-                            {editing && (
-                                <div className="flex items-center gap-1.5 mb-1.5 text-xs font-medium uppercase tracking-wide text-[color:var(--color-text)]">
-                                    <Pencil size={12} aria-hidden="true" />
-                                    {t('editing_place')}
-                                </div>
-                            )}
-                            <h1 className="title-record text-text">{placeShort}</h1>
-                            <OtherNamesSubtitle names={detail?.otherNames} className="mt-0.5 text-md text-text-secondary" />
-                            {/* The enclosing places, as links. Not a breadcrumb: the Place-only
-                                breadcrumb went in #765; app-wide breadcrumbs are #732's call. */}
-                            {detail?.parents && detail.parents.length > 0 && (
-                                // A wrapping row, so a deep chain breaks between places on a
-                                // phone instead of running off the card: the old inline run
-                                // had no break opportunity around a margin-spaced "›" (#928).
-                                // Each "›" travels with the place after it.
-                                <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-sm text-text-muted">
-                                    <span>{t('part_of')}</span>
-                                    {detail.parents.map((p, i) => (
-                                        <span key={p.id} className="inline-flex min-w-0 items-baseline gap-x-1.5">
-                                            {i > 0 && <span aria-hidden="true">›</span>}
-                                            <Link href={placeHref(p)} className="min-w-0 break-words text-link hover:underline">
-                                                {p.name.split(',')[0]?.trim() ?? p.name}
-                                            </Link>
-                                        </span>
-                                    ))}
-                                </p>
-                            )}
-                            {detail && (
-                                <>
-                                    {/* "Geocoded as" lives in Place details only (#1185). */}
-                                    <p className="mt-2 text-sm text-text-muted">
-                                        <span>{t('people_linked', { count: peopleCount })}</span>
-                                        <span> · </span>
-                                        <span>{t('records_total', { count: totalCount })}</span>
-                                    </p>
-                                    <div className="flex gap-2 mt-3 flex-wrap">
-                                        {/* The mark comes from the ONE geocode-state set (#266).
-                                            It used to be a MapPin in both states, so the same
-                                            shape said "has a pin" and "has no pin" and only the
-                                            badge tone told them apart — colour alone.
-                                            Only the own-pin mark is drawn: this surface knows
-                                            whether the place has its OWN coordinates, not
-                                            whether an ancestor lends it one, and the hollow
-                                            ring specifically means "no pin anywhere". The words
-                                            beside it already carry the negative case. */}
-                                        {/* Geocoded and the place form are facts, so muted text;
-                                            a missing pin is a state to act on, so it keeps its tag (#757). */}
-                                        {geocoded ? (
-                                            <span className="inline-flex items-center gap-1 text-meta text-text-muted"><PinMark state="own" />{t('geocoded')}</span>
-                                        ) : (
-                                            <Badge tone="warning">{t('not_geocoded')}</Badge>
-                                        )}
-                                        {detail.form && <span className="text-meta text-text-muted">{t('form_label', { form: detail.form })}</span>}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        {canEdit && !editing && (
-                            <span ref={editButtonContainerRef}>
-                                <HeroEditButton onClick={() => handleEdit()} />
-                            </span>
-                        )}
-                        {canEdit && editing && (
-                            <div className="flex shrink-0 gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    icon={<X size={13} aria-hidden="true" />}
-                                    onClick={handleCancel}
-                                    disabled={saving}
-                                >
-                                    {tc('cancel')}
-                                </Button>
-                                <Button
-                                    variant="primary"
-                                    size="sm"
-                                    icon={<Check size={13} aria-hidden="true" />}
-                                    onClick={handleSave}
-                                    disabled={saving || namesBlocked}
-                                >
-                                    {saving ? t('saving') : t('save')}
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </DetailHero>
-
                 {phase === 'loading' ? (
                     <PlaceDetailSkeleton />
                 ) : phase === 'pending' ? null : !detail && visibleLoadError ? (
@@ -681,6 +661,7 @@ export default function PlaceDetailClient() {
                     />
                 ) : !detail ? (
                     <Card className="text-center py-8">
+                        <h1 className="title-record text-text">{placeShort}</h1>
                         <p className="text-text-muted">{t('no_records')}</p>
                     </Card>
                 ) : (
@@ -693,248 +674,60 @@ export default function PlaceDetailClient() {
                             className="mb-4"
                         />
                     )}
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_1fr] gap-4 items-start">
-                        {/* LEFT — map + people list */}
-                        <div>
-                            {!mapPoint && descendantMarkers.length > 0 ? (
-                                <>
-                                    <LocationMap
-                                        markers={descendantMarkers}
-                                        variant="full"
-                                        height={280}
-                                        className="mb-4"
-                                    />
-                                    <div className="mb-4 flex items-start gap-2 text-xs text-text-muted" role="status">
-                                        <MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-                                        <span>{t('map_descendants_in', { count: descendantMarkers.length, place: placeName })}</span>
-                                    </div>
-                                </>
-                            ) : mapPoint ? (
-                                <>
-                                    <LocationMap
-                                        markers={[{ lat: mapPoint.lat, lng: mapPoint.lng, label: placeName }]}
-                                        variant="full"
-                                        height={280}
-                                        className="mb-4"
-                                        draggable={editing}
-                                        onMarkerDragEnd={handlePinDrag}
-                                    />
-                                    {detail?.inheritedFrom && (detail.latitude == null || detail.longitude == null) && (
-                                        <div className="mb-4 flex items-start gap-2 text-xs text-text-muted" role="status">
-                                            <PinMark state="inherited" />
-                                            <span>{t('map_inherited_from', { place: detail.inheritedFrom.name })}</span>
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                // No coordinates: a line on how to set a pin by hand, not an
-                                // empty 280px map box (FR-5). Live lookup is opt-in (#791).
-                                <p className="mb-4 flex items-start gap-2 text-sm text-text-muted">
-                                    <MapPin size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-                                    <span>{editing ? t('map_none_place_editing') : canEdit ? t('map_none_place_edit') : t('map_none_place')}</span>
+                    <PlaceCover
+                        detail={detail}
+                        placeName={placeName}
+                        map={coverMap}
+                        people={peopleCount}
+                        records={detail.factLinks.length}
+                        years={years}
+                        menu={menu}
+                        canEdit={canEdit}
+                        onPutOnMap={() => handleEdit()}
+                    />
+                    <DetailBody
+                        rail={(
+                            <PlaceRail
+                                key={scopeKey}
+                                detail={detail}
+                                people={personGroups}
+                                placeName={placeName}
+                                treeId={activeTreeId}
+                                canEdit={canEdit}
+                                pinned={geocoded}
+                                recordedAs={recordedNames}
+                                onEditNames={() => handleEdit()}
+                                onFixLocation={() => handleEdit()}
+                                onPrefetchPlace={prefetchPlace}
+                                fixRef={editButtonContainerRef}
+                                editing={editPanel}
+                            />
+                        )}
+                    >
+                        <section aria-labelledby="place-events-title">
+                            <SectionHeader headingId="place-events-title" title={tDesk('what_happened')} />
+                            {eventCounts.length === 0 ? (
+                                <p className="m-0 text-sm text-text-muted">
+                                    {tDesk('nothing_yet')}
+                                    {canDelete && !inUse && <> {tDesk('nothing_yet_delete')}</>}
                                 </p>
-                            )}
-
-                            {detail.people.length > 0 && (
-                                <>
-                                    <SectionHeader title={t('people_connected', { place: placeShort })} />
-                                    <Card pad={false} className="overflow-hidden">
-                                        {visiblePeople.map((p, i) => {
-                                            const fullName = displayFullName(p);
-                                            const sex = p.Sex === 'M' ? 'M' : p.Sex === 'F' ? 'F' : null;
-                                            return (
-                                                <Link
-                                                    key={p.Id}
-                                                    href={`/people/view?id=${p.Id}`}
-                                                    className={`flex items-center gap-3 px-4 py-2.5 min-h-[44px] hover:bg-[color:var(--color-hover-surface)] transition-colors ${i < visiblePeople.length - 1 || hiddenPeople > 0 ? 'border-b border-border-light' : ''}`}
-                                                >
-                                                    {/* PersonAvatar, not the initials-only `Avatar`: the
-                                                        payload carries each person's primary photo and its
-                                                        focal crop, and showing initials for someone whose
-                                                        face we have reads as "no photo on file". */}
-                                                    <PersonAvatar
-                                                        mediaId={p.PrimaryMediaId}
-                                                        treeId={activeTreeId}
-                                                        sex={sex}
-                                                        name={fullName}
-                                                        initials={initialsFromName(fullName)}
-                                                        focalX={p.FocalX}
-                                                        focalY={p.FocalY}
-                                                        focalRadius={p.FocalRadius}
-                                                        size={PERSON_AVATAR_SIZE}
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="text-sm font-semibold text-text truncate">
-                                                            {fullName || t('person_fallback', { id: p.Id })}
-                                                        </div>
-                                                        <div className="text-xs text-text-muted">
-                                                            {/* PlaceRole is a raw derived code ('born', 'died',
-                                                                'born & died') — it was rendering untranslated,
-                                                                so French and Russian users read English here. */}
-                                                            {placeRoleLabel(p.PlaceRole, t)}
-                                                            {(p.BirthDate || p.DeathDate) && <> · <Lifespan birth={p.BirthDate} death={p.DeathDate} /></>}
-                                                            {recordedNames.has(p.Id) && <> · {t.rich('recorded_as', { name: recordedNames.get(p.Id)!, i: (c) => <i className="serif">{c}</i> })}</>}
-                                                        </div>
-                                                    </div>
-                                                    <ChevronRight size={16} className="text-text-muted shrink-0" aria-hidden="true" />
-                                                </Link>
-                                            );
-                                        })}
-                                        {hiddenPeople > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAllPeopleFor(scopeKey)}
-                                                className="w-full px-4 py-2.5 min-h-[44px] text-sm font-medium text-link text-left cursor-pointer hover:bg-[color:var(--color-hover-surface)] transition-colors focus-ring-inset"
-                                            >
-                                                {t('show_all_people', { count: detail.people.length })}
-                                            </button>
-                                        )}
-                                    </Card>
-                                </>
-                            )}
-
-                            {detail.children && detail.children.length > 0 && (
-                                <div className="mt-4">
-                                    <SectionHeader title={t('places_within', { place: placeShort })} />
-                                    <Card pad={false} className="overflow-hidden">
-                                        {detail.children.map((c, i, arr) => (
-                                            <Link
-                                                key={c.id}
-                                                href={placeHref(c)}
-                                                onMouseEnter={() => prefetchPlace(c.name)}
-                                                onFocus={() => prefetchPlace(c.name)}
-                                                className={`flex items-center gap-3 px-4 py-2.5 min-h-[44px] hover:bg-[color:var(--color-hover-surface)] transition-colors ${i < arr.length - 1 ? 'border-b border-border-light' : ''}`}
-                                            >
-                                                <MapPin size={16} className="text-text-muted shrink-0" aria-hidden="true" />
-                                                <span className="flex-1 min-w-0 serif text-sm text-text truncate">{c.name.split(',')[0]?.trim() ?? c.name}</span>
-                                                <ChevronRight size={16} className="text-text-muted shrink-0" aria-hidden="true" />
-                                            </Link>
-                                        ))}
-                                    </Card>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* RIGHT — details + events rail: cards on the page, headings inside (#764).
-                            Swaps to the edit form when editing. */}
-                        <DetailRail>
-                            {editing ? (
-                                <div className="card p-4">
-                                    <SectionHeader level="rail" title={t('place_details')} />
-                                    <PlaceEditFields
-                                        placeName={placeName}
-                                        displayName={detail.displayName}
-                                        coordsValue={coordsInput}
-                                        onCoordsChange={(v) => { setCoordsInput(v); if (coordsError) setCoordsError(null); }}
-                                        coordsError={coordsError}
-                                        draggableHint={mapPoint != null}
-                                        pinAdjusted={pinAdjusted}
-                                        nameValue={nameInput}
-                                        onNameChange={setNameInput}
-                                        otherPlaces={otherPlaces}
-                                        onApplyName={handleApplyName}
-                                        renaming={renaming}
-                                        onRematch={handleRematch}
-                                        rematching={rematching}
-                                        separate={renameChoice.separate}
-                                        renameChoices={
-                                            <RenameChoices
-                                                from={placeName}
-                                                to={nameInput.trim()}
-                                                target={otherPlaces.includes(nameInput.trim()) ? nameInput.trim() : null}
-                                                records={detail.ownNameRecords ?? 0}
-                                                choice={renameChoice}
-                                                onChoice={setRenameChoice}
-                                                disabled={renaming}
-                                            />
-                                        }
-                                        otherNames={detail.id != null && (
-                                            <OtherNamesEditor drafts={nameDrafts} onChange={setNameDrafts} placeName={placeName} index={nameIndex} disabled={saving} />
-                                        )}
-                                    />
-                                    {saveError && (
-                                        <p role="alert" className="mt-3 text-xs text-error">{saveError}</p>
-                                    )}
-                                    {detail.id != null && (
-                                        <div className="mt-4 border-t border-border-light pt-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                <Button variant="outline" size="sm" onClick={() => setMovingRecords(true)} disabled={saving || renaming || deleting}>
-                                                    {t('move_records')}
-                                                </Button>
-                                                {canDelete && detail.uses && placeUnused(detail.uses) && (
-                                                    <Button variant="danger-text" size="sm" onClick={() => setConfirmingDelete(true)} disabled={saving || renaming || deleting}>
-                                                        {t('delete_place')}
-                                                    </Button>
-                                                )}
-                                            </div>
-                                            {canDelete && detail.uses && !placeUnused(detail.uses) && (
-                                                <PlaceInUseHint place={placeName} uses={detail.uses} className="mt-2" />
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
                             ) : (
-                                <div className="card p-4">
-                                    <SectionHeader level="rail" title={t('place_details')} />
-                                    <dl className="grid grid-cols-[92px_1fr] gap-x-3 gap-y-2 text-sm">
-                                        {detail.displayName && (
-                                            <>
-                                                <dt className="text-text-muted">{t('geocoded_label')}</dt>
-                                                <dd className="text-text">{detail.displayName}</dd>
-                                            </>
-                                        )}
-                                        {/* "Place name", never "Canonical" or "Display name" —
-                                            ADR 0017. This is Places.Name; the row above is
-                                            Places.DisplayName. */}
-                                        <dt className="text-text-muted">{t('place_name')}</dt>
-                                        <dd className="text-text">{placeName}</dd>
-                                        <dt className="text-text-muted">{t('coordinates')}</dt>
-                                        <dd className="tabular-nums text-text-muted">
-                                            {geocoded ? `${detail.latitude!.toFixed(4)}, ${detail.longitude!.toFixed(4)}` : t('not_geocoded_value')}
-                                        </dd>
-                                    </dl>
-                                </div>
-                            )}
-
-                            {!editing && detail.id != null && (
-                                <OtherNamesCard names={detail.otherNames ?? []} canEdit={canEdit} onAdd={() => handleEdit()} />
-                            )}
-
-                            {!editing && eventCounts.length > 0 && (
-                                <div className="card p-4">
-                                    <SectionHeader level="rail" title={t('events_here')} />
-                                    <div className="text-sm">
+                                <Card pad={false}>
+                                    <ul className="m-0 p-2 list-none">
                                         {eventCounts.map(({ type, label, count }) => (
-                                            <div key={type} className="flex justify-between items-center py-1 border-b border-border-light last:border-0">
+                                            <li key={type} className="flex justify-between items-center px-2 py-2 text-sm border-b border-border-light last:border-0">
                                                 <span className="text-text">{label}</span>
                                                 <span className="tabular-nums text-text-muted">{count}</span>
-                                            </div>
+                                            </li>
                                         ))}
-                                    </div>
-                                </div>
+                                    </ul>
+                                </Card>
                             )}
-
-                            {/* Notes live in the rail, as on the person and family
-                                detail pages — full width made them the loudest thing
-                                on the page (review 6 §11.2.8). On mobile the rail
-                                stacks under the main column, so they still read last. */}
-                            {!editing && detail.id != null && (
-                                <OwnerNotesCard
-                                        ownerTable="Places"
-                                        ownerId={detail.id}
-                                        treeId={activeTreeId}
-                                        canEdit={canEdit}
-                                        canDelete={canDelete}
-                                        onNotesChange={(notes) => setNoteCount(notes.length)}
-                                        headerRule
-                                        header={
-                                            <SectionHeader level="rail" className="mb-0" title={<>{tNotes('section_title')} <NoteCount count={noteCount} /></>} />
-                                        }
-                                    />
-                            )}
-                        </DetailRail>
-                    </div>
-
+                        </section>
+                        {detail.id != null && (
+                            <PlaceNotes key={scopeKey} placeId={detail.id} treeId={activeTreeId} canEdit={canEdit} canDelete={canDelete} run={run} refreshKey={notesVersion} />
+                        )}
+                    </DetailBody>
                     </>
                 )}
             </PageShell>
