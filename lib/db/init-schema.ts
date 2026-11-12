@@ -22,7 +22,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 68;
+export const SCHEMA_VERSION = 69;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -544,6 +544,171 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
         );
       END IF;
     END$migration$;
+  `);
+
+  // ── v69: a case holds leads, findings and claims (#58, ADR 0045) ────────────
+  // The desktop research workspace. A lead is a sub-question with its own people;
+  // a finding is a record a lead turned up (its source a Citation with FactTable
+  // 'CaseFindings') or a search that found nothing; a claim is one thing a record
+  // says, decided in place. A request tracks a record asked of an archive or a
+  // relative. Lead status is worked out from these rows, never stored. Additive:
+  // every existing case gains its question as its first lead, and nothing else
+  // moves.
+  await pool.query(`ALTER TABLE "Cases" ADD COLUMN IF NOT EXISTS "FromYear" INTEGER;`);
+  await pool.query(`ALTER TABLE "Cases" ADD COLUMN IF NOT EXISTS "ToYear" INTEGER;`);
+  await pool.query(`ALTER TABLE "Cases" ADD COLUMN IF NOT EXISTS "Place" TEXT;`);
+  await pool.query(`ALTER TABLE "Cases" ADD COLUMN IF NOT EXISTS "QuestionKind" TEXT;`);
+  await pool.query(`ALTER TABLE "Cases" ADD COLUMN IF NOT EXISTS "Outcome" TEXT CHECK ("Outcome" IN ('answered', 'ruled_out', 'unresolved'));`);
+  await pool.query(`ALTER TABLE "Cases" ADD COLUMN IF NOT EXISTS "ClosedAt" TIMESTAMPTZ;`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseLeads" (
+      "Id" SERIAL PRIMARY KEY,
+      "CaseId" INTEGER NOT NULL REFERENCES "Cases"("Id") ON DELETE CASCADE,
+      "Question" VARCHAR(500) NOT NULL,
+      "FromYear" INTEGER,
+      "ToYear" INTEGER,
+      "Position" INTEGER NOT NULL DEFAULT 0,
+      "CreatedBy" INTEGER REFERENCES "Users"("Id") ON DELETE SET NULL,
+      "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "SettledAt" TIMESTAMPTZ,
+      "SettledBy" INTEGER REFERENCES "Users"("Id") ON DELETE SET NULL,
+      "DroppedAt" TIMESTAMPTZ,
+      CONSTRAINT caseleads_years_check CHECK ("FromYear" IS NULL OR "ToYear" IS NULL OR "FromYear" <= "ToYear")
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_caseleads_caseid" ON "CaseLeads"("CaseId");`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseLeadPerson" (
+      "LeadId" INTEGER NOT NULL REFERENCES "CaseLeads"("Id") ON DELETE CASCADE,
+      "PersonId" INTEGER NOT NULL REFERENCES "People"("Id") ON DELETE CASCADE,
+      PRIMARY KEY ("LeadId", "PersonId")
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_caseleadperson_personid" ON "CaseLeadPerson"("PersonId");`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseRequests" (
+      "Id" SERIAL PRIMARY KEY,
+      "CaseId" INTEGER NOT NULL REFERENCES "Cases"("Id") ON DELETE CASCADE,
+      "LeadId" INTEGER REFERENCES "CaseLeads"("Id") ON DELETE SET NULL,
+      "UserId" INTEGER REFERENCES "Users"("Id") ON DELETE SET NULL,
+      "AskedFor" TEXT NOT NULL,
+      "Holder" TEXT,
+      "SentBy" TEXT CHECK ("SentBy" IN ('online', 'email', 'post', 'in_person')),
+      "SentOn" DATE,
+      "Reference" TEXT,
+      "RemindOn" DATE,
+      "State" TEXT NOT NULL DEFAULT 'waiting' CHECK ("State" IN ('waiting', 'received', 'nothing')),
+      "RepliedAt" TIMESTAMPTZ,
+      "ReplyNote" TEXT,
+      "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_caserequests_caseid" ON "CaseRequests"("CaseId");`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseFindings" (
+      "Id" SERIAL PRIMARY KEY,
+      "CaseId" INTEGER NOT NULL REFERENCES "Cases"("Id") ON DELETE CASCADE,
+      "UserId" INTEGER REFERENCES "Users"("Id") ON DELETE SET NULL,
+      "Kind" TEXT NOT NULL CHECK ("Kind" IN ('record', 'nothing')),
+      "MediaId" INTEGER REFERENCES "Media"("Id") ON DELETE SET NULL,
+      "SourceNature" TEXT CHECK ("SourceNature" IN ('original', 'derivative', 'authored')),
+      "Information" TEXT CHECK ("Information" IN ('primary', 'secondary', 'unknown')),
+      "Searched" TEXT,
+      "Site" TEXT,
+      "Note" TEXT,
+      "RequestId" INTEGER REFERENCES "CaseRequests"("Id") ON DELETE SET NULL,
+      "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT casefindings_nothing_check CHECK ("Kind" = 'record' OR ("Searched" IS NOT NULL AND "MediaId" IS NULL))
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_casefindings_caseid" ON "CaseFindings"("CaseId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_casefindings_mediaid" ON "CaseFindings"("MediaId");`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseFindingLead" (
+      "FindingId" INTEGER NOT NULL REFERENCES "CaseFindings"("Id") ON DELETE CASCADE,
+      "LeadId" INTEGER NOT NULL REFERENCES "CaseLeads"("Id") ON DELETE CASCADE,
+      PRIMARY KEY ("FindingId", "LeadId")
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_casefindinglead_leadid" ON "CaseFindingLead"("LeadId");`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseClaims" (
+      "Id" SERIAL PRIMARY KEY,
+      "FindingId" INTEGER NOT NULL REFERENCES "CaseFindings"("Id") ON DELETE CASCADE,
+      "Position" INTEGER NOT NULL DEFAULT 0,
+      "What" TEXT NOT NULL,
+      "PersonId" INTEGER REFERENCES "People"("Id") ON DELETE SET NULL,
+      "PersonName" TEXT,
+      "Says" TEXT,
+      "Date" TEXT,
+      "Place" TEXT,
+      "Evidence" TEXT CHECK ("Evidence" IN ('direct', 'indirect', 'negative')),
+      "Decision" TEXT NOT NULL DEFAULT 'undecided' CHECK ("Decision" IN ('accepted', 'rejected', 'undecided')),
+      "DecidedAt" TIMESTAMPTZ,
+      "DecidedBy" INTEGER REFERENCES "Users"("Id") ON DELETE SET NULL,
+      "AppliedAt" TIMESTAMPTZ,
+      "AppliedAuditId" INTEGER,
+      "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_caseclaims_findingid" ON "CaseClaims"("FindingId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_caseclaims_personid" ON "CaseClaims"("PersonId");`);
+
+  // The journal: the app's new entry kinds point at their finding or request, and
+  // any entry can be filed under leads (none = the whole case). The Kind check is
+  // replaced by a named one that allows the new kinds; ADR 0042's strike check is
+  // unchanged, so only a researcher's note can still be struck out.
+  await pool.query(`ALTER TABLE "CaseComments" ADD COLUMN IF NOT EXISTS "FindingId" INTEGER REFERENCES "CaseFindings"("Id") ON DELETE SET NULL;`);
+  await pool.query(`ALTER TABLE "CaseComments" ADD COLUMN IF NOT EXISTS "RequestId" INTEGER REFERENCES "CaseRequests"("Id") ON DELETE SET NULL;`);
+  await pool.query(`
+    DO $migration$
+    DECLARE old_check TEXT;
+    BEGIN
+      SELECT conname INTO old_check FROM pg_constraint
+       WHERE conrelid = '"CaseComments"'::regclass AND contype = 'c'
+         AND conname <> 'casecomments_struck_check' AND conname <> 'casecomments_kind_check'
+         AND pg_get_constraintdef(oid) LIKE '%Kind%';
+      IF old_check IS NOT NULL THEN
+        EXECUTE format('ALTER TABLE "CaseComments" DROP CONSTRAINT %I', old_check);
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = '"CaseComments"'::regclass AND conname = 'casecomments_kind_check'
+      ) THEN
+        ALTER TABLE "CaseComments" ADD CONSTRAINT casecomments_kind_check
+          CHECK ("Kind" IN ('status', 'conclusion', 'finding', 'search', 'request', 'reply', 'lead'));
+      END IF;
+    END$migration$;
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "CaseCommentLead" (
+      "CommentId" INTEGER NOT NULL REFERENCES "CaseComments"("Id") ON DELETE CASCADE,
+      "LeadId" INTEGER NOT NULL REFERENCES "CaseLeads"("Id") ON DELETE CASCADE,
+      PRIMARY KEY ("CommentId", "LeadId")
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "idx_casecommentlead_leadid" ON "CaseCommentLead"("LeadId");`);
+
+  // Every case gets its question as its first lead, with the case's people, in one
+  // statement so only the leads made here get people. Keyed on "has no lead yet",
+  // so a later boot never gives a case a second one (a dropped lead keeps its row).
+  await pool.query(`
+    WITH made AS (
+      INSERT INTO "CaseLeads" ("CaseId", "Question", "Position", "CreatedBy", "CreatedAt")
+      SELECT c."Id", LEFT(c."Title", 500), 0, c."UserId", c."CreatedAt"
+        FROM "Cases" c
+       WHERE NOT EXISTS (SELECT 1 FROM "CaseLeads" l WHERE l."CaseId" = c."Id")
+      RETURNING "Id", "CaseId"
+    )
+    INSERT INTO "CaseLeadPerson" ("LeadId", "PersonId")
+    SELECT made."Id", cp."PersonId" FROM made JOIN "CasePerson" cp ON cp."CaseId" = made."CaseId"
+    ON CONFLICT DO NOTHING;
   `);
 
   // #789 (and #727): the last zone-less timestamps become TIMESTAMPTZ. Drivers

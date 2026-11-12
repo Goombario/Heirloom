@@ -68,6 +68,63 @@ async function casesOf(treeId: number): Promise<CaseView[]> {
     return views;
 }
 
+/** Research on the first case with people (#58): a lead, a request, a record with claims, a search, a filed note. */
+async function seedWorkspace(treeId: number) {
+    const { addFindingService, addLeadService, addRequestService, changeLeadService, decideClaimService } = await import('@/lib/services/case-workspace');
+    const { addCommentService } = await import('@/lib/services/cases');
+    const { ensureFirstLead } = await import('@/lib/db/queries/case-workspace');
+    const scope = { requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID };
+    // The fixture writes its cases straight to the tables; v69 would have given each its first lead.
+    for (const c of (await query(`SELECT "Id" FROM "Cases" WHERE "TreeId" = $1`, [treeId])).rows as Array<{ Id: number }>) {
+        await ensureFirstLead({ query: (text, params) => query(text, params) }, c.Id, USER_ID);
+    }
+    const row = (await query(
+        `SELECT c."Id", MIN(cp."PersonId") AS "PersonId" FROM "Cases" c JOIN "CasePerson" cp ON cp."CaseId" = c."Id"
+          WHERE c."TreeId" = $1 AND c."Status" <> 'closed' GROUP BY c."Id" ORDER BY c."Id" LIMIT 1`,
+        [treeId],
+    )).rows[0] as { Id: number; PersonId: number };
+    const sourceId = ((await query(`SELECT "Id" FROM "Sources" WHERE "TreeId" = $1 ORDER BY "Id" LIMIT 1`, [treeId])).rows[0] as { Id: number }).Id;
+    const caseId = row.Id;
+    const lead = (await addLeadService({ caseId, ...scope, body: { question: 'Check the 1881 census', fromYear: 1880, toYear: 1882, personIds: [row.PersonId] } })).id!;
+    const request = (await addRequestService({ caseId, ...scope, body: { leadId: lead, askedFor: 'Baptism entry', holder: 'Parish office', sentBy: 'post', sentOn: '2026-10-01' } })).id!;
+    const record = await addFindingService({ caseId, ...scope, body: {
+        kind: 'record', leadIds: [lead], requestId: request, source: { id: sourceId }, page: 'folio 9', sourceNature: 'original', information: 'primary',
+        claims: [{ what: 'BIRT', personId: row.PersonId, date: '1851', evidence: 'direct' }, { what: 'Father', personName: 'John', evidence: 'indirect' }],
+    } });
+    for (const claim of record.workspace.findings.find((f) => f.Id === record.id)!.claims) {
+        await decideClaimService({ caseId, claimId: claim.Id, ...scope, body: { decision: claim.What === 'BIRT' ? 'accepted' : 'rejected' } });
+    }
+    await addFindingService({ caseId, ...scope, body: { kind: 'nothing', leadIds: [lead], searched: '1871 census', site: 'FreeCEN' } });
+    await changeLeadService({ caseId, leadId: lead, ...scope, body: { action: 'settle' } });
+    await addCommentService({ id: caseId, body: 'Filed under the census lead.', leadIds: [lead], ...scope });
+}
+
+/** A case's research by value: no ids, people and sources by name. */
+async function workspacesOf(treeId: number) {
+    const { getCaseWorkspaceService } = await import('@/lib/services/case-workspace');
+    const { getCaseService } = await import('@/lib/services/cases');
+    const scope = { requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID };
+    const ids = (await query(`SELECT "Id", "Title" FROM "Cases" WHERE "TreeId" = $1 ORDER BY "Title"`, [treeId])).rows as Array<{ Id: number; Title: string }>;
+    const out = [];
+    for (const { Id, Title } of ids) {
+        const ws = await getCaseWorkspaceService({ caseId: Id, ...scope });
+        const leadName = new Map(ws.leads.map((l) => [l.Id, l.Question]));
+        const comments = (await getCaseService({ id: Id, ...scope })).comments;
+        out.push({
+            Title,
+            leads: ws.leads.map((l) => [l.Question, l.FromYear, l.ToYear, l.SettledAt != null, l.people.map((p) => p.FirstName).sort()]),
+            requests: ws.requests.map((r) => [r.AskedFor, r.LeadId == null ? null : leadName.get(r.LeadId), r.SentOn, r.State]),
+            findings: ws.findings.map((f) => [
+                f.Kind, f.leadIds.map((l) => leadName.get(l)), f.citation?.sourceTitle ?? null, f.citation?.Page ?? null, f.Searched, f.SourceNature,
+                f.RequestId != null,
+                f.claims.map((c) => [c.What, c.personLabel ?? null, c.PersonName, c.Date, c.Evidence, c.Decision]),
+            ]),
+            filed: comments.filter((c) => (c.leadIds ?? []).length > 0).map((c) => [c.Kind ?? null, c.Body, (c.leadIds ?? []).map((l) => leadName.get(l))]),
+        });
+    }
+    return out;
+}
+
 describe('synthetic fixture cases round-trip through cases.json (#913)', () => {
     let db: PGlite;
     let source: number;
@@ -82,6 +139,7 @@ describe('synthetic fixture cases round-trip through cases.json (#913)', () => {
         source = ((await query(`INSERT INTO "Trees" ("OwnerId", "Name") VALUES ($1, 'Seeded') RETURNING "Id"`, [USER_ID])).rows[0] as { Id: number }).Id;
         target = ((await query(`INSERT INTO "Trees" ("OwnerId", "Name") VALUES ($1, 'Restored') RETURNING "Id"`, [USER_ID])).rows[0] as { Id: number }).Id;
         await seedSyntheticDataset({ query: (text, params) => db.query(text, params) }, { userId: USER_ID, treeId: source, storage: 'local' });
+        await seedWorkspace(source);
 
         const { exportGedcomLocalService } = await import('@/lib/data/local/gedcom-export');
         const { importGedcomService } = await import('@/lib/services/gedcom');
@@ -121,5 +179,13 @@ describe('synthetic fixture cases round-trip through cases.json (#913)', () => {
         expect(before.flatMap((c) => c.comments).filter((cm) => cm[3] !== null).length).toBeGreaterThan(0);
         expect(before.flatMap((c) => c.comments).filter((cm) => cm[4] !== null).length).toBeGreaterThan(0);
         expect(await casesOf(target)).toEqual(before);
+    });
+
+    it('re-imports each case’s research: leads, requests, findings, claims and filing (#58)', async () => {
+        const before = await workspacesOf(source);
+        // Guard against a vacuous pass: the seeded research is there.
+        expect(before.flatMap((c) => c.findings)).toHaveLength(2);
+        expect(before.flatMap((c) => c.filed).length).toBeGreaterThan(3);
+        expect(await workspacesOf(target)).toEqual(before);
     });
 });

@@ -273,7 +273,8 @@ const ENTITY_CONFIG: Record<string, EntityConfig> = {
     case: {
         table: '"Cases"',
         scope: 'user-tree',
-        allowedFields: new Set(['Title', 'Description', 'Status', 'Tags']),
+        // The case's scope (#58) is audited and reverts like its title.
+        allowedFields: new Set(['Title', 'Description', 'Status', 'Tags', 'FromYear', 'ToYear', 'Place', 'QuestionKind']),
     },
     source: {
         table: '"Sources"',
@@ -466,6 +467,15 @@ async function assertCitationRelationships(
                       FROM "CaseComments" cc
                       JOIN "Cases" c ON c."Id" = cc."CaseId"
                       WHERE cc."Id" = $1 AND c."TreeId" = $2 AND c."UserId" = $3`,
+                params: [factId, treeId, treeOwnerId],
+            };
+            break;
+        case FACT_TABLES.CASE_FINDINGS:
+            fact = {
+                sql: `SELECT 1
+                      FROM "CaseFindings" cf
+                      JOIN "Cases" c ON c."Id" = cf."CaseId"
+                      WHERE cf."Id" = $1 AND c."TreeId" = $2 AND c."UserId" = $3`,
                 params: [factId, treeId, treeOwnerId],
             };
             break;

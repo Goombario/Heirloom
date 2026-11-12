@@ -6,7 +6,10 @@ import { markRawPointers, maskRawPointers, maskRawPointersSql, RAW_POINTER_MARKE
 import { readGedcomText } from '@/lib/gedcom/charset';
 import { MAX_GEDCOM_BYTES, MAX_SPREADSHEET_BYTES, capInMegabytes } from '@/lib/import-limits';
 import { parseMediaSidecar } from '@/lib/gedcom/media-sidecar';
-import { casesSidecarEvidence } from '@/lib/gedcom/cases-sidecar';
+import { casesSidecarEvidence, parseCaseScope, parseCaseWorkspace, parseCommentLinks, type ParsedCaseWorkspace } from '@/lib/gedcom/cases-sidecar';
+import { ensureFirstLead, fileComment, importWorkspace, type ImportedWorkspaceIds } from '@/lib/db/queries/case-workspace';
+import { FACT_TABLES } from '@/lib/db/fact-tables';
+import type { CaseCommentKind } from '@/lib/db/schema';
 import type { ParsedMediaSidecar } from '@/lib/gedcom/media-sidecar';
 import { parseSourcesSidecar } from '@/lib/gedcom/sources-sidecar';
 import type { SidecarSourceEntry, SidecarNameVariantEntry } from '@/lib/gedcom/sources-sidecar';
@@ -254,14 +257,18 @@ function sidecarInstant(value: unknown): string | null {
 }
 
 const CASE_STATUS_ENTRIES: ReadonlySet<string> = new Set(['in_progress', 'on_hold', 'closed', 'reopened']);
+const CASE_LEAD_ENTRIES: ReadonlySet<string> = new Set(['added', 'settled', 'reopened', 'dropped']);
 
 /**
  * A cases.json journal entry's Kind (#801). An unknown kind, or a status line
  * whose body isn't a status, imports as a plain note so its text still shows.
  */
-function caseCommentKind(kind: unknown, body: string): 'status' | 'conclusion' | null {
+function caseCommentKind(kind: unknown, body: string): CaseCommentKind | null {
   if (kind === 'conclusion') return 'conclusion';
   if (kind === 'status' && CASE_STATUS_ENTRIES.has(body)) return 'status';
+  // The research workspace's entries (#58, ADR 0045).
+  if (kind === 'finding' || kind === 'search' || kind === 'request' || kind === 'reply') return kind;
+  if (kind === 'lead' && CASE_LEAD_ENTRIES.has(body)) return 'lead';
   return null;
 }
 
@@ -2509,28 +2516,67 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
             )).rows[0]?.Id
           : undefined;
         let caseId: number;
+        // The workspace (#58) comes in only with a case this import creates: a
+        // merge into a case the tree already has keeps that case's own research.
+        let workspace: ParsedCaseWorkspace | null = null;
+        let workspaceIds: ImportedWorkspaceIds | null = null;
+        let createdHere = false;
         if (existingCaseId !== undefined) {
           caseId = existingCaseId;
         } else {
           // Keep the exported instants so a backup restore round-trips them (#789).
           const createdAt = sidecarInstant(c.CreatedAt);
+          const caseScope = parseCaseScope(c);
+          const status = c.Status ?? 'in_progress';
           const caseResult = await client.query(
-            `INSERT INTO "Cases" ("UserId", "TreeId", "Title", "Description", "Status", "Tags", "CreatedAt", "UpdatedAt")
-             VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, CURRENT_TIMESTAMP), COALESCE($8::timestamptz, $7::timestamptz, CURRENT_TIMESTAMP))
+            `INSERT INTO "Cases" ("UserId", "TreeId", "Title", "Description", "Status", "Tags", "CreatedAt", "UpdatedAt",
+                                  "FromYear", "ToYear", "Place", "QuestionKind", "Outcome", "ClosedAt")
+             VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, CURRENT_TIMESTAMP), COALESCE($8::timestamptz, $7::timestamptz, CURRENT_TIMESTAMP),
+                     $9, $10, $11, $12, $13, $14::timestamptz)
              RETURNING "Id"`,
             [
               scope.ownerId,
               scope.treeId,
               title,
               c.Description ? String(c.Description).slice(0, 5000) : null,
-              c.Status ?? 'in_progress',
+              status,
               c.Tags ?? [],
               createdAt,
               sidecarInstant(c.UpdatedAt),
+              caseScope.FromYear,
+              caseScope.ToYear,
+              caseScope.Place,
+              caseScope.QuestionKind,
+              // How it closed belongs to a closed case only.
+              status === 'closed' ? caseScope.Outcome : null,
+              status === 'closed' ? caseScope.ClosedAt : null,
             ]
           );
           caseId = caseResult.rows[0].Id;
           importedCasesCount++;
+          createdHere = true;
+          workspace = parseCaseWorkspace(c);
+          // Behind a savepoint: a workspace the database still refuses is dropped,
+          // and the case comes in without it rather than failing the import.
+          await client.query('SAVEPOINT import_case_workspace');
+          try {
+            workspaceIds = await importWorkspace(client, caseId, scope.treeId, currentUserId, workspace, {
+              person: (xref) => personIdMap.get(xref),
+              media: (xref) => mediaContext.mediaXrefToId.get(xref),
+              cite: async (findingId, cit) => {
+                const sid = sourceXrefToId.get(cit.source);
+                if (sid !== undefined && await insertCitation(
+                  client, scope, FACT_TABLES.CASE_FINDINGS, findingId, sid, cit.page, cit.note, mode, cit.evidence, true,
+                )) importedCitationsCount++;
+              },
+            });
+            await client.query('RELEASE SAVEPOINT import_case_workspace');
+          } catch (err) {
+            await client.query('ROLLBACK TO SAVEPOINT import_case_workspace');
+            console.warn('[gedcom import] a case\'s research could not be imported', err);
+            workspace = null;
+            workspaceIds = null;
+          }
         }
 
         // Older bundles can carry both the free-text and structured arrays.
@@ -2607,11 +2653,17 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
             }
           }
           if (commentId === undefined) {
+            // Its filing, finding and request (#58), in a case whose workspace came in with it.
+            const links = workspace && workspaceIds ? parseCommentLinks(cmt, workspace) : null;
+            const findingId = links?.finding == null ? null : workspaceIds!.findings[links.finding] ?? null;
+            const requestId = links?.request == null ? null : workspaceIds!.requests[links.request] ?? null;
             commentId = (await client.query(
-              `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "CreatedAt", "Kind", "MediaId", "StruckAt", "StruckReason")
-               VALUES ($1, $2, $3, COALESCE($4::timestamptz, CURRENT_TIMESTAMP), $5, $6, $7::timestamptz, $8) RETURNING "Id"`,
-              [caseId, currentUserId, body, createdAt, kind, mediaId, struckAt, struckReason]
+              `INSERT INTO "CaseComments" ("CaseId", "UserId", "Body", "CreatedAt", "Kind", "MediaId", "StruckAt", "StruckReason", "FindingId", "RequestId")
+               VALUES ($1, $2, $3, COALESCE($4::timestamptz, CURRENT_TIMESTAMP), $5, $6, $7::timestamptz, $8, $9, $10) RETURNING "Id"`,
+              [caseId, currentUserId, body, createdAt, kind, mediaId, struckAt, struckReason, findingId, requestId]
             )).rows[0].Id as number;
+            const leadIds = (links?.leads ?? []).map((i) => workspaceIds!.leads[i]).filter((n): n is number => n !== undefined);
+            await fileComment(client, commentId, leadIds);
           }
           // The entry's citation (#1035). An entry shows one, so a merge whose
           // matched entry already has one leaves it alone.
@@ -2658,6 +2710,10 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
           const sid = sourceXrefToId.get(sc.source);
           if (sid) await insertCaseCitation(sid, sc.page ?? null, sc.note ?? null, casesSidecarEvidence(sc));
         }
+
+        // A case from a bundle without leads gets its question as its first lead,
+        // with its people, as v69 gave every case (ADR 0045 §1).
+        if (createdHere) await ensureFirstLead(client, caseId, currentUserId);
       }
     }
 

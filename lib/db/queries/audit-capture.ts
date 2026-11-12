@@ -122,6 +122,7 @@ const CITATION_FACT_WORDS: Record<string, string> = {
     [FACT_TABLES.NAME_VARIANT]: 'name variant',
     [FACT_TABLES.CASES]: 'research case',
     [FACT_TABLES.CASE_COMMENTS]: 'journal entry',
+    [FACT_TABLES.CASE_FINDINGS]: 'case finding',
 };
 
 function citationFactWord(record: Record<string, unknown>): string {
@@ -207,6 +208,14 @@ async function citationSubject(run: Queryable, treeId: number, record: Record<st
         case FACT_TABLES.CASE_COMMENTS: {
             const r = await run.query(
                 `SELECT c."Title" FROM "CaseComments" cc JOIN "Cases" c ON c."Id" = cc."CaseId" WHERE cc."Id" = $1 AND c."TreeId" = $2`,
+                [factId, treeId],
+            );
+            subject = (r.rows[0] as { Title?: string } | undefined)?.Title?.trim() || undefined;
+            break;
+        }
+        case FACT_TABLES.CASE_FINDINGS: {
+            const r = await run.query(
+                `SELECT c."Title" FROM "CaseFindings" cf JOIN "Cases" c ON c."Id" = cf."CaseId" WHERE cf."Id" = $1 AND c."TreeId" = $2`,
                 [factId, treeId],
             );
             subject = (r.rows[0] as { Title?: string } | undefined)?.Title?.trim() || undefined;

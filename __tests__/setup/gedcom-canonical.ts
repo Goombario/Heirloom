@@ -280,6 +280,13 @@ export async function canonicalizeTree(
   );
   // A journal entry's natural key: its case and body. The fixture's bodies are unique per case.
   const commentKey = new Map(caseComments.map(cm => [cm.Id, `${caseKey.get(cm.CaseId) ?? `<missing case:${cm.CaseId}>`}: ${cm.Body}`]));
+  // A case finding's natural key (#58): its case, kind, and what was searched or its note.
+  const caseFindings = await rows<{ Id: number; CaseId: number; Kind: string; Searched: string | null; Note: string | null }>(
+    `SELECT "Id","CaseId","Kind","Searched","Note" FROM "CaseFindings"
+     WHERE "CaseId" IN (SELECT "Id" FROM "Cases" WHERE "TreeId" = $1)`,
+    [treeId],
+  );
+  const findingKey = new Map(caseFindings.map(f => [f.Id, `${caseKey.get(f.CaseId) ?? `<missing case:${f.CaseId}>`}: ${f.Kind} ${f.Searched ?? f.Note ?? ''}`]));
   const caseMedia = await rows<{ CaseId: number; MediaId: number }>(
     `SELECT "CaseId","MediaId" FROM "CaseMedia"
      WHERE "CaseId" IN (SELECT "Id" FROM "Cases" WHERE "TreeId" = $1)`,
@@ -377,6 +384,8 @@ export async function canonicalizeTree(
         return caseKey.get(factId) ?? `<missing case:${factId}>`;
       case 'CaseComments':
         return commentKey.get(factId) ?? `<missing journal entry:${factId}>`;
+      case 'CaseFindings':
+        return findingKey.get(factId) ?? `<missing finding:${factId}>`;
       case 'NameVariant':
         return nameVariantKey.get(factId) ?? `<missing nameVariant:${factId}>`;
       default:

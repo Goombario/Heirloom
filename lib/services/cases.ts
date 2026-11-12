@@ -18,7 +18,7 @@ import { safeRollback } from '@/lib/db/rollback';
 import { auditCaseNoteStrike, withAuditIds, type Audited } from '@/lib/db/queries/audit-capture';
 import { validateStringField, ValidationError } from '@/lib/validation';
 import { AccessError, NotFoundError } from '@/lib/data/errors';
-import type { Case, CaseComment, CaseWithRelations, MediaWithPerson, NewCase } from '@/lib/db/schema';
+import type { Case, CaseComment, CaseOutcome, CaseWithRelations, MediaWithPerson, NewCase } from '@/lib/db/schema';
 
 // ── Param types ───────────────────────────────────────────────────────────────
 
@@ -65,6 +65,8 @@ export interface AddCommentParams {
   id: number;
   body: string;
   mediaId?: number | null;
+  /** The leads the note is filed under (#58); none files it under the whole case. */
+  leadIds?: unknown;
   requestedTreeId: number | null;
   requestedOwnerId: number | null;
   currentUserId: number;
@@ -96,6 +98,42 @@ export interface UnlinkMediaParams {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const VALID_STATUSES = new Set(['in_progress', 'on_hold', 'closed']);
+const VALID_OUTCOMES = new Set<CaseOutcome>(['answered', 'ruled_out', 'unresolved']);
+const QUESTION_KIND = /^[a-z_]{1,40}$/;
+
+function caseYear(value: unknown, field: string): number | null {
+  if (value === null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > 9999) throw new ValidationError(`${field} must be a year`);
+  return n;
+}
+
+/** The case's scope fields (#58): years, a focus place and the kind of question. Only those present. */
+function scopeFields(body: Record<string, unknown>): Partial<NewCase> {
+  const out: Partial<NewCase> = {};
+  if (body.FromYear !== undefined) out.FromYear = caseYear(body.FromYear, 'FromYear');
+  if (body.ToYear !== undefined) out.ToYear = caseYear(body.ToYear, 'ToYear');
+  if (out.FromYear != null && out.ToYear != null && out.FromYear > out.ToYear) {
+    throw new ValidationError('The from year is after the to year');
+  }
+  if (body.Place !== undefined) out.Place = validateStringField(body.Place, 'Place', 500)?.trim() || null;
+  if (body.QuestionKind !== undefined) {
+    const kind = body.QuestionKind;
+    if (kind !== null && (typeof kind !== 'string' || !QUESTION_KIND.test(kind))) throw new ValidationError('Invalid question kind');
+    out.QuestionKind = kind as string | null;
+  }
+  return out;
+}
+
+function leadIdList(value: unknown): number[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 200) throw new ValidationError('leadIds must be a list of ids');
+  return [...new Set(value.map((v) => {
+    const n = typeof v === 'number' ? v : Number(v);
+    if (!Number.isInteger(n) || n <= 0 || n > 2147483647) throw new ValidationError('leadIds must be a list of ids');
+    return n;
+  }))];
+}
 
 /** Map plain Error strings from case query fns to typed errors. */
 function mapCaseError(err: unknown): never | void {
@@ -160,6 +198,7 @@ export async function createCaseService(params: CreateCaseParams): Promise<Case>
     Description: validateStringField(body.Description, 'Description', 10000),
     Status: status,
     Tags: tags,
+    ...scopeFields(body),
   };
 
   const personIds: number[] = Array.isArray(body.personIds)
@@ -198,6 +237,7 @@ export async function updateCaseService(params: UpdateCaseParams): Promise<Case>
       ? body.Tags.map((t: unknown) => String(t).slice(0, 100)).filter(Boolean)
       : [];
   }
+  Object.assign(updates, scopeFields(body));
 
   const personIds: number[] = Array.isArray(body.personIds)
     ? body.personIds.map((pid: unknown) => parseInt(String(pid), 10)).filter((n: number) => !isNaN(n))
@@ -212,8 +252,15 @@ export async function updateCaseService(params: UpdateCaseParams): Promise<Case>
     ? validateStringField(body.Conclusion, 'Conclusion', 10000)
     : null;
 
+  // How the case closed (#58): answered, ruled out or unresolved. Kept only on close.
+  let outcome: CaseOutcome | null = null;
+  if (body.Outcome !== undefined && body.Outcome !== null) {
+    if (!VALID_OUTCOMES.has(body.Outcome as CaseOutcome)) throw new ValidationError('Invalid outcome');
+    outcome = body.Outcome as CaseOutcome;
+  }
+
   try {
-    return await updateCase(id, updates, personIds, mediaIds, scope.treeId, currentUserId, conclusion?.trim() || null);
+    return await updateCase(id, updates, personIds, mediaIds, scope.treeId, currentUserId, conclusion?.trim() || null, outcome);
   } catch (err) {
     mapCaseError(err);
     throw err;
@@ -241,7 +288,7 @@ export async function deleteCaseService(params: DeleteCaseParams): Promise<void>
 
 /** POST /api/cases/[id]/comments logic: check case exists and is open, then add a comment. */
 export async function addCommentService(params: AddCommentParams): Promise<CaseComment> {
-  const { id, body, mediaId = null, requestedTreeId, requestedOwnerId, currentUserId } = params;
+  const { id, body, mediaId = null, leadIds, requestedTreeId, requestedOwnerId, currentUserId } = params;
   const scope = await resolveTreeScope(
     { treeId: requestedTreeId, ownerId: requestedOwnerId },
     currentUserId
@@ -258,7 +305,12 @@ export async function addCommentService(params: AddCommentParams): Promise<CaseC
 
   // CaseComments.UserId is the comment AUTHOR (the acting user), not tree scope —
   // it stays keyed on currentUserId, never scope.ownerId.
-  return addComment(id, currentUserId, bodyText, mediaId);
+  try {
+    return await addComment(id, currentUserId, bodyText, mediaId, leadIdList(leadIds));
+  } catch (err) {
+    mapCaseError(err);
+    throw err;
+  }
 }
 
 export interface CaseNoteParams {

@@ -32,7 +32,7 @@ interface Draft {
     photoId?: number | null;
     sourceId?: number | null;
     /** An item whose record is found by looking the item up. */
-    pending?: { table: 'Events' | 'MediaTag' | 'NameVariant' | 'Citation' | 'CaseComments'; id: number };
+    pending?: { table: 'Events' | 'MediaTag' | 'NameVariant' | 'Citation' | 'CaseComments' | 'CaseFindings'; id: number };
 }
 
 const num = (v: unknown): number | null => {
@@ -64,6 +64,8 @@ function citedFact(draft: Draft, factTable: unknown, factId: number | null): voi
         case FACT_TABLES.EVENTS: item.fact = 'event'; draft.pending = { table: 'Events', id: factId }; return;
         case FACT_TABLES.NAME_VARIANT: item.fact = 'nameVariant'; draft.pending = { table: 'NameVariant', id: factId }; return;
         case FACT_TABLES.CASE_COMMENTS: item.fact = 'journal'; draft.pending = { table: 'CaseComments', id: factId }; return;
+        // A finding's record (#58) is cited for its case.
+        case FACT_TABLES.CASE_FINDINGS: item.fact = 'case'; draft.pending = { table: 'CaseFindings', id: factId }; return;
         default: return;
     }
     draft.kind = item.fact === 'partnership' || item.fact === 'marriage' ? 'family' : item.fact === 'case' ? 'case' : 'person';
@@ -229,7 +231,7 @@ export async function getAuditRecords(treeId: number, entries: AuditLogEntry[]):
         citedFact(draft, row.FactTable, num(row.FactId));
     }
 
-    const [events, tags, variants, comments] = await Promise.all([
+    const [events, tags, variants, comments, findings] = await Promise.all([
         rowsById(`SELECT "Id", "Type", "PersonId", "FamilyId" FROM "Events" WHERE "Id" = ANY($1::int[]) AND "TreeId" = $2`, pendingIds('Events'), treeId),
         rowsById(
             `SELECT mt."Id", mt."PersonId", mt."MediaId" FROM "MediaTag" mt JOIN "Media" m ON m."Id" = mt."MediaId"
@@ -241,6 +243,11 @@ export async function getAuditRecords(treeId: number, entries: AuditLogEntry[]):
             `SELECT cc."Id", cc."CaseId" FROM "CaseComments" cc JOIN "Cases" c ON c."Id" = cc."CaseId"
               WHERE cc."Id" = ANY($1::int[]) AND c."TreeId" = $2`,
             pendingIds('CaseComments'), treeId,
+        ),
+        rowsById(
+            `SELECT cf."Id", cf."CaseId" FROM "CaseFindings" cf JOIN "Cases" c ON c."Id" = cf."CaseId"
+              WHERE cf."Id" = ANY($1::int[]) AND c."TreeId" = $2`,
+            pendingIds('CaseFindings'), treeId,
         ),
     ]);
     for (const draft of drafts.values()) {
@@ -268,7 +275,7 @@ export async function getAuditRecords(treeId: number, entries: AuditLogEntry[]):
                 item.name ??= text(row.Name);
             }
         } else {
-            const row = comments.get(pending.id);
+            const row = (pending.table === 'CaseFindings' ? findings : comments).get(pending.id);
             if (row) Object.assign(draft, { kind: 'case', id: num(row.CaseId) });
         }
     }

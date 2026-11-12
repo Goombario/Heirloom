@@ -45,6 +45,7 @@ const AUDITED_AS: Record<string, string | null> = {
   Places: 'place',
   NameVariant: 'namevariant',
   CaseComments: null,
+  CaseFindings: null,
   Repository: null,
 };
 
@@ -60,6 +61,7 @@ const FACT_BACKING: Record<string, string> = {
   [FACT_TABLES.NAME_VARIANT]: 'NameVariant',
   [FACT_TABLES.CASES]: 'Cases',
   [FACT_TABLES.CASE_COMMENTS]: 'CaseComments',
+  [FACT_TABLES.CASE_FINDINGS]: 'CaseFindings',
 };
 
 /** The owner vocabularies of the two polymorphic link tables. */
@@ -69,7 +71,8 @@ const LINK_OWNERS: Array<[link: 'NoteLink' | 'MediaLink', parent: string, key: s
 ];
 
 /** The tree of row `o` in `table`; CaseComments carries no TreeId of its own. */
-const treeOf = (table: string, alias: string): string => table === 'CaseComments'
+// Journal entries and case findings (#58) belong to a tree through their case.
+const treeOf = (table: string, alias: string): string => table === 'CaseComments' || table === 'CaseFindings'
   ? `(SELECT ca."TreeId" FROM "Cases" ca WHERE ca."Id" = ${alias}."CaseId")`
   : `${alias}."TreeId"`;
 

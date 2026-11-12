@@ -177,7 +177,7 @@ describe('round-trip fixture', () => {
     // the whole-event citation and the one of its DATE (#990). A journal entry's
     // citation rides in cases.json (#1035).
     expect((facts.rows as { FactTable: string }[]).map(r => r.FactTable).sort())
-      .toEqual(['CaseComments', 'Cases', 'Events', 'Events', 'Families', 'FamilyMarriage', 'NameVariant', 'People', 'People', 'PersonBirth', 'PersonDeath', 'PersonName']);
+      .toEqual(['CaseComments', 'CaseFindings', 'Cases', 'Events', 'Events', 'Families', 'FamilyMarriage', 'NameVariant', 'People', 'People', 'PersonBirth', 'PersonDeath', 'PersonName']);
 
     // Exactly one primary name variant, plus a non-primary one.
     const variants = await query(

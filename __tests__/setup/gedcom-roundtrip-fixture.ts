@@ -318,6 +318,78 @@ export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
     [U, T, sourceId, journalEntry],
   );
 
+  // The research workspace (#58, ADR 0045): the case's scope, its first lead and a
+  // second, settled one, a request, a record with its citation and claims, a
+  // search, and journal entries filed under leads, all through cases.json.
+  await db.query(
+    `UPDATE "Cases" SET "FromYear" = 1895, "ToYear" = 1905, "Place" = 'Paris', "QuestionKind" = 'parents' WHERE "Id" = $1`,
+    [caseIds.parentage],
+  );
+  const lead = async (question: string, position: number, settled: boolean) => (await db.query<{ Id: number }>(
+    `INSERT INTO "CaseLeads" ("CaseId","Question","FromYear","ToYear","Position","CreatedBy","SettledAt","SettledBy")
+     VALUES ($1,$2,1899,1901,$3,$4,${settled ? "NOW()" : 'NULL'},${settled ? '$4' : 'NULL'}) RETURNING "Id"`,
+    [caseIds.parentage, question, position, U],
+  )).rows[0].Id;
+  const firstLead = await lead('Saint-Sulpice parentage review', 0, false);
+  const registerLead = await lead('Find the baptism in the register', 1, true);
+  await db.query('INSERT INTO "CaseLeadPerson" ("LeadId","PersonId") VALUES ($1,$3), ($2,$3)', [firstLead, registerLead, stored]);
+  const requestId = (await db.query<{ Id: number }>(
+    `INSERT INTO "CaseRequests" ("CaseId","LeadId","UserId","AskedFor","Holder","SentBy","SentOn","Reference","RemindOn","State","RepliedAt","ReplyNote")
+     VALUES ($1,$2,$3,'Baptism entry, 1900','Archives de Paris','email','2026-10-01','REF-77','2026-11-01','received',NOW(),'Scan attached.') RETURNING "Id"`,
+    [caseIds.parentage, registerLead, U],
+  )).rows[0].Id;
+  const findingId = (await db.query<{ Id: number }>(
+    `INSERT INTO "CaseFindings" ("CaseId","UserId","Kind","SourceNature","Information","Note","RequestId")
+     VALUES ($1,$2,'record','original','primary','The baptism, with both parents named.',$3) RETURNING "Id"`,
+    [caseIds.parentage, U, requestId],
+  )).rows[0].Id;
+  await db.query(
+    `INSERT INTO "Citation" ("OwnerId","TreeId","SourceId","FactTable","FactId","Page","DataText")
+     VALUES ($1,$2,$3,'CaseFindings',$4,'f. 12','Baptised Jeanne, daughter of Louis.')`,
+    [U, T, sourceId, findingId],
+  );
+  await db.query('INSERT INTO "CaseFindingLead" ("FindingId","LeadId") VALUES ($1,$2)', [findingId, registerLead]);
+  await db.query(
+    `INSERT INTO "CaseClaims" ("FindingId","Position","What","PersonId","Says","Date","Place","Evidence","Decision","DecidedAt","DecidedBy")
+     VALUES ($1,0,'BAPM',$2,'Baptised','3 JAN 1900','Paris','direct','accepted',NOW(),$3),
+            ($1,1,'Father',NULL,'Louis','3 JAN 1900',NULL,'indirect','rejected',NOW(),$3)`,
+    [findingId, stored, U],
+  );
+  await db.query('UPDATE "CaseClaims" SET "PersonName" = $2 WHERE "FindingId" = $1 AND "PersonId" IS NULL', [findingId, 'Louis Martin']);
+  const searchId = (await db.query<{ Id: number }>(
+    `INSERT INTO "CaseFindings" ("CaseId","UserId","Kind","Searched","Site","Note")
+     VALUES ($1,$2,'nothing','Civil births, 1900','Archives de Paris online','No entry under either spelling.') RETURNING "Id"`,
+    [caseIds.parentage, U],
+  )).rows[0].Id;
+  await db.query('INSERT INTO "CaseFindingLead" ("FindingId","LeadId") VALUES ($1,$2)', [searchId, firstLead]);
+  const entry = async (kind: string, body: string, minutes: number, link: { finding?: number; request?: number }, leads: number[]) => {
+    const id = (await db.query<{ Id: number }>(
+      `INSERT INTO "CaseComments" ("CaseId","UserId","Body","Kind","CreatedAt","FindingId","RequestId")
+       VALUES ($1,$2,$3,$4, NOW() + ($5 || ' minutes')::interval, $6, $7) RETURNING "Id"`,
+      [caseIds.parentage, U, body, kind, String(minutes), link.finding ?? null, link.request ?? null],
+    )).rows[0].Id;
+    for (const l of leads) await db.query('INSERT INTO "CaseCommentLead" ("CommentId","LeadId") VALUES ($1,$2)', [id, l]);
+  };
+  await entry('request', 'Baptism entry, 1900', 2, { request: requestId }, [registerLead]);
+  await entry('finding', 'Parish register', 3, { finding: findingId }, [registerLead]);
+  await entry('search', 'Civil births, 1900', 4, { finding: searchId }, [firstLead]);
+  await entry('lead', 'settled', 5, {}, [registerLead]);
+
+  // A closed case keeps how and when it closed (#58).
+  const closedCase = (await db.query<{ Id: number }>(
+    `INSERT INTO "Cases" ("UserId","TreeId","Title","Status","Outcome","ClosedAt")
+     VALUES ($1,$2,'Was Louis a carpenter?','closed','ruled_out',NOW()) RETURNING "Id"`,
+    [U, T],
+  )).rows[0].Id;
+  await db.query(
+    `INSERT INTO "CaseLeads" ("CaseId","Question","Position","CreatedBy") VALUES ($1,'Was Louis a carpenter?',0,$2)`,
+    [closedCase, U],
+  );
+  await db.query(
+    `INSERT INTO "CaseComments" ("CaseId","UserId","Body","Kind") VALUES ($1,$2,'He was a mason, not a carpenter.','conclusion')`,
+    [closedCase, U],
+  );
+
   // Notes at all three scopes. "NoteLink"."OwnerId" is the OWNER RECORD's id
   // (polymorphic, paired with "OwnerTable") — not a user id — and the link table
   // carries no "TreeId" of its own; scope comes from the parent "Note".

@@ -245,7 +245,18 @@ export interface Case {
     Tags: string[];
     CreatedAt: string;
     UpdatedAt: string;
+    /** The case's scope (#58, ADR 0045): from/to years and a focus place. */
+    FromYear?: number | null;
+    ToYear?: number | null;
+    Place?: string | null;
+    /** The kind of question the case started as ('moved', 'parents', … or 'own'). */
+    QuestionKind?: string | null;
+    /** Set when the case closes: answered, ruled out or unresolved. */
+    Outcome?: CaseOutcome | null;
+    ClosedAt?: string | null;
 }
+
+export type CaseOutcome = 'answered' | 'ruled_out' | 'unresolved';
 
 export interface NewCase {
     UserId: number;
@@ -254,6 +265,10 @@ export interface NewCase {
     Description?: string | null;
     Status?: 'in_progress' | 'on_hold' | 'closed';
     Tags?: string[];
+    FromYear?: number | null;
+    ToYear?: number | null;
+    Place?: string | null;
+    QuestionKind?: string | null;
 }
 
 /** A case citation is now a Citation row (FactTable='Cases') referencing a library Source. */
@@ -276,9 +291,13 @@ export interface CaseCitation {
 /**
  * A journal entry the app writes (#801). A status entry's Body is the status the
  * case moved to, or 'reopened' when it left Closed; a conclusion's Body is the
- * researcher's answer, written when the case closes.
+ * researcher's answer, written when the case closes. The research workspace (#58,
+ * ADR 0045) adds `finding` (a record added; Body is its title), `search` (nothing
+ * found; Body is what was searched), `request` and `reply` (Body is what was
+ * asked for), and `lead` (Body is 'added', 'settled', 'reopened' or 'dropped',
+ * filed under that lead).
  */
-export type CaseCommentKind = 'status' | 'conclusion';
+export type CaseCommentKind = 'status' | 'conclusion' | 'finding' | 'search' | 'request' | 'reply' | 'lead';
 export type CaseStatusEntry = 'in_progress' | 'on_hold' | 'closed' | 'reopened';
 
 export interface CaseComment {
@@ -306,6 +325,11 @@ export interface CaseComment {
     StruckBy?: number | null;
     StruckByName?: string | null;
     StruckReason?: string | null;
+    /** The finding or request an app-written entry is about (#58). */
+    FindingId?: number | null;
+    RequestId?: number | null;
+    /** The leads the entry is filed under; empty for the whole case (#58). */
+    leadIds?: number[];
 }
 
 export interface PersonResult {
@@ -464,6 +488,122 @@ export interface MediaLinkOwner {
     SourceTitle: string | null;
     EventType: string | null;
     FactDate: string | null;
+}
+
+/** A person on a case or a lead, as the workspace shows them. */
+export interface CasePersonRef {
+    Id: number;
+    FirstName: string | null;
+    LastName: string | null;
+    EffectiveFirstName?: string | null;
+    Nickname?: string | null;
+    Sex: string | null;
+    PrimaryMediaId?: number;
+    FocalX?: number;
+    FocalY?: number;
+    FocalRadius?: number | null;
+}
+
+/**
+ * A lead (#58, ADR 0045): a sub-question of a case with its own people and years.
+ * Its status is worked out by `leadStatus`, never stored.
+ */
+export interface CaseLead {
+    Id: number;
+    CaseId: number;
+    Question: string;
+    FromYear: number | null;
+    ToYear: number | null;
+    Position: number;
+    CreatedAt: string;
+    SettledAt: string | null;
+    DroppedAt: string | null;
+    people: CasePersonRef[];
+}
+
+export type CaseClaimDecision = 'accepted' | 'rejected' | 'undecided';
+export type CaseClaimEvidence = 'direct' | 'indirect' | 'negative';
+
+/** One thing a record says, decided in place (#58). */
+export interface CaseClaim {
+    Id: number;
+    FindingId: number;
+    Position: number;
+    /** A fact key ('BIRT', 'RESI', …) or free text. */
+    What: string;
+    /** The person it is about, when they are in the tree. */
+    PersonId: number | null;
+    /** The name the record gives someone not in the tree yet. */
+    PersonName: string | null;
+    /** The tree's name for `PersonId`, for display. */
+    personLabel?: string | null;
+    Says: string | null;
+    Date: string | null;
+    Place: string | null;
+    Evidence: CaseClaimEvidence | null;
+    Decision: CaseClaimDecision;
+    DecidedAt: string | null;
+    AppliedAt: string | null;
+}
+
+export type CaseSourceNature = 'original' | 'derivative' | 'authored';
+export type CaseInformation = 'primary' | 'secondary' | 'unknown';
+
+/** A record a lead turned up, or a search that turned up nothing (#58). */
+export interface CaseFinding {
+    Id: number;
+    CaseId: number;
+    Kind: 'record' | 'nothing';
+    UserId: number | null;
+    CreatedAt: string;
+    MediaId: number | null;
+    media?: Media | null;
+    SourceNature: CaseSourceNature | null;
+    Information: CaseInformation | null;
+    /** Nothing found: what was searched, where, and a note. */
+    Searched: string | null;
+    Site: string | null;
+    Note: string | null;
+    RequestId: number | null;
+    /** The record's source citation (FactTable 'CaseFindings'); null for nothing found. */
+    citation: {
+        Id: number;
+        SourceId: number;
+        sourceTitle: string;
+        sourceRepo: string | null;
+        Page: string | null;
+        Url: string | null;
+        DataText: string | null;
+    } | null;
+    leadIds: number[];
+    claims: CaseClaim[];
+}
+
+export type CaseRequestState = 'waiting' | 'received' | 'nothing';
+export type CaseRequestSentBy = 'online' | 'email' | 'post' | 'in_person';
+
+/** A record asked of an archive, a parish or a relative (#58). Heirloom sends nothing. */
+export interface CaseRequest {
+    Id: number;
+    CaseId: number;
+    LeadId: number | null;
+    AskedFor: string;
+    Holder: string | null;
+    SentBy: CaseRequestSentBy | null;
+    SentOn: string | null;
+    Reference: string | null;
+    RemindOn: string | null;
+    State: CaseRequestState;
+    RepliedAt: string | null;
+    ReplyNote: string | null;
+    CreatedAt: string;
+}
+
+/** Everything the desktop workspace reads beyond the case itself (#58). */
+export interface CaseWorkspace {
+    leads: CaseLead[];
+    findings: CaseFinding[];
+    requests: CaseRequest[];
 }
 
 export interface CaseWithRelations extends Case {
