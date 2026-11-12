@@ -19,8 +19,6 @@ import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { placeDetailKey, usePrefetchPlaceDetail } from '@/lib/places/prefetch';
 import { placeHref, type PlaceKey } from '@/lib/places/place-key';
 import { parseIdParam } from '@/lib/utils/parse-id';
-import { eventTypeLabel } from '@/lib/places/eventTypes';
-import { factTally } from '@/app/places/factTally';
 import { groupFactLinks } from '@/app/places/explore/groupFactLinks';
 import { chainFromCandidate, type PhotonCandidate } from '@/lib/geocode/photon';
 import type { PlaceDetail } from '@/lib/data/types';
@@ -42,6 +40,7 @@ import { useChange } from '@/app/people/view/mobile/useChange';
 import { PlaceCover, type CoverMap } from './desktop/PlaceCover';
 import { PlaceRail, RAIL_AVATAR_SIZE } from './desktop/PlaceRail';
 import { PlaceNotes } from './desktop/PlaceNotes';
+import { WhatHappened } from './desktop/WhatHappened';
 
 // Owner-scoped cache key for a place-detail payload (see lib/places/prefetch.ts —
 // single source of truth, shared with the hover/focus prefetch). Served from the
@@ -246,11 +245,6 @@ export default function PlaceDetailClient() {
     }, [fetchDetail]);
     const run = useChange({ treeId: activeTreeId, canUndo: canDelete, onChanged: afterChange });
 
-    // Every record here by type, births and deaths included (#56).
-    const eventCounts = useMemo(
-        () => factTally(detail?.factLinks ?? []).map(({ type, count }) => ({ type, label: eventTypeLabel(type, t), count })),
-        [detail, t],
-    );
 
     // While editing, the map shows the EDIT BUFFER, not the saved row: typing coordinates
     // moves the pin, and dragging the pin writes them back (#566). Debounced, because the
@@ -283,7 +277,7 @@ export default function PlaceDetailClient() {
     // until an edit types a coordinate of its own.
     const descendantMarkers = useMemo(
         () => (editPoint ? [] : (detail?.descendantPins ?? []).map((p) => ({
-            lat: p.lat, lng: p.lng, label: p.name.split(',')[0]?.trim() || p.name,
+            id: p.id, href: placeHref(p), lat: p.lat, lng: p.lng, label: p.name.split(',')[0]?.trim() || p.name,
         }))),
         [editPoint, detail?.descendantPins],
     );
@@ -377,6 +371,11 @@ export default function PlaceDetailClient() {
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
     }, [editing, handleCancel]);
+
+    // The place of the record open in What happened here: the cover rings its pin.
+    const [ringedState, setRingedState] = useState<{ key: string; id: number | null }>({ key: '', id: null });
+    const ringed = ringedState.key === scopeKey ? ringedState.id : null;
+    const setRinged = useCallback((id: number | null) => setRingedState({ key: scopeKey, id }), [scopeKey]);
 
     // Rename or merge opens the panel on its name field, not the coordinates.
     const editPanelRef = useRef<HTMLElement>(null);
@@ -574,7 +573,7 @@ export default function PlaceDetailClient() {
     // The cover's map: the place's own pin (or the one being typed or dragged), the
     // pins of the places within it, a parent's pin, or nothing at all (#56).
     const coverMap: CoverMap = editPoint || geocoded
-        ? { kind: 'pins', markers: [{ lat: mapPoint!.lat, lng: mapPoint!.lng, label: placeShort }], draggable: editing, onDrag: handlePinDrag }
+        ? { kind: 'pins', markers: [{ id: detail?.id ?? null, lat: mapPoint!.lat, lng: mapPoint!.lng, label: placeShort }], draggable: editing, onDrag: handlePinDrag }
         : descendantMarkers.length > 0
             ? { kind: 'pins', markers: descendantMarkers, draggable: false }
             : detail?.inheritedFrom
@@ -682,6 +681,7 @@ export default function PlaceDetailClient() {
                         records={detail.factLinks.length}
                         years={years}
                         menu={menu}
+                        ringed={ringed}
                         canEdit={canEdit}
                         onPutOnMap={() => handleEdit()}
                     />
@@ -704,28 +704,17 @@ export default function PlaceDetailClient() {
                             />
                         )}
                     >
-                        <section aria-labelledby="place-events-title">
-                            <SectionHeader headingId="place-events-title" title={tDesk('what_happened')} />
-                            {eventCounts.length === 0 ? (
-                                <p className="m-0 text-sm text-text-muted">
-                                    {tDesk('nothing_yet')}
-                                    {canDelete && !inUse && <> {tDesk('nothing_yet_delete')}</>}
-                                </p>
-                            ) : (
-                                <Card pad={false}>
-                                    <ul className="m-0 p-2 list-none">
-                                        {eventCounts.map(({ type, label, count }) => (
-                                            <li key={type} className="flex justify-between items-center px-2 py-2 text-sm border-b border-border-light last:border-0">
-                                                <span className="text-text">{label}</span>
-                                                <span className="tabular-nums text-text-muted">{count}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </Card>
-                            )}
-                        </section>
+                        <WhatHappened
+                            key={`events-${scopeKey}`}
+                            links={detail.factLinks}
+                            placeId={detail.id ?? null}
+                            treeId={activeTreeId}
+                            canEdit={canEdit}
+                            deletable={canDelete && !inUse}
+                            onSelectPlace={setRinged}
+                        />
                         {detail.id != null && (
-                            <PlaceNotes key={scopeKey} placeId={detail.id} treeId={activeTreeId} canEdit={canEdit} canDelete={canDelete} run={run} refreshKey={notesVersion} />
+                            <PlaceNotes key={`notes-${scopeKey}`} placeId={detail.id} treeId={activeTreeId} canEdit={canEdit} canDelete={canDelete} run={run} refreshKey={notesVersion} />
                         )}
                     </DetailBody>
                     </>

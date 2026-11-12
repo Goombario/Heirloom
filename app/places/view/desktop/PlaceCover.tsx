@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import LocationMap, { type MapMarker } from '@/app/components/LocationMap';
@@ -70,7 +71,7 @@ function Counts({ people, records, within, years }: { people: number; records: n
  * pin ringed and dashed, with the name, the "Part of" chain and the counts over
  * its foot. With no pin anywhere up the chain, a short flat navy band instead.
  */
-export function PlaceCover({ detail, placeName, map, people, records, years, menu, canEdit, onPutOnMap }: {
+export function PlaceCover({ detail, placeName, map, people, records, years, menu, ringed, canEdit, onPutOnMap }: {
     detail: PlaceDetail;
     placeName: string;
     map: CoverMap;
@@ -79,11 +80,14 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
     years: { first: number; last: number } | null;
     /** The ⋯ menu's items; viewers pass none. */
     menu: RecordMenuItem[];
+    /** The place of the record open below: its pin grows and is named. */
+    ringed?: number | null;
     canEdit: boolean;
     onPutOnMap: () => void;
 }) {
     const t = useTranslations('placeDesktop');
     const short = shortName(placeName);
+    const ringedIds = useMemo(() => (ringed != null ? [ringed] : []), [ringed]);
     const parents = detail.parents ?? [];
     const within = detail.children?.length ?? 0;
     const counts = <Counts people={people} records={records} within={within} years={years} />;
@@ -127,6 +131,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
                 variant="full"
                 height={340}
                 insets={{ top: 24, right: 24, bottom: 132, left: 24 }}
+                highlightedIds={ringedIds}
                 draggable={map.draggable}
                 onMarkerDragEnd={map.onDrag}
                 className="place-cover__map"
