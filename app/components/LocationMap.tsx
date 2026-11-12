@@ -22,7 +22,8 @@ export interface MapMarker {
 interface LocationMapProps {
   markers: MapMarker[];
   variant?: 'full' | 'mini';
-  height?: number;
+  /** Pixels, or `'100%'` to fill a sized parent (the full-page Places Explore, #56). */
+  height?: number | '100%';
   className?: string;
   /** Makes pins with an `id` operable: they become focusable buttons that report the
    *  clicked place instead of opening a popup — the caller has somewhere to select into. */
@@ -423,6 +424,16 @@ export default function LocationMap({
     next.forEach((key) => setLabelled(registryRef.current.get(key), named));
     highlightKeysRef.current = next;
   }, [map, highlightKey]);
+
+  // A map that fills its parent follows the parent's size, not just the window's: the
+  // Explore pane beside it can widen (#56), which MapLibre's own resize tracking misses.
+  useEffect(() => {
+    const el = elRef.current;
+    if (!map || !el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [map]);
 
   if (failed) {
     return (

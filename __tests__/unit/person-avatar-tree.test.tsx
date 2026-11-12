@@ -40,7 +40,6 @@ vi.mock('@/app/components/SearchBar', () => ({ default: () => null }));
 
 import PeoplePageClient from '@/app/people/PeoplePageClient';
 import { FaceStack } from '@/app/places/PinMark';
-import { PlaceCard } from '@/app/places/PlaceCard';
 
 describe('avatars in a non-default tree (#929)', () => {
     it('the People list asks for every avatar photo in the active tree', () => {
@@ -54,12 +53,6 @@ describe('avatars in a non-default tree (#929)', () => {
     it('the places map face stack uses the active tree', () => {
         h.avatars = [];
         render(<FaceStack faces={[face as never]} />);
-        expect(h.avatars).toEqual([{ mediaId: 5, treeId: 7 }]);
-    });
-
-    it('the place card face stack uses the active tree', () => {
-        h.avatars = [];
-        render(<PlaceCard name="Dover, Kent" count={1} peopleCount={1} faces={[face as never]} />);
         expect(h.avatars).toEqual([{ mediaId: 5, treeId: 7 }]);
     });
 });

@@ -2419,6 +2419,12 @@ html.dark .react-flow__minimap-mask {
    Desktop only: below 768px the sidebar is a bottom sheet (see useTreePersonEditor),
    which covers neither panel, and the minimap/controls are display:none there
    anyway. --tree-panel-inset is set per-render by TreeVisualization. */
+/* Places Explore rail rows (#56): pin, name and kind line, up to three faces (fixed, so
+   rows without faces stay aligned), the record count in a column as wide as the
+   level's longest number, and the drill chevron. */
+.explore-row {
+  grid-template-columns: 12px minmax(0, 1fr) 52px var(--explore-count-w, 3ch) 16px;
+}
 :root { --tree-sidebar-w: 300px; }
 /* The v1.1 person panel (#71) pairs fields two to a row, so it is wider from lg. */
 @media (min-width: 1024px) { :root { --tree-sidebar-w: 340px; } }
