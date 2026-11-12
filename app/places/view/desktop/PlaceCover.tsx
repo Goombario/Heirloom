@@ -71,7 +71,7 @@ function Counts({ people, records, within, years }: { people: number; records: n
  * pin ringed and dashed, with the name, the "Part of" chain and the counts over
  * its foot. With no pin anywhere up the chain, a short flat navy band instead.
  */
-export function PlaceCover({ detail, placeName, map, people, records, years, menu, ringed, canEdit, onPutOnMap }: {
+export function PlaceCover({ detail, placeName, map, people, records, years, menu, ringed, canEdit, onPutOnMap, dragBar }: {
     detail: PlaceDetail;
     placeName: string;
     map: CoverMap;
@@ -84,6 +84,8 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
     ringed?: number | null;
     canEdit: boolean;
     onPutOnMap: () => void;
+    /** Drag the pin's bar, over the top of the map while it is open. */
+    dragBar?: React.ReactNode;
 }) {
     const t = useTranslations('placeDesktop');
     const short = shortName(placeName);
@@ -136,6 +138,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
                 onMarkerDragEnd={map.onDrag}
                 className="place-cover__map"
             />
+            {dragBar && <div className="place-cover__drag">{dragBar}</div>}
             <div className="hero-dark place-cover__foot">
                 <div className="min-w-0 grid gap-1">
                     <div className="flex items-start gap-3 min-w-0">

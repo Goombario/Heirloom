@@ -748,10 +748,10 @@ export async function auditPlaceEdit(params: {
     userId: number;
     treeId: number;
     exec: Queryable;
-}): Promise<void> {
+}): Promise<number | null> {
     const changed = params.changes.filter(placeEditChanged);
     const leaf = params.changes[params.changes.length - 1];
-    if (!leaf || changed.length === 0) return;
+    if (!leaf || changed.length === 0) return null;
     const parentIds = [leaf.before?.ParentId, leaf.after.ParentId].filter((id): id is number => typeof id === 'number');
     const parentNames = await getPlaceNamesById(params.exec, params.treeId, parentIds);
     const after = placeDisplay(leaf.after, parentNames);
@@ -770,7 +770,7 @@ export async function auditPlaceEdit(params: {
     const changes = created
         ? { snapshot: { Name: leaf.name, ...after }, summary, places: changed }
         : { fields, summary, places: changed };
-    await insertAuditEntry({
+    return insertAuditEntry({
         TreeOwnerId: params.treeOwnerId,
         UserId: params.userId,
         TreeId: params.treeId,

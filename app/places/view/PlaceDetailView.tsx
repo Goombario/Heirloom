@@ -41,6 +41,7 @@ import { PlaceCover, type CoverMap } from './desktop/PlaceCover';
 import { PlaceRail, RAIL_AVATAR_SIZE } from './desktop/PlaceRail';
 import { PlaceNotes } from './desktop/PlaceNotes';
 import { WhatHappened } from './desktop/WhatHappened';
+import { DragBar, FixLocationMenu, SearchMapDialog, TypeCoordinatesPanel, type FixMode } from './desktop/FixLocation';
 
 // Owner-scoped cache key for a place-detail payload (see lib/places/prefetch.ts —
 // single source of truth, shared with the hover/focus prefetch). Served from the
@@ -128,8 +129,12 @@ export default function PlaceDetailClient() {
     const canEdit = detail !== null && activePermission != null && activePermission !== 'view';
     const canDelete = activePermission === 'owner' || activePermission === 'edit';
 
-    // Ref for the desktop Edit button — used to return focus when edit closes.
-    const editButtonContainerRef = useRef<HTMLSpanElement | null>(null);
+    // Fix the location's button: focus returns here when an edit or a fix closes.
+    const fixButtonRef = useRef<HTMLButtonElement | null>(null);
+    // Fix the location (#56): which way is open, and where a dragged pin is now.
+    const [fix, setFix] = useState<FixMode | null>(null);
+    const [dragTo, setDragTo] = useState<{ lat: number; lng: number } | null>(null);
+    const [fixSaving, setFixSaving] = useState(false);
     // Track previous editing state so we only refocus after an edit-close transition.
     const wasEditingRef = useRef(false);
 
@@ -154,6 +159,8 @@ export default function PlaceDetailClient() {
         setNameDrafts([]);
         setNameIndex(null);
         setMovingRecords(false);
+        setFix(null);
+        setDragTo(null);
         wasEditingRef.current = false;
     }, [scopeKey]);
 
@@ -386,10 +393,18 @@ export default function PlaceDetailClient() {
         editPanelRef.current?.querySelector('input')?.focus();
     }, [editing]);
 
+    // Escape leaves a drag without saving.
+    useEffect(() => {
+        if (fix !== 'drag') return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setFix(null); setDragTo(null); } };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [fix]);
+
     // Return focus to the Edit button after the edit panel closes.
     useEffect(() => {
         if (!editing && wasEditingRef.current) {
-            editButtonContainerRef.current?.querySelector('button')?.focus();
+            fixButtonRef.current?.focus();
         }
         wasEditingRef.current = editing;
     }, [editing]);
@@ -572,7 +587,22 @@ export default function PlaceDetailClient() {
 
     // The cover's map: the place's own pin (or the one being typed or dragged), the
     // pins of the places within it, a parent's pin, or nothing at all (#56).
-    const coverMap: CoverMap = editPoint || geocoded
+    const ownPoint = geocoded ? { lat: detail!.latitude!, lng: detail!.longitude! } : null;
+    // A drag starts on the place's own pin, or its parent's when it has none.
+    const dragFrom = ownPoint ?? (detail?.inheritedFrom ? { lat: detail.inheritedFrom.lat, lng: detail.inheritedFrom.lng } : null);
+    const dragAt = dragTo ?? dragFrom;
+    const coverMap: CoverMap = fix === 'drag' && dragAt
+        ? {
+            kind: 'pins',
+            markers: [
+                { id: detail?.id ?? null, lat: dragAt.lat, lng: dragAt.lng, label: placeShort },
+                // The old pin stays, faded, until the move is saved.
+                ...(ownPoint ? [{ lat: ownPoint.lat, lng: ownPoint.lng, label: tDesk('old_pin'), ghost: true }] : []),
+            ],
+            draggable: true,
+            onDrag: (lat: number, lng: number) => setDragTo({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)) }),
+        }
+        : editPoint || geocoded
         ? { kind: 'pins', markers: [{ id: detail?.id ?? null, lat: mapPoint!.lat, lng: mapPoint!.lng, label: placeShort }], draggable: editing, onDrag: handlePinDrag }
         : descendantMarkers.length > 0
             ? { kind: 'pins', markers: descendantMarkers, draggable: false }
@@ -586,7 +616,8 @@ export default function PlaceDetailClient() {
         handleEdit();
     };
     const inUse = detail?.uses ? !placeUnused(detail.uses) : false;
-    const menu: RecordMenuItem[] = canEdit && detail?.id != null ? [
+    // A place known only by its name (no id yet) can still be renamed.
+    const menu: RecordMenuItem[] = !canEdit || !detail ? [] : detail.id == null ? [{ label: t('rename_or_merge'), onSelect: startRename }] : [
         { label: t('rename_or_merge'), onSelect: startRename },
         { label: t('move_records_title'), onSelect: () => setMovingRecords(true) },
         ...(canDelete ? [{
@@ -599,8 +630,39 @@ export default function PlaceDetailClient() {
                 : undefined,
             onSelect: () => setConfirmingDelete(true),
         }] : []),
-    ] : [];
+    ];
 
+    const closeFix = () => {
+        setFix(null);
+        setDragTo(null);
+        requestAnimationFrame(() => fixButtonRef.current?.focus());
+    };
+    const openFix = (mode: FixMode) => {
+        if (editing) handleCancel();
+        setDragTo(null);
+        setFix(mode);
+    };
+    // Every fix saves through `run`: the page reloads and editors get Undo.
+    const saveFix = async (write: () => Promise<{ auditIds: number[] }>, detailLine: string) => {
+        setFixSaving(true);
+        const ok = await run(write, { message: tDesk('location_saved', { place: placeShort }), detail: detailLine });
+        setFixSaving(false);
+        if (ok) closeFix();
+    };
+    const saveCoords = (p: { lat: number; lng: number }) => {
+        if (!detail) return;
+        void saveFix(async () => {
+            const client = await getDataClient();
+            return client.places.updateCoordinates(detail.id ?? detail.name, p.lat, p.lng, activeTreeId);
+        }, `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`);
+    };
+    const saveMatch = (c: PhotonCandidate) => {
+        if (!detail) return;
+        void saveFix(async () => {
+            const client = await getDataClient();
+            return client.places.geocodeUpsertHierarchy(chainFromCandidate(c, detail.name), activeTreeId, { reparent: true, leafId: detail.id });
+        }, c.result.name);
+    };
     const editPanel = editing && detail ? (
         <section ref={editPanelRef} aria-labelledby="place-edit-title">
             <SectionHeader level="rail" headingId="place-edit-title" title={<span className="inline-flex items-center gap-1.5"><Pencil size={12} aria-hidden="true" />{t('editing_place')}</span>} />
@@ -683,7 +745,11 @@ export default function PlaceDetailClient() {
                         menu={menu}
                         ringed={ringed}
                         canEdit={canEdit}
-                        onPutOnMap={() => handleEdit()}
+                        onPutOnMap={() => openFix('search')}
+                        dragBar={fix === 'drag' ? (
+                            <DragBar placeName={placeShort} from={ownPoint} to={dragTo} saving={fixSaving}
+                                onSave={() => { if (dragTo) saveCoords(dragTo); }} onCancel={closeFix} />
+                        ) : undefined}
                     />
                     <DetailBody
                         rail={(
@@ -697,10 +763,13 @@ export default function PlaceDetailClient() {
                                 pinned={geocoded}
                                 recordedAs={recordedNames}
                                 onEditNames={() => handleEdit()}
-                                onFixLocation={() => handleEdit()}
+                                fixMenu={(
+                                    <FixLocationMenu pinned={geocoded} canDrag={dragFrom != null} onPick={openFix} triggerRef={fixButtonRef} />
+                                )}
                                 onPrefetchPlace={prefetchPlace}
-                                fixRef={editButtonContainerRef}
-                                editing={editPanel}
+                                editing={editPanel ?? (fix === 'type' && detail ? (
+                                    <TypeCoordinatesPanel placeName={placeShort} current={ownPoint} saving={fixSaving} onSave={saveCoords} onCancel={closeFix} />
+                                ) : null)}
                             />
                         )}
                     >
@@ -750,6 +819,16 @@ export default function PlaceDetailClient() {
                 onConfirm={handleDelete}
                 onCancel={() => setConfirmingDelete(false)}
             />
+            {fix === 'search' && detail && (
+                <SearchMapDialog
+                    placeName={placeName}
+                    current={ownPoint}
+                    currentOsm={{ type: detail.osmType ?? null, id: detail.osmId ?? null }}
+                    saving={fixSaving}
+                    onPick={saveMatch}
+                    onClose={closeFix}
+                />
+            )}
             {movingRecords && detail?.id != null && (
                 <MoveRecordsDialog
                     detail={detail}

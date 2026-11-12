@@ -506,6 +506,7 @@ export async function getPlacePinChainsService(
 /**
  * Run a place write and its audit entry in one transaction (#924), so an edit
  * is never saved without its log entry and a failed audit write rolls it back.
+ * Returns the entry's id (none when nothing changed), so the caller can offer Undo.
  */
 async function inPlaceEditTransaction(
   treeId: number,
@@ -513,13 +514,14 @@ async function inPlaceEditTransaction(
   userId: number,
   kind: PlaceEditKind,
   write: (client: Queryable) => Promise<PlaceEditChange[]>,
-): Promise<void> {
+): Promise<number[]> {
   const client = await getClient();
   try {
     await client.query('BEGIN');
     const changes = await write(client);
-    await auditPlaceEdit({ kind, changes, treeOwnerId: ownerId, userId, treeId, exec: client });
+    const auditId = await auditPlaceEdit({ kind, changes, treeOwnerId: ownerId, userId, treeId, exec: client });
     await client.query('COMMIT');
+    return auditId != null ? [auditId] : [];
   } catch (err) {
     await safeRollback(client);
     throw err;
@@ -583,7 +585,7 @@ export interface UpdatePlaceCoordinatesParams {
 }
 
 /** Persist a manual coordinate adjustment without changing geocoder provenance. */
-export async function updatePlaceCoordinatesService(params: UpdatePlaceCoordinatesParams): Promise<void> {
+export async function updatePlaceCoordinatesService(params: UpdatePlaceCoordinatesParams): Promise<Audited> {
   const { latitude, longitude, requestedTreeId, requestedOwnerId, currentUserId } = params;
   const target = placeTarget(params.name, params.placeId);
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
@@ -596,9 +598,10 @@ export async function updatePlaceCoordinatesService(params: UpdatePlaceCoordinat
   const scope = await resolveTreeScope({ treeId: requestedTreeId, ownerId: requestedOwnerId }, currentUserId);
   if (scope.permission === 'view') throw new AccessError('You only have view permission for this tree');
 
-  await inPlaceEditTransaction(scope.treeId, scope.ownerId, currentUserId, 'coordinates', async (client) => [
+  const auditIds = await inPlaceEditTransaction(scope.treeId, scope.ownerId, currentUserId, 'coordinates', async (client) => [
     await upsertPlaceCoordinates(client, { ownerId: scope.ownerId, treeId: scope.treeId, target, latitude, longitude }),
   ]);
+  return { auditIds };
 }
 
 export interface HierarchyLevelInput {
@@ -642,7 +645,7 @@ export interface UpsertPlaceHierarchyParams {
  * PinSuppressed value untouched, so an ancestor explicitly suppressed on its own
  * still stops resolvePin's walk-up per §3.
  */
-export async function upsertPlaceHierarchyService(params: UpsertPlaceHierarchyParams): Promise<void> {
+export async function upsertPlaceHierarchyService(params: UpsertPlaceHierarchyParams): Promise<Audited> {
   const { levels, reparent = false, leafId, requestedTreeId, requestedOwnerId, currentUserId } = params;
   if (leafId != null && (!Number.isInteger(leafId) || leafId <= 0)) throw new ValidationError('leafId must be a positive integer');
   if (!Array.isArray(levels) || levels.length === 0) throw new ValidationError('levels must be a non-empty array');
@@ -661,7 +664,7 @@ export async function upsertPlaceHierarchyService(params: UpsertPlaceHierarchyPa
   const scope = await resolveTreeScope({ treeId: requestedTreeId, ownerId: requestedOwnerId }, currentUserId);
   if (scope.permission === 'view') throw new AccessError('You only have view permission for this tree');
 
-  await inPlaceEditTransaction(scope.treeId, scope.ownerId, currentUserId, 'hierarchy', (client) => upsertPlaceHierarchy(client, {
+  const auditIds = await inPlaceEditTransaction(scope.treeId, scope.ownerId, currentUserId, 'hierarchy', (client) => upsertPlaceHierarchy(client, {
     ownerId: scope.ownerId,
     treeId: scope.treeId,
     reparent,
@@ -675,6 +678,7 @@ export async function upsertPlaceHierarchyService(params: UpsertPlaceHierarchyPa
       osmId: level.osmId ?? null,
     })),
   }));
+  return { auditIds };
 }
 
 export interface GetPlaceDependentCountParams {

@@ -1749,6 +1749,7 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   pointer-events: none;
 }
 .place-cover__foot a, .place-cover__foot button { pointer-events: auto; }
+.place-cover__drag { position: absolute; top: 12px; left: 64px; right: 16px; z-index: 3; }
 /* Places within are named on the cover; a single own pin is named by the title. */
 .place-cover--labels .location-map-pin-label { display: block; }
 /* A borrowed pin (a parent's) is ringed and dashed, so it never reads as this place's own. */
@@ -2275,6 +2276,8 @@ html.dark .react-flow__minimap-mask {
 .location-map-pin.is-draggable {
   cursor: grab;
 }
+/* The pin's old place while it is dragged (#56). */
+.location-map-pin.is-ghost { opacity: 0.4; pointer-events: none; }
 .location-map-pin.is-draggable:active {
   cursor: grabbing;
 }

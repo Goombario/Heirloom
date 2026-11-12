@@ -17,6 +17,8 @@ export interface MapMarker {
   /** Gazetteer place id. Required for a marker to be clickable (selection is id-based),
    *  to report hover, and for `highlightedIds` to be able to address it. */
   id?: number | null;
+  /** Where the pin was before a drag (#56): faded, and never draggable itself. */
+  ghost?: boolean;
 }
 
 interface LocationMapProps {
@@ -69,7 +71,7 @@ interface RegistryEntry {
  *  body, never on the root. */
 function makePinEl(m: MapMarker): HTMLElement {
   const el = document.createElement('div');
-  el.className = 'location-map-pin';
+  el.className = m.ghost ? 'location-map-pin is-ghost' : 'location-map-pin';
 
   const body = document.createElement('div');
   body.className = 'location-map-pin-body';
@@ -186,7 +188,7 @@ export default function LocationMap({
   // Read once, when the map is built: the cover's insets never change.
   const insetsRef = useRef(insets);
   const markersKey = markers
-    .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}`)
+    .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}|${m.ghost ? 'g' : ''}`)
     .join(';');
   const hasMarkers = markers.length > 0;
 
@@ -194,7 +196,8 @@ export default function LocationMap({
   // different set of places (a drill), never because a place MOVED. A dragged pin (#566)
   // or a coordinate typed into the edit field must not yank the viewport out from under
   // the hand doing the dragging — the pin moves, the map holds still.
-  const identityKey = markers.map((m) => m.id ?? `@${m.label}`).join(';');
+  // A ghost (a dragged pin's old place) never re-frames the map.
+  const identityKey = markers.filter((m) => !m.ghost).map((m) => m.id ?? `@${m.label}`).join(';');
   const identityKeyRef = useRef(identityKey);
   identityKeyRef.current = identityKey;
 
@@ -334,7 +337,7 @@ export default function LocationMap({
       const marker = new maplibregl.Marker({
         element: makePinEl(data),
         anchor: 'bottom',
-        draggable: draggableRef.current,
+        draggable: draggableRef.current && !data.ghost,
       }).setLngLat([data.lng, data.lat]);
       // dragend only — never `drag`. The coordinates field is the source of truth and a
       // per-frame write would thrash it (and its validation) sixty times a second.
@@ -405,9 +408,10 @@ export default function LocationMap({
   // rebuild the map, which is exactly what a re-mount would cost.
   useEffect(() => {
     if (!map) return;
-    registryRef.current.forEach(({ marker }) => {
-      marker.setDraggable(draggable);
-      marker.getElement().classList.toggle('is-draggable', draggable);
+    registryRef.current.forEach(({ marker, data }) => {
+      const can = draggable && !data.ghost;
+      marker.setDraggable(can);
+      marker.getElement().classList.toggle('is-draggable', can);
     });
   }, [map, draggable, markersKey]);
 

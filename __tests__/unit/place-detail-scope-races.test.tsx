@@ -29,7 +29,7 @@ vi.mock('@/lib/data', () => ({
   getDataClient: async () => ({ places: { detail, list, geocodeUpsert, updateCoordinates, rename } }),
 }));
 vi.mock('@/app/components/useErrorToast', () => ({
-  useErrorToast: () => ({ redirectIfUnauthorized }),
+  useErrorToast: () => ({ redirectIfUnauthorized, reportError: vi.fn() }),
 }));
 vi.mock('@/app/components/useLoadPhase', () => ({
   useLoadPhase: (loading: boolean) => loading ? 'loading' : 'loaded',
@@ -94,7 +94,8 @@ describe('PlaceDetail scope races', () => {
     render(<PlaceDetailClient />);
     await screen.findByRole('heading', { name: 'Paris' });
     expect(detail).toHaveBeenCalledWith(7, 1);
-    await user.click(screen.getByRole('button', { name: 'fix_location' }));
+    await user.click(screen.getByRole('button', { name: 'more_actions_for' }));
+    await user.click(screen.getByRole('menuitem', { name: 'rename_or_merge' }));
     await user.click(screen.getAllByRole('button', { name: 'save' })[0]!);
     await waitFor(() => expect(updateCoordinates).toHaveBeenCalledWith(7, 1, 2, 1));
     expect(replace).not.toHaveBeenCalled();
@@ -107,7 +108,8 @@ describe('PlaceDetail scope races', () => {
     const view = render(<PlaceDetailClient />);
 
     await screen.findByRole('heading', { name: 'Alpha' });
-    await user.click(screen.getByRole('button', { name: 'fix_location' }));
+    await user.click(screen.getByRole('button', { name: 'more_actions_for' }));
+    await user.click(screen.getByRole('menuitem', { name: 'rename_or_merge' }));
     await user.click(screen.getAllByRole('button', { name: 'save' })[0]!);
     await waitFor(() => expect(updateCoordinates).toHaveBeenCalledWith('Alpha', 1, 2, 1));
 
@@ -124,5 +126,24 @@ describe('PlaceDetail scope races', () => {
     expect(screen.getByRole('heading', { name: 'Beta' })).toBeInTheDocument();
     expect(screen.queryByText('save_failed')).not.toBeInTheDocument();
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('types coordinates from a pasted pair and saves them (#56)', async () => {
+    placeName = '';
+    placeId = '7';
+    detail.mockImplementation(async () => place('Paris', 7));
+    updateCoordinates.mockResolvedValue({ auditIds: [] });
+    const user = userEvent.setup();
+    render(<PlaceDetailClient />);
+    await screen.findByRole('heading', { name: 'Paris' });
+    await user.click(screen.getByRole('button', { name: 'fix_location' }));
+    await user.click(screen.getByRole('menuitem', { name: 'fix_type' }));
+    const lat = screen.getByLabelText('latitude');
+    await user.clear(lat);
+    await user.click(lat);
+    await user.paste('48.8566, 2.3522');
+    expect(screen.getByLabelText('longitude')).toHaveValue('2.3522');
+    await user.click(screen.getByRole('button', { name: 'save_changes' }));
+    await waitFor(() => expect(updateCoordinates).toHaveBeenCalledWith(7, 48.8566, 2.3522, 1));
   });
 });

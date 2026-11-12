@@ -347,10 +347,11 @@ export interface PlacesClient {
    *  resolution, keyed by `placeKeyString`. */
   pinChains(places: PlaceKey[], treeId?: number | null): Promise<Record<string, PinChainRow[]>>;
   geocodeUpsert(place: ResolvedPlace, treeId?: number | null): Promise<void>;
-  updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<void>;
+  /** Returns the audit entry, for Undo (#56). */
+  updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<Audited>;
   /** Persist a resolved jurisdiction chain (hierarchy rollup) in one call; `leafId`
    *  lands the last level on that place. */
-  geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<void>;
+  geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited>;
   /** How many other places currently inherit their pin from this one. */
   dependentCount(place: PlaceKey, treeId?: number | null): Promise<number>;
   /** Rename a place, or merge it into an existing one (rewrites fact columns + gazetteer). */

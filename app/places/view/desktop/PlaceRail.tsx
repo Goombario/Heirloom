@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import PersonAvatar from '@/app/components/PersonAvatar';
-import { ActionLink, Button, DetailRail, Lifespan, SectionHeader } from '@/app/components/ui';
+import { ActionLink, DetailRail, Lifespan, SectionHeader } from '@/app/components/ui';
 import { MapPin } from '@/lib/icons';
 import { initialsFromName } from '@/lib/utils/initials';
 import { sortOtherNames } from '@/lib/places/other-names';
@@ -28,7 +28,7 @@ const shortName = (name: string) => name.split(',')[0]?.trim() || name;
  * and Details (how the map knows it, its names and coordinates, Fix the location).
  * Lists expand at their foot. Viewers get no Edit or Fix.
  */
-export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, recordedAs, onEditNames, onFixLocation, onPrefetchPlace, fixRef, editing }: {
+export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, recordedAs, onEditNames, fixMenu, onPrefetchPlace, editing }: {
     detail: PlaceDetail;
     /** Everyone a record here names, once each. */
     people: PersonFactGroup[];
@@ -40,11 +40,10 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
     /** The name a person's records here were written under, when it is another of the place's names. */
     recordedAs: ReadonlyMap<number, string>;
     onEditNames: () => void;
-    onFixLocation: () => void;
+    /** Fix the location ⌄ (editors only). */
+    fixMenu: React.ReactNode;
     onPrefetchPlace: (name: string) => void;
-    /** Takes focus back when the edit panel closes. */
-    fixRef: React.Ref<HTMLSpanElement>;
-    /** The edit panel, shown in place of Details while it is open. */
+    /** An edit panel, shown in place of Details while it is open. */
     editing: React.ReactNode;
 }) {
     const t = useTranslations('placeDesktop');
@@ -172,13 +171,7 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
                             </>
                         )}
                     </dl>
-                    {canEdit && (
-                        <span ref={fixRef} className="block mt-4">
-                            <Button variant="outline" size="sm" icon={<MapPin size={14} aria-hidden="true" />} onClick={onFixLocation}>
-                                {pinned ? t('fix_location') : t('put_on_map')}
-                            </Button>
-                        </span>
-                    )}
+                    {canEdit && <div className="mt-4">{fixMenu}</div>}
                 </section>
             )}
         </DetailRail>
