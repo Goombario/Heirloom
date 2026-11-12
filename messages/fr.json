@@ -4471,6 +4471,7 @@
     "finder_failed": "La recherche a échoué. Réessayez.",
     "finder_none": "Personne dans cet arbre ne correspond à « {query} »",
     "finder_add_n": "Ajouter {count, plural, one {# personne} other {# personnes}}",
-    "finder_cancel": "Annuler"
+    "finder_cancel": "Annuler",
+    "range_of": "{from}–{to} sur {total}"
   }
 }

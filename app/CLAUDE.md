@@ -84,8 +84,9 @@ the source of truth when this guide and the stylesheet disagree.
 - Links: `text-link` (slate ink) at regular weight with `hover:underline`. A link inside running
   text is always underlined: slate is close to muted text in lightness, so colour alone can't mark it. Entity names in lists (people,
   partners, children) stay `text-text` with a hover underline.
-- Selected states: neutral, never a colour. A selected choice in a control is the ink fill
-  `bg-text text-card` (`SegmentedControl`, active `FilterChip`; #691); a selected list or menu row is `bg-surface-2`.
+- Selected states: neutral, never a colour. A selected choice in a control is the selected fill
+  `bg-segment-on text-on-segment` (`SegmentedControl`, active `FilterChip`; #691): ink navy in light
+  mode (#55 C6), the ink fill in dark. A selected list or menu row is `bg-surface-2`.
 - Slate is chrome and, as slate ink, links and focus; copper is the main-action fill; amber is evidence. Reserve `text-evidence`,
   `bg-evidence-soft` and `.date-mono` for dates, citations and complete sourcing — never for
   links, buttons, selection, emphasis or warnings (warnings use the orange `warning-*` tokens).

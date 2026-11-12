@@ -233,10 +233,12 @@
   --color-status-deceased: #1C1917;
   --color-status-unknown: #605A52;
   --color-on-status: #FFFFFF;
-  /* SegmentedControl's selected segment (#691): the ink fill, i.e. text on card.
+  /* The selected fill of a choice control (SegmentedControl, an active FilterChip,
+     a ticked finder row; #691). Light mode is the ink navy of the v1.1 desktop band
+     (#55 C6); dark mode keeps the ink fill (text on card), set in both dark blocks.
      Its own pair so a dark island (which washes --color-card to white) can pin it. */
-  --color-segment-on: var(--color-text);
-  --color-on-segment: var(--color-card);
+  --color-segment-on: #1F2B3D;
+  --color-on-segment: #FFFFFF;
 
   /* Fonts */
   --font-sans: var(--font-inter);
@@ -451,6 +453,8 @@ html.dark {
   --color-toast-fg: #231B16;
   --color-toast-action: #9A4A1A;
   --color-card: #292524;
+  --color-segment-on: #FAFAF9;
+  --color-on-segment: #292524;
   --color-card-alt: #44403C;
   --color-border: #44403C;
   --color-border-light: rgba(255, 255, 255, 0.06);
@@ -545,6 +549,8 @@ html.dark {
     --color-toast-fg: #231B16;
     --color-toast-action: #9A4A1A;
     --color-card: #292524;
+    --color-segment-on: #FAFAF9;
+    --color-on-segment: #292524;
     --color-card-alt: #44403C;
     --color-border: #44403C;
     --color-border-light: rgba(255, 255, 255, 0.06);
@@ -1393,6 +1399,17 @@ body::after {
   .input-nozoom {
     font-size: 16px;
   }
+}
+
+/* A greyed form column (#55 FieldColumn: Died while Living). Disabled fields take
+   the surface fill and muted text; the labels stay muted text, which meets AA. */
+.field-column.is-inactive :is(input, textarea, [role="combobox"]) {
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+.field-column.is-inactive label > span:first-child {
+  color: var(--color-text-muted);
 }
 
 /* Segmented-control option (Sex / Living status) keyboard focus */

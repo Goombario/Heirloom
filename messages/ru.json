@@ -4471,6 +4471,7 @@
     "finder_failed": "Поиск не удался. Попробуйте ещё раз.",
     "finder_none": "В этом древе нет совпадений с «{query}»",
     "finder_add_n": "Добавить {count, plural, one {# человека} few {# человек} many {# человек} other {# человека}}",
-    "finder_cancel": "Отмена"
+    "finder_cancel": "Отмена",
+    "range_of": "{from}–{to} из {total}"
   }
 }

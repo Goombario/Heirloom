@@ -179,19 +179,27 @@ describe('design-system color tokens meet WCAG AA contrast', () => {
   // The lightbox is a dark island in BOTH themes, so its white panel/stage text is
   // guarded once against the theme-neutral --color-lightbox-* surfaces (stage-top is
   // the lightest dark → the worst case for white legibility on the stage).
-  // An ACTIVE FilterChip inverts to `bg-text text-card`, and its count badge is
-  // `text-card/70` — --color-card composited over --color-text. Dark theme is the
+  // An ACTIVE FilterChip takes the selected fill `bg-segment-on text-on-segment`
+  // (navy in light, ink in dark; #55 C6), and its count badge is `text-on-segment/70`,
+  // composited over --color-segment-on. Before C6 it was text on card. Dark theme is the
   // tight side (near-white chip, dark count). At the original 55% this composited to
   // #878584 = 3.51:1, a real AA failure on 12px text that neither guard could see:
   // this test only compared solid token pairs, and the browser scan renders /families
   // in its EMPTY state, where no count badge exists to measure.
+  it.each([
+    ['light', light],
+    ['dark', dark],
+  ] as [string, Record<string, string>][])('selected fill label — %s', (_label, theme) => {
+    expect(ratio(theme['--color-on-segment'], theme['--color-segment-on'])).toBeGreaterThanOrEqual(AA);
+  });
+
   const CHIP_COUNT_ALPHA = 0.7;
   it.each([
     ['light: active chip count over the inverted chip', light],
     ['dark: active chip count over the inverted chip', dark],
   ] as [string, Record<string, string>][])('active FilterChip count — %s', (_label, theme) => {
-    const chipBg = theme['--color-text'];
-    const composited = over(theme['--color-card'], chipBg, CHIP_COUNT_ALPHA);
+    const chipBg = theme['--color-segment-on'];
+    const composited = over(theme['--color-on-segment'], chipBg, CHIP_COUNT_ALPHA);
     expect(ratio(composited, chipBg)).toBeGreaterThanOrEqual(AA);
   });
 

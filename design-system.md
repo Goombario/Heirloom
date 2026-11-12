@@ -49,8 +49,11 @@ Slate is chrome (warm charcoal in dark mode), copper is the main action, slate i
 | Drop-zone edge (Add media's dashed drop strip, #1204) | `--color-drop-edge` (`border-drop-edge`) | `#8C857C` (3.3:1 on card-alt) | `#9C958C` (3.5:1 on card-alt) |
 
 Selected states use a **neutral** fill, not a colour: colour fill means the main action only.
-A selected choice in a control (`SegmentedControl` segment, active `FilterChip`) is the ink
-fill `bg-text text-card`, weight 600 (#691, decision 5). It reads at ≥14:1 in both themes.
+A selected choice in a control (`SegmentedControl` segment, active `FilterChip`, a ticked
+finder row) is the selected fill `bg-segment-on text-on-segment`, weight 600 (#691,
+decision 5). In light mode it is the ink navy `#1F2B3D` of the v1.1 band (#55 C6); dark mode
+keeps the ink fill (off-white on ink). Navy is a neutral, not a colour: it is the chrome's
+ink, never a main action. It reads at ≥14:1 in both themes, guarded in `contrast-tokens.test.ts`.
 Build mode switches and pickers from `SegmentedControl`, which also takes `icon`, `sub`,
 per-option `disabled` and `orientation="vertical"`, instead of hand-rolling selected styles.
 A selected row in a list or menu stays the quieter `bg-surface-2`.
@@ -487,6 +490,29 @@ Phones don't use the kit: they keep `RecordBand` and their panes.
     reverts the change's own audit entries. Pass several changes when one action made
     several; one Undo reverts them all. Desktop unlinks use it instead of a confirm dialog.
 
+- **Dialogs and lists** (part 4 of #55):
+  - **`FormDialog`** is the 640px form dialog over the page it was opened from: a title
+    with ×, a scrolling body, and a footer bar with an optional left slot ("Save and add
+    another") and the right slot (Cancel, then the one copper main action). Opening it
+    focuses the first field. With `dirty`, ×, Cancel (the footer gets the guarded close),
+    Escape, the backdrop and navigation all ask before dropping changes; `busy` blocks
+    closing while saving. The quick-add forms, New lead, "Search the map again" and
+    Import's preflight use it.
+  - **`FormBlock`** is a form section: an eyebrow heading with an optional action on the
+    right ("Cite ›"), separated by space, never boxed.
+  - **`FieldColumns`** + **`FieldColumn`** put two facts side by side (Born | Died). An
+    `inactive` column is a disabled fieldset whose fields take the surface fill, with its
+    reason in the heading row in place of the action, so both columns stay level. The
+    heading and reason are muted text, which still meets AA.
+  - **`RecordBlock`** is a linked person in a form: a tinted block with the × right after
+    the name, then that link's own fields (relationship selects, the marriage date).
+  - **`WarningLine`** is the one-line form warning ("These two already have a family"). It
+    uses the orange warning tokens with a left edge (C11), never amber.
+  - **`ListToolbar`** is the list page toolbar: search (`/` focuses it), then chips with
+    counts and selects, then the one copper main button on the right (C5).
+  - **`TablePanel`** is the white panel that holds the `DataTable`, with the pager in its
+    footer ("1–25 of 412" and ‹ ›), hidden on one page.
+
 These primitives define the chrome of a **standalone entity-detail page**; they do not require
 the domain content inside them to share a state model. A light `DetailHero`, for example, may slot
 view, edit, or draft/autosave content while continuing to own the surface and elevation.
@@ -709,7 +735,7 @@ under `PageShell` above until their screen issue lands.
   the word "Cite ›", which opens `CiteFactSheet`.
 - **Citation chips** keep the desktop rule: page-local footnote numbers, never a count. On a
   form group they sit after the group title, never beside "Cite ›".
-- **Selections** use the ink fill, as on desktop: `SegmentedControl` and `FilterChip`, an
+- **Selections** use the selected fill, as on desktop: `SegmentedControl` and `FilterChip`, an
   active chip with ✕. Chips are drawn at 34px with a 44px hit. A segmented control is 40px
   overall on phones (32px segments): its segments sit edge to edge and are wide, so it is the
   one exception to the 44px floor.

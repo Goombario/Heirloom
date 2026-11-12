@@ -251,7 +251,7 @@ export function PersonFinder(props: Single | Multi) {
                   className={cx('flex items-center gap-2.5 rounded-btn px-2 py-1.5 cursor-pointer', isActive && 'bg-surface-2')}
                 >
                   {props.multiple && (
-                    <span aria-hidden="true" className={cx('grid place-items-center w-4 h-4 shrink-0 rounded-[4px] border', checked ? 'bg-text border-text text-card' : 'border-text-muted')}>
+                    <span aria-hidden="true" className={cx('grid place-items-center w-4 h-4 shrink-0 rounded-[4px] border', checked ? 'bg-segment-on border-segment-on text-on-segment' : 'border-text-muted')}>
                       {checked && <Check className="w-3 h-3" />}
                     </span>
                   )}

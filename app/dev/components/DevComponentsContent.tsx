@@ -12,6 +12,17 @@ import {
     Button,
     Card,
     CoverBand,
+    DataTable,
+    FieldColumn,
+    FieldColumns,
+    FilterChip,
+    FormBlock,
+    FormDialog,
+    ListToolbar,
+    RecordBlock,
+    TablePanel,
+    WarningLine,
+    type Column,
     DetailBody,
     DetailRail,
     EmptySlot,
@@ -36,7 +47,7 @@ import { useTheme } from '@/app/components/ThemeProvider';
 import { Timeline } from '@/app/components/Timeline';
 import type { PersonResult } from '@/lib/db/schema';
 import type { ChildRelationships } from '@/lib/child-relationship';
-import { Heart, Sprout, Pencil, Trash2, Users, UserRound, FolderSearch } from '@/lib/icons';
+import { Heart, Sprout, Pencil, Plus, Trash2, Users, UserRound, FolderSearch } from '@/lib/icons';
 
 type Role = 'editor' | 'contributor' | 'viewer';
 
@@ -57,6 +68,102 @@ const fixtureSearch = async (q: string) => {
     const needle = q.toLowerCase();
     return FIXTURE_PEOPLE.filter((p) => `${p.FirstName} ${p.LastName}`.toLowerCase().includes(needle));
 };
+
+interface FixtureRow { id: number; name: string; years: string; place: string }
+const FIXTURE_ROWS: FixtureRow[] = Array.from({ length: 31 }, (_, i) => ({
+    id: i + 1,
+    name: ['Anna Lindqvist', 'Johan Lindqvist', 'Kristina Holm', 'Maja Berg', 'Nils Berg', 'Greta Holm', 'Erik Lindqvist'][i % 7],
+    years: `${1840 + i}–${1900 + i}`,
+    place: ['Österbybruk', 'Uppsala', 'Duluth', 'Göteborg'][i % 4],
+}));
+
+function DialogListBoards({ canWrite }: { canWrite: boolean }) {
+    const [open, setOpen] = useState(false);
+    const [status, setStatus] = useState('living');
+    const [first, setFirst] = useState('');
+    const [parentRel, setParentRel] = useState<ChildRelationships>({ partner1: 'Birth', partner2: 'Birth' });
+    const [q, setQ] = useState('');
+    const [chip, setChip] = useState<'all' | 'living' | 'unsourced'>('all');
+    const [page, setPage] = useState(1);
+    const rows = FIXTURE_ROWS.filter((r) => r.name.toLowerCase().includes(q.toLowerCase()));
+    const cols: Column<FixtureRow>[] = [
+        { key: 'name', header: 'Name', sortable: true, render: (r) => <span className="serif font-semibold">{r.name}</span> },
+        { key: 'years', header: 'Years', render: (r) => <span className="date-mono">{r.years}</span> },
+        { key: 'place', header: 'Born in', render: (r) => r.place },
+    ];
+    return (
+        <>
+            <Board title="FormDialog and form parts" note="640px over the page. Sections are eyebrows and space, no cards. Died greys out while Living. Partners and parents are tinted blocks with × after the name. Warnings are orange (C11). Close asks first once something is typed.">
+                <Button variant="outline" onClick={() => setOpen(true)}>Open Add a person</Button>
+                <FormDialog
+                    open={open}
+                    onClose={() => { setOpen(false); setFirst(''); }}
+                    title="Add a person"
+                    dirty={first.length > 0}
+                    footerStart={<Button variant="ghost" onClick={() => setOpen(false)}>Save and add another</Button>}
+                    footer={(close) => (
+                        <>
+                            <Button variant="outline" onClick={close}>Cancel</Button>
+                            <Button variant="primary" onClick={() => setOpen(false)}>Save and open</Button>
+                        </>
+                    )}
+                >
+                    <FormBlock title="Name">
+                        <FieldColumns>
+                            <Input size="sm" label="First name" value={first} onChange={(e) => setFirst(e.target.value)} />
+                            <Input size="sm" label="Last name" />
+                        </FieldColumns>
+                        <WarningLine action={<ActionLink kind="leave" href="/people/view?id=1">Open</ActionLink>}>Anna Berg, born 1893, may already be in this tree.</WarningLine>
+                    </FormBlock>
+                    <FormBlock title="Status">
+                        <SegmentedControl aria-label="Status" value={status} onChange={setStatus}
+                            options={[{ v: 'living', l: 'Living' }, { v: 'deceased', l: 'Deceased' }, { v: 'unknown', l: 'Unknown' }]} />
+                    </FormBlock>
+                    <div className="pt-5">
+                        <FieldColumns>
+                            <FieldColumn title="Born" action={<ActionLink onClick={noop} kind="action">Cite</ActionLink>}>
+                                <Input size="sm" label="Date" />
+                                <Input size="sm" label="Place" />
+                            </FieldColumn>
+                            <FieldColumn title="Died" inactive={status === 'living'} inactiveReason="Living people have no death." action={<ActionLink onClick={noop} kind="action">Cite</ActionLink>}>
+                                <Input size="sm" label="Date" />
+                                <Input size="sm" label="Place" />
+                            </FieldColumn>
+                        </FieldColumns>
+                    </div>
+                    <FormBlock title="Parents" action={<ActionLink onClick={noop} kind="action">Find their parents</ActionLink>}>
+                        <RecordBlock
+                            identity={<PersonIdentity as="span" name="Johan Lindqvist" initials="JL" sex="M" lifespan={<span className="date-mono">1838–1904</span>} />}
+                            onRemove={canWrite ? noop : undefined}
+                            removeLabel="Remove Johan Lindqvist"
+                        >
+                            <ParentRelationshipSelects value={parentRel} onChange={setParentRel} partner1Name="Johan" partner2Name="Kristina" />
+                        </RecordBlock>
+                    </FormBlock>
+                </FormDialog>
+            </Board>
+
+            <Board title="List recipe: ListToolbar and TablePanel" note="Search (press /), chips with counts, the one copper button on the right (C5), then one white panel with the table and the pager in its footer. Selected chips are navy in light mode (C6).">
+                <div className="grid gap-3">
+                    <ListToolbar
+                        search={q}
+                        onSearchChange={(v) => { setQ(v); setPage(1); }}
+                        searchLabel="Search people"
+                        filters={<>
+                            <FilterChip active={chip === 'all'} count={412} onClick={() => setChip('all')}>All</FilterChip>
+                            <FilterChip active={chip === 'living'} count={38} onClick={() => setChip('living')}>Living</FilterChip>
+                            <FilterChip active={chip === 'unsourced'} count={97} onClick={() => setChip('unsourced')}>No sources</FilterChip>
+                        </>}
+                        action={canWrite ? <Button variant="primary" icon={<Plus className="w-4 h-4" aria-hidden="true" />}>Add person</Button> : undefined}
+                    />
+                    <TablePanel page={page} pageSize={10} total={rows.length} onPage={setPage}>
+                        <DataTable columns={cols} rows={rows.slice((page - 1) * 10, page * 10)} rowKey={(r) => r.id} />
+                    </TablePanel>
+                </div>
+            </Board>
+        </>
+    );
+}
 
 function OverlayBoards({ canWrite }: { canWrite: boolean }) {
     const [picked, setPicked] = useState<string>('nobody yet');
@@ -374,6 +481,7 @@ export default function DevComponentsContent() {
             </Board>
 
             <OverlayBoards canWrite={canWrite} />
+            <DialogListBoards canWrite={canWrite} />
 
             <Board title="Timeline: a relative's read-only row" note="A child's birth on the family page links to the child (↗) and takes no Edit or Delete.">
                 <div className="max-w-[640px]">

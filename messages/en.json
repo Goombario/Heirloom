@@ -4471,6 +4471,7 @@
     "finder_failed": "Search failed. Try again.",
     "finder_none": "No one in this tree matches “{query}”",
     "finder_add_n": "Add {count, plural, one {# person} other {# people}}",
-    "finder_cancel": "Cancel"
+    "finder_cancel": "Cancel",
+    "range_of": "{from}–{to} of {total}"
   }
 }
