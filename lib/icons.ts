@@ -31,6 +31,10 @@ export {
   ArrowLeft,       // RecordNotFound back link
   ArrowLeftRight,  // Relationship swap
   ChevronDown,
+  ArrowDownFromLine, // Tree direction: descendants
+  ArrowUpToLine,   // Tree direction: ancestors
+  Target,          // Tree direction: focus; Focus here
+  Crosshair,       // Tree: Bring into view
   ChevronLeft,
   ChevronRight,
   ChevronUp,
