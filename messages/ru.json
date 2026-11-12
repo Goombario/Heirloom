@@ -852,7 +852,8 @@
     "list_separated": "Разошлись",
     "list_annulled": "Аннулирован",
     "list_no_children": "Нет детей",
-    "list_children_died_young": "{children}, из них {count} умерли в детстве"
+    "list_children_died_young": "{children}, из них {count} умерли в детстве",
+    "new_family": "Новая семья"
   },
   "geocodingPrompt": {
     "title": "Искать места в интернете?",

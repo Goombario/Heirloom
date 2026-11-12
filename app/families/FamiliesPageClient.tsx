@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { Button, CopperPill, DataTable, Pagination, EmptyState, MobileListHeader, PageShell, type Column } from '@/app/components/ui';
+import { Button, CopperPill, CoverBand, DataTable, EmptyState, ListToolbar, MobileListHeader, PageShell, TablePanel, type Column } from '@/app/components/ui';
 import { useTree } from '@/app/contexts/TreeContext';
 import { Plus } from '@/lib/icons';
 import { getInitials } from '@/lib/utils/initials';
@@ -23,7 +23,6 @@ import { InlineDataError } from '@/app/components/ui';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import { FilterChip } from '@/app/components/ui';
-import SearchBar from '@/app/components/SearchBar';
 import { SkeletonList } from '@/app/components/SkeletonLoader';
 import { useLoadPhase } from '@/app/components/useLoadPhase';
 import type { FamilyType } from '@/lib/db/schema';
@@ -34,6 +33,7 @@ import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { NewFamilySheet, afterSheetStep } from './new/mobile/NewFamilySheet';
 import { NewFamilyDialog } from './NewFamilyDialog';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
+import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 
 type FilterKey = 'all' | FamilyFilterKey;
 type Translator = ReturnType<typeof useTranslations>;
@@ -264,6 +264,7 @@ export default function FamiliesPageClient({
     }, [families]);
 
     const canEdit = activePermission !== 'view';
+    const treeName = useActiveTreeName();
     // Opened once per `?add=1`, as soon as the permission is known.
     const [addSeen, setAddSeen] = useState(false);
     if (wantsAdd !== addSeen && (!wantsAdd || activePermission !== null)) {
@@ -281,36 +282,27 @@ export default function FamiliesPageClient({
     // body. Gated on families.length so a cache hit with data skips the skeleton.
     const phase = useLoadPhase((currentUserId === null || loading) && families.length === 0, { delay: 0 });
 
-    // The title is known before the fetch resolves, so it renders in both phases
-    // and only the count subtitle skeletons — matching the People list.
-    const titleNode = t('title');
-    const subtitleNode = phase === 'ready'
-        ? t('partnerships_count', { count: totalPartnerships })
-        // PageShell wraps `subtitle` in a <p>; a block-level Skeleton div isn't
-        // valid phrasing content there, so use an inline span for this slot.
-        : <span className="skeleton inline-block mt-[2px] h-4 w-48 rounded-[6px]" aria-hidden="true" />;
-    // activePermission starts null, which canEdit reads as editable — so the
-    // action waits for it to resolve rather than flashing a primary action a
-    // view-only collaborator cannot use.
-    // One create path per screen (FL-2): the copper pill takes over below md.
-    const actionsNode = activePermission !== null && canEdit && (
-        <div className="hidden md:block">
-            <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)} className="text-sm">{t('new_partnership')}</Button>
+    // Below md the dark header names the page and the list runs edge to edge (#1064).
+    const shell = { topBar: <MobileListHeader title={t('title')} />, contentClassName: 'max-md:p-0!' };
+    // Desktop (#59): the short navy band (tree, title, counts). The title is known
+    // before the fetch resolves, so only the counts line skeletons.
+    const band = (
+        <div className="hidden md:block mb-4">
+            <CoverBand
+                variant="short"
+                eyebrow={treeName}
+                title={t('title')}
+                meta={phase === 'ready'
+                    ? (filtered.length !== totalPartnerships ? t('count_of', { filtered: filtered.length, total: totalPartnerships }) : t('partnerships_count', { count: totalPartnerships }))
+                    : <span className="skeleton inline-block h-3 w-48 rounded-[4px] opacity-40" aria-hidden="true" />}
+            />
         </div>
     );
-    // Below md the dark header names the page and the list runs edge to edge (#1064).
-    const shell = {
-        topBar: <MobileListHeader title={t('title')} />,
-        title: titleNode,
-        titleClassName: 'max-md:hidden',
-        contentClassName: 'max-md:p-0!',
-        subtitle: subtitleNode,
-        actions: actionsNode,
-    };
 
     if (phase === 'loading') {
         return (
             <PageShell {...shell}>
+                {band}
                 <div className="md:hidden"><SkeletonList rows={8} /></div>
                 <div className="hidden md:block card overflow-hidden">
                     <SkeletonList rows={8} />
@@ -348,9 +340,9 @@ export default function FamiliesPageClient({
                             <span className="muted my-0 mx-1 text-sm" aria-hidden="true">+</span>
                             {partnerAvatar(f.wifeName, f.partner2Sex, f.wifeMediaId, f.wifeFocalX, f.wifeFocalY, f.wifeFocalRadius, activeTreeId, false)}
                         </div>
-                        <span className="font-medium min-w-0">
+                        <span className="serif text-base font-semibold text-text min-w-0">
                             <PartnerNameLines lines={nameLines} fallback={t('partnership_fallback', { id: f.Id })} className="block" />
-                            {seqRank && <span className="block text-xs font-normal text-text-muted">{seqRank}</span>}
+                            {seqRank && <span className="block font-sans text-xs font-normal text-text-muted">{seqRank}</span>}
                         </span>
                     </Link>
                 );
@@ -439,7 +431,7 @@ export default function FamiliesPageClient({
 
     return (
         <PageShell {...shell}>
-
+                {band}
                 {/* Phone: the filter field and chips, sliding away on scroll down */}
                 <MobileFamiliesFilters
                     query={searchQuery}
@@ -448,23 +440,19 @@ export default function FamiliesPageClient({
                     onFilter={(key) => setActiveFilter(key ?? 'all')}
                 />
 
-                {/* Desktop: search + filter chips */}
-                <div className="hidden md:block">
-                    {/* Search */}
-                    <SearchBar
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        placeholder={t('search_placeholder_redesign')}
-                        clearLabel={t('clear_search')}
-                        trailing={searchQuery ? (
-                            <span className="muted text-meta shrink-0">
-                                {t('count_of', { filtered: filtered.length, total: totalPartnerships })}
-                            </span>
-                        ) : undefined}
-                    />
-
-                    {/* Filter chips */}
-                    <div className="list-filter-chips mb-1">
+                {/* Desktop: search, the filter chips with counts, then the one main button (#59) */}
+                <div className="hidden md:block mb-3">
+                    <ListToolbar
+                        search={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        searchLabel={t('search_placeholder_redesign')}
+                        // activePermission starts null, which canEdit reads as editable, so the
+                        // button waits for it rather than flash at a view-only collaborator.
+                        // One create path per screen (FL-2): the copper pill takes over below md.
+                        action={activePermission !== null && canEdit
+                            ? <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)}>{t('new_family')}</Button>
+                            : undefined}
+                        filters={<>
                         {FILTER_KEYS.map(f => {
                             const count = (() => {
                                 switch (f.key) {
@@ -487,7 +475,8 @@ export default function FamiliesPageClient({
                                 />
                             );
                         })}
-                    </div>
+                        </>}
+                    />
                 </div>
 
                 {error != null && (
@@ -513,7 +502,7 @@ export default function FamiliesPageClient({
                                             <CopperPill icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_family')}</CopperPill>
                                         </span>
                                         <span className="hidden md:inline">
-                                            <Button variant="outline" size="sm" onClick={() => setAdding(true)}>{t('new_partnership')}</Button>
+                                            <Button variant="outline" size="sm" onClick={() => setAdding(true)}>{t('new_family')}</Button>
                                         </span>
                                     </>
                                 ) : undefined}
@@ -545,33 +534,18 @@ export default function FamiliesPageClient({
                             onPage={(n) => { setCurrentPage(n); window.scrollTo({ top: 0 }); }}
                         />
 
-                        {/* Desktop table — hidden on mobile */}
-                        <div className="hidden md:block mt-1.5">
-                            <div className="card overflow-hidden">
-                                <div className="overflow-x-auto">
-                                    <DataTable
-                                        columns={familyColumns}
-                                        rows={pagedFamilies}
-                                        rowKey={(f) => f.Id}
-                                        sort={{ key: sortKey, dir: sortDir }}
-                                        onSortChange={(key) => toggleSort(key as SortKey)}
-                                        onRowPrefetch={(f) => prefetchFamily(f.Id, activeTreeId)}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Pagination (shared with People) */}
+                        {/* Desktop: one white panel holds the table, the pager in its footer (#59) */}
                         <div className="hidden md:block">
-                        <Pagination
-                            current={currentPage}
-                            total={totalPages}
-                            onPrev={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            onNext={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            prevLabel={t('prev')}
-                            nextLabel={t('next')}
-                            positionLabel={t('page_pos', { current: currentPage, total: totalPages })}
-                        />
+                            <TablePanel page={currentPage} pageSize={ITEMS_PER_PAGE} total={filtered.length} onPage={setCurrentPage}>
+                                <DataTable
+                                    columns={familyColumns}
+                                    rows={pagedFamilies}
+                                    rowKey={(f) => f.Id}
+                                    sort={{ key: sortKey, dir: sortDir }}
+                                    onSortChange={(key) => toggleSort(key as SortKey)}
+                                    onRowPrefetch={(f) => prefetchFamily(f.Id, activeTreeId)}
+                                />
+                            </TablePanel>
                         </div>
                     </>
                 )}

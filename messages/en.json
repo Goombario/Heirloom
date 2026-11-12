@@ -852,7 +852,8 @@
     "list_separated": "Separated",
     "list_annulled": "Annulled",
     "list_no_children": "No children",
-    "list_children_died_young": "{children}, {count} died young"
+    "list_children_died_young": "{children}, {count} died young",
+    "new_family": "New family"
   },
   "geocodingPrompt": {
     "title": "Look up places online?",

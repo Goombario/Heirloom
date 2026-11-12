@@ -852,7 +852,8 @@
     "list_separated": "Séparés",
     "list_annulled": "Annulé",
     "list_no_children": "Aucun enfant",
-    "list_children_died_young": "{children}, dont {count} morts jeunes"
+    "list_children_died_young": "{children}, dont {count} morts jeunes",
+    "new_family": "Nouvelle famille"
   },
   "geocodingPrompt": {
     "title": "Rechercher les lieux en ligne ?",
