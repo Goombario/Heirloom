@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useRef } from 'react';
+import type { ReactFlowInstance } from 'reactflow';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
@@ -15,9 +16,11 @@ import { useTreeDisplayPrefs } from './useTreeDisplayPrefs';
 import { useUnsavedChangesGuard } from '@/app/components/UnsavedChangesProvider';
 import { TreeHeader } from './TreeHeader';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
-import { TreeLeftRail } from './TreeLeftRail';
 import type { TreeDisplayProps } from './TreeDisplayControls';
 import { TreeOverlays } from './TreeOverlays';
+import type { TreeRootFace } from './TreeControlBar';
+import type { TreeNode } from '@/app/components/tree/types';
+import { READABLE_ZOOM } from '@/lib/tree/fitView';
 
 const TreeVisualization = dynamic(() => import('@/app/components/tree/TreeVisualization'), {
   ssr: false,
@@ -66,7 +69,25 @@ function TreePageContent() {
 
   const phase = useLoadPhase(loading);
 
+  // Bring into view (#71): move the canvas back to the root person, at no less than
+  // a readable zoom, without refetching or laying the tree out again.
+  const flowRef = useRef<ReactFlowInstance | null>(null);
+  const onFlowReady = useCallback((instance: ReactFlowInstance) => {
+    flowRef.current = instance;
+    setReactFlowInstance(instance);
+  }, [setReactFlowInstance]);
+  const bringIntoView = useCallback(() => {
+    const flow = flowRef.current;
+    if (!flow || selectedRootId == null) return;
+    const node = flow.getNodes().find((n) => (n.data as { person?: { id?: number } } | undefined)?.person?.id === selectedRootId);
+    if (!node) return;
+    const x = (node.positionAbsolute?.x ?? node.position.x) + (node.width ?? 0) / 2;
+    const y = (node.positionAbsolute?.y ?? node.position.y) + (node.height ?? 0) / 2;
+    flow.setCenter(x, y, { zoom: Math.max(flow.getZoom(), READABLE_ZOOM), duration: 300 });
+  }, [selectedRootId]);
+
   const currentPersonInfo = treeData?.allPeople?.find(p => p.id === selectedRootId);
+  const rootFace: TreeRootFace | null = findInTree(treeData?.tree, selectedRootId);
   // The chrome renders before the data does, so its controls must read as
   // "not yet" rather than as "unavailable": without this, the mode buttons were
   // clickable but inert (handleModeChange needs a root), Focus View claimed
@@ -79,7 +100,7 @@ function TreePageContent() {
   // rooted at the parent, so the focus person simply appears as a childless node.
   // Requiring both directions used to disable the control for every leaf.
   const canFocus = (currentPersonInfo?.hasAncestors || currentPersonInfo?.hasDescendants) ?? false;
-  // One settings bundle for the desktop rail and the Display sheet below lg (#936).
+  // One settings bundle for the Display menu and the Display sheet below lg (#936).
   const display: TreeDisplayProps = {
     orientation: effectiveOrientation,
     onOrientationChange: setOrientation,
@@ -104,6 +125,8 @@ function TreePageContent() {
         canFocus={canFocus}
         onModeChange={handleModeChange}
         currentPersonInfo={currentPersonInfo}
+        rootFace={rootFace}
+        onBringIntoView={bringIntoView}
         canExport={activePermission !== 'view'}
         onExport={handleExport}
         isExporting={isExporting}
@@ -112,19 +135,10 @@ function TreePageContent() {
         display={display}
       />
 
-      {/* Tree Container with left rail + canvas + sidebar */}
+      {/* Tree container: canvas + person panel (no left rail since #71). */}
       <div className="flex-1 flex overflow-hidden relative">
-        <TreeLeftRail
-          mode={mode}
-          ready={chromeReady}
-          canViewDescendants={canViewDescendants}
-          canViewAncestors={canViewAncestors}
-          canFocus={canFocus}
-          onModeChange={handleModeChange}
-          display={display}
-        />
 
-        {/* Canvas wrapper. The top bar and left rail above render immediately —
+        {/* Canvas wrapper. The control bar above renders immediately —
             only this interior waits on the fetch. */}
         <div ref={containerRef} className="flex-1 relative">
           {selectedPersonId !== null && treeData && (
@@ -178,7 +192,7 @@ function TreePageContent() {
               mode={mode}
               orientation={effectiveOrientation}
               focusTrees={displayFocusTrees}
-              onReady={setReactFlowInstance}
+              onReady={onFlowReady}
               onPersonClick={guardedSidebarSelect}
               onPersonDoubleClick={guardedPersonSelect}
               onPaneClick={() => setShowDropdown(false)}
@@ -197,6 +211,19 @@ function TreePageContent() {
       <TreeOverlays isSavingTree={isSavingTree} isExporting={isExporting} />
     </PageShell>
   );
+}
+
+/** The root person's face for the control bar: the tree root, or the first match below it. */
+function findInTree(node: TreeNode | null | undefined, id: number | null): TreeRootFace | null {
+  if (!node || id == null) return null;
+  const stack: TreeNode[] = [node];
+  while (stack.length > 0) {
+    const n = stack.pop() as TreeNode;
+    if (n.id === id) return { photoMediaId: n.photoMediaId, focalX: n.focalX, focalY: n.focalY, focalRadius: n.focalRadius, sex: n.sex };
+    for (const sp of n.spouses ?? []) if (sp.id === id) return { photoMediaId: sp.photoMediaId, focalX: sp.focalX, focalY: sp.focalY, focalRadius: sp.focalRadius, sex: sp.sex };
+    if (n.children) stack.push(...n.children);
+  }
+  return null;
 }
 
 function TreeSuspenseFallback() {

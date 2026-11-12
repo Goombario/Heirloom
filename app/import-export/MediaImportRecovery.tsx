@@ -37,6 +37,8 @@ export interface MediaImportRecoveryProps {
   initialItems?: MediaImportItem[];
   initialArchive?: File | null;
   result?: ImportResultSummary | null;
+  /** The result's View people and View families; off where the page already offers them (#60). */
+  links?: boolean;
 }
 
 const STATUS_TONES: Record<MediaImportItem['status'], 'neutral' | 'green' | 'red' | 'warning'> = {
@@ -45,7 +47,7 @@ const STATUS_TONES: Record<MediaImportItem['status'], 'neutral' | 'green' | 'red
 
 type LifecyclePhase = 'processing' | 'complete' | 'attention';
 
-export default function MediaImportRecovery({ treeId = null, initialTreeId, initialItems, initialArchive = null, result = null }: MediaImportRecoveryProps) {
+export default function MediaImportRecovery({ treeId = null, initialTreeId, initialItems, initialArchive = null, result = null, links = true }: MediaImportRecoveryProps) {
   const t = useTranslations('importExport');
   const seedTreeId = initialTreeId === undefined ? treeId : initialTreeId;
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -273,7 +275,7 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
           </div>
 
           <p className="mt-3 text-xs text-text-muted">{t(DATA_MODE === 'local' ? 'import_recorded_note' : 'import_recorded_note_hosted')}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 empty:hidden">
             {phase === 'processing' && (
               <Button variant="outline" disabled icon={<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}>
                 {t('media_lifecycle_processing_button')}
@@ -282,14 +284,14 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
             {busy && progress && (
               <Button variant="outline" size="lg" onClick={stop}>{t('media_recovery_stop')}</Button>
             )}
-            {phase === 'complete' && (
+            {links && phase === 'complete' && (
               <GuardedLink href="/people" className={buttonClass({ variant: 'success', size: 'lg' })}>
                 {t('view_people')}
               </GuardedLink>
             )}
-            <GuardedLink href={phase === 'complete' ? '/families' : '/people'} className={buttonClass({ variant: 'outline', size: 'lg' })}>
+            {links && <GuardedLink href={phase === 'complete' ? '/families' : '/people'} className={buttonClass({ variant: 'outline', size: 'lg' })}>
               {t(phase === 'complete' ? 'view_families' : 'media_lifecycle_view_records')}
-            </GuardedLink>
+            </GuardedLink>}
           </div>
         </div>
       ) : (

@@ -8,12 +8,14 @@
 // so a hit in another branch shows without navigating there first (the other views still take
 // the pruned tree page.tsx builds).
 
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { FilterChip } from '@/app/components/ui';
 import { ScrollArea } from '@/app/components/ui/ScrollArea';
-import { ChevronRight } from '@/lib/icons';
+import { ArrowDown, ArrowUp, ChevronRight } from '@/lib/icons';
 import { usePrefetchPlaceDetail } from '@/lib/places/prefetch';
 import { PinMark, FaceStack } from '../PinMark';
-import { flattenWithAncestry, label, levelRows, matchesQuery } from './drillRows';
+import { flattenWithAncestry, label, levelRows, matchesQuery, type DrillRowData } from './drillRows';
 import type { PlaceTreeNode } from '@/lib/places/hierarchy';
 import type { ExploreState } from './useExploreState';
 import { foldForSearch } from '@/lib/utils/search-fold';
@@ -29,6 +31,10 @@ function DrillRow({ node, region: reg, selected, onSelect, prefetch, onHover }: 
   // map (#416). Focus counts as pointing — keyboard browsing gets the same highlight.
   const enter = () => { prefetch(node.id ?? node.name); onHover?.(node); };
   const leave = () => onHover?.(null);
+  const name = label(node.name);
+  // The kind line (#56): where it sits, then how many places are inside it. The kind
+  // of place itself ("City") waits on #45.
+  const kind = [reg, hasChildren ? t('explore_subplaces', { count: node.children.length }) : ''].filter(Boolean).join(' · ');
   return (
     <button
       type="button"
@@ -37,36 +43,67 @@ function DrillRow({ node, region: reg, selected, onSelect, prefetch, onHover }: 
       onMouseLeave={leave}
       onFocus={enter}
       onBlur={leave}
-      style={selected ? { boxShadow: 'inset 2px 0 0 var(--color-text), 0 1px 3px rgba(0,0,0,.10)' } : undefined}
-      className={`w-full flex items-center gap-2 px-2.5 py-2 min-h-[44px] rounded-lg text-left transition-colors focus-ring ${
-        selected ? 'bg-card' : 'hover:bg-[color:var(--color-hover-surface)]'
+      title={node.name}
+      aria-current={selected ? 'true' : undefined}
+      className={`explore-row w-full grid items-center gap-x-2.5 px-3 py-2 min-h-[52px] text-left transition-colors focus-ring-inset border-l-2 ${
+        selected ? 'bg-surface-2 border-l-[color:var(--color-segment-on)]' : 'border-l-transparent hover:bg-[color:var(--color-hover-surface)]'
       }`}
     >
       <PinMark state={node.pinState} />
-      {/* The NAME outranks the region. Both were plain flex items with `truncate`, so
-          they shrank together and a short name like "Minster" was clipped to "Mins…"
-          to make room for a subtitle nobody is scanning by. The name now yields only
-          after the region has given up everything it can, and takes at most 70% of the
-          row so a very long one still cannot swallow it whole. */}
-      <span className="flex-1 min-w-0 flex items-baseline gap-2">
-        <span className="serif text-sm font-semibold text-text truncate shrink-0 max-w-[70%]">{label(node.name)}</span>
-        {reg && <span className="min-w-0 text-xs text-text-muted truncate">{reg}</span>}
+      {/* The name is clamped to two lines, the kind line to one; the full name is
+          the row's tooltip. A long single word breaks at the column edge. */}
+      <span className="min-w-0">
+        <span className="serif text-sm font-semibold text-text line-clamp-2 break-words">{name}</span>
+        {kind && <span className="block text-xs text-text-muted truncate">{kind}</span>}
       </span>
-      <span className="ml-auto flex items-center gap-2.5 shrink-0 text-text-muted">
-        <FaceStack faces={node.faces} />
-        {hasChildren ? (
-          // "Go deeper" disclosure — a neutral count + forward chevron, deliberately NOT the
-          // amber/mono source-chip styling (which reads as a citation count).
-          <span className="inline-flex items-center gap-0.5" title={t('explore_subplaces', { count: node.children.length })}>
-            <span className="text-xs tabular-nums">{node.children.length}</span>
-            <ChevronRight size={16} aria-hidden="true" />
-          </span>
-        ) : (
-          <span className="text-xs tabular-nums pr-1">{node.ownCount}</span>
-        )}
+      {/* Up to three faces, no "+N"; the column keeps its width when there are none. */}
+      <span className="explore-row__faces flex justify-end"><FaceStack faces={node.faces.slice(0, 3)} /></span>
+      <span className={`explore-row__count text-right text-xs tabular-nums ${node.rolledCount === 0 ? 'text-text-muted opacity-70' : 'text-text-secondary'}`}>
+        {node.rolledCount.toLocaleString()}
+      </span>
+      <span className="w-4 flex justify-end text-text-muted">
+        {hasChildren && <ChevronRight size={16} aria-hidden="true" />}
       </span>
     </button>
   );
+}
+
+/** How the rail orders a level (#56). Saved as a preference, not kept in the URL. */
+export type ExploreSort = 'records-desc' | 'records-asc' | 'name-asc' | 'name-desc';
+const SORT_KEY = 'places-explore-sort';
+const SORTS: ExploreSort[] = ['records-desc', 'records-asc', 'name-asc', 'name-desc'];
+
+/** The rail's two "places to fix" filters, the dropped List view's main job (#56). */
+type FixFilter = 'none' | 'inherited';
+
+function sortRows(rows: DrillRowData[], sort: ExploreSort): DrillRowData[] {
+  if (sort === 'records-desc') return rows; // the tree's own order: records, then pinned, then name
+  const byName = (a: DrillRowData, b: DrillRowData) => label(a.node.name).localeCompare(label(b.node.name));
+  const out = [...rows];
+  if (sort === 'records-asc') out.sort((a, b) => a.node.rolledCount - b.node.rolledCount || byName(a, b));
+  else if (sort === 'name-asc') out.sort(byName);
+  else out.sort((a, b) => byName(b, a));
+  return out;
+}
+
+function readSort(): ExploreSort {
+  try {
+    const saved = typeof window === 'undefined' ? null : localStorage.getItem(SORT_KEY) as ExploreSort | null;
+    return saved && SORTS.includes(saved) ? saved : 'records-desc';
+  } catch {
+    return 'records-desc';
+  }
+}
+
+function useExploreSort(): [ExploreSort, (s: ExploreSort) => void] {
+  // A lazy read is hydration-safe here: the rail only renders after the client-side
+  // places fetch, so the server never paints it (as useExploreState's URL read).
+  const [sort, setSort] = useState<ExploreSort>(readSort);
+  const save = (next: ExploreSort) => {
+    setSort(next);
+    try { localStorage.setItem(SORT_KEY, next); } catch { /* ignore */ }
+  };
+  return [sort, save];
 }
 
 export interface ExploreDrillProps {
@@ -78,22 +115,91 @@ export interface ExploreDrillProps {
   /** Notified as the pointer/focus enters and leaves a row (null on leave), so the map
    *  can highlight the matching pin. Omitted on mobile, where there is no hover. */
   onRowHover?: (node: PlaceTreeNode | null) => void;
+  /** Clears the bar's filter, from the "no matches" line. */
+  onClearSearch?: () => void;
 }
 
-export function ExploreDrill({ state, search, onRowClick, onRowHover }: ExploreDrillProps) {
+/** How many places in the whole tree are in each "to fix" state. */
+function useFixCounts(roots: PlaceTreeNode[]): Record<FixFilter, number> {
+  const counts = { none: 0, inherited: 0 };
+  const walk = (ns: PlaceTreeNode[]) => {
+    for (const n of ns) {
+      if (n.pinState === 'none') counts.none++;
+      else if (n.pinState === 'inherited') counts.inherited++;
+      walk(n.children);
+    }
+  };
+  walk(roots);
+  return counts;
+}
+
+function SortHead({ label: text, state, active, dir, onClick, align }: {
+  label: string; state: string | undefined; active: boolean; dir: 'up' | 'down'; onClick: () => void; align?: 'right';
+}) {
+  const Icon = dir === 'up' ? ArrowUp : ArrowDown;
+  return (
+    <button type="button" onClick={onClick} title={state}
+      className={`inline-flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer rounded focus-ring ${align === 'right' ? 'justify-self-end' : ''} ${active ? 'text-text font-semibold' : 'hover:text-text'}`}>
+      {text}
+      {active && <Icon size={12} aria-hidden="true" />}
+      {state && <span className="sr-only">, {state}</span>}
+    </button>
+  );
+}
+
+/** The folded middle of a deep breadcrumb: "…" opens a menu of those levels. */
+function CrumbFold({ crumbs, onPick }: { crumbs: PlaceTreeNode[]; onPick: (id: number | null) => void }) {
+  const t = useTranslations('places');
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  return (
+    <span ref={wrap} className="relative">
+      <button type="button" aria-expanded={open} aria-label={t('breadcrumb_more')} title={t('breadcrumb_more')}
+        onClick={() => setOpen((o) => !o)}
+        className="px-1 rounded bg-transparent border-0 cursor-pointer text-text hover:bg-hover-surface focus-ring">…</button>
+      {open && (
+        <span className="absolute left-0 top-full mt-1 z-30 flex flex-col min-w-44 p-1 rounded-lg border border-border bg-card shadow-[var(--shadow-lg)]">
+          {crumbs.map((c) => (
+            <button key={c.id ?? c.name} type="button" onClick={() => { setOpen(false); onPick(c.id); }}
+              className="text-left px-2.5 py-1.5 rounded-md text-sm text-text serif hover:bg-hover-surface cursor-pointer bg-transparent border-0 focus-ring-inset">
+              {label(c.name)}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSearch }: ExploreDrillProps) {
   const t = useTranslations('places');
   const prefetch = usePrefetchPlaceDetail();
   const q = foldForSearch(search.trim());
+  const [sort, setSort] = useExploreSort();
+  const [fix, setFix] = useState<FixFilter | null>(null);
   // Search is GLOBAL: a query matches every place in the tree, not only the
   // jurisdiction you happen to be standing in. Matching the current subtree meant
   // a hit two levels up was unreachable without manually navigating there first.
-  const searching = q.length > 0;
+  // A "places to fix" chip is global the same way: it lists every place in that
+  // state, with its path, so picking one moves the breadcrumb to it.
+  const searching = q.length > 0 || fix != null;
   // Search rows carry gazetteer ancestry as their region text (#417); level rows
   // keep the name-derived region, because every row is a child of the jurisdiction
   // the breadcrumb already names.
-  const rows = searching
-    ? flattenWithAncestry(state.roots).filter((row) => matchesQuery(row, q))
-    : levelRows(state.children);
+  const rows = sortRows(searching
+    ? flattenWithAncestry(state.roots).filter((row) => (q.length === 0 || matchesQuery(row, q)) && (fix == null || row.node.pinState === fix))
+    : levelRows(state.children), sort);
+  const fixCounts = useFixCounts(state.roots);
+  // The count column widens for 4+ digits, the same width on every row of the level.
+  const countWidth = `${Math.max(3, ...rows.map((r) => r.node.rolledCount.toLocaleString().length))}ch`;
 
   const parentLabel = state.currentNode ? label(state.currentNode.name) : null;
   // The deepest crumb is the jurisdiction being browsed — `crumbs` is the inclusive
@@ -111,9 +217,22 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover }: ExploreD
   const atRoot = !searching && state.crumbs.length === 0;
   const lastCrumbIndex = state.crumbs.length - 1;
   const isShown = (id: number | null) => id != null && state.selected?.id === id;
+  // A deep path folds its middle levels into "…", which opens a menu of them (#56).
+  const folded = state.crumbs.length > 3 ? state.crumbs.slice(1, -2) : [];
+  const shownCrumbs = folded.length > 0
+    ? [{ crumb: state.crumbs[0], i: 0 }, ...state.crumbs.slice(-2).map((crumb, k) => ({ crumb, i: state.crumbs.length - 2 + k }))]
+    : state.crumbs.map((crumb, i) => ({ crumb, i }));
+  const sortBy = (col: 'name' | 'records') => {
+    if (col === 'name') setSort(sort === 'name-asc' ? 'name-desc' : 'name-asc');
+    else setSort(sort === 'records-desc' ? 'records-asc' : 'records-desc');
+  };
+  const ariaSort = (col: 'name' | 'records') =>
+    col === 'name'
+      ? (sort === 'name-asc' ? t('sort_az') : sort === 'name-desc' ? t('sort_za') : undefined)
+      : (sort === 'records-desc' ? t('sort_most') : sort === 'records-asc' ? t('sort_fewest') : undefined);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ '--explore-count-w': countWidth } as React.CSSProperties}>
       {/* Header band — the breadcrumb. Pinned: the row list below scrolls, the
           breadcrumb does not. The row count lives only in the labelled footer (#752). */}
       <nav
@@ -133,8 +252,14 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover }: ExploreD
         {searching ? (
           <span className="text-text-muted">· {t('explore_searching_all')}</span>
         ) : (
-          state.crumbs.map((c, i) => (
+          shownCrumbs.map(({ crumb: c, i }) => (
             <span key={c.id ?? c.name} className="flex items-center gap-1.5">
+              {i === state.crumbs.length - 2 && folded.length > 0 && (
+                <>
+                  <span aria-hidden="true">›</span>
+                  <CrumbFold crumbs={folded} onPick={(id) => state.goTo(id)} />
+                </>
+              )}
               <span aria-hidden="true">›</span>
               {i === lastCrumbIndex ? (
                 // The level you are in. Distinguished from its ancestors by its
@@ -164,6 +289,19 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover }: ExploreD
         )}
       </nav>
 
+      {/* The two "places to fix" chips, then the sortable column heads (#56). */}
+      <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5" role="group" aria-label={t('fix_filters_label')}>
+        <FilterChip label={t('not_on_map_chip')} count={fixCounts.none} active={fix === 'none'} onClick={() => setFix(fix === 'none' ? null : 'none')} />
+        <FilterChip label={t('borrowed_pin_chip')} count={fixCounts.inherited} active={fix === 'inherited'} onClick={() => setFix(fix === 'inherited' ? null : 'inherited')} />
+      </div>
+      <div className="explore-row explore-row--head grid items-center gap-x-2.5 px-3 pt-2 pb-1.5 border-b border-border-light text-xs text-text-muted">
+        <span aria-hidden="true" />
+        <SortHead label={t('col_place')} state={ariaSort('name')} active={sort.startsWith('name')} dir={sort === 'name-desc' ? 'down' : 'up'} onClick={() => sortBy('name')} />
+        <span />
+        <SortHead label={t('col_records')} state={ariaSort('records')} active={sort.startsWith('records')} dir={sort === 'records-asc' ? 'up' : 'down'} onClick={() => sortBy('records')} align="right" />
+        <span />
+      </div>
+
       {/* ScrollArea, not a bare overflow div: themed rail in dark mode, and the
           rail stays painted so rows do not jump sideways the moment a
           jurisdiction has enough children to overflow. */}
@@ -174,7 +312,15 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover }: ExploreD
           what lets this become the scroll container. */}
       <ScrollArea className="flex-1 min-h-0 p-1.5">
         {rows.length === 0 ? (
-          <p className="text-xs text-text-muted py-6 text-center">{t('no_results')}</p>
+          <div className="py-6 text-center">
+            <p className="text-xs text-text-muted m-0">{t('no_results')}</p>
+            {(fix != null || (q.length > 0 && onClearSearch)) && (
+              <button type="button" onClick={() => { setFix(null); if (q.length > 0) onClearSearch?.(); }}
+                className="mt-1.5 text-xs text-link underline bg-transparent border-0 cursor-pointer focus-ring">
+                {t('clear_filter')}
+              </button>
+            )}
+          </div>
         ) : (
           rows.map(({ node, region }) => (
             <DrillRow

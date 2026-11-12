@@ -14,6 +14,7 @@ import {
 } from '@/lib/db/queries/citations';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import { AccessError, NotFoundError } from '@/lib/data/errors';
+import { getCaseFindingStatus } from '@/lib/db/queries/case-workspace';
 import { ValidationError } from '@/lib/validation';
 import { query, getClient } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
@@ -175,6 +176,12 @@ export async function createCitationService(params: CreateCitationParams): Promi
     if (context.status === 'closed') {
       throw new AccessError('Cannot add citations to a closed case');
     }
+  }
+  // A case finding (#58) is scoped through its case, like a journal entry.
+  if (factTable === FACT_TABLES.CASE_FINDINGS) {
+    const status = await getCaseFindingStatus(factId, scope.treeId);
+    if (!status) throw new NotFoundError('Finding not found in this tree');
+    if (status === 'closed') throw new AccessError('Cannot add citations to a closed case');
   }
 
   return createCitation(

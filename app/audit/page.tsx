@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useTranslations } from 'next-intl';
-import { Button, Badge, Card, DataTable, EmptyState, Pagination, InlineDataError, PageShell, showChangeToast, type Column } from '@/app/components/ui';
+import { Button, Badge, Card, CoverBand, DataTable, EmptyState, InlineDataError, PageShell, TablePanel, showChangeToast, type Column } from '@/app/components/ui';
 import type { AuditLogEntryWithUser, AuditFieldChanges, AuditSnapshotChanges } from '@/lib/db/schema';
 import type { AuditEditor } from '@/lib/data/types';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
@@ -108,6 +108,7 @@ export default function AuditPage() {
     const tCommon = useTranslations('common');
     const tMobile = useTranslations('mobileAudit');
     const tCases = useTranslations('cases');
+    const tNav = useTranslations('nav');
     const tEventTypes = useTranslations('eventTypes');
     // A case's Status is a stored code; readers see the Cases status names (#701).
     const caseStatusLabel = useCallback(
@@ -318,9 +319,10 @@ export default function AuditPage() {
                             ) : (
                                 <>
                                     <span style={{ color: 'var(--text-muted)' }}> · </span>
-                                    <span className="line-through" style={{ color: 'var(--error)' }}>{fieldFormat.value(spec, changes.fields[field].old)}</span>
+                                    {/* "Birth date 1846 → 14 Mar 1846": the old value struck, the new one plain (#59). */}
+                                    <span className="line-through text-text-muted">{fieldFormat.value(spec, changes.fields[field].old)}</span>
                                     <span style={{ color: 'var(--text-muted)' }}> → </span>
-                                    <span className="font-medium" style={{ color: 'var(--success)' }}>{fieldFormat.value(spec, changes.fields[field].new)}</span>
+                                    <span className="font-medium text-text">{fieldFormat.value(spec, changes.fields[field].new)}</span>
                                 </>
                             )}
                         </div>
@@ -478,10 +480,16 @@ export default function AuditPage() {
         );
     }
 
+    // The Tools pages' short band (#59): "Tools", the title, the counts line.
+    const band = (meta: React.ReactNode) => (
+        <div className="mb-4"><CoverBand variant="short" eyebrow={tNav('tools')} title={t('title')} meta={meta} /></div>
+    );
+
     if ((loading || (entriesTreeKey !== treeKey && !currentError)) && currentEntries.length === 0) {
         // The loaded page's own title and table card, with placeholder rows (#698).
         return (
-            <PageShell title={t('title')} subtitle={t('subtitle')} busy>
+            <PageShell busy>
+                {band(t('subtitle'))}
                 <Card pad={false} data-testid="audit-skeleton">
                     <SkeletonList rows={8} />
                 </Card>
@@ -490,7 +498,8 @@ export default function AuditPage() {
     }
 
     return (
-        <PageShell title={t('title')} subtitle={t('subtitle')}>
+        <PageShell>
+                {band(<>{t('subtitle')} · <span className="tabular-nums">{t('entry_count', { count: currentTotal })}</span></>)}
                 {currentError && (
                     <InlineDataError
                         className="mb-4"
@@ -507,19 +516,20 @@ export default function AuditPage() {
                         onPatch={patchFilters}
                         editors={currentEditors}
                         entryDates={entryDates}
-                        count={currentTotal}
                     />
                 </div>
 
                 {/* Bulk revert */}
                 {canEdit && currentSelectedIds.size > 0 && (
-                    <div className="flex items-center gap-3 border border-[color:var(--warning-text)] rounded-[10px] py-2 px-3.5 mb-3.5" style={{ background: 'var(--warning-bg)' }}>
-                        <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{t('selected_count', { count: currentSelectedIds.size })}</span>
-                        <Button variant="outline" size="sm" onClick={() => setConfirmRevert(Array.from(currentSelectedIds))} disabled={reverting} style={{ borderColor: 'var(--date)', color: 'var(--date)' }}>
-                            <RotateCcw size={13} aria-hidden className="mr-[5px]" />{reverting ? t('reverting') : t('revert_selected_short')}
+                    // "2 selected · Revert 2 changes · Clear" (#59).
+                    <Card role="status" pad={false} className="flex items-center gap-3 py-2 px-3.5 mb-3">
+                        <span className="text-sm font-semibold text-text tabular-nums">{t('selected_count', { count: currentSelectedIds.size })}</span>
+                        <Button variant="outline" size="sm" onClick={() => setConfirmRevert(Array.from(currentSelectedIds))} disabled={reverting}
+                            icon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}>
+                            {reverting ? t('reverting') : t('revert_n', { count: currentSelectedIds.size })}
                         </Button>
-                        <button type="button" onClick={() => setSelectedIds(new Set())} className="ml-auto text-meta cursor-pointer" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', padding: 0, font: 'inherit' }}>{t('clear')}</button>
-                    </div>
+                        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>{t('clear')}</Button>
+                    </Card>
                 )}
 
                 <ConfirmDialog
@@ -549,7 +559,7 @@ export default function AuditPage() {
                 ) : (
                     <>
                         {/* Desktop table */}
-                        <Card pad={false} className="hidden md:block overflow-x-auto">
+                        <TablePanel page={page} pageSize={pageSize} total={currentTotal} onPage={(n) => { setPage(n); setSelectedIds(new Set()); }}>
                             <DataTable
                                 columns={columns}
                                 rows={currentEntries}
@@ -565,21 +575,10 @@ export default function AuditPage() {
                                     isRowSelectable: isAuditEntryRevertible,
                                 } : undefined}
                             />
-                        </Card>
-
+                        </TablePanel>
                     </>
                 )}
 
-                {/* Pagination */}
-                <Pagination
-                    current={page}
-                    total={totalPages}
-                    onPrev={() => { setPage(p => Math.max(1, p - 1)); setSelectedIds(new Set()); }}
-                    onNext={() => { setPage(p => Math.min(totalPages, p + 1)); setSelectedIds(new Set()); }}
-                    prevLabel={tCommon('previous')}
-                    nextLabel={tCommon('next')}
-                    positionLabel={tCommon('page_of', { current: page, total: totalPages })}
-                />
         </PageShell>
     );
 }

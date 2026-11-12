@@ -25,6 +25,7 @@ export async function POST(
         const comment = await addCommentService({
             id: caseId,
             body: body.body,
+            leadIds: body.leadIds,
             mediaId,
             requestedTreeId,
             requestedOwnerId,

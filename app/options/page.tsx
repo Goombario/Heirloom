@@ -8,7 +8,7 @@ import { timeZoneName, timeZoneOffset } from '@/lib/utils/timezones';
 import { DATA_MODE, getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useMyTrees } from '@/app/hooks/useMyTrees';
-import { Banner, Button, Card, PageShell, SegmentedControl, SelectField } from '@/app/components/ui';
+import { Banner, Button, Card, CoverBand, PageShell, SegmentedControl, SelectField } from '@/app/components/ui';
 import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, FlaskConical, HardDrive, Languages, Monitor, Moon, Network, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
 import { readStatusSymbols, writeStatusSymbols } from '@/lib/utils/status-symbols';
 import LocalDataSection from '@/app/components/LocalDataSection';
@@ -230,7 +230,9 @@ export default function OptionsPage() {
     }
 
     return (
-        <PageShell title={t('title')} subtitle={t('subtitle')}>
+        <PageShell>
+                {/* Desktop (#59): the short navy band, then the settings in white panels. */}
+                <CoverBand variant="short" title={t('title')} meta={t('subtitle')} className="mb-6" />
                 <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)] gap-8 items-start">
                     {/* Sidebar nav */}
                     <Card role="navigation" pad={false} className="p-6 lg:sticky lg:top-4">

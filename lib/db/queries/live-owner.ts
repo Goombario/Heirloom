@@ -38,6 +38,8 @@ export function liveCitationSql(alias: string): string {
             THEN EXISTS (SELECT 1 FROM "Cases" lc WHERE lc."Id" = ${fact})
         WHEN ${alias}."FactTable" = '${FACT_TABLES.CASE_COMMENTS}'
             THEN EXISTS (SELECT 1 FROM "CaseComments" lc WHERE lc."Id" = ${fact})
+        WHEN ${alias}."FactTable" = '${FACT_TABLES.CASE_FINDINGS}'
+            THEN EXISTS (SELECT 1 FROM "CaseFindings" lc WHERE lc."Id" = ${fact})
         ELSE TRUE
     END)`;
 }

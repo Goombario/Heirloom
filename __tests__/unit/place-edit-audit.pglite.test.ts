@@ -69,10 +69,12 @@ describe('place edit audit (#924)', () => {
         const before = await place('Dover');
         const count = (await placeEntries()).length;
 
-        await updatePlaceCoordinatesService({ ...ctx(), name: 'Dover', latitude: 51.13, longitude: 1.32 });
+        const { auditIds } = await updatePlaceCoordinatesService({ ...ctx(), name: 'Dover', latitude: 51.13, longitude: 1.32 });
         const entries = await placeEntries();
         expect(entries).toHaveLength(count + 1);
         const entry = entries.at(-1)!;
+        // The write hands back its entry, so the place page can offer Undo (#56).
+        expect(auditIds).toEqual([entry.Id]);
         expect(entry).toMatchObject({ Action: 'update', EntityLabel: 'Dover: coordinates set' });
         expect((entry.Changes as { fields: Row }).fields).toEqual({
             Coordinates: { old: [51.12, 1.31], new: [51.13, 1.32] },
@@ -103,8 +105,9 @@ describe('place edit audit (#924)', () => {
     it('a write that changes nothing is not logged', async () => {
         await updatePlaceCoordinatesService({ ...ctx(), name: 'Hythe', latitude: 51.07, longitude: 1.08 });
         const count = (await placeEntries()).length;
-        await updatePlaceCoordinatesService({ ...ctx(), name: 'Hythe', latitude: 51.07, longitude: 1.08 });
+        const again = await updatePlaceCoordinatesService({ ...ctx(), name: 'Hythe', latitude: 51.07, longitude: 1.08 });
         expect(await placeEntries()).toHaveLength(count);
+        expect(again.auditIds).toEqual([]);
     });
 
     it('a hierarchy build writes one grouped entry, and revert removes created parents and unlinks the leaf', async () => {

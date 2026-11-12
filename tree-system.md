@@ -241,8 +241,8 @@ laid out left-to-right instead of the portrait `PersonNode`.
   the orientation you are looking at. `page.tsx` keeps `effectiveOrientation` as a
   same-render guard so the canvas cannot flash bars before that effect lands.
 - UI: a Vertical/Horizontal segmented control in `TreeDisplayControls`, between
-  Direction and Depth. The desktop rail (`TreeLeftRail`, lg and up) renders it, and
-  below lg the header's Display button opens the same component in a bottom sheet
+  Direction and Depth. At lg and up the control bar's Display menu (`TreeControlBar`,
+  #71) opens it in a white popover, and below lg the header's Display button opens the same component in a bottom sheet
   (`Sheet below="lg"`, #936), so every display setting is reachable at every width. State lives in `useTreeData`, persisted to
   `localStorage['tree:orientation']`. The buttons' active/`aria-pressed` state
   tracks `orientation` even while disabled in focus, so the control always
@@ -343,7 +343,7 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 | Key | Effect |
 |-----|--------|
 | `treeColorblindMode` | Shape markers on branch edges |
-| `treeShowAgeIndicator` | "Show ages" in the Display controls (rail and phone Display sheet, #271): the age beside each card's status mark |
+| `treeShowAgeIndicator` | "Show ages" in the Display controls (the desktop Display menu and the Display sheet below lg, #271): the age beside each card's status mark |
 | `tree:orientation` | `vertical` (portrait cards) or `horizontal` (bar cards); descendants/ancestors only. Unlike the others, this is a **layout input**, not a post-layout decoration. |
 
 Node names use each person's **primary name** (the `NameVariant` marked
@@ -413,7 +413,7 @@ The loading overlay is debounced: it only appears after 300ms of loading to avoi
 
 `loadTree` (page.tsx) is the single entry point for fetching tree data. Behaviour:
 
-- **Chrome-first loading boundary.** `TreeHeader` and `TreeLeftRail` render on the
+- **Chrome-first loading boundary.** `TreeHeader` (the navy `TreeControlBar` at lg and up) renders on the
   first frame, whatever the fetch is doing; only the canvas region inside the
   container waits. That interior renders one of four states — error message,
   "no tree" card (`phase === 'ready'` with no data), a full-bleed `skeleton`
@@ -423,8 +423,25 @@ The loading overlay is debounced: it only appears after 300ms of loading to avoi
   once `treeData` exists. Both chrome components take a `ready` prop (`treeData
   !== null`): before data lands the direction buttons, search field and export are
   **disabled** rather than clickable-but-inert (`handleModeChange` needs a root),
-  and the rail suppresses its `· n/a` sub-label — it cannot yet know whether a
+  and a disabled direction gives no reason yet — it cannot know whether a
   direction is unavailable.
+- **Desktop chrome (#71, lg and up).** One ink navy control bar replaces the white
+  header and the left rail: Find (`/` focuses it; picking someone re-roots), Export
+  JPEG as an icon, the root person (photo and name, no label) with **Bring into
+  view**, then the Descendants / Ancestors / Focus switch and the Display menu
+  (Layout, Depth, Show ages). Bring into view only moves the viewport (`setCenter`
+  on the root's node at no less than `READABLE_ZOOM`); it never refetches or lays
+  the tree out again. The bar's popovers (Find's list, Display) are portalled to
+  `<body>` so they stay white page popovers rather than inherit the island's
+  tokens. Below lg the white header and the Display sheet stay as they were.
+- **Desktop person panel (#71, lg and up).** `PersonSidebar` passes `panel` to
+  `SidebarContent`: a navy head (photo, serif name, years; close at top right),
+  Open person page and Focus here, the person's preferred note (from #555; serif,
+  clamped by `LeadText`, read with one `notes.listForOwner` call only while the
+  Notes row is shut), then the quick edit two fields to a row with Sex as a select
+  and Living status under it, the Notes row (no count) and a pinned Discard / Save.
+  The panel is 340px from lg (`--tree-sidebar-w`). Below lg and on the phone the
+  old layout renders unchanged.
 - **Flash-free "no tree" state.** `useLoadPhase(loading)`
   (`app/components/useLoadPhase.ts`) gates the empty-state card so a fast load can
   never flash "no tree" before data lands; the skeleton covers `pending` and

@@ -1,39 +1,30 @@
 'use client';
 
-import { useState, useEffect, useId, useRef, useCallback, type ReactNode } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { DATA_MODE, getDataClient } from '@/lib/data';
+import { getDataClient } from '@/lib/data';
 import { RateLimitError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 import { useUnsavedChangesGuard } from '@/app/components/UnsavedChangesProvider';
-import { GEDCOM_IMPORT_STEPS, type GedcomImportStep } from '@/lib/gedcom/import-steps';
-import { Banner, Button, Badge, buttonClass, Card, PageShell } from '@/app/components/ui';
-import { Loader2, AlertTriangle, Download, Upload } from '@/lib/icons';
+import type { GedcomImportStep } from '@/lib/gedcom/import-steps';
 import type { GedcomDryRunResponse, SpreadsheetDryRunResponse, SpreadsheetImportResponse, SkippedRecord, TreeCounts, MediaImportItem, MediaExportPreflight, ExportArtifact, GedcomExportOptions } from '@/lib/data/types';
 import { findMissingMedia, findMissingMediaRefs, normalizeArchivePath, type ArchiveMediaEntry } from '@/lib/gedcom/media-match';
 import { contentTypeForExtension } from '@/lib/media/allowed-extensions';
 import { gateOverwriteImport, type NamedCounts } from '@/lib/gedcom/overwrite-gate';
 import { MAX_GEDCOM_BYTES, capInMegabytes } from '@/lib/import-limits';
 import { BUNDLE_SIDECARS, openGedcomZip, readBundleFile, type GedcomZipError } from '@/lib/gedcom/zip-bundle';
-import ConfirmDialog from '@/app/components/ConfirmDialog';
-import ImportProgress from './ImportProgress';
-import MediaImportRecovery, { type ImportResultSummary } from './MediaImportRecovery';
-import { ImportReport } from './ImportReport';
-import MediaExportPreflightDialog from './MediaExportPreflightDialog';
+import type { ImportResultSummary } from './MediaImportRecovery';
 import { collectArchiveMediaPaths } from './useMediaImportRecovery';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { showChangeToast } from '@/app/components/ui';
-import { MobileImportExport } from './MobileImportExport';
+import { MobileImportExport, type MobileImportExportProps } from './MobileImportExport';
+import { DesktopImportExport } from './desktop/DesktopImportExport';
 
 type GedcomImportResult = ImportResultSummary;
-
-/** A browser-build import of this many people takes long enough to warn about (ST-1). */
-const LARGE_IMPORT_PEOPLE = 1000;
 
 interface MediaExportPreflightState {
     treeId: number | null;
@@ -45,7 +36,6 @@ export default function ImportExportPage() {
     // No mode is pre-selected: Overwrite is destructive, so the user has to pick one
     // before Preview or Import will run (FL-1).
     const [mode, setMode] = useState<'overwrite' | 'merge' | null>(null);
-    const [includeMedia, setIncludeMedia] = useState(true);
     const [loading, setLoading] = useState(false);
     const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
     const [result, setResult] = useState<GedcomImportResult | null>(null);
@@ -79,12 +69,9 @@ export default function ImportExportPage() {
     const [duplicateReport, setDuplicateReport] = useState<{ treeId: number | null; count: number } | null>(null);
     // The data checks' count over the target tree once the import completes (FR-3, #835).
     const [checksReport, setChecksReport] = useState<{ treeId: number | null; count: number } | null>(null);
-    const exportAnchorRef = useRef<HTMLDivElement>(null);
     const recoveryPanelRef = useRef<HTMLDivElement>(null);
     const exportBusyRef = useRef(false);
     const t = useTranslations('importExport');
-    const ts = useTranslations('spreadsheetImport');
-    const tCommon = useTranslations('common');
     const zipErrorMessage = (error: GedcomZipError): string => {
         switch (error) {
             case 'multiple_ged': return t('error_multiple_ged_in_zip');
@@ -132,10 +119,7 @@ export default function ImportExportPage() {
     const liveCounts = countsRead ? treeCounts.counts : null;
     const liveGate = countsRead ? gateOverwriteImport(liveCounts) : null;
     const treeEmpty = liveGate?.action === 'proceed';
-    const namedCounts = liveGate?.action === 'confirm' ? liveGate.counts : null;
     const countsText = (counts: NamedCounts) => t('tree_counts', { people: counts.people, families: counts.families });
-    const modeLabel = (value: string) => (value === 'overwrite' ? t('mode_overwrite') : t('mode_merge'));
-    const strong = (chunks: ReactNode) => <strong>{chunks}</strong>;
 
     // Spreadsheet import state
     const [xlsxFile, setXlsxFile] = useState<File | null>(null);
@@ -502,8 +486,8 @@ export default function ImportExportPage() {
         }
     }
 
-    /** Resolves true once a file was downloaded. `media` defaults to the checkbox. */
-    async function handleExport(media: boolean = includeMedia): Promise<boolean> {
+    /** Resolves true once a file was downloaded: a backup with photos, or a bare GEDCOM. */
+    async function handleExport(media: boolean): Promise<boolean> {
         if (exportBusyRef.current) return false;
         const exportTreeId = activeTreeId;
         if (!media) return exportArtifact({ includeMedia: false }, exportTreeId);
@@ -548,614 +532,72 @@ export default function ImportExportPage() {
         }, 0);
     }
 
-    if (isPhone) {
-        return (
-            <MobileImportExport
-                treeName={treeName}
-                permission={activePermission}
-                treeEmpty={countsRead ? treeEmpty : null}
-                liveCounts={liveCounts}
-                countsText={countsText}
-                activeTreeId={activeTreeId}
-                file={file}
-                onFile={(f) => { setFile(f); setError(null); setDryRunPreview(null); }}
-                onStartJob={(next) => { startAnotherImport(); setFile(null); setDryRunPreview(null); setMode(next); }}
-                previewing={previewing}
-                loading={loading}
-                checkingTree={checkingTree}
-                importStep={importStep}
-                importProgress={importProgress}
-                preview={dryRunPreview}
-                previewSidecars={previewSidecars}
-                error={error}
-                onPreview={() => { void handlePreview(); }}
-                onBackToForm={handleCancelPreview}
-                onImport={() => { void requestImport(); }}
-                result={result}
-                recoverySeed={recoverySeed}
-                checksCount={checksReport?.treeId === activeTreeId ? checksReport.count : null}
-                duplicatesCount={duplicateReport?.treeId === activeTreeId ? duplicateReport.count : null}
-                onFinish={startAnotherImport}
-                confirmOpen={confirmOverwrite}
-                existingCounts={existingCounts}
-                onConfirm={() => {
-                    const confirmedTree = confirmOverwriteTree;
-                    setConfirmOverwriteTree(undefined);
-                    if (confirmedTree === activeTreeId) runImport();
-                }}
-                onCancelConfirm={() => setConfirmOverwriteTree(undefined)}
-                exportBusy={exportBusy}
-                exportError={exportError}
-                onExport={handleExport}
-                preflight={mediaExportPreflight?.preflight ?? null}
-                onPreflightClose={() => setMediaExportPreflight(null)}
-                onExportOmit={() => {
-                    if (!mediaExportPreflight || activeTreeIdRef.current !== mediaExportPreflight.treeId) { setMediaExportPreflight(null); return; }
-                    const exportTreeId = mediaExportPreflight.treeId;
-                    setMediaExportPreflight(null);
-                    void exportArtifact({ includeMedia: true, mediaPolicy: 'omit-unresolved' }, exportTreeId);
-                }}
-                xlsx={{
-                    file: xlsxFile,
-                    onFile: (f) => { setXlsxFile(f); setXlsxError(null); },
-                    phase: xlsxPhase,
-                    dryRun: xlsxDryRun,
-                    result: xlsxResult,
-                    error: xlsxError,
-                    onPreview: () => { void handleXlsxPreview(); },
-                    onConfirm: () => { void handleXlsxConfirm(); },
-                    onCancel: () => { handleXlsxCancel(); setXlsxFile(null); setXlsxResult(null); },
-                    dateFormat,
-                }}
-                onSkipLog={downloadSkipLog}
-            />
-        );
-    }
+    const shared: MobileImportExportProps = {
+        treeName,
+        permission: activePermission,
+        treeEmpty: countsRead ? treeEmpty : null,
+        liveCounts,
+        countsText,
+        activeTreeId,
+        file,
+        onFile: (f) => { setFile(f); setError(null); setDryRunPreview(null); },
+        onStartJob: (next) => { startAnotherImport(); setFile(null); setDryRunPreview(null); setMode(next); },
+        previewing,
+        loading,
+        checkingTree,
+        importStep,
+        importProgress,
+        preview: dryRunPreview,
+        previewSidecars,
+        error,
+        onPreview: () => { void handlePreview(); },
+        onBackToForm: handleCancelPreview,
+        onImport: () => { void requestImport(); },
+        result,
+        recoverySeed,
+        checksCount: checksReport?.treeId === activeTreeId ? checksReport.count : null,
+        duplicatesCount: duplicateReport?.treeId === activeTreeId ? duplicateReport.count : null,
+        onFinish: startAnotherImport,
+        confirmOpen: confirmOverwrite,
+        existingCounts,
+        onConfirm: () => {
+            const confirmedTree = confirmOverwriteTree;
+            setConfirmOverwriteTree(undefined);
+            if (confirmedTree === activeTreeId) runImport();
+        },
+        onCancelConfirm: () => setConfirmOverwriteTree(undefined),
+        exportBusy,
+        exportError,
+        onExport: handleExport,
+        preflight: mediaExportPreflight?.preflight ?? null,
+        onPreflightClose: () => setMediaExportPreflight(null),
+        onExportOmit: () => {
+            if (!mediaExportPreflight || activeTreeIdRef.current !== mediaExportPreflight.treeId) { setMediaExportPreflight(null); return; }
+            const exportTreeId = mediaExportPreflight.treeId;
+            setMediaExportPreflight(null);
+            void exportArtifact({ includeMedia: true, mediaPolicy: 'omit-unresolved' }, exportTreeId);
+        },
+        xlsx: {
+            file: xlsxFile,
+            onFile: (f) => { setXlsxFile(f); setXlsxError(null); },
+            phase: xlsxPhase,
+            dryRun: xlsxDryRun,
+            result: xlsxResult,
+            error: xlsxError,
+            onPreview: () => { void handleXlsxPreview(); },
+            onConfirm: () => { void handleXlsxConfirm(); },
+            onCancel: () => { handleXlsxCancel(); setXlsxFile(null); setXlsxResult(null); },
+            dateFormat,
+        },
+        onSkipLog: downloadSkipLog,
+    };
 
+    if (isPhone) return <MobileImportExport {...shared} />;
     return (
-        <PageShell title={t('title')} subtitle={t('subtitle')}>
-            <div className="max-w-4xl">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-                    {/* Import Section */}
-                    <Card pad={false} className="p-6">
-                        {/* Name the tree at every step: the active tree is per browser,
-                            so the header chip was the only clue to what gets replaced (FR-2). */}
-                        <h2 className="section text-text mb-4">{t('import_title_tree', { tree: treeName })}</h2>
-                        <p className="text-text-secondary mb-6">{t('import_desc')}</p>
-
-                        <div className="space-y-4">
-                            {/* The form collapses once an import succeeds; the result
-                                panel below takes over until "Import another file" (FR-3). */}
-                            {!result && (<>
-                            {/* File Upload */}
-                            <FileField
-                                label={t('select_file')}
-                                accept=".ged,.zip"
-                                file={file}
-                                onFile={setFile}
-                                chooseLabel={t('choose_file')}
-                                noFileLabel={t('no_file')}
-                            />
-
-                            {/* Zip Structure Info */}
-                            <div className="bg-surface border border-border rounded-lg p-4">
-                                <p className="text-sm text-text font-medium mb-2">{t('zip_structure')}</p>
-                                <p className="text-xs text-text-muted mb-2">{t('zip_desc')}</p>
-                                <pre className="text-xs bg-card-alt p-2 rounded font-mono text-text-secondary">
-                                    {`your_archive.zip
-├── family_tree.ged  (required)
-├── cases.json       (optional)
-├── media.json       (optional)
-├── sources.json     (optional)
-└── media/           (optional)
-    ├── photo1.jpg
-    ├── photo2.png
-    └── ...`}
-                                </pre>
-                                <p className="text-xs text-text-muted mt-2">{t('import_compression_note')}</p>
-                            </div>
-
-                            {/* Import Mode */}
-                            <div>
-                                <label className="block text-sm font-medium text-text mb-2">
-                                    {t('import_mode')}
-                                </label>
-                                <div className="space-y-2">
-                                    <label className="flex items-start p-3 border border-border rounded-lg cursor-pointer hover:bg-surface">
-                                        <input
-                                            type="radio"
-                                            name="import-mode"
-                                            value="overwrite"
-                                            checked={mode === 'overwrite'}
-                                            onChange={(e) => setMode(e.target.value as 'overwrite')}
-                                            className="mt-1 mr-3"
-                                        />
-                                        <div>
-                                            <div className="font-medium text-text">{t('mode_overwrite')}</div>
-                                            <div className="text-sm text-text-muted">{t('mode_overwrite_desc')}</div>
-                                        </div>
-                                    </label>
-                                    <label className="flex items-start p-3 border border-border rounded-lg cursor-pointer hover:bg-surface">
-                                        <input
-                                            type="radio"
-                                            name="import-mode"
-                                            value="merge"
-                                            checked={mode === 'merge'}
-                                            onChange={(e) => setMode(e.target.value as 'merge')}
-                                            className="mt-1 mr-3"
-                                        />
-                                        <div>
-                                            <div className="font-medium text-text">{t('mode_merge')}</div>
-                                            <div className="text-sm text-text-muted">{t('mode_merge_desc')}</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* Overwrite is irreversible — warn + offer a one-click backup.
-                                An empty tree has nothing to lose, so it gets neither. */}
-                            {mode === 'overwrite' && liveGate?.action === 'confirm' && (
-                                <Banner tone="warning" role="note" icon={<AlertTriangle className="w-4 h-4" />}>
-                                    <p>{namedCounts
-                                        ? t.rich('overwrite_warning_counts', { tree: treeName, counts: countsText(namedCounts), strong })
-                                        : t.rich('overwrite_warning', { tree: treeName, strong })}</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => exportAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                                        className="mt-1.5 font-semibold underline cursor-pointer rounded focus-ring"
-                                    >
-                                        {t('back_up_first')}
-                                    </button>
-                                </Banner>
-                            )}
-
-                            {/* Preview / Import buttons */}
-                            {dryRunPreview ? (
-                                <div className="space-y-3">
-                                    <div className="bg-surface border border-border rounded-lg p-4 space-y-2">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Badge tone="green">{t('validated')}</Badge>
-                                            {dryRunPreview.skipped.length > 0 && (
-                                                <Badge tone="warning">{t('warnings_count', { count: dryRunPreview.skipped.length })}</Badge>
-                                            )}
-                                        </div>
-                                        <p className="text-sm text-text-muted">{t.rich('preview_ready', { mode: modeLabel(dryRunPreview.mode), strong })}</p>
-                                        {/* What's there now, beside what the file adds (FR-2). */}
-                                        {liveCounts && (
-                                            <p className="text-sm text-text-muted">
-                                                {treeEmpty
-                                                    ? t.rich('preview_current_empty', { tree: treeName, strong })
-                                                    : t.rich(dryRunPreview.mode === 'overwrite' ? 'preview_current_overwrite' : 'preview_current_merge', { tree: treeName, counts: countsText(liveCounts), strong })}
-                                            </p>
-                                        )}
-                                        <div className="grid grid-cols-2 gap-2 text-sm text-text">
-                                            <div>{t('preview_people')}: <strong>{dryRunPreview.toImport.peopleCount}</strong></div>
-                                            <div>{t('preview_families')}: <strong>{dryRunPreview.toImport.familiesCount}</strong></div>
-                                            <div>{t('preview_children')}: <strong>{dryRunPreview.toImport.childrenCount}</strong></div>
-                                            <div>{t('preview_media')}: <strong>{dryRunPreview.toImport.mediaCount}</strong></div>
-                                            <div>{t('preview_sources')}: <strong>{dryRunPreview.toImport.sourcesCount}</strong></div>
-                                            <div>{t('preview_citations')}: <strong>{dryRunPreview.toImport.citationsCount}</strong></div>
-                                        </div>
-                                        {previewSidecars && (
-                                            <p className="text-xs text-text-muted">
-                                                {previewSidecars.length > 0
-                                                    ? t('preview_sidecars', { files: previewSidecars.join(', ') })
-                                                    : t('preview_sidecars_none')}
-                                            </p>
-                                        )}
-                                        {dryRunPreview.skipped.length > 0 && (
-                                            <div className="mt-3 pt-3 border-t border-border">
-                                                <p className="text-sm font-medium text-badge-warning-text mb-1">
-                                                    {t('skipped_records', { count: dryRunPreview.skipped.length })}
-                                                </p>
-                                                <ul className="text-xs text-text-muted space-y-1 max-h-32 overflow-y-auto">
-                                                    {dryRunPreview.skipped.slice(0, 50).map((s, i) => (
-                                                        <li key={i} className="truncate">{s.type} {s.identifier} — {s.reason}</li>
-                                                    ))}
-                                                </ul>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => downloadSkipLog(dryRunPreview.skipped)}
-                                                    className="mt-2 text-xs text-link hover:underline"
-                                                >
-                                                    {t('download_skip_log')}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    {/* The browser build imports in the page, about a minute for a
-                                        large file; say so before the user starts (ST-1). */}
-                                    {DATA_MODE === 'local' && dryRunPreview.toImport.peopleCount >= LARGE_IMPORT_PEOPLE && (
-                                        <p className="text-sm text-text-muted">{t('import_browser_note')}</p>
-                                    )}
-                                    {loading && (
-                                        <ImportProgress
-                                            label={importProgress
-                                                ? t('uploading_media')
-                                                : importStep
-                                                    ? t(`import_step_${importStep}`)
-                                                    : t('importing_counts', { tree: treeName, counts: countsText({ people: dryRunPreview.toImport.peopleCount, families: dryRunPreview.toImport.familiesCount }) })}
-                                            current={importProgress?.current ?? (importStep ? GEDCOM_IMPORT_STEPS.indexOf(importStep) + 1 : undefined)}
-                                            total={importProgress?.total ?? (importStep ? GEDCOM_IMPORT_STEPS.length : undefined)}
-                                        />
-                                    )}
-                                    <div className="flex gap-2">
-                                        <Button
-                                            className="flex-1"
-                                            onClick={() => { void requestImport(); }}
-                                            disabled={loading || checkingTree}
-                                            icon={checkingTree && !loading ? <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" /> : undefined}
-                                        >
-                                            {loading
-                                                ? (importProgress ? t('upload_progress', { current: importProgress.current, total: importProgress.total }) : t('importing'))
-                                                : checkingTree ? t('checking_tree') : t('import_button')}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={handleCancelPreview}
-                                            disabled={loading}
-                                        >
-                                            {tCommon('cancel')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <Button
-                                        onClick={handlePreview}
-                                        disabled={!file || !mode || previewing || loading}
-                                        icon={previewing ? <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" /> : undefined}
-                                    >
-                                        {previewing ? t('previewing') : t('preview_button')}
-                                    </Button>
-                                    {file && !mode && <p className="text-sm text-text-muted">{t('choose_mode_hint')}</p>}
-                                </div>
-                            )}
-                            </>)}
-
-                            {/* Error Message */}
-                            {error && (
-                                <Banner tone="error">
-                                    <p className="font-semibold">{t('error_label')}</p>
-                                    <p className="mt-1">{error}</p>
-                                </Banner>
-                            )}
-
-                            <div ref={recoveryPanelRef} tabIndex={-1} role="region" aria-label={t('media_recovery_title')}>
-                                <MediaImportRecovery
-                                    treeId={activeTreeId}
-                                    initialTreeId={recoverySeed?.treeId}
-                                    initialItems={recoverySeed?.treeId === activeTreeId ? recoverySeed.items : undefined}
-                                    initialArchive={recoverySeed?.treeId === activeTreeId ? recoverySeed.archive : null}
-                                    result={result}
-                                />
-                            </div>
-
-                            {result && (
-                                <div className="space-y-3">
-                                    <ImportReport
-                                        datesToCheck={checksReport?.treeId === activeTreeId ? checksReport.count : null}
-                                        duplicates={duplicateReport?.treeId === activeTreeId ? duplicateReport.count : null} />
-                                    <Button variant="outline" onClick={startAnotherImport} icon={<Upload className="w-4 h-4" aria-hidden="true" />}>
-                                        {t('import_another')}
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    </Card>
-
-                    {/* Export Section. The scroll anchor lives inside the card (not as a
-                        sibling) so it never occupies a grid cell — a stray grid child here
-                        pushed Export out of the second column and under Import. */}
-                    <Card pad={false} className="p-6">
-                        <div ref={exportAnchorRef} />
-                        <h2 className="section text-text mb-4">{t('export_title')}</h2>
-                        <p className="text-text-secondary mb-6">{t('export_desc')}</p>
-
-                        <div className="space-y-4">
-                            {/* Include Media Checkbox */}
-                            <label className="flex items-center p-3 border border-border rounded-lg cursor-pointer hover:bg-surface">
-                                <input
-                                    type="checkbox"
-                                    checked={includeMedia}
-                                    onChange={(e) => setIncludeMedia(e.target.checked)}
-                                    className="mr-3 w-4 h-4"
-                                />
-                                <div>
-                                    <div className="font-medium text-text">{t('include_media')}</div>
-                                    <div className="text-sm text-text-muted">{t('include_media_desc')}</div>
-                                </div>
-                            </label>
-
-                            <div className="bg-surface border border-border rounded-lg p-4">
-                                <p className="text-sm text-text">
-                                    <strong>{t('what_is_gedcom_title')}</strong>
-                                </p>
-                                <p className="text-sm text-text-muted mt-2">{t('what_is_gedcom')}</p>
-                            </div>
-
-                            <Button
-                                size="lg"
-                                block
-                                onClick={() => { void handleExport(); }}
-                                disabled={exportBusy}
-                                aria-busy={exportBusy}
-                                // The media preflight takes a second or two; say so (BK-1).
-                                icon={exportBusy
-                                    ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                                    : <Download className="w-4 h-4" aria-hidden="true" />}
-                            >
-                                {exportBusy ? t('export_preparing') : includeMedia ? t('download_zip') : t('download_gedcom')}
-                            </Button>
-                            {exportError && (
-                                <p role="alert" className="text-sm text-error">{exportError}</p>
-                            )}
-
-                            <div className="text-sm text-text-muted space-y-2">
-                                <p><strong>{t('export_includes')}</strong></p>
-                                <ul className="list-disc list-inside space-y-1 ml-2">
-                                    <li>{t('export_all_people')}</li>
-                                    <li>{t('export_all_families')}</li>
-                                    <li>{t('export_birth_death')}</li>
-                                    <li>{t('export_events')}</li>
-                                    {includeMedia && <li>{t('export_photos')}</li>}
-                                </ul>
-                            </div>
-
-                            <div className="bg-surface border border-border rounded-lg p-3">
-                                <p className="text-xs text-text-muted">{t('export_sources_included')}</p>
-                            </div>
-
-                        </div>
-                    </Card>
-                </div>
-
-                {mediaExportPreflight && (
-                    <MediaExportPreflightDialog
-                        preflight={mediaExportPreflight.preflight}
-                        onReview={reviewMediaExport}
-                        onCancel={() => setMediaExportPreflight(null)}
-                        onExportWithoutUnresolved={() => {
-                            if (activeTreeIdRef.current !== mediaExportPreflight.treeId) {
-                                setMediaExportPreflight(null);
-                                return;
-                            }
-                            const exportTreeId = mediaExportPreflight.treeId;
-                            setMediaExportPreflight(null);
-                            void exportArtifact({ includeMedia: true, mediaPolicy: 'omit-unresolved' }, exportTreeId);
-                        }}
-                        busy={exportBusy}
-                    />
-                )}
-
-                {/* Overwrite confirmation modal — kept outside the import/export grid so
-                    it is never counted as a grid child. */}
-                <ConfirmDialog
-                    open={confirmOverwrite}
-                    variant="calm"
-                    tone="danger"
-                    title={t('overwrite_confirm_title')}
-                    body={existingCounts
-                        ? t('overwrite_confirm_body', { tree: treeName, counts: countsText(existingCounts) })
-                        : t('overwrite_confirm_body_no_counts', { tree: treeName })}
-                    warning={t('overwrite_confirm_warning')}
-                    confirmLabel={t('overwrite_confirm_cta')}
-                    busy={loading}
-                    onConfirm={() => {
-                        const confirmedTree = confirmOverwriteTree;
-                        setConfirmOverwriteTree(undefined);
-                        if (confirmedTree === activeTreeId) runImport();
-                    }}
-                    onCancel={() => setConfirmOverwriteTree(undefined)}
-                />
-
-                {/* Spreadsheet Import Section */}
-                <Card pad={false} className="mt-6 p-6">
-                    <div className="mb-4">
-                        <h2 className="section m-0 text-text">{ts('title')}</h2>
-                        <p className="text-text-secondary text-sm mt-0.5">{ts('subtitle')}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {/* Download template */}
-                        <div className="space-y-3">
-                            <p className="text-sm text-text-muted">{ts('download_template_desc')}</p>
-                            <Button
-                                variant="outline"
-                                icon={<Download className="w-4 h-4" aria-hidden="true" />}
-                                onClick={() => { window.location.href = `/api/import/spreadsheet/template?dateFormat=${dateFormat}`; }}
-                            >
-                                {ts('download_template')}
-                            </Button>
-                            <p className="text-xs text-text-muted">
-                                {ts('date_format_note', {
-                                    format: dateFormat === 'DMY' ? ts('format_dmy') : ts('format_mdy'),
-                                })}
-                            </p>
-                        </div>
-
-                        {/* Upload & import */}
-                        <div className="space-y-4">
-                            {xlsxPhase === 'idle' || xlsxPhase === 'previewing' ? (
-                                <>
-                                    <FileField
-                                        label={ts('select_file')}
-                                        accept=".xlsx"
-                                        file={xlsxFile}
-                                        onFile={(f) => { setXlsxFile(f); setXlsxError(null); }}
-                                        chooseLabel={t('choose_file')}
-                                        noFileLabel={t('no_file')}
-                                    />
-                                    <Button
-                                        onClick={handleXlsxPreview}
-                                        disabled={!xlsxFile || xlsxPhase === 'previewing'}
-                                        icon={xlsxPhase === 'previewing' ? <Loader2 className="animate-spin h-4 w-4" aria-hidden="true" /> : undefined}
-                                    >
-                                        {xlsxPhase === 'previewing' ? ts('previewing') : ts('preview_button')}
-                                    </Button>
-                                </>
-                            ) : xlsxPhase === 'preview' && xlsxDryRun ? (
-                                <div className="space-y-4">
-                                    <div className="bg-surface border border-border rounded-lg p-4 space-y-2">
-                                        <p className="font-semibold text-text">{ts('preview_title')}</p>
-                                        <p className="text-sm text-text-muted">{ts('preview_to_import')}</p>
-                                        <ul className="text-sm text-text space-y-1 list-disc list-inside ml-2">
-                                            <li>{ts('preview_people', { count: xlsxDryRun.toImport.peopleCount })}</li>
-                                            <li>{ts('preview_families', { count: xlsxDryRun.toImport.familiesCount })}</li>
-                                            <li>{ts('preview_children', { count: xlsxDryRun.toImport.childrenCount })}</li>
-                                        </ul>
-                                        {xlsxDryRun.skipped.length > 0 && (
-                                            <div className="mt-3 pt-3 border-t border-border">
-                                                <p className="text-sm font-medium text-badge-warning-text">
-                                                    {ts('preview_skipped_title', { count: xlsxDryRun.skipped.length })}
-                                                </p>
-                                                <p className="text-xs text-text-muted mb-2">{ts('preview_skipped_desc')}</p>
-                                                <ul className="text-xs text-text-muted space-y-1 max-h-32 overflow-y-auto">
-                                                    {xlsxDryRun.skipped.map((s, i) => (
-                                                        <li key={i} className="truncate">{s.identifier} — {s.reason}</li>
-                                                    ))}
-                                                </ul>
-                                                <button
-                                                    onClick={() => downloadSkipLog(xlsxDryRun.skipped)}
-                                                    className="mt-2 text-xs text-link hover:underline"
-                                                >
-                                                    {ts('download_log')}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button className="flex-1" onClick={handleXlsxConfirm}>
-                                            {ts('confirm_button')}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={handleXlsxCancel}
-                                        >
-                                            {ts('cancel_button')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : xlsxPhase === 'confirming' ? (
-                                <div className="flex items-center justify-center py-8 gap-3 text-text-muted">
-                                    <Loader2 className="animate-spin h-5 w-5" aria-hidden="true" />
-                                    {ts('confirming')}
-                                </div>
-                            ) : xlsxPhase === 'done' && xlsxResult ? (
-                                <Banner tone="success">
-                                    <p className="font-semibold mb-2">{ts('success_title')}</p>
-                                    <div className="space-y-1">
-                                        <p><strong>{ts('success_people')}</strong> {xlsxResult.peopleImported}</p>
-                                        <p><strong>{ts('success_families')}</strong> {xlsxResult.familiesImported}</p>
-                                        <p><strong>{ts('success_children')}</strong> {xlsxResult.childrenLinked}</p>
-                                        {xlsxResult.skipped.length > 0 && (
-                                            <>
-                                                <p><strong>{ts('success_skipped')}</strong> {xlsxResult.skipped.length}</p>
-                                                <button
-                                                    onClick={() => downloadSkipLog(xlsxResult.skipped)}
-                                                    className="text-xs text-link hover:underline"
-                                                >
-                                                    {ts('download_log')}
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        <Link href="/people" className={buttonClass({ variant: 'success' })}>
-                                            {ts('view_people')}
-                                        </Link>
-                                        <Link href="/families" className={buttonClass({ variant: 'outline' })}>
-                                            {ts('view_families')}
-                                        </Link>
-                                    </div>
-                                </Banner>
-                            ) : null}
-
-                            {xlsxError && (
-                                <Banner tone="error">
-                                    <p className="font-semibold">{ts('error_label')}</p>
-                                    <div className="mt-1 space-y-0.5">
-                                        {xlsxError.split('\n').map((line, i) => (
-                                            <p key={i}>{line}</p>
-                                        ))}
-                                    </div>
-                                </Banner>
-                            )}
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Help Section */}
-                <Card pad={false} className="mt-8 p-6">
-                    <h3 className="section text-text mb-4">{t('help_title')}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-text-muted">
-                        <div>
-                            <p className="font-medium text-text mb-2">{t('help_version_title')}</p>
-                            <p>{t('help_version')}</p>
-                        </div>
-                        <div>
-                            <p className="font-medium text-text mb-2">{t('help_size_title')}</p>
-                            <p>{t('help_size')}</p>
-                        </div>
-                        <div>
-                            <p className="font-medium text-text mb-2">{t('help_safety_title')}</p>
-                            <p>{t('help_safety')}</p>
-                        </div>
-                        <div>
-                            <p className="font-medium text-text mb-2">{t('help_merge_title')}</p>
-                            <p>{t('help_merge')}</p>
-                        </div>
-                    </div>
-                </Card>
-
-            </div>
-        </PageShell>
-    );
-}
-
-/**
- * A file input shown as an outline `Button` plus the chosen file's name (BTN-6), instead
- * of the browser's unstyled "Choose file" control. The native input stays in the DOM,
- * hidden, so tests and drag-free pickers still reach it.
- */
-function FileField({ label, accept, file, onFile, chooseLabel, noFileLabel }: {
-    label: string;
-    accept: string;
-    file: File | null;
-    onFile: (file: File | null) => void;
-    chooseLabel: string;
-    noFileLabel: string;
-}) {
-    const inputRef = useRef<HTMLInputElement>(null);
-    const labelId = useId();
-    return (
-        <div>
-            <p id={labelId} className="block text-sm font-medium text-text mb-2">{label}</p>
-            <div className="flex items-center gap-3 min-w-0">
-                <input
-                    ref={inputRef}
-                    type="file"
-                    accept={accept}
-                    aria-labelledby={labelId}
-                    className="hidden"
-                    onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-                />
-                <Button
-                    variant="outline"
-                    className="shrink-0"
-                    aria-describedby={labelId}
-                    icon={<Upload className="w-4 h-4" aria-hidden="true" />}
-                    onClick={() => {
-                        // Clear first so picking the same file again still fires onChange.
-                        if (inputRef.current) { inputRef.current.value = ''; inputRef.current.click(); }
-                    }}
-                >
-                    {chooseLabel}
-                </Button>
-                <span className="text-sm text-text-secondary truncate min-w-0">
-                    {file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : noFileLabel}
-                </span>
-            </div>
-        </div>
+        <DesktopImportExport
+            {...shared}
+            onPreflightReview={reviewMediaExport}
+            recoveryRef={recoveryPanelRef}
+        />
     );
 }

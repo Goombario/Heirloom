@@ -142,16 +142,6 @@
       "count": 2
     }
   },
-  "app/tree/TreeHeader.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 3
-    }
-  },
-  "app/tree/TreeLeftRail.tsx": {
-    "ds/no-arbitrary-font-size": {
-      "count": 1
-    }
-  },
   "app/tree/TreeOverlays.tsx": {
     "ds/no-inline-static-literal": {
       "count": 4

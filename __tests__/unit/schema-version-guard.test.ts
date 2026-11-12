@@ -121,7 +121,14 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // v68 — journal entries are append-only (#1251, ADR 0042): CaseComments."StruckAt",
 // "StruckBy" (FK, ON DELETE SET NULL) and "StruckReason", with casecomments_struck_check
 // (a marker only on a note, never on a status or conclusion line). Additive.
-const EXPECTED_FINGERPRINT = '14d6c781fecce5705f646526ff40b894db9d5ffc66cea18a59b69a33c870a7e1';
+// v69 — the research workspace (#58, ADR 0045): "CaseLeads", "CaseLeadPerson",
+// "CaseRequests", "CaseFindings", "CaseFindingLead", "CaseClaims", "CaseCommentLead";
+// "Cases" gains FromYear/ToYear/Place/QuestionKind/Outcome/ClosedAt and "CaseComments"
+// FindingId/RequestId; the Kind check becomes casecomments_kind_check with the new
+// kinds; every case gets its question as a first lead. Additive.
+// v70 — Answer and close (#58, ADR 0046): "CaseClaims"."AppliedCitationAuditId", the audit
+// entry of the citation an applied claim put on the tree, so Undo reverts it too. Additive.
+const EXPECTED_FINGERPRINT = 'cb7ec1f6ce14392da8af5b03b3b593fada11b1df59754ad2fc7b1cacd8769362';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

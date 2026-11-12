@@ -1734,6 +1734,38 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 }
 .cover-portrait > * { width: 100%; height: 100%; }
 .cover-lead { flex: 1 1 auto; min-width: 0; padding-top: 18px; max-width: 68ch; }
+.place-cover { position: relative; margin-bottom: 28px; border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-card); }
+.place-cover__map { border-radius: 0 !important; }
+/* The name sits over the map's foot (#56), so the attribution moves to the top. */
+.place-cover .maplibregl-ctrl-bottom-right { top: 0; bottom: auto; }
+.place-cover__foot.hero-dark {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  padding: 56px 28px 20px;
+  border-radius: 0;
+  box-shadow: none;
+  background: linear-gradient(to top, var(--color-hero-bg) 0%, var(--color-hero-bg) 58%, color-mix(in srgb, var(--color-hero-bg) 0%, transparent) 100%);
+  pointer-events: none;
+}
+.place-cover__foot a, .place-cover__foot button { pointer-events: auto; }
+.place-cover__drag { position: absolute; top: 12px; left: 64px; right: 16px; z-index: 3; }
+/* Places within are named on the cover; a single own pin is named by the title. */
+.place-cover--labels .location-map-pin-label { display: block; }
+/* A borrowed pin (a parent's) is ringed and dashed, so it never reads as this place's own. */
+.place-cover--borrowed .location-map-pin-body::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  width: 44px;
+  height: 44px;
+  transform: translateX(-50%);
+  border: 2px dashed var(--color-text-secondary);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.place-cover--borrowed .location-map-pin-body svg { opacity: 0.7; }
 .lead-text__body {
   font-size: var(--text-md);
   line-height: 1.6;
@@ -2079,6 +2111,38 @@ main#main-content:focus {
   align-items: center;
 }
 
+/* A research lead's timeline (#58): a stretch with no record, hatched. */
+.timeline-gap {
+  background: repeating-linear-gradient(135deg, var(--color-border) 0 2px, transparent 2px 6px);
+}
+
+/* A research case laid out to print, so Export saves it as a PDF (#58). Hidden on
+   screen; while it is in the page, printing shows only it, black on white. */
+.case-print { display: none; }
+@media print {
+  body:has(> .case-print) > :not(.case-print) { display: none !important; }
+  body:has(> .case-print) { background: white; }
+  .case-print { display: block; color: black; font-family: var(--font-sans); font-size: 10.5pt; line-height: 1.45; }
+  .case-print h1, .case-print h2 { font-family: var(--font-serif); font-weight: 600; margin: 0; }
+  .case-print h1 { font-size: 20pt; margin-top: 2pt; }
+  .case-print h2 { font-size: 13.5pt; margin-top: 16pt; padding-top: 8pt; border-top: 0.5pt solid #999; break-after: avoid; }
+  .case-print h3 { font-size: 10.5pt; margin: 8pt 0 0; }
+  .case-print p { margin: 3pt 0; }
+  .case-print ul { margin: 6pt 0 0; padding-left: 14pt; }
+  .case-print li { margin-bottom: 6pt; break-inside: avoid; }
+  .case-print dl { display: grid; grid-template-columns: max-content 1fr; gap: 2pt 12pt; margin: 10pt 0 0; }
+  .case-print dt { color: #555; }
+  .case-print dd { margin: 0; white-space: pre-wrap; }
+  .case-print table { border-collapse: collapse; width: 100%; margin-top: 3pt; }
+  .case-print td { border-top: 0.5pt solid #ccc; padding: 2pt 6pt 2pt 0; vertical-align: top; }
+  .case-print td:first-child { width: 22%; color: #555; }
+  .case-print td:last-child { width: 22%; }
+  .case-print blockquote { margin: 3pt 0; padding-left: 8pt; border-left: 1.5pt solid #ccc; white-space: pre-wrap; }
+  .case-print-muted { color: #555; }
+  .case-print-body { white-space: pre-wrap; }
+  .case-print-struck .case-print-body { text-decoration: line-through; }
+}
+
 /* Horizontal-scrolling strip (e.g. the library tab headers). Scrolls on narrow
    widths with no visible scrollbar, and pins overflow-y to hidden so the
    horizontal scrollbar's height can't spawn a spurious vertical scrollbar
@@ -2244,6 +2308,8 @@ html.dark .react-flow__minimap-mask {
 .location-map-pin.is-draggable {
   cursor: grab;
 }
+/* The pin's old place while it is dragged (#56). */
+.location-map-pin.is-ghost { opacity: 0.4; pointer-events: none; }
 .location-map-pin.is-draggable:active {
   cursor: grabbing;
 }
@@ -2419,7 +2485,15 @@ html.dark .react-flow__minimap-mask {
    Desktop only: below 768px the sidebar is a bottom sheet (see useTreePersonEditor),
    which covers neither panel, and the minimap/controls are display:none there
    anyway. --tree-panel-inset is set per-render by TreeVisualization. */
+/* Places Explore rail rows (#56): pin, name and kind line, up to three faces (fixed, so
+   rows without faces stay aligned), the record count in a column as wide as the
+   level's longest number, and the drill chevron. */
+.explore-row {
+  grid-template-columns: 12px minmax(0, 1fr) 52px var(--explore-count-w, 3ch) 16px;
+}
 :root { --tree-sidebar-w: 300px; }
+/* The v1.1 person panel (#71) pairs fields two to a row, so it is wider from lg. */
+@media (min-width: 1024px) { :root { --tree-sidebar-w: 340px; } }
 
 @media (min-width: 768px) {
   .tree-canvas .react-flow__panel.right {

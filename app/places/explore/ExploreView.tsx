@@ -1,8 +1,8 @@
 'use client';
 
-// Composes the Explore view: builds the tree, runs useExploreState, and lays out the two
-// elevation levels — a map RECESSED into the page (level −1, inset shadow, no card frame)
-// above ONE raised panel (level +2) holding the index rail and the detail side by side.
+// Composes the full-page Explore workspace (#56): builds the tree, runs useExploreState,
+// and lays out three panes that each scroll on their own: the list rail, the selected
+// place, and the map filling the rest.
 //
 // The map tracks the CURRENT JURISDICTION (state.currentNode): it re-fits only when you drill
 // into a different level — a click on a parent entry — never on hover or a leaf select. Combined
@@ -19,6 +19,7 @@ import { collapseEmptyIntermediaries, type PlaceTreeNode } from '@/lib/places/hi
 import { findNodeById, useExploreState } from './useExploreState';
 import { ExploreDrill } from './ExploreDrill';
 import { ExploreDetail } from './ExploreDetail';
+import { ScrollArea } from '@/app/components/ui/ScrollArea';
 import { collectPins } from './collectPins';
 import { MapPin } from '@/lib/icons';
 import { usePrefetchPlaceDetail } from '@/lib/places/prefetch';
@@ -29,11 +30,13 @@ export interface ExploreViewProps {
    *  applies the query itself, inside the drill, so it can match globally. */
   roots: PlaceTreeNode[];
   treeId: number | null;
-  /** Hero search query, shared across views. */
+  /** The bar's filter query. */
   search: string;
+  /** Clears the bar's filter (the rail's "no matches" line). */
+  onClearSearch?: () => void;
 }
 
-export function ExploreView({ roots, treeId, search }: ExploreViewProps) {
+export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreViewProps) {
   const t = useTranslations('places');
   const router = useRouter();
   // Skip fact-less pass-through jurisdictions (e.g. New York with no own records) so the
@@ -116,86 +119,61 @@ export function ExploreView({ roots, treeId, search }: ExploreViewProps) {
     if (node) prefetch(node.id ?? node.name);
   };
 
-  const shortName = (name: string) => name.split(',')[0]?.trim() ?? name;
+  // The selected-place pane is Narrow (420px) by default; Wide gives it more room.
+  // Kept for the session only: the map takes whatever is left either way.
+  const [wide, setWide] = useState(false);
 
   return (
-    <div>
-      {/* Level −1: the map is recessed into the page — inset shadow, no border, no
-          Card. It is the only element in the system with no frame that still needs
-          definition, and an inner shadow gives it depth without adding a card. */}
-      {/* No place in view has coordinates (most GEDCOMs carry none): no map well
-          at all, just a line saying how to get one (FR-5; #765 sized it before). */}
-      {markers.length === 0 ? (
-        <p className="flex items-center gap-2 text-sm text-text-muted">
-          <MapPin size={16} className="shrink-0" aria-hidden="true" />
-          {t('map_none_explore')}
-        </p>
-      ) : (
-        <div
-          className="relative h-[400px] rounded-2xl overflow-hidden"
-          style={{ background: 'var(--map-well-bg)' }}
+    // Three panes, each scrolling on its own (#56): the list rail, the selected place,
+    // and the map filling the rest. Below lg there is no room for the map, so it drops
+    // and the two panes share the width.
+    <div className={`explore-workspace flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] ${wide ? 'lg:grid-cols-[320px_640px_minmax(0,1fr)]' : 'lg:grid-cols-[320px_420px_minmax(0,1fr)]'}`}>
+      <div className="min-h-0 flex flex-col bg-card border-r border-border">
+        <ExploreDrill
+          state={state}
+          search={search}
+          onRowClick={onRowClick}
+          onRowHover={onRowHover}
+          onClearSearch={onClearSearch}
+        />
+      </div>
+      <div className="min-h-0 flex flex-col bg-card border-r border-border relative">
+        <button
+          type="button"
+          onClick={() => setWide((w) => !w)}
+          aria-pressed={wide}
+          className="hidden lg:inline-flex absolute top-3 right-3 z-10 items-center min-h-7 px-2 rounded-md border border-border bg-card text-xs text-text-secondary cursor-pointer hover:bg-hover-surface focus-ring"
         >
+          {wide ? t('pane_narrow') : t('pane_wide')}
+        </button>
+        <ScrollArea className="flex-1 min-h-0">
+          <ExploreDetail
+            placeName={state.selected?.name ?? null}
+            placeId={state.selected?.id ?? null}
+            treeId={treeId}
+            onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) onRowClick(node); }}
+          />
+        </ScrollArea>
+      </div>
+      <div className="hidden lg:block relative min-h-0" style={{ background: 'var(--map-well-bg)' }}>
+        {markers.length === 0 ? (
+          // No place in view has coordinates (most GEDCOMs carry none): a line saying
+          // how to get one instead of an empty map (FR-5).
+          <p className="absolute inset-0 m-0 flex items-center justify-center gap-2 p-6 text-sm text-text-muted text-center">
+            <MapPin size={16} className="shrink-0" aria-hidden="true" />
+            {t('map_none_explore')}
+          </p>
+        ) : (
           <LocationMap
             markers={markers}
             variant="full"
-            height={400}
+            height="100%"
+            className="rounded-none!"
             onMarkerClick={onMarkerClick}
             onMarkerHover={onMarkerHover}
             highlightedIds={highlightedIds}
           />
-          {/* The well shadow lives on this overlay, NOT on the parent: an inset shadow
-              paints beneath in-flow children, and MapLibre's canvas fills the box exactly
-              (measured 1104x400 at offset 0,0), so once tiles loaded the recess vanished
-              — only the childless skeleton ever showed it. pointer-events-none keeps the
-              map draggable through it. */}
-          <div
-            className="pointer-events-none absolute inset-0 rounded-2xl"
-            style={{ boxShadow: 'var(--map-well-shadow)' }}
-            aria-hidden="true"
-          />
-          {/* Bottom-LEFT, not bottom-right: MapLibre anchors its attribution bottom-right,
-              and that is a licensing element rather than chrome — it must stay legible, so
-              the caption yields. The zoom control is top-left, so this corner is free. */}
-          <div className="absolute left-4 bottom-4 rounded-md border border-border bg-[color:var(--card)]/80 px-2.5 py-1.5 text-xs text-text-muted pointer-events-none">
-            {state.currentNode
-              ? t('explore_map_caption', { place: shortName(state.currentNode.name), count: markers.length })
-              : t('explore_map_caption_all', { count: markers.length })}
-          </div>
-        </div>
-      )}
-
-      {/* Level +2: ONE raised panel holding index + detail. They are one task ("pick
-          a place, read the place"); merging them removes the empty-detail dead zone
-          and the mid-page gap that made the old layout read as three loose slabs. */}
-      <div
-        className="mt-[18px] rounded-2xl border border-border bg-card overflow-hidden grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[372px_1fr]"
-        style={{ boxShadow: 'var(--panel-shadow)' }}
-      >
-        {/* The DETAIL pane sets the panel's height; the rail only fills it.
-            Removing the rail's 520px cap (#467) let a long level drive the row
-            instead — at the root, 43 places made a tall panel beside an empty
-            detail pane. The rail's content is taken out of the row's intrinsic
-            height (absolutely positioned inside a stretched grid cell) so it can
-            only ever scroll within whatever height the detail pane asks for, with
-            `min-h` as the floor for short/empty details.
-
-            Desktop only: below `md` the detail pane is `hidden`, so there is no
-            second cell to set the height and the rail must lay out normally —
-            it grows and the page scrolls, which is the right touch behaviour. */}
-        <div className="bg-card-alt border-b md:border-b-0 md:border-r border-border flex flex-col md:relative md:min-h-[360px]">
-          <div className="flex flex-col md:absolute md:inset-0">
-            <ExploreDrill
-              state={state}
-              search={search}
-              onRowClick={onRowClick}
-              onRowHover={onRowHover}
-            />
-          </div>
-        </div>
-        {/* Detail is desktop/tablet only — a mobile row tap routes to the full page. */}
-        <div className="hidden md:flex flex-col min-h-[360px]">
-          <ExploreDetail placeName={state.selected?.name ?? null} placeId={state.selected?.id ?? null} treeId={treeId} />
-        </div>
+        )}
       </div>
     </div>
   );

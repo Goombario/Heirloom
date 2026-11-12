@@ -24,6 +24,7 @@ import type { ActivityRow } from '@/lib/utils/activity-groups';
 import type { PinChainRow } from '@/lib/services/places';
 import type { FaceConfirmBatchResult, FaceGroup } from '@/lib/services/media-faces';
 import type { FaceDismissReason } from '@/lib/db/schema';
+import type { CaseChange, CaseClaimDecision, CaseClaimEvidence, CaseInformation, CaseOutcome, CaseRequestSentBy, CaseRequestState, CaseSourceNature, CaseWorkspace } from '@/lib/db/schema';
 import type { FaceSuggestionSnapshot } from '@/lib/db/queries/media-faces';
 import type { MediaDeleteBatchResult } from '@/lib/services/media';
 import type { PeopleFlag } from '@/lib/db/queries/data-quality';
@@ -347,10 +348,11 @@ export interface PlacesClient {
    *  resolution, keyed by `placeKeyString`. */
   pinChains(places: PlaceKey[], treeId?: number | null): Promise<Record<string, PinChainRow[]>>;
   geocodeUpsert(place: ResolvedPlace, treeId?: number | null): Promise<void>;
-  updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<void>;
+  /** Returns the audit entry, for Undo (#56). */
+  updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<Audited>;
   /** Persist a resolved jurisdiction chain (hierarchy rollup) in one call; `leafId`
    *  lands the last level on that place. */
-  geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<void>;
+  geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited>;
   /** How many other places currently inherit their pin from this one. */
   dependentCount(place: PlaceKey, treeId?: number | null): Promise<number>;
   /** Rename a place, or merge it into an existing one (rewrites fact columns + gazetteer). */
@@ -1045,17 +1047,58 @@ export interface GedcomClient {
 export interface ListCasesOptions {
   treeId?: number | null; status?: string; tag?: string; search?: string; personId?: number;
 }
-export interface CreateCaseInput {
+/** A case's scope (#58): years, a focus place, and the kind of question it started as. */
+interface CaseScopeInput {
+  FromYear?: number | null; ToYear?: number | null; Place?: string | null; QuestionKind?: string | null;
+}
+export interface CreateCaseInput extends CaseScopeInput {
   Title: string; Description?: string | null;
   Status?: 'in_progress' | 'on_hold' | 'closed'; Tags?: string[]; personIds?: number[];
 }
-export interface UpdateCaseInput {
+export interface UpdateCaseInput extends CaseScopeInput {
   Title?: string; Description?: string | null;
   Status?: 'in_progress' | 'on_hold' | 'closed'; Tags?: string[]; personIds?: number[]; mediaIds?: number[];
   /** Required when Status moves to 'closed': the case's answer, written as its final journal entry (#801). */
   Conclusion?: string;
+  /** How the case closed (#58); kept only when it closes. */
+  Outcome?: CaseOutcome | null;
 }
-export interface AddCommentInput { body: string; mediaId?: number | null; }
+export interface AddCommentInput { body: string; mediaId?: number | null; leadIds?: number[]; }
+
+// ---- The research workspace (#58, ADR 0045) ----
+export interface CaseLeadInput { question: string; fromYear?: number | null; toYear?: number | null; personIds?: number[]; }
+export type CaseLeadChange = { action: 'edit' } & CaseLeadInput | { action: 'settle' | 'reopen' | 'drop' };
+export interface CaseClaimInput {
+  what: string; personId?: number | null; personName?: string | null; says?: string | null;
+  date?: string | null; place?: string | null; evidence?: CaseClaimEvidence | null;
+}
+export type CaseFindingInput = {
+  kind: 'record';
+  leadIds?: number[];
+  /** An existing source in the tree, or a new one to make. */
+  source: { id: number } | { title: string; repository?: string | null };
+  page?: string | null; url?: string | null; transcription?: string | null; mediaId?: number | null;
+  sourceNature?: CaseSourceNature | null; information?: CaseInformation | null; note?: string | null;
+  requestId?: number | null;
+  claims?: CaseClaimInput[];
+  /** A journal note whose photo or citation this record is (#58). */
+  commentId?: number | null;
+} | {
+  kind: 'nothing';
+  leadIds?: number[];
+  searched: string; site?: string | null; note?: string | null; requestId?: number | null;
+};
+export interface CaseRequestInput {
+  askedFor: string; leadId?: number | null; holder?: string | null; sentBy?: CaseRequestSentBy | null;
+  sentOn?: string | null; reference?: string | null; remindOn?: string | null;
+}
+/** Answer and close (#58): the answer, how it ended, and the claims to put into the tree. */
+export interface CloseCaseInput {
+  conclusion: string; outcome: CaseOutcome;
+  apply: Array<{ claimId: number; replace?: boolean }>;
+}
+/** A workspace write's answer: the new row's id when it made one, and the workspace after it. */
+export interface CaseWorkspaceWrite { id: number | null; workspace: CaseWorkspace; }
 export interface LinkMediaInput { mediaIds: number[]; }
 
 export interface CasesClient {
@@ -1072,6 +1115,21 @@ export interface CasesClient {
   listMediaLibrary(id: number, treeId?: number | null): Promise<MediaWithPerson[]>;
   linkMedia(id: number, input: LinkMediaInput, treeId?: number | null): Promise<{ linked: number }>;
   unlinkMedia(id: number, mediaId: number, treeId?: number | null): Promise<void>;
+  /** The case's leads, findings and requests (#58). */
+  getWorkspace(id: number, treeId?: number | null): Promise<CaseWorkspace>;
+  addLead(id: number, input: CaseLeadInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  changeLead(id: number, leadId: number, change: CaseLeadChange, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  addFinding(id: number, input: CaseFindingInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  addClaim(id: number, findingId: number, input: CaseClaimInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  decideClaim(id: number, claimId: number, decision: CaseClaimDecision, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  addRequest(id: number, input: CaseRequestInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  replyToRequest(id: number, requestId: number, reply: { state: CaseRequestState; note?: string | null }, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  /** What Answer and close would change in the tree (#58, ADR 0046). */
+  getChanges(id: number, treeId?: number | null): Promise<CaseChange[]>;
+  /** Close the case with its answer, putting the chosen claims into the tree. */
+  close(id: number, input: CloseCaseInput, treeId?: number | null): Promise<CaseWorkspaceWrite>;
+  /** Put back what Answer and close changed for one claim. */
+  undoApplied(id: number, claimId: number, treeId?: number | null): Promise<CaseWorkspaceWrite>;
 }
 
 export type { Source, SourceWithCitationCount } from '@/lib/db/queries/sources';

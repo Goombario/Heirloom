@@ -63,22 +63,24 @@ export class HttpPlacesClient implements PlacesClient {
     if (!res.ok) await throwForStatus(res);
   }
 
-  async updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<void> {
+  async updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<Audited> {
     const res = await fetch(`/api/places/coordinates${treeQuery(treeId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...(typeof place === 'number' ? { placeId: place } : { name: place }), latitude, longitude }),
     });
     if (!res.ok) await throwForStatus(res);
+    return { auditIds: ((await res.json()) as { auditIds?: number[] }).auditIds ?? [] };
   }
 
-  async geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<void> {
+  async geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited> {
     const res = await fetch(`/api/places/geocode-hierarchy${treeQuery(treeId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ levels, reparent: options?.reparent ?? false, ...(options?.leafId != null ? { leafId: options.leafId } : {}) }),
     });
     if (!res.ok) await throwForStatus(res);
+    return { auditIds: ((await res.json()) as { auditIds?: number[] }).auditIds ?? [] };
   }
 
   async dependentCount(place: PlaceKey, treeId?: number | null): Promise<number> {

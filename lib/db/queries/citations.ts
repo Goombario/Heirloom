@@ -398,11 +398,14 @@ export async function getCitedByForSource(sourceId: number, treeId: number): Pro
              WHEN 'Cases' THEN (SELECT "Title" FROM "Cases" WHERE "Id" = c."FactId")
              -- A journal entry's citation belongs to the entry's case.
              WHEN 'CaseComments' THEN (SELECT cs."Title" FROM "CaseComments" cc JOIN "Cases" cs ON cs."Id" = cc."CaseId" WHERE cc."Id" = c."FactId")
+             -- So does a finding's (#58).
+             WHEN 'CaseFindings' THEN (SELECT cs."Title" FROM "CaseFindings" cf JOIN "Cases" cs ON cs."Id" = cf."CaseId" WHERE cf."Id" = c."FactId")
            END AS "caseTitle",
            ${subjectPersonId} AS "personId",
            CASE c."FactTable"
              WHEN 'Cases' THEN c."FactId"
              WHEN 'CaseComments' THEN (SELECT "CaseId" FROM "CaseComments" WHERE "Id" = c."FactId")
+             WHEN 'CaseFindings' THEN (SELECT "CaseId" FROM "CaseFindings" WHERE "Id" = c."FactId")
            END AS "caseId",
            (SELECT p."Sex" FROM "People" p WHERE p."Id" = ${subjectPersonId}) AS "personSex",
            ${primaryMediaIdFor(`(${subjectPersonId})`, 'c."TreeId"')} AS "personMediaId",

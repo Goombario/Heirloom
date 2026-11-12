@@ -24,6 +24,8 @@ interface SearchRecordsPanelProps {
     /** Sites a find was cited from in this sidebar. */
     cited?: ReadonlySet<string>;
     onFound?: (site: SiteDefinition, kind: FactKind) => void;
+    /** A site marked as having nothing, for a caller that records the search (#58). */
+    onNothing?: (site: SiteDefinition) => void;
 }
 
 /**
@@ -53,7 +55,7 @@ function usePlaceAncestry(place: string | null): string[] {
  * sends, edited in place, left out with × and added back from a dashed chip.
  * Each offered site below opens in one click; nothing is fetched.
  */
-export function SearchRecordsPanel({ subject, canCite, cited, onFound }: SearchRecordsPanelProps) {
+export function SearchRecordsPanel({ subject, canCite, cited, onFound, onNothing }: SearchRecordsPanelProps) {
     const t = useTranslations('research');
     const ancestry = usePlaceAncestry(researchPlaceText(subject.input));
     const base = useMemo(() => buildResearchQuery(subject.input, ancestry), [subject.input, ancestry]);
@@ -209,7 +211,7 @@ export function SearchRecordsPanel({ subject, canCite, cited, onFound }: SearchR
                         onOpened={() => {
                             if (!cited?.has(search.site.id)) setOutcome(search.site.id, 'opened');
                         }}
-                        onNothing={() => setOutcome(search.site.id, 'none')}
+                        onNothing={() => { setOutcome(search.site.id, 'none'); onNothing?.(search.site); }}
                         onFound={() => onFound?.(search.site, query.kind)}
                     />
                 ))}
