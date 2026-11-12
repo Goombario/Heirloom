@@ -24,12 +24,14 @@ const applies = (c: CaseChange) => c.kind === 'fill' || c.kind === 'event' || c.
  * otherwise is replaced only when ticked. Marriages, parents and people not in
  * the tree are listed to enter by hand. Unsettled leads say so.
  */
-export function AnswerClose({ caseId, treeId, leads, summaries, busy, onGoToLead, onCancel, onClose }: {
+export function AnswerClose({ caseId, treeId, leads, summaries, busy, canReplace = true, onGoToLead, onCancel, onClose }: {
     caseId: number;
     treeId: number | null;
     leads: CaseLead[];
     summaries: LeadSummary[];
     busy: boolean;
+    /** Replacing what the tree says takes Edit access; Contribute fills gaps and adds events only. */
+    canReplace?: boolean;
     onGoToLead: (leadId: number) => void;
     onCancel: () => void;
     onClose: (input: CloseCaseInput) => void;
@@ -165,14 +167,15 @@ export function AnswerClose({ caseId, treeId, leads, summaries, busy, onGoToLead
                                 return (
                                     <li key={c.claimId} className="grid gap-2 px-4 py-3">
                                         <label className="flex items-start gap-3 cursor-pointer">
-                                            <input type="checkbox" className="mt-1" checked={ticked.has(c.claimId)} onChange={() => setTicked((s) => toggle(s, c.claimId))} />
+                                            <input type="checkbox" className="mt-1" checked={ticked.has(c.claimId)} disabled={only && !canReplace}
+                                                onChange={() => setTicked((s) => toggle(s, c.claimId))} />
                                             <span className="grid gap-0.5 min-w-0">
                                                 {head}
                                                 {only ? <span className="text-sm text-text-secondary break-words">{replaceLabel(c)}</span> : lines}
                                                 {only && source(c) && <span className="text-meta text-text-muted break-words">{source(c)}</span>}
                                             </span>
                                         </label>
-                                        {!only && (c.differs.date != null || c.differs.place != null) && (
+                                        {!only && canReplace && (c.differs.date != null || c.differs.place != null) && (
                                             <label className="flex items-start gap-3 pl-7 text-sm text-text-secondary cursor-pointer">
                                                 <input type="checkbox" className="mt-0.5" checked={replace.has(c.claimId)} disabled={!ticked.has(c.claimId)}
                                                     onChange={() => setReplace((s) => toggle(s, c.claimId))} />

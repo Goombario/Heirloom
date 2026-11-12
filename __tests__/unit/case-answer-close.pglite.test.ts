@@ -147,4 +147,45 @@ describe('Answer and close (#58)', () => {
         await query(`UPDATE "People" SET "DeathDate" = '1921' WHERE "Id" = $1`, [bert]);
         await expect(undoAppliedClaimService({ caseId, claimId: ids[1], ...as(OWNER) })).rejects.toThrow(/edited since/);
     });
+
+    it('plans each claim after the one before: a second claim cites, or needs Replace', async () => {
+        const { caseId, ids } = await caseWith([
+            { what: 'DEAT', personId: bert, date: '1920' },
+            { what: 'DEAT', personId: bert, date: '1920' },
+            { what: 'RESI', personId: bert, date: '1881' },
+            { what: 'RESI', personId: bert, date: '1881' },
+        ]);
+        await closeCaseService({ caseId, ...as(OWNER), body: { conclusion: 'x', outcome: 'answered', apply: ids.map((claimId) => ({ claimId })) } });
+        expect(await rows(`SELECT 1 FROM "Events" WHERE "PersonId" = $1`, [bert])).toHaveLength(1);
+        const second = await createCaseService({ body: { Title: 'Again', personIds: [bert] }, ...as(OWNER) });
+        const made = await addFindingService({ caseId: second.Id, ...as(OWNER), body: { kind: 'record', source: { id: census }, claims: [
+            { what: 'BIRT', personId: bert, date: '1850' }, { what: 'BIRT', personId: bert, date: '1851' },
+        ] } });
+        const claimIds = made.workspace.findings[0].claims.map((c) => c.Id);
+        for (const claimId of claimIds) await decideClaimService({ caseId: second.Id, claimId, ...as(OWNER), body: { decision: 'accepted' } });
+        await expect(closeCaseService({ caseId: second.Id, ...as(OWNER), body: { conclusion: 'x', outcome: 'answered', apply: claimIds.map((claimId) => ({ claimId })) } }))
+            .rejects.toThrow(/Tick Replace/);
+        expect((await person(bert)).BirthDate).toBeNull();
+    });
+
+    it('Undo clears a change already undone from the audit log, and refuses an event edited since', async () => {
+        const { caseId, ids } = await caseWith([
+            { what: 'DEAT', personId: bert, date: '1920' },
+            { what: 'BURI', personId: bert, date: '1920' },
+        ]);
+        await closeCaseService({ caseId, ...as(OWNER), body: { conclusion: 'x', outcome: 'answered', apply: ids.map((claimId) => ({ claimId })) } });
+        await query(`UPDATE "People" SET "DeathDate" = NULL, "IsDeceased" = NULL WHERE "Id" = $1`, [bert]);
+        const undone = await undoAppliedClaimService({ caseId, claimId: ids[0], ...as(OWNER) });
+        expect(undone.workspace.findings[0].claims[0].AppliedAt).toBeNull();
+        expect(await rows(`SELECT 1 FROM "Citation" WHERE "FactTable" = 'PersonDeath'`)).toHaveLength(0);
+        await query(`UPDATE "Events" SET "Description" = 'Edited' WHERE "PersonId" = $1`, [bert]);
+        await expect(undoAppliedClaimService({ caseId, claimId: ids[1], ...as(OWNER) })).rejects.toThrow(/edited or cited since/);
+    });
+
+    it('lets Contribute fill gaps but not replace', async () => {
+        const { caseId, ids } = await caseWith([{ what: 'BIRT', personId: ada, date: '1852' }]);
+        await expect(closeCaseService({ caseId, ...as(CONTRIB), body: { conclusion: 'x', outcome: 'answered', apply: [{ claimId: ids[0], replace: true }] } }))
+            .rejects.toThrow(/permission to replace/);
+    });
 });
+

@@ -388,13 +388,6 @@ export async function createCase(
 }
 
 /**
- * Update case fields and re-sync people/media. Uses a transaction.
- * Authorization = the tree-scoped SELECT (the row must be in the caller's
- * resolved tree) + the user-keyed edit check kept as defense in depth.
- * `actingUserId` defaults to the tree owner for callers that predate the
- * scope split.
- */
-/**
  * A case's status changed (#801, #58): closing records when and how it ended,
  * reopening clears both, and the journal logs the change, with the answer as the
  * final entry when it closes. Runs in the caller's transaction after the
@@ -428,6 +421,13 @@ export async function recordStatusChange(
     }
 }
 
+/**
+ * Update case fields and re-sync people/media. Uses a transaction.
+ * Authorization = the tree-scoped SELECT (the row must be in the caller's
+ * resolved tree) + the user-keyed edit check kept as defense in depth.
+ * `actingUserId` defaults to the tree owner for callers that predate the
+ * scope split.
+ */
 export async function updateCase(
     id: number,
     updates: Partial<Omit<NewCase, 'UserId'>>,

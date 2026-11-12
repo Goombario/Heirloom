@@ -198,6 +198,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                             leads={ws.workspace.leads}
                             summaries={ws.summaries}
                             busy={ws.busy}
+                            canReplace={cd.activePermission === 'owner' || cd.activePermission === 'edit'}
                             onGoToLead={(leadId) => ws.open({ kind: 'lead', leadId })}
                             onCancel={firstLead}
                             onClose={(input) => { void closeCase(input); }}

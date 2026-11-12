@@ -13,7 +13,8 @@ settles what applying a claim writes. The maintainer chose "Fill gaps, add event
 2. **A birth or death fills empty fields.** The claim's date and place go into the person's empty
    `BirthDate` / `BirthPlace` (or `DeathDate` / `DeathPlace`). Where the tree already says
    something else, the page shows it with a **Replace** checkbox that starts unticked; only a ticked
-   Replace overwrites it. A death also marks the person deceased. When the tree already says what the
+   Replace overwrites it, and ticking Replace takes Edit access (Contribute fills gaps and adds
+   events only). A death also marks the person deceased. When the tree already says what the
    claim says, nothing is written but the record is cited on the fact.
 3. **Other life events become new events.** Baptism, burial, residence, occupation, census,
    emigration, immigration and naturalisation become an `"Events"` row on the person: the claim's
@@ -29,13 +30,15 @@ settles what applying a claim writes. The maintainer chose "Fill gaps, add event
 6. **Marriages, parents, free-text claims and people not in the tree are entered by hand.** The
    page lists them under "To enter by hand"; nothing is written for them.
 7. **Applying and closing is one transaction.** The page sends the answer, the outcome and the
-   ticked claims; the server works out the changes again from the rows as they are, applies them,
-   then closes the case with the answer as its last journal entry. A choice that is no longer a
+   ticked claims; the server works out each change again from the rows as they are, after the one
+   before it (so a second claim about the same fact cites it, or needs Replace), applies them, then
+   closes the case with the answer as its last journal entry. A choice that is no longer a
    change fails the whole close.
 8. **Undo reverts both entries, newest first,** through the audit log's own revert, and clears the
    claim's applied mark; the case stays closed. It takes Edit access, like reverting from the audit
-   log. It is refused when the person's birth or death has been edited since, so it never overwrites
-   later work.
+   log. It is refused when the person's birth or death, or the new event, has been edited since, or
+   the event has gained other sources, so it never overwrites later work. A change already undone
+   elsewhere (from the audit log, or its record deleted) just clears the claim's mark.
 9. **A case that changed the tree can't be deleted** until its changes are undone, so the record of
    where those facts came from isn't lost.
 

@@ -327,6 +327,10 @@ export async function closeCaseService(params: WorkspaceScopeParams & { body: un
   const outcome = oneOf<CaseOutcome>(raw.outcome, OUTCOMES, 'outcome');
   if (!outcome) throw new ValidationError('outcome is required');
   const choices = applyChoices(raw.apply);
+  // Replacing what the tree says is an edit, not an addition: Contribute can fill gaps and add events only.
+  if (choices.some((c) => c.replace) && (await scopeFor(params, true)).permission === 'contribute') {
+    throw new AccessError('You do not have permission to replace what the tree says');
+  }
   return inCase(params, async (exec, scope) => {
     await applyChanges(exec, params.caseId, scope, params.currentUserId, choices);
     const before = await exec.query(`SELECT * FROM "Cases" WHERE "Id" = $1`, [params.caseId]);

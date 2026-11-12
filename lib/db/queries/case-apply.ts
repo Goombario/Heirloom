@@ -178,18 +178,23 @@ export async function applyChanges(
     choices: readonly ApplyChoice[],
 ): Promise<number> {
     if (choices.length === 0) return 0;
-    const plan = new Map((await planChanges(exec, caseId, scope.treeId)).map((c) => [c.claimId, c]));
     let applied = 0;
     for (const choice of choices) {
-        const change = plan.get(choice.claimId);
-        if (!change || change.kind === 'by_hand' || change.kind === 'in_tree' || !change.citation) {
+        // Planned again for each claim: an earlier one in this close may have filled the
+        // same field or made the same event, which this one then cites rather than repeats.
+        const change = (await planChanges(exec, caseId, scope.treeId)).find((c) => c.claimId === choice.claimId);
+        // Already said and cited, by an earlier claim in this close: nothing to write.
+        if (change?.kind === 'in_tree') continue;
+        if (!change || change.kind === 'by_hand' || !change.citation) {
             throw new ValidationError('A change is no longer there to make. Look over the list again.');
         }
         let auditId: number | null;
         let target = change.target;
         if (change.kind === 'fill') {
             const written = await fillVital(exec, scope.treeId, userId, change, choice.replace);
-            if (written === undefined) throw new ValidationError('A change has nothing left to write. Tick Replace or leave it out.');
+            if (written === undefined) {
+                throw new ValidationError('A change would replace what the tree says, or what another claim just filled. Tick Replace, or leave one of them out.');
+            }
             auditId = written;
         } else if (change.kind === 'event') {
             const made = await addEvent(exec, scope, userId, change);
@@ -241,8 +246,8 @@ async function fillVital(exec: Queryable, treeId: number, userId: number, change
     if (change.what === 'DEAT' && Number(before.IsDeceased) !== 1) columns.push(['"IsDeceased"', 1]);
     await exec.query(
         `UPDATE "People" SET ${columns.map(([c], i) => `${c} = $${i + 1}`).join(', ')}, "UpdatedAt" = CURRENT_TIMESTAMP
-          WHERE "Id" = $${columns.length + 1}`,
-        [...columns.map(([, value]) => value), change.personId],
+          WHERE "Id" = $${columns.length + 1} AND "TreeId" = $${columns.length + 2}`,
+        [...columns.map(([, value]) => value), change.personId, treeId],
     );
     const after = await personRow(exec, change.personId!, treeId);
     return auditUpdate('person', before, after, PERSON_FIELDS, Number(before.UserId), userId, exec, factPlaceRefChanges('people', before, after));
@@ -263,10 +268,20 @@ async function addEvent(exec: Queryable, scope: { treeId: number; ownerId: numbe
     return { eventId: Number(event.Id), auditId };
 }
 
+/** A revert that names a record gone since: the change is already undone there. */
+const gone = (err: unknown) => err instanceof Error && !(err instanceof ValidationError) && /no longer exists|not found/i.test(err.message);
+
+type AuditRow = { Id: number; Action: string; EntityType: string; EntityId: number; Changes: unknown };
+const changesOf = (e: AuditRow) => (typeof e.Changes === 'string' ? JSON.parse(e.Changes) : e.Changes) as {
+    fields?: Record<string, { old: unknown; new: unknown }>; snapshot?: Row;
+};
+
 /**
  * Undo (#58): reverts what Answer and close changed for one claim (the citation,
- * then the fact) and clears the claim's applied mark. Refused when the person's
- * birth or death has been edited since, so Undo never overwrites later work.
+ * then the fact) and clears the claim's applied mark. Refused when the fact has
+ * been edited since (the person's birth or death, or the new event, or the event
+ * has gained other sources), so Undo never overwrites later work. A change already
+ * undone elsewhere (from the audit log, or its record deleted) just clears the mark.
  */
 export async function undoApplied(
     exec: Queryable,
@@ -286,23 +301,51 @@ export async function undoApplied(
     if (row.AppliedAt == null || row.AppliedAuditId == null) throw new ValidationError('This claim has no change to undo');
     const ids = [Number(row.AppliedAuditId), ...(row.AppliedCitationAuditId == null ? [] : [Number(row.AppliedCitationAuditId)])];
 
-    const entry = await exec.query(
-        `SELECT "Action", "EntityType", "EntityId", "Changes" FROM "AuditLog" WHERE "Id" = $1 AND "TreeId" = $2`,
-        [ids[0], scope.treeId],
+    const found = await exec.query(
+        `SELECT "Id", "Action", "EntityType", "EntityId", "Changes" FROM "AuditLog" WHERE "Id" = ANY($1::int[]) AND "TreeId" = $2`,
+        [ids, scope.treeId],
     );
-    const main = entry.rows[0] as { Action: string; EntityType: string; EntityId: number; Changes: unknown } | undefined;
-    if (!main) throw new ValidationError('This change is no longer in the audit log');
-    if (main.EntityType === 'person' && main.Action === 'update') {
-        const raw = typeof main.Changes === 'string' ? JSON.parse(main.Changes) : main.Changes;
-        const fields = (raw as { fields?: Record<string, { new: unknown }> }).fields ?? {};
-        const now = await personRow(exec, Number(main.EntityId), scope.treeId);
-        for (const [field, diff] of Object.entries(fields)) {
-            if (!same(str(now[field]), str(diff.new))) {
+    const byId = new Map((found.rows as AuditRow[]).map((e) => [Number(e.Id), e]));
+    const citationIds = [...byId.values()].filter((e) => e.EntityType === 'citation').map((e) => Number(e.EntityId));
+    const toRevert: number[] = [];
+    for (const auditId of ids) {
+        const e = byId.get(auditId);
+        if (!e) continue;
+        if (e.EntityType === 'person' && e.Action === 'update') {
+            const fields = Object.entries(changesOf(e).fields ?? {});
+            const now = await exec.query(`SELECT p.*, ${factPlaceTextColumns('people', 'p')} FROM "People" p WHERE p."Id" = $1 AND p."TreeId" = $2`, [e.EntityId, scope.treeId]);
+            const person = now.rows[0] as Row | undefined;
+            if (!person) continue;
+            // Already put back from the audit log: nothing to revert here.
+            if (fields.every(([field, diff]) => same(str(person[field]), str(diff.old)))) continue;
+            if (!fields.every(([field, diff]) => same(str(person[field]), str(diff.new)))) {
                 throw new ValidationError('This person has been edited since. Change it on their page instead.');
             }
+        } else if (e.EntityType === 'event' && e.Action === 'create') {
+            const snap = changesOf(e).snapshot ?? {};
+            const now = await exec.query(`SELECT * FROM "Events" WHERE "Id" = $1 AND "TreeId" = $2`, [e.EntityId, scope.treeId]);
+            const event = now.rows[0] as Row | undefined;
+            if (!event) continue;
+            const edited = ['Type', 'Date', 'Description', 'PersonId', 'PlaceId'].some((f) => !same(str(event[f]), str(snap[f])));
+            const others = await exec.query(
+                `SELECT 1 FROM "Citation" WHERE "FactTable" = $1 AND "FactId" = $2 AND "TreeId" = $3 AND NOT ("Id" = ANY($4::int[])) LIMIT 1`,
+                [FACT_TABLES.EVENTS, e.EntityId, scope.treeId, citationIds],
+            );
+            if (edited || others.rows.length > 0) {
+                throw new ValidationError('This event has been edited or cited since. Change it on the page of the person instead.');
+            }
+        } else if (e.EntityType === 'citation' && e.Action === 'create') {
+            const still = await exec.query(`SELECT 1 FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`, [e.EntityId, scope.treeId]);
+            if (still.rows.length === 0) continue;
         }
+        toRevert.push(auditId);
     }
-    await revertAuditEntriesWith(exec, ids, scope.treeId, scope.ownerId, userId);
+    try {
+        await revertAuditEntriesWith(exec, toRevert, scope.treeId, scope.ownerId, userId);
+    } catch (err) {
+        if (!gone(err)) throw err;
+        throw new ValidationError('What this changed has been edited or deleted since, so it can not be undone here.');
+    }
     await exec.query(
         `UPDATE "CaseClaims" SET "AppliedAt" = NULL, "AppliedAuditId" = NULL, "AppliedCitationAuditId" = NULL WHERE "Id" = $1`,
         [claimId],
