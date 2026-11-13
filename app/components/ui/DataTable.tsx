@@ -49,6 +49,12 @@ export interface DataTableProps<T> {
    * pointer/focus intent, not per render.
    */
   onRowPrefetch?: (row: T) => void;
+  /**
+   * `list`: the v1.1 record lists (People, Families; locked list boards): tighter
+   * rows with every cell centred on the row, so a name with or without its sub-line
+   * reads level with the dates beside it.
+   */
+  density?: 'default' | 'list';
 }
 
 const CHECKBOX_STYLE: CSSProperties = {
@@ -91,6 +97,7 @@ export function DataTable<T>({
   style,
   rowClassName,
   onRowPrefetch,
+  density = 'default',
 }: DataTableProps<T>) {
   const tc = useTranslations('common');
   const totalCols = columns.length + (selection ? 1 : 0);
@@ -193,7 +200,7 @@ export function DataTable<T>({
                   <td
                     key={col.key}
                     className={col.className}
-                    style={{ padding: '10px 12px', textAlign: col.align ?? 'left', verticalAlign: 'top' }}
+                    style={{ padding: density === 'list' ? '8px 12px' : '10px 12px', textAlign: col.align ?? 'left', verticalAlign: density === 'list' ? 'middle' : 'top' }}
                   >
                     {col.render(row)}
                   </td>

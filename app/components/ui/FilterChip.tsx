@@ -73,7 +73,7 @@ export function FilterChip({ active = false, count = null, label, loading = fals
           type="button"
           ref={bodyRef}
           aria-pressed={active}
-          className={`inline-flex items-center self-stretch gap-1.5 pl-3.5 ${active ? 'pr-1.5' : 'pr-3.5'} ${active ? 'rounded-l-full' : 'rounded-full'} ${TEXT} ${FOCUS}`}
+          className={`inline-flex items-center self-stretch gap-1.5 pl-3 ${active ? 'pr-1.5' : 'pr-3'} ${active ? 'rounded-l-full' : 'rounded-full'} ${TEXT} ${FOCUS}`}
           {...rest}
         >
           {icon}
@@ -105,7 +105,7 @@ export function FilterChip({ active = false, count = null, label, loading = fals
     <button
       type="button"
       aria-pressed={active}
-      className={`${SHELL} gap-1.5 px-3.5 ${TEXT} ${FOCUS} ${tone(active)} ${className}`.trim()}
+      className={`${SHELL} gap-1.5 px-3 ${TEXT} ${FOCUS} ${tone(active)} ${className}`.trim()}
       {...rest}
     >
       {icon}
