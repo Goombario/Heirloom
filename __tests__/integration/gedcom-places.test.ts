@@ -65,6 +65,11 @@ d('Places as a browsable entity (Slice 5)', () => {
     expect(leaf.ParentId).toBe(parent.Id);
     const children = await getChildPlaces(parent.Id, treeId);
     expect(children.map((c) => c.Name)).toContain('Boston, Suffolk, Massachusetts, USA');
+    // Each child carries the records at it or below it (the birth in Boston).
+    expect(children.find((c) => c.Name === 'Boston, Suffolk, Massachusetts, USA')!.RecordCount).toBeGreaterThanOrEqual(1);
+    const country = places.find((p) => p.Name === 'USA')!;
+    const states = await getChildPlaces(country.Id, treeId);
+    expect(states.find((c) => c.Name === 'Massachusetts, USA')!.RecordCount).toBeGreaterThanOrEqual(1);
 
     // records-for-place lookup
     const usage = await getRecordsForPlace('Boston, Suffolk, Massachusetts, USA', treeId);

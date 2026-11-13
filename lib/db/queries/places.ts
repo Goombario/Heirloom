@@ -73,8 +73,8 @@ export async function getPlaceById(id: number, treeId: number): Promise<Place | 
 
 /**
  * Direct children of a place in the jurisdiction hierarchy, each with
- * `RecordCount`: the live events and marriages recorded at that child or any
- * place inside it (the same two counts the place page's own Records stat adds).
+ * `RecordCount`: the births, deaths, marriages and live events whose place is
+ * that child or any place inside it.
  */
 export async function getChildPlaces(parentId: number, treeId: number): Promise<(Place & { RecordCount: number })[]> {
     const result = await query(
@@ -88,11 +88,8 @@ export async function getChildPlaces(parentId: number, treeId: number): Promise<
               WHERE NOT p."Id" = ANY(s.path)
          )
          SELECT pl.*,
-                (SELECT COUNT(*) FROM "Events" e
-                  WHERE e."TreeId" = $2 AND e."PlaceId" IN (SELECT id FROM sub WHERE sub.root = pl."Id")
-                    AND ${liveEventSql('e')})::int
-              + (SELECT COUNT(*) FROM "Families" f
-                  WHERE f."TreeId" = $2 AND f."MarriagePlaceId" IN (SELECT id FROM sub WHERE sub.root = pl."Id"))::int
+                ${FACT_PLACE_COLUMNS.map((col) => `(SELECT COUNT(*) FROM ${col.table} f
+                  WHERE f."TreeId" = $2 AND f.${col.id} IN (SELECT id FROM sub WHERE sub.root = pl."Id")${col.table === '"Events"' ? ` AND ${liveEventSql('f')}` : ''})::int`).join('\n              + ')}
                 AS "RecordCount"
            FROM "Places" pl
           WHERE pl."ParentId" = $1 AND pl."TreeId" = $2
