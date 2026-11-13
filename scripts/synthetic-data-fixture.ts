@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { DbExecutor } from '../lib/db/init-schema';
 import { linkFactPlaceTexts, type FactPlaceText } from '../lib/db/queries/place-links';
 
-export const SYNTHETIC_GENERATOR_VERSION = 3;
+export const SYNTHETIC_GENERATOR_VERSION = 4;
 export const SYNTHETIC_PEOPLE_COUNT = 120;
 export const SYNTHETIC_MEDIA_COUNT = 30;
 
@@ -561,7 +561,12 @@ export async function seedSyntheticDataset(exec: DbExecutor, options: SyntheticS
   for (const place of dataset.places) if (place.parentName) await exec.query(`UPDATE "Places" SET "ParentId" = $1 WHERE "Id" = $2 AND "TreeId" = $3`, [placeByName.get(place.parentName), placeByName.get(place.name), options.treeId]);
 
   for (const variant of dataset.nameVariants) await exec.query(`INSERT INTO "NameVariant" ("OwnerId", "TreeId", "PersonId", "Type", "Name", "IsPrimary") VALUES ($1, $2, $3, $4, $5, $6)`, [options.userId, options.treeId, peopleByXref.get(variant.personXref), variant.type, variant.name, variant.isPrimary]);
-  const familyRows = await insertRows(exec, `INSERT INTO "Families" ("UserId", "TreeId", "Partner1Id", "Partner2Id", "MarriageDate", "Type") VALUES __VALUES__ RETURNING "Id"`, dataset.families.map(family => [options.userId, options.treeId, family.partner1 ? peopleByXref.get(family.partner1) : null, family.partner2 ? peopleByXref.get(family.partner2) : null, family.marriageDate, family.type]));
+  const familyRows = await insertRows(exec, `INSERT INTO "Families" ("UserId", "TreeId", "Partner1Id", "Partner2Id", "HusbandId", "WifeId", "MarriageDate", "Type") VALUES __VALUES__ RETURNING "Id"`, dataset.families.map(family => {
+    // App writes mirror the partners into the legacy HusbandId/WifeId columns, so the seed does too (#69).
+    const partner1 = family.partner1 ? peopleByXref.get(family.partner1) : null;
+    const partner2 = family.partner2 ? peopleByXref.get(family.partner2) : null;
+    return [options.userId, options.treeId, partner1, partner2, partner1, partner2, family.marriageDate, family.type];
+  }));
   const familiesByKey = new Map(dataset.families.map((family, index) => [family.key, (familyRows[index] as { Id: number }).Id]));
   for (const link of dataset.childLinks) await exec.query(`INSERT INTO "FamilyPerson" ("FamiliesAsChildId", "ChildrenId", "Partner1Relationship", "Partner2Relationship") VALUES ($1, $2, $3, $3)`, [familiesByKey.get(link.familyKey), peopleByXref.get(link.childXref), link.relationshipType]);
   const eventRows = await insertRows(exec, `INSERT INTO "Events" ("UserId", "TreeId", "Type", "Date", "Description", "PersonId", "FamilyId") VALUES __VALUES__ RETURNING "Id"`, dataset.events.map(event => [options.userId, options.treeId, event.type, event.date, event.description, event.personXref ? peopleByXref.get(event.personXref) : null, event.familyKey ? familiesByKey.get(event.familyKey) : null]));

@@ -106,12 +106,15 @@ export async function exportGedcomService(params: ExportGedcomParams): Promise<E
     // --- Group relations in memory -----------------------------------------
     // Spouse families: iterate families in Id order so each person's list keeps
     // the old husband-first-then-wife concatenation deterministic. Grouped on the
-    // legacy HusbandId/WifeId columns — the exact columns the old route queried.
+    // legacy HusbandId/WifeId columns — the exact columns the old route queried —
+    // falling back to Partner1Id/Partner2Id for a row that has only those (#69).
     const spouseFamiliesByHusband = new Map<number, ExportFamilyRow[]>();
     const spouseFamiliesByWife = new Map<number, ExportFamilyRow[]>();
     for (const f of rawFamilies) {
-        if (f.HusbandId != null) bucket(spouseFamiliesByHusband, f.HusbandId, f);
-        if (f.WifeId != null) bucket(spouseFamiliesByWife, f.WifeId, f);
+        const husbandId = f.HusbandId ?? f.Partner1Id;
+        const wifeId = f.WifeId ?? f.Partner2Id;
+        if (husbandId != null) bucket(spouseFamiliesByHusband, husbandId, f);
+        if (wifeId != null) bucket(spouseFamiliesByWife, wifeId, f);
     }
 
     const familiesAsChildByPerson = new Map<number, Family[]>();
