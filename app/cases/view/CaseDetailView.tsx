@@ -7,7 +7,7 @@ import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
 import { Button, PageShell } from '@/app/components/ui';
-import { DetailSkeleton } from '@/app/components/SkeletonLoader';
+import { WorkspaceSkeleton } from '@/app/components/SkeletonLoader';
 import RecordNotFound from '@/app/components/RecordNotFound';
 import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
@@ -55,7 +55,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
         // dropped a full layout in. Same DetailSkeleton the person and family detail
         // pages use — the shapes (hero, rail, body) match this page's layout.
         // A phone gets its own: the case page there is a band and tabs, not a hero and rail.
-        return isMobile ? <MobileCaseSkeleton /> : <DetailSkeleton heroTone="light" />;
+        return isMobile ? <MobileCaseSkeleton /> : <WorkspaceSkeleton />;
     }
 
     if (notFound) return <RecordNotFound record="case" />;

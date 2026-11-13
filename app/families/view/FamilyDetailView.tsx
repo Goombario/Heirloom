@@ -107,7 +107,7 @@ export default function FamilyDetailsClient() {
         if (phase === 'loading') {
             return (
                 <>
-                    <div className="contents max-md:hidden"><DetailSkeleton /></div>
+                    <div className="contents max-md:hidden"><DetailSkeleton portrait="split" /></div>
                     <div className="contents md:hidden"><MobilePersonSkeleton /></div>
                 </>
             );
