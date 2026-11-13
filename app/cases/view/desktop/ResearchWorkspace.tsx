@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
-import { Banner, Button, CoverBand, PageShell, RecordMenu, showSuccessToast, type RecordMenuItem } from '@/app/components/ui';
+import { Banner, Button, CoverBand, PageShell, RecordMenu, cx, showSuccessToast, type RecordMenuItem } from '@/app/components/ui';
 import { CheckCircle2, Search, X } from '@/lib/icons';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { getDataClient } from '@/lib/data';
@@ -151,7 +151,18 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     titleSize="record"
                     actions={(
                         <>
-                            <span className="research-ws__status" data-status={caseData.Status}>{statusLine}</span>
+                            {/* The status pill opens the case's states (fix 07); closing goes through Answer and close. */}
+                            {manage && !closed ? (
+                                <RecordMenu recordName={caseData.Title} tone="island" menuLabel={t('change_status')}
+                                    trigger={statusLine}
+                                    triggerClassName={cx('research-ws__status research-ws__status-btn', caseData.Status !== 'in_progress' && 'is-quiet')}
+                                    items={(['in_progress', 'on_hold'] as const).map((st) => ({
+                                        label: tCases(`status_${st}`) + (caseData.Status === st ? ' ✓' : ''),
+                                        onSelect: () => { if (caseData.Status !== st) void cd.patchCase({ Status: st }); },
+                                    }))} />
+                            ) : (
+                                <span className="research-ws__status" data-status={caseData.Status}>{statusLine}</span>
+                            )}
                             <span className="research-ws__opened">{t('opened_on', { date: format.dateTime(new Date(caseData.CreatedAt), { dateStyle: 'medium' }) })}</span>
                             {canEdit && !closed && (
                                 <Button icon={<CheckCircle2 className="w-4 h-4" aria-hidden="true" />} onClick={() => ws.open({ kind: 'close' })}>{t('answer_and_close')}</Button>

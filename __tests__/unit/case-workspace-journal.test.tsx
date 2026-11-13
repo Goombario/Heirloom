@@ -55,10 +55,10 @@ describe('WorkspaceJournal (#58)', () => {
 
     it('filters by entry type', () => {
         journal();
-        fireEvent.click(screen.getByRole('button', { name: 'Findings' }));
+        fireEvent.click(screen.getByRole('button', { name: /^Findings/ }));
         expect(within(list()).getAllByRole('listitem')).toHaveLength(1);
         expect(list()).toHaveTextContent('St Mary register');
-        fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+        fireEvent.click(screen.getByRole('button', { name: /^Notes/ }));
         expect(list()).toHaveTextContent('Parish books start in 1880');
         expect(list()).not.toHaveTextContent('St Mary register');
     });
@@ -66,7 +66,7 @@ describe('WorkspaceJournal (#58)', () => {
     it('files a note under the open lead by default', async () => {
         const cd = journal();
         expect(screen.getByRole('button', { name: /Filed under/ })).toHaveTextContent('Find her baptism');
-        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add note' })); });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add entry' })); });
         expect(cd.postComment).toHaveBeenCalledWith([11], true);
         expect(screen.queryByText(/Added under/)).not.toBeInTheDocument();
     });
@@ -75,7 +75,7 @@ describe('WorkspaceJournal (#58)', () => {
         const cd = journal();
         fireEvent.click(screen.getByRole('button', { name: /Filed under/ }));
         fireEvent.click(screen.getByRole('checkbox', { name: 'The whole case' }));
-        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add note' })); });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Add entry' })); });
         expect(cd.postComment).toHaveBeenCalledWith([], true);
         expect(screen.getByRole('status')).toHaveTextContent('Added under The whole case');
         fireEvent.click(screen.getByRole('button', { name: 'Show' }));

@@ -7,7 +7,7 @@ import type { PersonWithRelations, GedcomEvent, EventWithMedia, PersonGalleryMed
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
 import { formatDateForDisplay, sortableYear } from '@/lib/date-utils';
-import { ledgerPlaces, useLedgerDate } from '@/app/components/ledgerCells';
+import { LedgerPeople, ledgerPlaces, useLedgerDate } from '@/app/components/ledgerCells';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { ActionLink, LedgerTimeline, type LedgerItem } from '@/app/components/ui';
 import { useToggleSet } from '@/app/hooks/useToggleSet';
@@ -69,6 +69,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
     const tc = useTranslations('common');
     const te = useTranslations('eventEdit');
     const tDesk = useTranslations('personDesktop');
+    const tKit = useTranslations('detailKit');
     const tm = useTranslations('mobileEvents');
     const { activeTreeId } = useTree();
     const dateWords = useDateQualifierWords();
@@ -123,7 +124,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
          * A relative's event shown read-only here (#49): a marriage or partnership
          * start, or the birth of this person's child. It links to where it is edited.
          */
-        relative?: { href: string };
+        relative?: { href: string; people: Parameters<typeof LedgerPeople>[0]['people']; family: boolean };
     };
 
     const items: Item[] = [];
@@ -216,7 +217,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                 modifier: '',
                 citation: null,
                 isIntrinsic: false,
-                relative: { href: `/families/view?id=${f.Id}` },
+                relative: { href: `/families/view?id=${f.Id}`, people: s.person ? [person, s.person] : [person], family: true },
             });
         }
         const slot = f.Partner1Id === person.Id ? 'Partner1Relationship' : 'Partner2Relationship';
@@ -234,7 +235,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                 modifier: '',
                 citation: null,
                 isIntrinsic: false,
-                relative: { href: `/people/view?id=${c.Id}` },
+                relative: { href: `/people/view?id=${c.Id}`, people: [c], family: false },
             });
         }
     }
@@ -242,6 +243,14 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
     items.sort(compareTimelineItems);
 
     const birthYear = sortableYear(person.BirthDate);
+    const tEdit = useTranslations('eventEdit');
+    /** "Anna Maria was about 15.", under the event panel's date (fix 02). */
+    const personAgeHint = (date: string): string | null => {
+        const y = sortableYear(date);
+        return birthYear != null && y != null && y > birthYear
+            ? tEdit('age_hint', { name: displayFullName(person) || tc('unknown'), age: y - birthYear })
+            : null;
+    };
 
     /** How many notes this event has: what a rail on this page last reported, else
      *  the count that came with the person payload. */
@@ -343,9 +352,17 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                 key: item.key,
                 ...dateColumn(item.date),
                 title: item.title,
-                href: item.relative.href,
                 age: ageOf(item),
                 place: placeLine(item),
+                readOnly: {
+                    date: item.date ? formatDateForDisplay(item.date, language, dateWords) : undefined,
+                    place: item.place ?? undefined,
+                    people: <LedgerPeople people={item.relative.people} treeId={activeTreeId} />,
+                    editHref: canEdit ? item.relative.href : undefined,
+                    editLabel: item.relative.family
+                        ? tKit('edit_on_family')
+                        : tKit('edit_on_page', { name: displayFullName(item.relative.people[0]!) || tc('unknown') }),
+                },
             };
         }
         // Translate the event title where a localized label exists.
@@ -423,6 +440,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                     // Where a note is ADDED, including to an event that has none. Not the
                     // Description field, which is this event's own Events."Description".
                     notesSlot={notesRail(ev, 'plain')}
+                    sourcesSlot={item.citation}
+                    ageHint={personAgeHint}
                 />
             );
         } else if (item.isIntrinsic && editingVital === item.type) {
@@ -455,6 +474,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                     // The only way to create a vital's first note: the disclosure under
                     // the row appears only once a note exists.
                     notesSlot={itemFact ? vitalNotesRail(itemFact, 'plain') : undefined}
+                    sourcesSlot={item.citation}
+                    ageHint={vital === 'DEAT' ? personAgeHint : undefined}
                 />
             );
         }

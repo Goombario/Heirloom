@@ -90,7 +90,7 @@ describe('Escape with a typed, unblurred date (#861)', () => {
         const confirm = stubConfirm(false);
         const onCancel = vi.fn();
         render(<InlineMarriageEditor familyId={1} treeId={1} marriageDate={null} marriagePlace={null} kindLabel="Marriage" canDelete={false} onCancel={onCancel} onSaved={vi.fn()} />);
-        typeThenEscape(/started_date/, '1920');
+        typeThenEscape(/field_date/, '1920');
         expect(confirm).toHaveBeenCalledTimes(1);
         expect(onCancel).not.toHaveBeenCalled();
     });

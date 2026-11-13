@@ -412,6 +412,8 @@ export default function FamilyDetailsClient() {
                             <section id="notes" aria-labelledby="notes-title">
                                 <SectionHeader level="label" headingId="notes-title" title={t('section_notes')} count={noteCount || undefined} />
                                 <OwnerNotesCard
+                                    // Flush with the heading, sentence-case labels, like the person page (fix 12).
+                                    look="plain"
                                     ownerTable="Families"
                                     ownerId={family.Id}
                                     treeId={activeTreeId}

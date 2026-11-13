@@ -87,7 +87,7 @@ export function computeStandardLayout(
             source: parentNodeId,
             target: siblingNodeId,
             type: 'smoothstep',
-            style: { stroke: 'var(--color-tree-edge)', strokeWidth: 4 },
+            style: { stroke: 'var(--color-tree-edge)', strokeWidth: 2 },
             sourceHandle: 'bottom',
             targetHandle: 'top-target',
           } satisfies FlowEdge);

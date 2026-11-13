@@ -227,6 +227,7 @@ export function DesktopCases({ cases, loading, loadError, onRetry, canEdit, onNe
                         columns={columns}
                         rows={paged}
                         rowKey={(c) => c.Id}
+                        density="list"
                         sort={sort}
                         onSortChange={(key) => setSort((s) => s.key === key
                             ? { key: s.key, dir: s.dir === 'asc' ? 'desc' : 'asc' }

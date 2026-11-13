@@ -915,7 +915,8 @@
     "ended_derived": "Определено по дате смерти: {name}.",
     "find_or_add": "Найти или добавить человека",
     "type_saved": "Тип семьи сохранён",
-    "family_photo_alt": "Фото семьи: {family}"
+    "family_photo_alt": "Фото семьи: {family}",
+    "ages_hint": "Возраст тогда: {ages}."
   },
   "geocodingPrompt": {
     "title": "Искать места в интернете?",
@@ -3277,7 +3278,9 @@
     "ftype_divorce_filed": "Заявление о разводе",
     "ftype_separation": "Раздельное проживание",
     "ftype_census": "Перепись",
-    "ftype_event": "Другое событие"
+    "ftype_event": "Другое событие",
+    "field_sources": "Источники",
+    "age_hint": "{name}: около {age} лет."
   },
   "eventTypes": {
     "BIRT": "Рождение",
@@ -3318,7 +3321,8 @@
     "save_changes": "Сохранить",
     "person_not_found": "Человек не найден",
     "unknown_person": "Неизвестно",
-    "note": "Заметка"
+    "note": "Заметка",
+    "quick_edit": "Быстрое изменение"
   },
   "dateInput": {
     "placeholder": "напр. 15 марта 1945",
@@ -3875,7 +3879,6 @@
     "type_searches": "Поиски",
     "type_status": "Статус",
     "add_note": "Добавить заметку",
-    "add_note_button": "Добавить",
     "remove_photo": "Убрать фото",
     "remove_cite": "Убрать цитату",
     "added_to": "Добавлено в: {where}",
@@ -4006,7 +4009,9 @@
     "report_decision_undecided": "Не решено",
     "report_request_waiting": "ожидается",
     "report_request_received": "прислали",
-    "report_request_nothing": "ничего нет"
+    "report_request_nothing": "ничего нет",
+    "change_status": "Изменить статус",
+    "add_entry": "Добавить запись"
   },
   "citeSheet": {
     "cite_title": "Указать источник",
@@ -5037,7 +5042,13 @@
     "range_of": "{from}–{to} из {total}",
     "more_events": "{count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
     "show_more_events": "Показать {count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
-    "show_fewer": "Показать меньше"
+    "show_fewer": "Показать меньше",
+    "ro_date": "Дата",
+    "ro_place": "Место",
+    "ro_close": "Закрыть",
+    "edit_on_page": "Изменить на странице: {name}",
+    "edit_on_family": "Изменить на странице семьи",
+    "pagination": "Страницы"
   },
   "personDesktop": {
     "this_person": "этот человек",
@@ -5256,7 +5267,6 @@
     "search_use_anyway": "Всё равно использовать",
     "old_pin": "Прежняя метка",
     "location_saved": "Метка места {place} перемещена",
-    "read_only_here": "Здесь только просмотр. Записи редактируются на своей странице.",
     "names_and": "{first} и {last}",
     "record_of": "<type></type>: {who}",
     "show_all_records": "Показать все записи ({count})",
@@ -5275,6 +5285,13 @@
     "lane_undated": "{count, plural, one {Без даты · # запись здесь} few {Без даты · # записи здесь} many {Без даты · # записей здесь} other {Без даты · # записи здесь}}",
     "show_all_people": "Показать всех ({count})",
     "show_fewer_people": "Показать меньше людей",
-    "more_people": "ещё {count}"
+    "more_people": "ещё {count}",
+    "cover_eyebrow": "Место",
+    "also_recorded_as": "Также записано как {names}",
+    "full_map": "Вся карта",
+    "stat_people": "{count, plural, one {человек} few {человека} many {человек} other {человека}}",
+    "stat_records": "{count, plural, one {запись} few {записи} many {записей} other {записи}}",
+    "stat_within": "{count, plural, one {место внутри} few {места внутри} many {мест внутри} other {места внутри}}",
+    "stat_years": "от первой до последней записи"
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import GuardedLink from '@/app/components/GuardedLink';
-import { Link2Off } from '@/lib/icons';
+import { Link2Off, Pencil } from '@/lib/icons';
 import { cx } from './cx';
 import { PersonIdentity } from './PersonIdentity';
 import { RowAction, RowActions } from './RowActions';
@@ -39,7 +39,9 @@ export function PersonRow({ href, edit, unlink, className, ...identity }: Person
         <div className="flex flex-1 min-w-0 items-center px-2 py-1.5">{body}</div>
       )}
       {hasActions && (
-        <RowActions compact editLabel={edit?.label} onEdit={edit?.onClick}>
+        // Edit first, then the red Remove (fix 08).
+        <RowActions compact>
+          {edit && <RowAction icon={<Pencil size={13} aria-hidden="true" />} label={edit.label} ariaLabel={edit.label} onClick={edit.onClick} />}
           {unlink && (
             <RowAction danger icon={<Link2Off size={13} aria-hidden="true" />} label={unlink.label} ariaLabel={unlink.label} onClick={unlink.onClick} />
           )}

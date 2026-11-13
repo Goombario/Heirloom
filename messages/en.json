@@ -915,7 +915,8 @@
     "ended_derived": "Worked out from {name}’s death.",
     "find_or_add": "Find or add someone",
     "type_saved": "Family type saved",
-    "family_photo_alt": "Family photo of {family}"
+    "family_photo_alt": "Family photo of {family}",
+    "ages_hint": "Ages then: {ages}."
   },
   "geocodingPrompt": {
     "title": "Look up places online?",
@@ -3277,7 +3278,9 @@
     "ftype_divorce_filed": "Divorce filed",
     "ftype_separation": "Separation",
     "ftype_census": "Census",
-    "ftype_event": "Other event"
+    "ftype_event": "Other event",
+    "field_sources": "Sources",
+    "age_hint": "{name} was about {age}."
   },
   "eventTypes": {
     "BIRT": "Birth",
@@ -3318,7 +3321,8 @@
     "save_changes": "Save changes",
     "person_not_found": "Person not found",
     "unknown_person": "Unknown",
-    "note": "Note"
+    "note": "Note",
+    "quick_edit": "Quick edit"
   },
   "dateInput": {
     "placeholder": "e.g. 15 Mar 1945",
@@ -3875,7 +3879,6 @@
     "type_searches": "Searches",
     "type_status": "Status",
     "add_note": "Add a note",
-    "add_note_button": "Add note",
     "remove_photo": "Remove the photo",
     "remove_cite": "Remove the citation",
     "added_to": "Added under {where}",
@@ -4006,7 +4009,9 @@
     "report_decision_undecided": "Undecided",
     "report_request_waiting": "waiting",
     "report_request_received": "they sent it",
-    "report_request_nothing": "they had nothing"
+    "report_request_nothing": "they had nothing",
+    "change_status": "Change status",
+    "add_entry": "Add entry"
   },
   "citeSheet": {
     "cite_title": "Cite a source",
@@ -5037,7 +5042,13 @@
     "range_of": "{from}–{to} of {total}",
     "more_events": "{count, plural, one {# more event} other {# more events}}",
     "show_more_events": "Show {count, plural, one {# more event} other {# more events}}",
-    "show_fewer": "Show fewer"
+    "show_fewer": "Show fewer",
+    "ro_date": "Date",
+    "ro_place": "Place",
+    "ro_close": "Close",
+    "edit_on_page": "Edit on {name}'s page",
+    "edit_on_family": "Edit on the family page",
+    "pagination": "Pages"
   },
   "personDesktop": {
     "this_person": "this person",
@@ -5256,7 +5267,6 @@
     "search_use_anyway": "Use it anyway",
     "old_pin": "Old pin",
     "location_saved": "Moved the pin for {place}",
-    "read_only_here": "Read only here. Records are edited on their own page.",
     "names_and": "{first} and {last}",
     "record_of": "<type></type> of {who}",
     "show_all_records": "Show all {count} records",
@@ -5275,6 +5285,13 @@
     "lane_undated": "{count, plural, one {Undated · # record here} other {Undated · # records here}}",
     "show_all_people": "Show all {count} people",
     "show_fewer_people": "Show fewer people",
-    "more_people": "{count} more"
+    "more_people": "{count} more",
+    "cover_eyebrow": "Place",
+    "also_recorded_as": "Also recorded as {names}",
+    "full_map": "Full map",
+    "stat_people": "{count, plural, one {person} other {people}}",
+    "stat_records": "{count, plural, one {record} other {records}}",
+    "stat_within": "{count, plural, one {place within} other {places within}}",
+    "stat_years": "first to last record"
   }
 }

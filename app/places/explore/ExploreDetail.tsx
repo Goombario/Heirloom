@@ -23,8 +23,8 @@ import { groupFactLinks } from './groupFactLinks';
 import { prefetchPerson } from '@/app/people/view/personCache';
 import { ExploreDetailSkeleton } from './ExploreSkeleton';
 import { warmThumbnails } from '@/lib/media/warmThumbnails';
-import { ActionLink, SectionHeader } from '@/app/components/ui';
-import { MapPin, ChevronRight } from '@/lib/icons';
+import { ActionLink, SectionHeader, buttonClass, cx } from '@/app/components/ui';
+import { ArrowUpRight, MapPin, ChevronRight } from '@/lib/icons';
 import { sortableYear } from '@/lib/date-utils';
 import type { PlaceDetail } from '@/lib/data/types';
 import { placeHref } from '@/lib/places/place-key';
@@ -142,7 +142,7 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
         </div>
         {overview && overview.top.length > 0 && (
           <section className="px-5 py-4">
-            <SectionHeader level="rail" title={t('explore_most_records')} />
+            <SectionHeader level="label" title={t('explore_most_records')} />
             <div className="flex flex-col">
               {overview.top.map((p) => (
                 <button key={p.id ?? p.name} type="button" onClick={() => { if (p.id != null) onPickPlace?.(p.id); }}
@@ -201,14 +201,16 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
         )}
         {summary && <p className="mt-1.5 mb-0 text-sm text-text-secondary tabular-nums">{summary}</p>}
         <div className="mt-2.5">
-          <ActionLink kind="leave" href={placeHref({ id: placeId, name: placeName })}>{t('open_place_page')}</ActionLink>
+          <Link href={placeHref({ id: placeId, name: placeName })} className={cx(buttonClass({ variant: 'outline', size: 'sm' }), 'no-underline')}>
+            {t('open_place_page')}<ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </Link>
         </div>
       </div>
 
       {/* People here: five rows, expanding in place (no link out). One entry per person,
           with the facts that tie them here stacked under the name. */}
       <section className="px-5 py-4 border-b border-border-light">
-        <SectionHeader level="rail" title={t('people_here')} count={linkedPeopleCount} />
+        <SectionHeader level="label" title={t('people_here')} count={linkedPeopleCount} />
         {personGroups.length > 0 ? (
           <div className="flex flex-col">
             {people.map((group) => {
@@ -238,7 +240,7 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
                     size={PERSON_AVATAR_SIZE}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="serif text-sm font-semibold text-text truncate">
+                    <div className="serif text-md font-semibold text-text truncate">
                       {group.name || t('person_fallback', { id: group.personId })}
                     </div>
                     {shown.map((link, i) => {
@@ -282,7 +284,7 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
       {/* Places within: under People here, also expanding in place. Left out at 0. */}
       {within.length > 0 && (
         <section className="px-5 py-4 border-b border-border-light">
-          <SectionHeader level="rail" title={t('places_within_title')} count={within.length} />
+          <SectionHeader level="label" title={t('places_within_title')} count={within.length} />
           <div className="flex flex-col">
             {places.map((p) => (
               <button key={p.id} type="button" onClick={() => onPickPlace?.(p.id)}
@@ -304,7 +306,7 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
 
       {/* Records here, by kind. */}
       <section className="px-5 py-4 border-b border-border-light">
-        <SectionHeader level="rail" title={t('records_here')} count={totalCount} />
+        <SectionHeader level="label" title={t('records_here')} count={totalCount} />
         {eventCounts.length > 0 ? (
           <div className="text-sm">
             {eventCounts.map(({ type, label, count }) => (
@@ -321,7 +323,7 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
 
       {/* Years: the first and last dated record here. */}
       <section className="px-5 py-4">
-        <SectionHeader level="rail" title={t('years_title')} />
+        <SectionHeader level="label" title={t('years_title')} />
         <p className="text-sm text-text-secondary m-0 tabular-nums">
           {years ? t('years_span', { first: years.first, last: years.last }) : t('years_none')}
         </p>

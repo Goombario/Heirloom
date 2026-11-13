@@ -184,7 +184,8 @@ describe('FamilyTimeline event notes rail', () => {
 
         await userEvent.click(screen.getByRole('button', { name: 'Cite Birth · Ann' }));
         expect(onCitationClick).toHaveBeenCalledWith('PersonBirth', 21, 'Birth · Ann', null);
-        expect(screen.queryByRole('button', { name: /Bea/ })).not.toBeInTheDocument();
+        // Bea's row opens read-only in place, but carries no citation pin.
+        expect(screen.queryByRole('button', { name: /Cite.*Bea/ })).not.toBeInTheDocument();
     });
 
     it("gives every child's recorded death a row, not only one under 18, so its citations have a pin", () => {

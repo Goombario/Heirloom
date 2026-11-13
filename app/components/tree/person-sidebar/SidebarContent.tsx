@@ -345,7 +345,8 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
     const sexValue = form.Sex === 'M' || form.Sex === 'F' || form.Sex === 'X' ? form.Sex : '';
     return (
         <div className={`flex flex-col min-h-full ${loadedPersonId !== personId ? 'pointer-events-none' : ''}`}>
-            <div className="dark-island tree-panel-head relative flex flex-col items-center gap-2 px-5 pt-6 pb-5 text-center bg-[color:var(--color-hero-bg)]">
+            {/* Avatar on the left, the name and years beside it (fix 09). */}
+            <div className="dark-island tree-panel-head relative flex items-center gap-3.5 pl-5 pr-12 pt-5 pb-5 text-left bg-[color:var(--color-hero-bg)]">
                 {onClose && (
                     <button type="button" onClick={onClose} aria-label={tCommon('close')} title={tCommon('close')}
                         className="absolute top-2.5 right-2.5 grid place-items-center w-8 h-8 rounded-btn text-text-secondary hover:text-text hover:bg-surface-2 cursor-pointer focus-ring">
@@ -358,16 +359,18 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                     name={displayName}
                     initials={initials}
                     sex={form.Sex}
-                    size={64}
+                    size={52}
                     focalX={primaryPhotoFocal.x}
                     focalY={primaryPhotoFocal.y}
                     focalRadius={primaryPhotoFocal.r}
                     className="rounded-full ring-2 ring-white"
                 />
-                <h2 className="serif text-md font-bold text-text m-0">{displayName}</h2>
-                {(form.BirthDate || form.DeathDate) && (
-                    <Lifespan birth={form.BirthDate || null} death={form.DeathDate || null} className="text-meta" />
-                )}
+                <div className="grid gap-0.5 min-w-0">
+                    <h2 className="serif text-md font-bold text-text m-0 break-words">{displayName}</h2>
+                    {(form.BirthDate || form.DeathDate) && (
+                        <Lifespan birth={form.BirthDate || null} death={form.DeathDate || null} className="text-meta" />
+                    )}
+                </div>
             </div>
 
             <div className="flex gap-2 px-5 py-4">
@@ -388,6 +391,7 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
             )}
 
             <div className="flex-1 px-5 py-4 border-t border-border-light space-y-3">
+                <div className="eyebrow">{t('quick_edit')}</div>
                 <div className="grid grid-cols-2 gap-2.5">
                     <div className="min-w-0">{firstNameField}</div>
                     <div className="min-w-0">{lastNameField}</div>

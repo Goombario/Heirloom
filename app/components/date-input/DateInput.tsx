@@ -448,7 +448,7 @@ export default function DateInput({ value, onChange, className = fieldClass(), p
 
     return (
         <div {...draftMark}>
-            <div className={stacked ? 'flex flex-col gap-1.5 w-full' : 'flex flex-wrap items-center gap-1.5 w-full'}>
+            <div className={stacked ? 'flex flex-col gap-1.5 w-full' : 'date-field-row flex flex-wrap items-center gap-1.5 w-full'}>
                 {!qualifierChips && <SelectField<DateInputMode>
                     aria-label={t('qualifier_label')}
                     value={parts.qualifier}

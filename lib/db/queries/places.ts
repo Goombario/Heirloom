@@ -71,13 +71,32 @@ export async function getPlaceById(id: number, treeId: number): Promise<Place | 
     return (result.rows[0] as Place | undefined) ?? null;
 }
 
-/** Direct children of a place in the jurisdiction hierarchy. */
-export async function getChildPlaces(parentId: number, treeId: number): Promise<Place[]> {
+/**
+ * Direct children of a place in the jurisdiction hierarchy, each with
+ * `RecordCount`: the births, deaths, marriages and live events whose place is
+ * that child or any place inside it.
+ */
+export async function getChildPlaces(parentId: number, treeId: number): Promise<(Place & { RecordCount: number })[]> {
     const result = await query(
-        `SELECT * FROM "Places" WHERE "ParentId" = $1 AND "TreeId" = $2 ORDER BY "Name" ASC`,
+        // `path` stops a cyclic ParentId (should never exist) from looping forever.
+        `WITH RECURSIVE sub AS (
+             SELECT c."Id" AS root, c."Id" AS id, ARRAY[c."Id"] AS path
+               FROM "Places" c WHERE c."ParentId" = $1 AND c."TreeId" = $2
+             UNION ALL
+             SELECT s.root, p."Id", s.path || p."Id"
+               FROM sub s JOIN "Places" p ON p."ParentId" = s.id AND p."TreeId" = $2
+              WHERE NOT p."Id" = ANY(s.path)
+         )
+         SELECT pl.*,
+                ${FACT_PLACE_COLUMNS.map((col) => `(SELECT COUNT(*) FROM ${col.table} f
+                  WHERE f."TreeId" = $2 AND f.${col.id} IN (SELECT id FROM sub WHERE sub.root = pl."Id")${col.table === '"Events"' ? ` AND ${liveEventSql('f')}` : ''})::int`).join('\n              + ')}
+                AS "RecordCount"
+           FROM "Places" pl
+          WHERE pl."ParentId" = $1 AND pl."TreeId" = $2
+          ORDER BY pl."Name" ASC`,
         [parentId, treeId],
     );
-    return result.rows as Place[];
+    return (result.rows as (Place & { RecordCount: number | string })[]).map((r) => ({ ...r, RecordCount: Number(r.RecordCount) }));
 }
 
 /**

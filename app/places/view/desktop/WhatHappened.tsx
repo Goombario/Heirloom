@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ActionLink, AvatarStack, FilterChip, SectionHeader, SegmentedControl } from '@/app/components/ui';
+import { ActionLink, AvatarStack, Button, FilterChip, SectionHeader, SegmentedControl } from '@/app/components/ui';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import { initialsFromName } from '@/lib/utils/initials';
 import { useLanguage } from '@/app/components/LanguageProvider';
+import { useLedgerDate } from '@/app/components/ledgerCells';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { familyEventLabel } from '@/app/components/familyEventTypes';
 import { formatDateForDisplay, sortableYear } from '@/lib/date-utils';
@@ -87,10 +88,11 @@ function RecordPlace({ record, placeId, placeName }: { record: PlaceRecord; plac
  * The read-only summary an opened record shows in place (#56): its date and place,
  * its people, and "Edit on X's page ↗" for those who can edit.
  */
-function RecordSummary({ record, placeId, placeName, canEdit, treeId }: {
-    record: PlaceRecord; placeId: number | null; placeName: string; canEdit: boolean; treeId: number | null;
+function RecordSummary({ record, placeId, placeName, canEdit, treeId, onClose }: {
+    record: PlaceRecord; placeId: number | null; placeName: string; canEdit: boolean; treeId: number | null; onClose: () => void;
 }) {
     const t = useTranslations('placeDesktop');
+    const tKit = useTranslations('detailKit');
     const date = useDate();
     return (
         <div className="place-evsum">
@@ -109,7 +111,7 @@ function RecordSummary({ record, placeId, placeName, canEdit, treeId }: {
             <RecordPeople record={record} treeId={treeId} />
             <div className="place-evsum__foot">
                 {canEdit ? <EditLink record={record} /> : <span />}
-                <span className="text-meta text-text-muted">{t('read_only_here')}</span>
+                <Button variant="outline" size="sm" onClick={onClose}>{tKit('ro_close')}</Button>
             </div>
         </div>
     );
@@ -131,18 +133,23 @@ function RecordTitle({ record }: { record: PlaceRecord }) {
 function ChronicleRow({ record, open, onToggle, placeId, placeName, canEdit, treeId }: {
     record: PlaceRecord; open: boolean; onToggle: () => void; placeId: number | null; placeName: string; canEdit: boolean; treeId: number | null;
 }) {
-    const date = useDate();
+    const { language } = useLanguage();
+    const when = useLedgerDate(language)(record.date);
     return (
         <li>
             <button type="button" aria-expanded={open} onClick={onToggle} className="place-ce focus-ring-inset">
-                <span className="place-ce__date">{record.date ? date(record.date) : ''}</span>
+                {/* The year over the day, as on the person and family timelines (fix 03). */}
+                <span className="place-ce__date">
+                    {record.date && <span className="ledger__year">{when.year}</span>}
+                    {when.day && <span className="ledger__day">{when.day}</span>}
+                </span>
                 <span className="min-w-0 text-base text-text">
                     <span className="block truncate"><RecordTitle record={record} /></span>
                     <span className="block text-meta text-text-muted truncate mt-px">{shortName(record.placeId === placeId ? placeName : record.placeName)}</span>
                 </span>
                 <AvatarStack people={record.people.map((p) => ({ id: p.id, name: p.name, sex: p.sex, mediaId: p.mediaId }))} size={28} max={FACES} treeId={treeId} />
             </button>
-            {open && <RecordSummary record={record} placeId={placeId} placeName={placeName} canEdit={canEdit} treeId={treeId} />}
+            {open && <RecordSummary record={record} placeId={placeId} placeName={placeName} canEdit={canEdit} treeId={treeId} onClose={onToggle} />}
         </li>
     );
 }

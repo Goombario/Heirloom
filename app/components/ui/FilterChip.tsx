@@ -45,7 +45,7 @@ const SHELL = 'inline-flex items-center shrink-0 h-7 rounded-full border-[1.5px]
 const TEXT = 'text-sm font-medium leading-none whitespace-nowrap cursor-pointer';
 const FOCUS = 'focus-ring';
 const tone = (active: boolean) =>
-  active ? 'bg-segment-on text-on-segment border-segment-on' : 'bg-card text-text-2 border-border hover:bg-surface-2';
+  active ? 'filter-chip bg-segment-on text-on-segment border-segment-on' : 'filter-chip is-off bg-card text-text-2 border-border hover:bg-surface-2';
 
 export function FilterChip({ active = false, count = null, label, loading = false, icon, dismissible = false, onDismiss, dismissLabel, className = '', children, ...rest }: FilterChipProps) {
   const bodyRef = React.useRef<HTMLButtonElement>(null);

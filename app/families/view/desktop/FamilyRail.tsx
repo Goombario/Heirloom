@@ -7,6 +7,7 @@ import { compareSortableYears, formatDateForDisplay, formatYearOrEmpty, sortable
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import type { JourneyStop } from '@/app/components/LocationJourneyModal';
+import JourneySketch from './JourneySketch';
 import { livingStatus } from '@/lib/living';
 import { getInitials } from '@/lib/utils/initials';
 import { factPlaceEntry } from '@/lib/places/place-key';
@@ -19,7 +20,6 @@ import type { FamilyWrites } from './familyWrites';
 import { ArrowUpRight, Plus } from '@/lib/icons';
 import type { PartnerFamilies, PartnerPerson } from '../useFamilyDetail';
 
-const LocationMap = dynamic(() => import('@/app/components/LocationMap'), { ssr: false });
 const LocationJourneyModal = dynamic(() => import('@/app/components/LocationJourneyModal'), { ssr: false });
 
 /** A place the family's records name, with what happened there for the map's stops. */
@@ -60,22 +60,19 @@ export function FamilyRail({ family, partner1, partner2, partner1Families, partn
   const dateWords = useDateQualifierWords();
   const [showMap, setShowMap] = useState(false);
 
-  // Where they lived: each named place once, pinned where it has coordinates.
+  // Where they lived: each named place once.
   const seen = new Set<string>();
-  const markers = places.flatMap(({ place, placeId }) => {
-    if (!place || seen.has(place)) return [];
-    seen.add(place);
-    const at = factPlaceEntry(placeCoords, place, placeId);
-    return at ? [{ lat: at.lat, lng: at.lng, label: place }] : [];
-  });
+  for (const { place } of places) if (place) seen.add(place);
   // The full map's stops: every geocoded record, oldest first, as the person page's journey.
-  const stops: JourneyStop[] = places
+  const dated = places
     .flatMap(({ place, placeId, title, date }) => {
       const at = place ? factPlaceEntry(placeCoords, place, placeId) : null;
       return place && at ? [{ date, stop: { lat: at.lat, lng: at.lng, label: place, title, date: date ? formatDateForDisplay(date, language, dateWords) : null } }] : [];
     })
-    .sort((x, y) => compareSortableYears(x.date, y.date))
-    .map((s) => s.stop);
+    .sort((x, y) => compareSortableYears(x.date, y.date));
+  const stops: JourneyStop[] = dated.map((s) => s.stop);
+  // The rail's sketch labels each stop with its year.
+  const sketch = dated.map(({ date, stop }) => ({ lat: stop.lat, lng: stop.lng, label: stop.label, year: date?.match(/\d{4}/)?.[0] ?? null }));
 
   return (
     <DetailRail look="open" className="rail-family">
@@ -179,10 +176,7 @@ export function FamilyRail({ family, partner1, partner2, partner1Families, partn
             // The whole block opens the full map of the family's places (board B).
             <button type="button" onClick={() => setShowMap(true)} aria-label={t('open_places_map')}
               className="family-places-link block w-full p-0 text-left bg-transparent border-0 cursor-pointer rounded-card focus-ring">
-              {/* The mini map is a picture here: it takes no pointer or keyboard input. */}
-              <span className="block pointer-events-none" inert>
-                <LocationMap markers={markers} variant="mini" height={130} className="rounded-card overflow-hidden" />
-              </span>
+              <JourneySketch stops={sketch} />
               <span className="flex items-center gap-2 mt-2">
                 <span className="flex-1 text-sm text-text-secondary">{t('places_n', { count: seen.size })}</span>
                 <ArrowUpRight className="w-3.5 h-3.5 text-link" aria-hidden="true" />

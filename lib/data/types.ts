@@ -259,8 +259,8 @@ export interface PlaceDetail {
   form?: string | null;
   /** Jurisdiction ancestors, root-first (breadcrumb). */
   parents?: PlaceRef[];
-  /** Direct child places in the hierarchy. */
-  children?: PlaceRef[];
+  /** Direct child places in the hierarchy, with the events and marriages recorded in each (itself and below). */
+  children?: (PlaceRef & { records?: number })[];
   /** The place's other names (#1185), each with how many records were written under it. */
   otherNames?: PlaceOtherName[];
   /** What still uses the place itself (#1229); a place can be deleted only when all are 0. */

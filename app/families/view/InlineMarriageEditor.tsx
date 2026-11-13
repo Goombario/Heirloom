@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { escapeToCancel, useFocusFirstField } from '@/app/hooks/useEditorFocusReturn';
 import { useTranslations } from 'next-intl';
 import DateInput from '@/app/components/DateInput';
@@ -11,7 +11,7 @@ import { getDataClient } from '@/lib/data';
 import type { PinChainRow } from '@/lib/data/types';
 import type { HierarchyLevel } from '@/lib/geocode/photon';
 import { useErrorToast } from '@/app/components/useErrorToast';
-import { EditorActions, FieldLabel, fieldClass } from '@/app/components/ui';
+import { EditorActions, fieldClass } from '@/app/components/ui';
 import { OwnerMediaCard } from '@/app/components/media/OwnerMediaCard';
 
 interface InlineMarriageEditorProps {
@@ -36,6 +36,10 @@ interface InlineMarriageEditorProps {
     withMedia?: boolean;
     /** Refresh the family after a photo is added or removed, so the row shows it. */
     onMediaChanged?: () => void;
+    /** The marriage's citation pins and "Cite a source", from the row (fix 02). */
+    sourcesSlot?: ReactNode;
+    /** "Ages then: Johan 27, Kristina 22.", under the date. */
+    ageHint?: (date: string) => string | null;
     onCancel: () => void;
     onSaved: () => void;
 }
@@ -45,7 +49,7 @@ interface InlineMarriageEditorProps {
  * look of InlineEventEditor. Marriage is stored on Families columns (not an Events
  * row), so this writes via families.update rather than the events client.
  */
-export default function InlineMarriageEditor({ familyId, treeId, marriageDate, marriagePlace, marriagePlaceId = null, kindLabel, canDelete, relevantPersonIds, withMedia = true, onMediaChanged, onCancel, onSaved }: InlineMarriageEditorProps) {
+export default function InlineMarriageEditor({ familyId, treeId, marriageDate, marriagePlace, marriagePlaceId = null, kindLabel, canDelete, relevantPersonIds, withMedia = true, onMediaChanged, sourcesSlot, ageHint, onCancel, onSaved }: InlineMarriageEditorProps) {
     const t = useTranslations('editFamily');
     const te = useTranslations('eventEdit');
     const tc = useTranslations('common');
@@ -116,13 +120,22 @@ export default function InlineMarriageEditor({ familyId, treeId, marriageDate, m
     });
 
     // The collections pattern's inline panel (#760), the same one InlineEventEditor uses.
+    // The same panel as every other event (fix 02): a heading, date and place side by
+    // side with the partners' ages under the date, the marriage's sources and media,
+    // then Cancel and the copper Save.
+    const fieldLabel = 'block text-meta font-medium mb-1 text-[color:var(--text-2)]';
+    const kindName = kindLabel.toLocaleLowerCase();
     return (
-        <div ref={panelRef} className="inline-panel my-2 flex flex-col gap-3" role="group" aria-label={t('editing_start', { kind: kindLabel })} onKeyDown={onKeyDown}>
-            <div className="grid grid-cols-1 gap-3">
-                <FieldLabel label={t('date_label')} fullLabel={t('started_date')} htmlFor={`${fieldId}-date`}>
-                    <DateInput id={`${fieldId}-date`} value={date} onChange={setDate} className={fieldClass()} />
-                </FieldLabel>
-                <FieldLabel label={t('place_label')} fullLabel={t('started_place')} htmlFor={`${fieldId}-place`}>
+        <div ref={panelRef} className="inline-panel event-panel grid gap-3.5" role="group" aria-label={t('editing_start', { kind: kindLabel })} onKeyDown={onKeyDown}>
+            <h3 className="m-0 text-base font-semibold text-text">{te('edit_named', { type: kindName })}</h3>
+            <div className="grid gap-x-4 gap-y-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+                <div className="min-w-0">
+                    <label htmlFor={`${fieldId}-date`} className={fieldLabel}>{te('field_date')}</label>
+                    <DateInput id={`${fieldId}-date`} value={date} onChange={setDate} className={fieldClass('sm')} />
+                    <p className="m-0 mt-1 text-xs text-text-muted">{(date && ageHint?.(date)) || te('date_hint')}</p>
+                </div>
+                <div className="min-w-0">
+                    <label htmlFor={`${fieldId}-place`} className={fieldLabel}>{te('field_place')}</label>
                     <LocationField
                         id={`${fieldId}-place`}
                         value={place}
@@ -133,17 +146,23 @@ export default function InlineMarriageEditor({ familyId, treeId, marriageDate, m
                         placeId={placeId}
                         onPlaceIdChange={setPlaceId}
                         treeId={treeId}
-                        className={fieldClass()}
+                        className={fieldClass('sm')}
                         placeholder={t('place_placeholder')}
                     />
-                </FieldLabel>
+                </div>
             </div>
+            {sourcesSlot && (
+                <div>
+                    <span className={fieldLabel}>{te('field_sources')}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">{sourcesSlot}</div>
+                </div>
+            )}
             {/* The marriage's own photos (ADR 0030). They save as they are added, like
                 an event's, so Save and Cancel don't apply to them. */}
             {withMedia && (
-                <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-2)' }}>{te('field_media')}</label>
-                    <OwnerMediaCard ownerTable="Families" ownerId={familyId} ownerFact="Marriage" treeId={treeId} canEdit canDelete={canDelete} relevantPersonIds={relevantPersonIds} onChanged={onMediaChanged} />
+                <div className="event-panel__media">
+                    <span className={fieldLabel}>{te('field_media_short')}</span>
+                    <OwnerMediaCard look="strip" ownerTable="Families" ownerId={familyId} ownerFact="Marriage" treeId={treeId} canEdit canDelete={canDelete} relevantPersonIds={relevantPersonIds} onChanged={onMediaChanged} />
                 </div>
             )}
             <EditorActions size="sm" onSave={handleSave} onCancel={onCancel} saving={saving} />

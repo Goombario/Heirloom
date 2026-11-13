@@ -72,6 +72,10 @@ interface InlineEventEditorProps {
      * Save/Cancel do not apply to it.
      */
     notesSlot?: ReactNode;
+    /** The event's citation pins and "Cite a source" (desktop panel), from the row. */
+    sourcesSlot?: ReactNode;
+    /** "Anna Maria was about 15.": the age the date gives, under the date field. */
+    ageHint?: (date: string) => string | null;
 }
 
 type EventFieldSnapshot = {
@@ -112,7 +116,7 @@ const leadRank = (value: string) => {
 // in the add-event list. Types stay family-scoped — never in EVENT_TYPES.
 const FAMILY_DEFAULTS: { value: string; label: string }[] = FAMILY_EVENT_TYPES.map((x) => ({ value: x.value, label: x.value }));
 
-export default function InlineEventEditor({ target, defaultType, event, relevantPersonIds, allowVital, vitalLock, onCancel, onSaved, onRefresh, onDelete, notesSlot }: InlineEventEditorProps) {
+export default function InlineEventEditor({ target, defaultType, event, relevantPersonIds, allowVital, vitalLock, onCancel, onSaved, onRefresh, onDelete, notesSlot, sourcesSlot, ageHint }: InlineEventEditorProps) {
     const { activeTreeId, activePermission } = useTree();
     const canDelete = activePermission === 'owner' || activePermission === 'edit';
     const t = useTranslations('eventEdit');
@@ -128,6 +132,8 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     const dateFieldId = useId();
     const placeFieldId = useId();
     const headingId = useId();
+    // Editing keeps its type; "Change type" in the heading row shows the Type field (fix 02).
+    const [retyping, setRetyping] = useState(false);
     // Opening the editor puts focus in its first field (#798, KB-2).
     const panelRef = useRef<HTMLDivElement>(null);
     useFocusFirstField(panelRef);
@@ -604,7 +610,7 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     const desktopFields = (
         <>
             {/* Type: only when editing an event that can change type (a new one picked it above). */}
-            {isEdit && !isSyntheticVital && (
+            {isEdit && !isSyntheticVital && retyping && (
                 <div className="max-w-[340px]">
                     <label htmlFor={typeFieldId} className={fieldLabel}>{t('field_type')}</label>
                     <SelectField id={typeFieldId} size="sm" value={type} onChange={setType}
@@ -615,7 +621,7 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
                 <div className="min-w-0">
                     <label htmlFor={dateFieldId} className={fieldLabel}>{t('field_date')}</label>
                     <DateInput id={dateFieldId} value={date} onChange={setDate} className={fieldClass('sm')} />
-                    <p className="m-0 mt-1 text-xs text-text-muted">{t('date_hint')}</p>
+                    <p className="m-0 mt-1 text-xs text-text-muted">{(date && ageHint?.(date)) || t('date_hint')}</p>
                 </div>
                 <div className="min-w-0">
                     <label htmlFor={placeFieldId} className={fieldLabel}>{t('field_place')}</label>
@@ -656,6 +662,12 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
                 </div>
             ))}
             {notesSlot && <div>{notesSlot}</div>}
+            {sourcesSlot && (
+                <div>
+                    <span className={fieldLabel}>{t('field_sources')}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">{sourcesSlot}</div>
+                </div>
+            )}
             {isSyntheticVital && target.kind === 'person' ? (
                 <div className="event-panel__media">
                     <span className={fieldLabel}>{t('field_media_short')}</span>
@@ -716,6 +728,9 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
             <div className="flex items-baseline justify-between gap-2.5">
                 <h3 id={headingId} className="m-0 text-base font-semibold text-text">{heading}</h3>
                 {choosing && <span className="text-meta text-text-muted">{t('choose_type')}</span>}
+                {isEdit && !isSyntheticVital && !retyping && (
+                    <button type="button" onClick={() => setRetyping(true)} className="p-0 bg-transparent border-0 text-sm text-link cursor-pointer hover:underline focus-ring rounded-sm">{t('change_type')}</button>
+                )}
                 {canChangeType && (
                     <button type="button" onClick={() => setType('')} className="p-0 bg-transparent border-0 text-sm text-link cursor-pointer hover:underline focus-ring rounded-sm">{t('change_type')}</button>
                 )}

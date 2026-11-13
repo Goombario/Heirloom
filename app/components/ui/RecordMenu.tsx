@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { Ellipsis } from '@/lib/icons';
+import { ChevronDown, Ellipsis } from '@/lib/icons';
 import { cx } from './cx';
 import { useMenuKeyboard } from './useMenuKeyboard';
 
@@ -30,6 +30,14 @@ export interface RecordMenuProps {
   tone?: 'island' | 'surface';
   /** `hover` hides the trigger until its row is hovered or focused (journal entries, #58). */
   reveal?: 'always' | 'hover';
+  /**
+   * A labelled trigger instead of ⋯ (the case's status pill, fix 07): rendered inside
+   * the button with a chevron after it; `triggerClassName` styles that button.
+   */
+  trigger?: React.ReactNode;
+  triggerClassName?: string;
+  /** The menu's accessible name when it isn't "More actions for …". */
+  menuLabel?: string;
   className?: string;
 }
 
@@ -39,7 +47,7 @@ export interface RecordMenuProps {
  * `role="menu"` popover with `useMenuKeyboard`; a pointer dismissal leaves focus
  * where the pointer went. Disabled items stay in the list with their reason.
  */
-export function RecordMenu({ recordName, items, tone = 'surface', reveal = 'always', className }: RecordMenuProps) {
+export function RecordMenu({ recordName, items, tone = 'surface', reveal = 'always', trigger: triggerContent, triggerClassName, menuLabel, className }: RecordMenuProps) {
   const t = useTranslations('detailKit');
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -72,15 +80,15 @@ export function RecordMenu({ recordName, items, tone = 'surface', reveal = 'alwa
   }, [open]);
 
   if (items.length === 0) return null;
-  const label = t('more_actions_for', { name: recordName });
+  const label = menuLabel ?? t('more_actions_for', { name: recordName });
 
   return (
     <div ref={wrap} className={cx('relative inline-block', reveal === 'hover' && !open && 'record-menu--hover', className)}>
       <button
         ref={trigger}
         type="button"
-        aria-label={label}
-        title={label}
+        aria-label={triggerContent ? undefined : label}
+        title={triggerContent ? undefined : label}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -90,14 +98,14 @@ export function RecordMenu({ recordName, items, tone = 'surface', reveal = 'alwa
           if (r) setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
           setOpen(true);
         }}
-        className={cx(
+        className={triggerContent ? cx('inline-flex items-center gap-1.5 cursor-pointer focus-ring', triggerClassName) : cx(
           'grid place-items-center w-9 h-9 rounded-full border cursor-pointer focus-ring transition-colors',
           tone === 'island'
             ? 'border-[color:var(--color-control-border)] text-[color:var(--color-text)] hover:bg-[color:var(--color-surface-2)]'
             : cx('border-border text-text-secondary bg-card hover:bg-hover-surface', open && 'bg-surface-2 text-text'),
         )}
       >
-        <Ellipsis className="w-4 h-4" aria-hidden="true" />
+        {triggerContent ? <>{triggerContent}<ChevronDown className="w-3.5 h-3.5" aria-hidden="true" /></> : <Ellipsis className="w-4 h-4" aria-hidden="true" />}
       </button>
       {open && pos && createPortal(
         <div

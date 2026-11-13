@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import GuardedLink from '@/app/components/GuardedLink';
-import { Card, SectionHeader, citeClass } from '@/app/components/ui';
+import { SectionHeader, citeClass } from '@/app/components/ui';
 import { groupCitationFactsBySource, numberSources } from '@/app/components/citations/factDescriptors';
 import type { CitationFactDescriptor } from '@/app/components/citations/types';
 import { librarySourceHref } from '@/app/library/links';
@@ -37,8 +37,8 @@ export function SourcesSection({ facts, title }: { facts: CitationFactDescriptor
       {sources.length === 0 ? (
         <p className="m-0 text-sm text-text-muted">{td('no_sources')}</p>
       ) : (
-        <Card pad={false}>
-          <ol className="list-none m-0 p-2">
+        // An open list with hairlines, like Names and Notes (audit fix 04): no card.
+        <ol className="list-none m-0 p-0 border-b border-border">
             {sources.map((source) => {
               const sourceTitle = source.title ?? t('source_fallback', { id: source.sourceId });
               const type = source.facts.flatMap((f) => f.citations).find((c) => c.SourceId === source.sourceId)?.sourceType ?? null;
@@ -46,13 +46,13 @@ export function SourcesSection({ facts, title }: { facts: CitationFactDescriptor
               const shown = names.slice(0, NAMED).join(', ');
               const more = names.length - NAMED;
               return (
-                <li key={source.sourceId}>
+                <li key={source.sourceId} className="border-t border-border">
                   <GuardedLink
                     href={librarySourceHref(source.sourceId)}
-                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2.5 gap-y-0.5 rounded-btn px-2 py-2.5 text-base text-text no-underline hover:bg-hover-surface focus-ring"
+                    className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2.5 gap-y-0.5 rounded-btn -mx-2 px-2 py-3 text-base text-text no-underline hover:bg-hover-surface focus-ring"
                   >
                     <span className={`${citeClass()} shrink-0 mt-px`}>{numbers.get(source.sourceId)}</span>
-                    <span className="serif min-w-0">{sourceTitle}</span>
+                    <span className="serif text-md font-semibold min-w-0">{sourceTitle}</span>
                     <ArrowUpRight className="w-4 h-4 shrink-0 mt-0.5 text-text-muted" aria-hidden="true" />
                     {names.length > 0 && (
                       <span className="col-start-2 col-span-2 text-meta text-text-muted">
@@ -68,8 +68,7 @@ export function SourcesSection({ facts, title }: { facts: CitationFactDescriptor
                 </li>
               );
             })}
-          </ol>
-        </Card>
+        </ol>
       )}
     </>
   );
