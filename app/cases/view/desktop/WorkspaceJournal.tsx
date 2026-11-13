@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import MediaImg from '@/app/components/MediaImg';
 import { Button, FilterChip, RecordMenu, SelectField, cx, fieldClass } from '@/app/components/ui';
-import { Paperclip, Quote, X } from '@/lib/icons';
+import { ChevronDown, Paperclip, Quote, X } from '@/lib/icons';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
 import type { CaseComment, CaseLead } from '@/lib/db/schema';
 import type { CaseDetailState } from '../useCaseDetail';
@@ -54,6 +54,14 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
     const [filedFor, setFiledFor] = useState<{ lead: number | null; ids: number[] } | null>(null);
     const filed = filedFor && filedFor.lead === openLeadId ? filedFor.ids : (openLeadId != null ? [openLeadId] : []);
     const [choosing, setChoosing] = useState(false);
+    const filedRef = useRef<HTMLSpanElement>(null);
+    // The Filed under menu closes on a click outside it.
+    useEffect(() => {
+        if (!choosing) return;
+        const onDown = (e: PointerEvent) => { if (!filedRef.current?.contains(e.target as Node)) setChoosing(false); };
+        document.addEventListener('pointerdown', onDown);
+        return () => document.removeEventListener('pointerdown', onDown);
+    }, [choosing]);
     const [added, setAdded] = useState<number[] | null>(null);
     const [striking, setStriking] = useState<{ id: number; reason: string } | null>(null);
     const [busy, setBusy] = useState(false);
@@ -98,7 +106,7 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
             </div>
             <div role="group" aria-label={t('entry_types')} className="flex flex-wrap gap-1.5">
                 {TYPES.map((k) => (
-                    <FilterChip key={k} active={type === k} onClick={() => setType(k)}>{t(`type_${k}`)}</FilterChip>
+                    <FilterChip key={k} active={type === k} count={comments.filter((c) => entryShown(c, shownLead, k)).length} onClick={() => setType(k)}>{t(`type_${k}`)}</FilterChip>
                 ))}
             </div>
 
@@ -131,28 +139,32 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
                             className="inline-flex items-center gap-1.5 h-7 rounded-btn border border-border bg-card px-2.5 text-meta text-text-secondary cursor-pointer hover:bg-hover-surface focus-ring">
                             <Quote className="w-3.5 h-3.5" aria-hidden="true" />{t('cite')}
                         </button>
-                        <button type="button" aria-expanded={choosing} onClick={() => setChoosing((v) => !v)}
-                            className="inline-flex min-w-0 max-w-full items-center gap-1 h-7 rounded-full bg-surface-2 px-2.5 text-meta text-text cursor-pointer focus-ring">
-                            <span className="text-text-muted shrink-0">{t('filed_under')}</span>
-                            <span className="truncate">{filedLabel(filed)}</span>
-                        </button>
-                        <Button size="sm" className="ml-auto" onClick={() => { void post(); }} disabled={postingComment || !commentBody.trim()}>{t('add_note_button')}</Button>
+                        {/* Filed under (fix 07): a checkbox menu that drops down beside Photo and Cite. */}
+                        <span className="relative min-w-0" ref={filedRef}>
+                            <button type="button" aria-expanded={choosing} onClick={() => setChoosing((v) => !v)}
+                                className="inline-flex min-w-0 max-w-full items-center gap-1 h-7 rounded-full bg-surface-2 px-2.5 text-meta text-text cursor-pointer focus-ring">
+                                <span className="text-text-muted shrink-0">{t('filed_under')}</span>
+                                <span className="truncate font-medium">{filedLabel(filed)}</span>
+                                <ChevronDown className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                            </button>
+                            {choosing && (
+                                <fieldset className="journal-filed__menu" onKeyDown={(e) => { if (e.key === 'Escape') setChoosing(false); }}>
+                                    <legend className="sr-only">{t('filed_under')}</legend>
+                                    {leads.map((l) => (
+                                        <label key={l.Id} className="flex items-start gap-2 text-sm text-text cursor-pointer">
+                                            <input type="checkbox" checked={filed.includes(l.Id)} onChange={() => toggleFiled(l.Id)} className="mt-0.5" />
+                                            <span className="break-words">{l.Question}</span>
+                                        </label>
+                                    ))}
+                                    <label className="flex items-start gap-2 text-sm text-text cursor-pointer">
+                                        <input type="checkbox" checked={filed.length === 0} onChange={() => toggleFiled('case')} className="mt-0.5" />
+                                        <span>{t('whole_case')}</span>
+                                    </label>
+                                </fieldset>
+                            )}
+                        </span>
+                        <Button size="sm" className="ml-auto" onClick={() => { void post(); }} disabled={postingComment || !commentBody.trim()}>{t('add_entry')}</Button>
                     </div>
-                    {choosing && (
-                        <fieldset className="m-0 grid gap-1.5 border-0 border-t border-border-light p-0 pt-2">
-                            <legend className="sr-only">{t('filed_under')}</legend>
-                            {leads.map((l) => (
-                                <label key={l.Id} className="flex items-start gap-2 text-sm text-text cursor-pointer">
-                                    <input type="checkbox" checked={filed.includes(l.Id)} onChange={() => toggleFiled(l.Id)} className="mt-0.5" />
-                                    <span className="break-words">{l.Question}</span>
-                                </label>
-                            ))}
-                            <label className="flex items-start gap-2 text-sm text-text cursor-pointer">
-                                <input type="checkbox" checked={filed.length === 0} onChange={() => toggleFiled('case')} className="mt-0.5" />
-                                <span>{t('whole_case')}</span>
-                            </label>
-                        </fieldset>
-                    )}
                 </div>
             )}
 

@@ -3878,7 +3878,6 @@
     "type_searches": "Поиски",
     "type_status": "Статус",
     "add_note": "Добавить заметку",
-    "add_note_button": "Добавить",
     "remove_photo": "Убрать фото",
     "remove_cite": "Убрать цитату",
     "added_to": "Добавлено в: {where}",
@@ -4009,7 +4008,9 @@
     "report_decision_undecided": "Не решено",
     "report_request_waiting": "ожидается",
     "report_request_received": "прислали",
-    "report_request_nothing": "ничего нет"
+    "report_request_nothing": "ничего нет",
+    "change_status": "Изменить статус",
+    "add_entry": "Добавить запись"
   },
   "citeSheet": {
     "cite_title": "Указать источник",

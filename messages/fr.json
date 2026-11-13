@@ -3878,7 +3878,6 @@
     "type_searches": "Recherches",
     "type_status": "Statut",
     "add_note": "Ajouter une note",
-    "add_note_button": "Ajouter la note",
     "remove_photo": "Retirer la photo",
     "remove_cite": "Retirer la citation",
     "added_to": "Ajouté sous : {where}",
@@ -4009,7 +4008,9 @@
     "report_decision_undecided": "Non tranchée",
     "report_request_waiting": "en attente",
     "report_request_received": "envoyé",
-    "report_request_nothing": "rien trouvé"
+    "report_request_nothing": "rien trouvé",
+    "change_status": "Changer le statut",
+    "add_entry": "Ajouter une entrée"
   },
   "citeSheet": {
     "cite_title": "Citer une source",

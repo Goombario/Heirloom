@@ -3878,7 +3878,6 @@
     "type_searches": "Searches",
     "type_status": "Status",
     "add_note": "Add a note",
-    "add_note_button": "Add note",
     "remove_photo": "Remove the photo",
     "remove_cite": "Remove the citation",
     "added_to": "Added under {where}",
@@ -4009,7 +4008,9 @@
     "report_decision_undecided": "Undecided",
     "report_request_waiting": "waiting",
     "report_request_received": "they sent it",
-    "report_request_nothing": "they had nothing"
+    "report_request_nothing": "they had nothing",
+    "change_status": "Change status",
+    "add_entry": "Add entry"
   },
   "citeSheet": {
     "cite_title": "Cite a source",
