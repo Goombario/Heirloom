@@ -1194,16 +1194,6 @@ body::after {
   background: var(--color-hover-surface);
 }
 
-/* Audit: per-row Revert button reveals on row hover */
-.audit-revert {
-  opacity: 0;
-  transition: opacity var(--dur-fast) ease;
-}
-.dt-row:hover .audit-revert,
-.audit-revert:focus-visible {
-  opacity: 1;
-}
-
 /* Audit date-range calendar (react-day-picker) themed to app tokens */
 .audit-daterange {
   --rdp-accent-color: var(--color-primary);

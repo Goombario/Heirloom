@@ -70,9 +70,12 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
 /**
  * The white panel that holds a list page's `DataTable`, with the pager in its
  * footer: "1–25 of 412" and ‹ ›. The footer hides when everything fits on one page.
+ * `header` is a bar across the panel's top, above the table (the audit log's
+ * "2 selected · Revert 2 changes · Clear").
  */
-export function TablePanel({ children, page, pageSize, total, onPage, className }: {
+export function TablePanel({ children, header, page, pageSize, total, onPage, className }: {
   children: React.ReactNode;
+  header?: React.ReactNode;
   /** 1-based. */
   page: number;
   pageSize: number;
@@ -87,6 +90,7 @@ export function TablePanel({ children, page, pageSize, total, onPage, className 
   const to = Math.min(total, page * pageSize);
   return (
     <Card pad={false} className={cx('table-panel overflow-hidden', className)}>
+      {header && <div className="border-b border-border-light bg-card-alt px-3.5 py-2">{header}</div>}
       <div className="overflow-x-auto">{children}</div>
       {pages > 1 && (
         <div className="flex items-center justify-end gap-2 border-t border-border-light px-4 py-2">
