@@ -22,6 +22,9 @@ export interface ExploreState {
   select(node: PlaceTreeNode): void;
   /** Breadcrumb / back navigation to a node id (null = root). */
   goTo(nodeId: number | null): void;
+  /** Pick a place from outside the list (the overview's quick picks): select it and
+   *  open the list at its level, so its row shows as picked among its siblings. */
+  reveal(node: PlaceTreeNode): void;
 }
 
 /** Depth-first lookup of a node by id (null id → null). */
@@ -64,6 +67,16 @@ export function selectResult(
   };
 }
 
+/** Where the list opens to show `id` picked: inside it when it has places within,
+ *  otherwise at its parent's level (the root for a top-level place). */
+export function levelFor(roots: PlaceTreeNode[], id: number | null): number | null {
+  const path = ancestorsOf(roots, id);
+  const node = path[path.length - 1];
+  if (!node) return null;
+  if (node.children.length > 0) return node.id;
+  return path.length > 1 ? path[path.length - 2]!.id : null;
+}
+
 function readUrl(): { node: number | null; sel: number | null } {
   const p = new URLSearchParams(window.location.search);
   const num = (v: string | null) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v) : null);
@@ -83,9 +96,13 @@ export function useExploreState(roots: PlaceTreeNode[]): ExploreState {
   // Suspense requirement + the static-export CSR bailout). Hydration-safe: the Explore
   // content only renders after the client-side data fetch, so the server never paints a
   // param-driven state.
-  const [currentNodeId, setCurrentNodeId] = useState<number | null>(
-    () => (typeof window === 'undefined' ? null : readUrl().node),
-  );
+  // A link that names only the selection (the place page's "Full map": ?sel=<id>) opens
+  // the list at that place's level, so its row shows as picked.
+  const [currentNodeId, setCurrentNodeId] = useState<number | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const { node, sel } = readUrl();
+    return node ?? levelFor(roots, sel);
+  });
   const [selectedId, setSelectedId] = useState<number | null>(
     () => (typeof window === 'undefined' ? null : readUrl().sel),
   );
@@ -118,10 +135,17 @@ export function useExploreState(roots: PlaceTreeNode[]): ExploreState {
     pushUrl(nodeId, nodeId);
   }, []);
 
+  const reveal = useCallback((node: PlaceTreeNode) => {
+    const nextCur = levelFor(roots, node.id);
+    setSelectedId(node.id);
+    setCurrentNodeId(nextCur);
+    pushUrl(nextCur, node.id);
+  }, [roots]);
+
   const currentNode = useMemo(() => findNodeById(roots, currentNodeId), [roots, currentNodeId]);
   const selected = useMemo(() => findNodeById(roots, selectedId), [roots, selectedId]);
   const crumbs = useMemo(() => ancestorsOf(roots, currentNodeId), [roots, currentNodeId]);
   const children = currentNode ? currentNode.children : roots;
 
-  return { currentNode, selected, crumbs, children, roots, select, goTo };
+  return { currentNode, selected, crumbs, children, roots, select, goTo, reveal };
 }

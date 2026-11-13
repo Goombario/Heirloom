@@ -163,7 +163,11 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
                                 </fieldset>
                             )}
                         </span>
-                        <Button size="sm" className="ml-auto" onClick={() => { void post(); }} disabled={postingComment || !commentBody.trim()}>{t('add_entry')}</Button>
+                    </div>
+                    {/* Add entry on its own row under Filed under (owner review 2026-11-13): beside it,
+                        it wrapped to wherever the chip left room in the narrow pane. */}
+                    <div className="flex justify-end">
+                        <Button size="sm" onClick={() => { void post(); }} disabled={postingComment || !commentBody.trim()}>{t('add_entry')}</Button>
                     </div>
                 </div>
             )}

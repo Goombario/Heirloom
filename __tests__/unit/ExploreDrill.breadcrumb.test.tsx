@@ -45,6 +45,7 @@ function state(over: Partial<ExploreState> = {}): ExploreState {
     roots: [uk],
     select: vi.fn(),
     goTo: vi.fn(),
+    reveal: vi.fn(),
     ...over,
   };
 }

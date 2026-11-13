@@ -44,6 +44,7 @@ function state(): ExploreState {
     roots: [uk, canada],
     select: vi.fn(),
     goTo: vi.fn(),
+    reveal: vi.fn(),
   };
 }
 

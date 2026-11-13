@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findNodeById, ancestorsOf, selectResult } from '@/app/places/explore/useExploreState';
+import { findNodeById, ancestorsOf, selectResult, levelFor } from '@/app/places/explore/useExploreState';
 import type { PlaceTreeNode } from '@/lib/places/hierarchy';
 
 function n(id: number, name: string, children: PlaceTreeNode[] = []): PlaceTreeNode {
@@ -50,5 +50,20 @@ describe('selectResult', () => {
   it('selecting a leaf keeps the current level (siblings stay listed)', () => {
     const dover = findNodeById(fixture(), 3)!;
     expect(selectResult(dover, 2)).toEqual({ selectedId: 3, currentNodeId: 2 });
+  });
+});
+
+describe('levelFor', () => {
+  it('opens a nested leaf at its parent, so its row shows picked among its siblings', () => {
+    expect(levelFor(fixture(), 5)).toBe(4);
+    expect(levelFor(fixture(), 3)).toBe(2);
+  });
+  it('opens a place with places within at itself', () => {
+    expect(levelFor(fixture(), 4)).toBe(4);
+  });
+  it('is the root level for a top-level leaf, a missing id or null', () => {
+    expect(levelFor([n(7, 'Wales')], 7)).toBeNull();
+    expect(levelFor(fixture(), 99)).toBeNull();
+    expect(levelFor(fixture(), null)).toBeNull();
   });
 });

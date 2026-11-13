@@ -752,6 +752,8 @@ export default function PlaceDetailClient() {
                         ) : undefined}
                     />
                     <DetailBody
+                        sheet
+                        className="place-body"
                         rail={(
                             <PlaceRail
                                 key={scopeKey}

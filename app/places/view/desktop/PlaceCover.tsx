@@ -160,8 +160,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
             <LocationMap
                 markers={map.markers}
                 variant="full"
-                height={440}
-                insets={{ top: 24, right: 24, bottom: 132, left: 24 }}
+                height={340}
                 highlightedIds={ringedIds}
                 draggable={map.draggable}
                 onMarkerDragEnd={map.onDrag}

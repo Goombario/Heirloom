@@ -55,7 +55,7 @@ export function PersonSummaryView({ summary, treeId }: { summary: PersonSummary;
             />
 
             {/* Body: still loading; the live page's main column and rail. */}
-            <DetailBody rail={(
+            <DetailBody sheet rail={(
                 <div className="flex flex-col gap-3">
                     <Skeleton className="h-14 w-full" />
                     {Array.from({ length: 3 }).map((_, i) => (

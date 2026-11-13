@@ -17,6 +17,8 @@ export interface DetailBodyProps {
   rail?: React.ReactNode;
   /** The full-width hairline above the body that closes the top section (family, home). */
   divided?: boolean;
+  /** Tint the main column as a cream sheet (#131): person, family and place pages. Needs a rail. */
+  sheet?: boolean;
   className?: string;
   /** The main column. Its sections are separated by spacing only. */
   children: React.ReactNode;
@@ -28,11 +30,11 @@ export interface DetailBodyProps {
  * (it narrows instead of dropping to the bottom); the index appears from 1180px.
  * Phones don't use this: they keep their own panes.
  */
-export function DetailBody({ index, rail, divided = false, className, children }: DetailBodyProps) {
+export function DetailBody({ index, rail, divided = false, sheet = false, className, children }: DetailBodyProps) {
   const hasIndex = index != null && index.length > 0;
   const main = useRef<HTMLDivElement>(null);
   return (
-    <div className={cx('detail-body', hasIndex && 'detail-body--index', rail != null && 'detail-body--rail', divided && 'detail-body--divided', className)}>
+    <div className={cx('detail-body', hasIndex && 'detail-body--index', rail != null && 'detail-body--rail', divided && 'detail-body--divided', sheet && rail != null && 'detail-body--sheet', className)}>
       {hasIndex && <SectionIndex entries={index} mainRef={main} />}
       <div ref={main} className="detail-body__main">{children}</div>
       {rail != null && <aside className="detail-body__rail">{rail}</aside>}
