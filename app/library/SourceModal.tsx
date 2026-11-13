@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/app/components/Modal';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
-import { Button, HeroEditButton, InlineDataError } from '@/app/components/ui';
+import { Button, HeroEditButton, InlineDataError, ScrollArea } from '@/app/components/ui';
 import { SourceFields } from '@/app/components/SourceFields';
 import { useSourceEditor } from '@/app/library/useSourceEditor';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
@@ -409,11 +409,11 @@ export default function SourceModal({
               </button>
             </div>
 
-            <div className="overflow-y-auto py-[18px] px-6">
+            <ScrollArea className="py-[18px] px-6">
               {loadErrorAlert}
               {!loadError && errorAlert}
               <SourceFields value={form} onChange={setForm} disabled={saving} idPrefix="modal-sf" treeId={treeId} />
-            </div>
+            </ScrollArea>
 
             <div className="flex items-center justify-between gap-2.5 border-t border-border bg-card-alt py-[13px] px-6">
               {canDelete && !isNew ? (
@@ -475,11 +475,11 @@ export default function SourceModal({
             </div>
 
             {/* Body — evidence ledger + catalog details */}
-            <div className="overflow-y-auto pt-[18px] px-6 pb-[22px]">
+            <ScrollArea className="pt-[18px] px-6 pb-[22px]">
               {loadErrorAlert}
               {citeNoticeLine}
               <SourceDetailBody source={source} citedBy={citedBy} isMobile={isMobile} t={t} canEdit={canEdit} canDelete={canDelete} treeId={treeId} onCiteOn={canEdit ? () => { setCiteNotice(null); setMode('cite'); } : undefined} citeOnRef={citeOnRef} />
-            </div>
+            </ScrollArea>
           </>
         ) : null}
       </div>

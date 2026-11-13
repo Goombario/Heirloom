@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, FormDialog, PersonFinder, fieldClass, cx } from '@/app/components/ui';
+import { Button, FormDialog, PersonFinder, TagField, fieldClass, cx } from '@/app/components/ui';
 import { Plus, X } from '@/lib/icons';
 import { displayFullName } from '@/lib/utils/names';
 import type { CaseWithRelations } from '@/lib/db/schema';
@@ -27,8 +27,8 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
     const [to, setTo] = useState(caseData.ToYear != null ? String(caseData.ToYear) : '');
     const [place, setPlace] = useState(caseData.Place ?? '');
     const [background, setBackground] = useState(caseData.Description ?? '');
-    const initialTags = (caseData.Tags ?? []).join(', ');
-    const [tags, setTags] = useState(initialTags);
+    const initialTags = caseData.Tags ?? [];
+    const [tags, setTags] = useState<string[]>(initialTags);
     const [people, setPeople] = useState(caseData.people.map((p) => ({ id: p.Id, name: displayFullName(p) || t('unnamed') })));
     const [busy, setBusy] = useState(false);
 
@@ -38,7 +38,7 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
     const ready = title.trim() !== '' && !badYears && !busy;
     const dirty = title !== caseData.Title || place !== (caseData.Place ?? '') || from !== (caseData.FromYear?.toString() ?? '')
         || to !== (caseData.ToYear?.toString() ?? '') || people.length !== caseData.people.length
-        || background !== (caseData.Description ?? '') || tags !== initialTags;
+        || background !== (caseData.Description ?? '') || tags.join('\n') !== initialTags.join('\n');
 
     const save = async () => {
         if (!ready) return;
@@ -46,7 +46,7 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
         const ok = await onSave({
             Title: title.trim(), FromYear: fromYear, ToYear: toYear, Place: place.trim() || null,
             Description: background.trim() || null,
-            Tags: [...new Set(tags.split(',').map((tag) => tag.trim()).filter(Boolean))],
+            Tags: tags,
             personIds: people.map((p) => p.id),
         });
         setBusy(false);
@@ -116,11 +116,22 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
                     {t('background')}
                     <textarea rows={3} value={background} onChange={(e) => setBackground(e.target.value)} className={cx(fieldClass(), 'resize-y')} placeholder={t('background_hint')} />
                 </label>
-                <label className="grid gap-1.5 text-sm text-text-secondary">
-                    {t('tags')}
-                    <input value={tags} onChange={(e) => setTags(e.target.value)} className={fieldClass()} aria-describedby="about-tags-hint" />
+                <div className="grid gap-1.5 text-sm text-text-secondary">
+                    <label htmlFor="about-tags">{t('tags')}</label>
+                    {/* Chips and the input share one field (#33), so typing never moves. */}
+                    <TagField
+                        id="about-tags"
+                        label={t('tags')}
+                        value={tags}
+                        onChange={setTags}
+                        placeholder={t('tags_placeholder')}
+                        removeLabel={(tag) => tc('remove_named', { name: tag })}
+                        addedLabel={(tag) => t('tag_added', { tag })}
+                        removedLabel={(tag) => t('tag_removed', { tag })}
+                        describedBy="about-tags-hint"
+                    />
                     <span id="about-tags-hint" className="text-meta text-text-muted">{t('tags_hint')}</span>
-                </label>
+                </div>
             </form>
         </FormDialog>
     );
