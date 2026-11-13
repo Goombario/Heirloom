@@ -153,6 +153,11 @@ export async function getAuditLog(
  * Distinct editors (users who have any audit entry) for a tree — powers
  * the "Who" filter dropdown.
  */
+/** The same entries with each editor's email removed, for view-only members (#51, L-4). */
+export function withoutEditorEmails<T extends { UserEmail?: string | null }>(entries: T[]): T[] {
+    return entries.map((e) => ({ ...e, UserEmail: null }));
+}
+
 export async function getAuditEditors(
     treeId: number
 ): Promise<{ userId: number; name: string }[]> {

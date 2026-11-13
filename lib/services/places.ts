@@ -779,6 +779,11 @@ export async function renamePlaceService(
       // rather than silently writing an empty audit entry.
       throw new ValidationError(`No place named "${from}" was found`);
     }
+    // A merge rewrites many records at once and `contribute` can't revert it, so
+    // it needs `edit`; renaming stays open to contributors (#51, L-7).
+    if (result.snapshot.wasMerge && scope.permission === 'contribute') {
+      throw new AccessError('Merging places needs edit permission for this tree');
+    }
     const auditId = await auditPlaceRename(scope.ownerId, params.currentUserId, result.snapshot, result.survivingId, client, scope.treeId);
     await client.query('COMMIT');
     return withAuditIds({ renamed: result.snapshot.affected.length, wasMerge: result.snapshot.wasMerge, to }, [auditId]);

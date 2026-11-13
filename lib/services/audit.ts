@@ -1,5 +1,5 @@
 import { parseIdParam } from '@/lib/utils/parse-id';
-import { getAuditLog, getAuditEditors, getAuditRefNames, revertAuditEntry, revertAuditEntries } from '@/lib/db/queries/audit';
+import { getAuditLog, getAuditEditors, getAuditRefNames, revertAuditEntry, revertAuditEntries, withoutEditorEmails } from '@/lib/db/queries/audit';
 import { getAuditRecords } from '@/lib/db/queries/audit-records';
 import { auditRefIds } from '@/lib/utils/audit-fields';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
@@ -69,7 +69,9 @@ export async function listAuditService(params: ListAuditParams): Promise<AuditLi
       getAuditRefNames(scope.treeId, ids.people, ids.families),
       getAuditRecords(scope.treeId, entries),
     ]);
-    return { entries, total, page: clampedPage, pageSize: clampedPageSize, refs, records };
+    // View-only members see editors' display names, never their emails (#51, L-4).
+    const shown = scope.permission === 'view' ? withoutEditorEmails(entries) : entries;
+    return { entries: shown, total, page: clampedPage, pageSize: clampedPageSize, refs, records };
   } catch (err) {
     if (err instanceof Error && /^Invalid (entityType|action|sort|dir)/.test(err.message)) {
       throw new ValidationError(err.message);

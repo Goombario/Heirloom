@@ -920,7 +920,7 @@
   },
   "geocodingPrompt": {
     "title": "Look up places online?",
-    "body": "To suggest matches and map pins, the place names you type are sent to Photon (photon.komoot.io), a geocoder built on OpenStreetMap data. Nothing else from your tree is sent. You can change this in Options.",
+    "body": "To suggest matches and map pins, the place names you type are sent to Photon (photon.komoot.io), a geocoder built on OpenStreetMap data. Nothing else from your tree is sent. You can change this in Options. Maps load their images from OpenFreeMap, which sees your IP address and the map area, never place names.",
     "turn_on": "Turn on lookup",
     "keep_off": "Keep off"
   },
@@ -1371,7 +1371,7 @@
     "experimental_title": "Experimental",
     "experimental_desc": "These features are in-progress and may change or be removed.",
     "geocoding_label": "Live place lookup",
-    "geocoding_help": "Off until you turn it on. When on, the place names you type are sent to Photon (photon.komoot.io), a geocoder built on OpenStreetMap data, to suggest matches and map pins. Nothing else from your tree is sent.",
+    "geocoding_help": "Off until you turn it on. When on, the place names you type are sent to Photon (photon.komoot.io), a geocoder built on OpenStreetMap data, to suggest matches and map pins. Nothing else from your tree is sent. Maps load their images from OpenFreeMap, which sees your IP address and the map area, never place names.",
     "quoted_names_label": "Quoted names in tree",
     "quoted_names_desc": "Controls how names with quoted nicknames (e.g. William \"Bill\" Hartley) appear on tree nodes.",
     "quoted_show": "Use nickname — e.g. Bill Hartley (default)",
