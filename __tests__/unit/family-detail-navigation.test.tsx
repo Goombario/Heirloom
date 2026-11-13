@@ -140,7 +140,6 @@ vi.mock('@/app/components/ui', async (importOriginal) => ({
     DetailSkeleton: () => <div data-testid="family-detail-skeleton" aria-busy="true" />,
 }));
 vi.mock('@/app/families/view/FamilySummaryView', () => ({ FamilySummaryView: () => <div /> }));
-vi.mock('@/app/families/view/FamilyHeroEditor', () => ({ FamilyHeroEditor: () => <div /> }));
 vi.mock('@/app/families/view/sections', () => ({
     FamilyTimeline: () => <div />,
     ChildrenList: () => <div />,

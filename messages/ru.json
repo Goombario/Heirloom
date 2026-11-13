@@ -883,7 +883,9 @@
     "section_media": "Медиа",
     "section_notes": "Заметки",
     "section_sources": "Источники",
-    "ended_derived": "Определено по дате смерти: {name}."
+    "ended_derived": "Определено по дате смерти: {name}.",
+    "find_or_add": "Найти или добавить человека",
+    "type_saved": "Тип семьи сохранён"
   },
   "geocodingPrompt": {
     "title": "Искать места в интернете?",

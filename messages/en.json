@@ -883,7 +883,9 @@
     "section_media": "Media",
     "section_notes": "Notes",
     "section_sources": "Sources",
-    "ended_derived": "Worked out from {name}’s death."
+    "ended_derived": "Worked out from {name}’s death.",
+    "find_or_add": "Find or add someone",
+    "type_saved": "Family type saved"
   },
   "geocodingPrompt": {
     "title": "Look up places online?",

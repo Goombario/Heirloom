@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useLanguage } from '@/app/components/LanguageProvider';
@@ -24,19 +23,17 @@ import Cite from '@/app/components/Cite';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { chipCitations, citationFactFor, datedFactValue, describeCitationFact, numberSources, withFallbackCitationFacts } from '@/app/components/citations/factDescriptors';
 import InlineEventEditor from '@/app/components/InlineEventEditor';
-import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { AddRow, DetailBody, PageShell, InlineDataError, SectionHeader } from '@/app/components/ui';
 import { cx } from '@/app/components/ui/cx';
 import { FACT_TABLES, isFactTableValue, type FactTableValue } from '@/lib/db/fact-tables';
-import { getDataClient } from '@/lib/data';
-import { useErrorToast } from '@/app/components/useErrorToast';
-import { usePlaceResolutionFlush } from '@/app/components/usePlaceResolutionFlush';
 import type { FamilyType } from '@/lib/db/schema';
 import { familyEventLabel } from '@/app/components/familyEventTypes';
 import { useFamilyDetail } from './useFamilyDetail';
 import { FamilySummaryView } from './FamilySummaryView';
-import { FamilyHeroEditor, type FamilyHeroPatch } from './FamilyHeroEditor';
-import { hasRecordedDeath, partnerName, sortChildrenByBirth, partnershipKindKey, partnershipYears, earlierDeathPartner, endFromEvents, endEventOf, endReasonOf, END_REASON_TAGS } from './derive';
+import { FamilyTypePanel } from './desktop/FamilyTypePanel';
+import { useFamilyWrites } from './desktop/familyWrites';
+import { coupleName } from './mobile/model';
+import { hasRecordedDeath, partnerName, sortChildrenByBirth, partnershipKindKey, partnershipYears, earlierDeathPartner, endFromEvents } from './derive';
 import { FamilyTimeline } from './sections';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { useDataCheckMarks } from '@/app/components/data-checks/marks';
@@ -45,7 +42,6 @@ import { MobileFamilyPage } from './mobile/MobileFamilyPage';
 import type { OtherPartnerships as PhoneOtherPartnerships } from './mobile/panes';
 
 export default function FamilyDetailsClient() {
-    const router = useRouter();
     const t = useTranslations('families');
     const tCommon = useTranslations('common');
     const tEvent = useTranslations('eventEdit');
@@ -59,21 +55,17 @@ export default function FamilyDetailsClient() {
         citationPreview, setCitationPreview,
         placeCoords, isOpen, toggle, fetchFamily, activeTreeId, activePermission,
     } = useFamilyDetail();
-    const { reportError } = useErrorToast();
-    const flushPlace = usePlaceResolutionFlush(activeTreeId);
     // "+ Add event" unmounts while its panel is open; closing hands focus back (#690).
     const addEventRef = useReturnFocus(showInlineEvent);
 
     const [editingHero, setEditingHero] = useState(false);
-    const [savingHero, setSavingHero] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [deleting, setDeleting] = useState(false);
     const [noteCount, setNoteCount] = useState(0);
     const [familyNotes, setFamilyNotes] = useState<Note[]>([]);
     const [mediaCount, setMediaCount] = useState<number | null>(null);
     // About this family writes notes through its own calls: the Notes list refetches after.
     const [notesRefresh, setNotesRefresh] = useState(0);
     const tChecks = useTranslations('dataChecks');
+    const tPhone = useTranslations('familyPhone');
     const run = useChange({
         treeId: activeTreeId,
         canUndo: activePermission === 'owner' || activePermission === 'edit',
@@ -85,44 +77,18 @@ export default function FamilyDetailsClient() {
     // Phones cite through sheets, not the drawer and popover (#1062).
     const phoneCites = useIsMobile();
 
-    const handleSaveHero = useCallback(async ({ placeResolution, end, ...familyPatch }: FamilyHeroPatch) => {
-        setSavingHero(true);
-        try {
-            const client = await getDataClient();
-            const id = Number(familyId);
-            const saved = await client.families.update(id, familyPatch, activeTreeId);
-            const endEvent = endEventOf(details?.events);
-            if (end && endEvent) {
-                // Retype only when the reason changed, so a DIVF (divorce filed) stays one.
-                const patch: { Type?: string; Date?: string | null } = {};
-                if (endReasonOf(endEvent.Type) !== end.reason) patch.Type = END_REASON_TAGS[end.reason];
-                if ((endEvent.Date ?? null) !== end.date) patch.Date = end.date;
-                if (patch.Type !== undefined || patch.Date !== undefined) await client.events.update(endEvent.Id, patch, activeTreeId);
-            } else if (end) {
-                await client.events.create({ Type: END_REASON_TAGS[end.reason], Date: end.date, FamilyId: id }, activeTreeId);
-            }
-            await flushPlace(familyPatch.MarriagePlace ?? '', placeResolution, saved.MarriagePlaceId);
-            await fetchFamily();
-            setEditingHero(false);
-        } catch (e) {
-            reportError(e);
-        } finally {
-            setSavingHero(false);
-        }
-    }, [familyId, activeTreeId, details?.events, fetchFamily, flushPlace, reportError]);
-
-    const handleDeleteFamily = useCallback(async () => {
-        setDeleting(true);
-        try {
-            const client = await getDataClient();
-            await client.families.remove(Number(familyId), activeTreeId);
-            router.push('/families');
-        } catch (e) {
-            setDeleting(false);
-            setShowDeleteConfirm(false);
-            reportError(e);
-        }
-    }, [familyId, activeTreeId, router, reportError]);
+    const familyRole = activePermission === 'view' ? 'viewer' : activePermission === 'owner' || activePermission === 'edit' ? 'editor' : 'contributor';
+    const writes = useFamilyWrites({
+        familyId: familyNum,
+        partner1: details?.husband ?? null,
+        partner2: details?.wife ?? null,
+        name: coupleName(details?.husband ?? null, details?.wife ?? null) || tPhone('family'),
+        treeId: activeTreeId,
+        role: familyRole,
+        run,
+    });
+    // "Record a divorce or separation" opens Add event set to Divorce (#119, G7).
+    const [newEventType, setNewEventType] = useState<string | undefined>(undefined);
 
     if (!details) {
         // Full record not ready yet. While loading, prefer an instant hero painted
@@ -241,7 +207,7 @@ export default function FamilyDetailsClient() {
             onChanged={fetchFamily}
         />
     );
-    const role = activePermission === 'view' ? 'viewer' : canDelete ? 'editor' : 'contributor';
+    const role = familyRole;
     const aboutNote = biographyNote(visibleNotes(familyNotes, 'unscoped'));
     // A fact's chips. A marriage's imported MARR citations ride the family's own pin.
     const citePins = (fact: { factTable: string; factId: number }, label: string) => {
@@ -319,27 +285,13 @@ export default function FamilyDetailsClient() {
                     treeId={activeTreeId}
                     role={role}
                     run={run}
+                    writes={writes}
                     onEditFamily={() => setEditingHero(true)}
-                    onDeleteFamily={() => setShowDeleteConfirm(true)}
                 />
 
                 {editingHero && (
                     <div className="family-editor">
-                        <FamilyHeroEditor
-                            partner1={partner1}
-                            partner2={partner2}
-                            type={(family.Type ?? 'Unknown') as FamilyType}
-                            marriageDate={family.MarriageDate ?? null}
-                            marriagePlace={family.MarriagePlace ?? null}
-                            marriagePlaceId={family.MarriagePlaceId ?? null}
-                            endEvent={endEventOf(details.events)}
-                            treeId={activeTreeId}
-                            saving={savingHero}
-                            canDelete={canDelete}
-                            onSave={handleSaveHero}
-                            onCancel={() => setEditingHero(false)}
-                            onDelete={() => setShowDeleteConfirm(true)}
-                        />
+                        <FamilyTypePanel type={(family.Type ?? 'Unknown') as FamilyType} onSave={writes.setType} onCancel={() => setEditingHero(false)} />
                     </div>
                 )}
 
@@ -375,6 +327,7 @@ export default function FamilyDetailsClient() {
                             canEdit={canEdit}
                             canDelete={canDelete}
                             onChanged={fetchFamily}
+                            writes={writes}
                         />
                     )}
                 >
@@ -400,6 +353,8 @@ export default function FamilyDetailsClient() {
                             toggle={toggle}
                             earlierPartner={earlierPartner}
                             marks={marks}
+                            run={run}
+                            onRecordEnd={() => { setNewEventType('DIV'); setShowInlineEvent(true); }}
                             onCitationClick={(factTable, factId, factLabel, citation, anchor) => {
                                 const fact = familyCitationFacts.find(f => f.factTable === factTable && f.factId === factId)
                                     ?? describeCitationFact(citationMap, factTable, factId, factLabel, factLabel);
@@ -412,17 +367,19 @@ export default function FamilyDetailsClient() {
                                 <div className="pt-3">
                                     <InlineEventEditor
                                         target={{ kind: 'family', familyId: parseInt(familyId, 10) }}
+                                        defaultType={newEventType}
                                         relevantPersonIds={relevantPersonIds}
-                                        onCancel={() => setShowInlineEvent(false)}
+                                        onCancel={() => { setShowInlineEvent(false); setNewEventType(undefined); }}
                                         onRefresh={fetchFamily}
                                         onSaved={() => {
                                             setShowInlineEvent(false);
+                                            setNewEventType(undefined);
                                             fetchFamily();
                                         }}
                                     />
                                 </div>
                             ) : (
-                                <AddRow ref={addEventRef} label={t('detail_add_event')} onClick={() => setShowInlineEvent(true)} />
+                                <AddRow ref={addEventRef} label={t('detail_add_event')} onClick={() => { setNewEventType(undefined); setShowInlineEvent(true); }} />
                             ))}
                         />
                     </section>
@@ -510,17 +467,6 @@ export default function FamilyDetailsClient() {
                 />
             )}
 
-            <ConfirmDialog
-                open={showDeleteConfirm}
-                variant="calm"
-                tone="danger"
-                title={t('detail_delete_partnership')}
-                body={t('detail_delete_confirm')}
-                confirmLabel={tCommon('yes_delete')}
-                busy={deleting}
-                onConfirm={handleDeleteFamily}
-                onCancel={() => setShowDeleteConfirm(false)}
-            />
         </>
     );
 }

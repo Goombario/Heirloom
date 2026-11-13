@@ -883,7 +883,9 @@
     "section_media": "Médias",
     "section_notes": "Notes",
     "section_sources": "Sources",
-    "ended_derived": "Déduit du décès de {name}."
+    "ended_derived": "Déduit du décès de {name}.",
+    "find_or_add": "Rechercher ou ajouter quelqu’un",
+    "type_saved": "Type de famille enregistré"
   },
   "geocodingPrompt": {
     "title": "Rechercher les lieux en ligne ?",
