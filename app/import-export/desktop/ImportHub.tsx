@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Button, Card, CoverBand, IconTile, PageShell, SectionHeader, cx } from '@/app/components/ui';
 import { CircleHelp, Download, GitMerge, LayoutGrid, Loader2, Lock, RotateCcw, Share2 } from '@/lib/icons';
@@ -51,7 +51,7 @@ export function ImportHub({ p, recoveryRef, canImport, canReplace, onJob }: {
             </div>
 
             <div className={cx('grid gap-4 items-start', canReplace && !empty ? 'lg:grid-cols-3' : 'lg:grid-cols-2')}>
-                <Panel title={t('back_up')} line={empty ? t('nothing_to_back_up') : t('back_up_line')} muted={empty}>
+                <Panel title={t('back_up')} line={t('back_up_line')} muted={empty}>
                     <div>
                         <OptRow
                             icon={<Download className="w-[18px] h-[18px]" />}
@@ -174,11 +174,13 @@ function OptRow({ icon, label, sub, action }: {
     sub: React.ReactNode;
     action?: React.ReactNode;
 }) {
+    const labelId = useId();
+    // The group names the row, so a screen reader hears "Download backup" with its short "Download".
     return (
-        <div className="flex items-center gap-3 py-3 border-t border-border-light first:border-t-0 first:pt-1 last:pb-0">
+        <div role="group" aria-labelledby={labelId} className="flex items-center gap-3 py-3 border-t border-border-light first:border-t-0 first:pt-1 last:pb-0">
             <IconTile>{icon}</IconTile>
             <span className="grid min-w-0 flex-1">
-                <span className="text-sm font-semibold text-text">{label}</span>
+                <span id={labelId} className="text-sm font-semibold text-text">{label}</span>
                 <span className="text-meta text-text-muted leading-snug">{sub}</span>
             </span>
             {action && <span className="shrink-0">{action}</span>}

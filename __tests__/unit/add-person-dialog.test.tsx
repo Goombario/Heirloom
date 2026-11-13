@@ -45,7 +45,7 @@ const wrap = (ui: React.ReactNode) => render(<NextIntlClientProvider locale="en"
 describe('Add person on desktop (#52)', () => {
   it('saves a named person and opens their page', async () => {
     wrap(<AddPersonDialog open onClose={vi.fn()} treeId={9} />);
-    expect(screen.getByRole('dialog', { name: 'Add a person' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'New person' })).toBeInTheDocument();
     const saveOpen = screen.getByRole('button', { name: 'Save and open' });
     expect(saveOpen).toBeDisabled();
     fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'Nils' } });
