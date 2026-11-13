@@ -45,12 +45,15 @@ export function OwnerMediaCard({
     look = 'card',
     onCount,
     familyPhoto,
+    refreshKey,
 }: {
     /**
      * A family's own gallery (#119, ADR 0047): the lightbox offers "Set as family
      * photo". `run` is the page's change runner, for its Undo toast and reload.
      */
     familyPhoto?: { run: RunChange };
+    /** Bump to reload the list after a change made elsewhere on the page (an Undo, say). */
+    refreshKey?: number;
     /**
      * `strip`: the v1.1 desktop record page's Media section (#119): one row of six
      * squares with "+N", no card, and a plain "Add media" line under it.
@@ -110,7 +113,8 @@ export function OwnerMediaCard({
         }
     }, [ownerTable, ownerId, ownerFact, treeId, redirectIfUnauthorized, scopeKey]);
 
-    useEffect(() => { load(); }, [load]);
+    // `refreshKey` is a dependency on purpose: a bump reloads the list.
+    useEffect(() => { load(); }, [load, refreshKey]);
 
     async function unlink(id: number) {
         if (busy) return;

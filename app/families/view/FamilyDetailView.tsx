@@ -401,6 +401,11 @@ export default function FamilyDetailsClient() {
                                     relevantPersonIds={relevantPersonIds}
                                     onCount={setMediaCount}
                                     familyPhoto={{ run }}
+                                    // Undo of a family photo choice reloads the page through run;
+                                    // the list reloads with it, and a removed or deleted photo
+                                    // reloads the cover.
+                                    refreshKey={notesRefresh}
+                                    onChanged={() => { void fetchFamily(); }}
                                 />
                             </section>
 
