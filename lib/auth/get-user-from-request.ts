@@ -101,6 +101,8 @@ export async function getUserFromRequest(): Promise<AuthenticatedUser | null> {
     // and provision now, via the same helper the jwt callback uses.
     const provisioned = await resolveOrCreateUser({
       googleId,
+      // The session doesn't carry Google's flag, so this path never links by email.
+      emailVerified: false,
       email: session.user.email,
       name: session.user.name ?? null,
       image: session.user.image ?? null,

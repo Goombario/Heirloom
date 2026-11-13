@@ -72,7 +72,7 @@ export async function admitSignIn(profile: SignInProfile): Promise<boolean> {
         return false;
     }
 
-    const user = await resolveOrCreateUser({ googleId, email: profile.email!, name: profile.name, image: profile.image });
+    const user = await resolveOrCreateUser({ googleId, email: profile.email!, emailVerified: profile.emailVerified, name: profile.name, image: profile.image });
     const client = await getClient();
     try {
         await client.query('BEGIN');

@@ -21,7 +21,8 @@ import { safeRollback } from '@/lib/db/rollback';
 import { AccessError, FileTooLargeError, NotFoundError, StorageLimitError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
 import { getDataDir } from '@/lib/data-dir';
-import { ALLOWED_EXTENSIONS, PDF_CONTENT_TYPE, classifyUpload, hasPdfSignature, type UploadKind } from '@/lib/media/allowed-extensions';
+import { ALLOWED_EXTENSIONS, PDF_CONTENT_TYPE, classifyUpload, hasPdfSignature,
+    hasPassthroughImageSignature, type UploadKind } from '@/lib/media/allowed-extensions';
 import { hashBytes } from '@/lib/media/content-hash';
 import type { Media, MediaImportFailureCode, MediaImportItem } from '@/lib/db/schema';
 import { clearPrimaryMediaLinksForMedia, type DbExecutor } from '@/lib/db/queries/media-links';
@@ -87,6 +88,9 @@ async function compressImage(
     originalExt: string
 ): Promise<{ buffer: Buffer; ext: string; contentType: string; format: string }> {
     if (SKIP_COMPRESSION.has(originalExt)) {
+        if (!hasPassthroughImageSignature(originalExt, inputBuffer)) {
+            throw new ValidationError(`The file is not a valid ${originalExt.slice(1).toUpperCase()} image`);
+        }
         return {
             buffer: inputBuffer,
             ext: originalExt,

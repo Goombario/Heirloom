@@ -9,7 +9,7 @@
     "core:window:allow-set-size",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://*" }, { "url": "http://*" }]
+      "allow": [{ "url": "https://*" }]
     }
   ]
 }

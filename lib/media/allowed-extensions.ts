@@ -53,6 +53,29 @@ export function hasPdfSignature(bytes: Uint8Array): boolean {
     return bytes.length >= PDF_SIGNATURE.length && PDF_SIGNATURE.every((byte, i) => bytes[i] === byte);
 }
 
+const GIF_SIGNATURES = ['GIF87a', 'GIF89a'];
+
+/**
+ * Whether the bytes of a file stored as it came (SVG and GIF skip the image
+ * pipeline that would reject anything undecodable) look like that format
+ * (#51, L-3). A GIF starts with its signature; an SVG is text that opens
+ * with markup and has an `<svg` element in its first 4 KB. Defence in depth:
+ * stored media is also served sandboxed.
+ */
+export function hasPassthroughImageSignature(ext: string, bytes: Uint8Array): boolean {
+    const head = bytes.subarray(0, 4096);
+    if (ext === '.gif') {
+        const sig = String.fromCharCode(...head.subarray(0, 6));
+        return GIF_SIGNATURES.includes(sig);
+    }
+    if (ext === '.svg') {
+        if (head.includes(0)) return false;
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(head).replace(/^\uFEFF/, '').trimStart();
+        return text.startsWith('<') && /<svg[\s>/]/i.test(text);
+    }
+    return true;
+}
+
 /** Whether a stored media row is a PDF document rather than a photo. */
 export function isPdfMedia(media: { ContentType?: string | null } | null | undefined): boolean {
     return media?.ContentType === PDF_CONTENT_TYPE;
