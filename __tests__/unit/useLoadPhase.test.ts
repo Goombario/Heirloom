@@ -9,6 +9,17 @@ describe('useLoadPhase', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it('never reports ready on the render where loading turns true (#67)', () => {
+    const seen: string[] = [];
+    const { rerender } = renderHook(
+      ({ loading }) => { const phase = useLoadPhase(loading, { delay: 200, minDuration: 400 }); seen.push(`${loading}:${phase}`); return phase; },
+      { initialProps: { loading: false } },
+    );
+    rerender({ loading: true });
+    expect(seen).not.toContain('true:ready');
+    expect(seen.at(-1)).toBe('true:pending');
+  });
+
   it('stays pending during the delay window, never reaching loading on a fast load', () => {
     const { result, rerender } = renderHook(
       ({ loading }) => useLoadPhase(loading, { delay: 200, minDuration: 400 }),
