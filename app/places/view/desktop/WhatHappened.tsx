@@ -8,6 +8,7 @@ import { ActionLink, AvatarStack, Button, FilterChip, SectionHeader, SegmentedCo
 import PersonAvatar from '@/app/components/PersonAvatar';
 import { initialsFromName } from '@/lib/utils/initials';
 import { useLanguage } from '@/app/components/LanguageProvider';
+import { useLedgerDate } from '@/app/components/ledgerCells';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { familyEventLabel } from '@/app/components/familyEventTypes';
 import { formatDateForDisplay, sortableYear } from '@/lib/date-utils';
@@ -132,11 +133,16 @@ function RecordTitle({ record }: { record: PlaceRecord }) {
 function ChronicleRow({ record, open, onToggle, placeId, placeName, canEdit, treeId }: {
     record: PlaceRecord; open: boolean; onToggle: () => void; placeId: number | null; placeName: string; canEdit: boolean; treeId: number | null;
 }) {
-    const date = useDate();
+    const { language } = useLanguage();
+    const when = useLedgerDate(language)(record.date);
     return (
         <li>
             <button type="button" aria-expanded={open} onClick={onToggle} className="place-ce focus-ring-inset">
-                <span className="place-ce__date">{record.date ? date(record.date) : ''}</span>
+                {/* The year over the day, as on the person and family timelines (fix 03). */}
+                <span className="place-ce__date">
+                    {record.date && <span className="ledger__year">{when.year}</span>}
+                    {when.day && <span className="ledger__day">{when.day}</span>}
+                </span>
                 <span className="min-w-0 text-base text-text">
                     <span className="block truncate"><RecordTitle record={record} /></span>
                     <span className="block text-meta text-text-muted truncate mt-px">{shortName(record.placeId === placeId ? placeName : record.placeName)}</span>

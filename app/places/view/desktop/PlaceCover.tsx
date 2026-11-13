@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import LocationMap, { type MapMarker } from '@/app/components/LocationMap';
-import { CoverBand, RecordMenu, cx, type RecordMenuItem } from '@/app/components/ui';
+import { CoverBand, RecordMenu, buttonClass, cx, type RecordMenuItem } from '@/app/components/ui';
+import { MapIcon } from '@/lib/icons';
 import { placeHref } from '@/lib/places/place-key';
 import type { PlaceDetail } from '@/lib/data/types';
 
@@ -65,6 +66,27 @@ function Counts({ people, records, within, years }: { people: number; records: n
     );
 }
 
+/** The cover's stat row (fix 06): big numbers over small words, on the right. */
+function Stats({ people, records, within, years }: { people: number; records: number; within: number; years: { first: number; last: number } | null }) {
+    const t = useTranslations('placeDesktop');
+    const stats: Array<{ key: string; n: React.ReactNode; label: string; date?: boolean }> = [
+        { key: 'p', n: people, label: t('stat_people', { count: people }) },
+        { key: 'r', n: records, label: t('stat_records', { count: records }) },
+        ...(within > 0 ? [{ key: 'w', n: within, label: t('stat_within', { count: within }) }] : []),
+        ...(years ? [{ key: 'y', n: years.first === years.last ? String(years.first) : `${years.first} – ${years.last}`, label: t('stat_years'), date: true }] : []),
+    ];
+    return (
+        <dl className="place-cover__stats">
+            {stats.map((s) => (
+                <div key={s.key}>
+                    <dt className={s.date ? 'date-mono place-cover__stat-years' : 'place-cover__stat-n'}>{s.n}</dt>
+                    <dd>{s.label}</dd>
+                </div>
+            ))}
+        </dl>
+    );
+}
+
 /**
  * The desktop place page's header (#56). With a pin to show, a map cover: the
  * place's own pin, or the labelled pins of the places within it, or a parent's
@@ -92,6 +114,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
     const ringedIds = useMemo(() => (ringed != null ? [ringed] : []), [ringed]);
     const parents = detail.parents ?? [];
     const within = detail.children?.length ?? 0;
+    const otherNames = (detail.otherNames ?? []).map((n) => n.name);
     const counts = <Counts people={people} records={records} within={within} years={years} />;
     const actions = menu.length > 0 ? <RecordMenu recordName={short} items={menu} tone="island" /> : null;
 
@@ -128,6 +151,12 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
 
     return (
         <header className={cx('place-cover', map.kind === 'borrowed' ? 'place-cover--borrowed' : map.markers.length > 1 && 'place-cover--labels')}>
+            {/* Full map, top right of the cover (audit fix 06): Explore, on this place. */}
+            {detail.id != null && (
+                <Link href={`/places?sel=${detail.id}`} className={cx(buttonClass({ variant: 'outline', size: 'sm' }), 'place-cover__full no-underline')}>
+                    <MapIcon className="w-4 h-4" aria-hidden="true" />{t('full_map')}
+                </Link>
+            )}
             <LocationMap
                 markers={map.markers}
                 variant="full"
@@ -141,18 +170,22 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
             {dragBar && <div className="place-cover__drag">{dragBar}</div>}
             <div className="hero-dark place-cover__foot">
                 <div className="min-w-0 grid gap-1">
+                    <p className="eyebrow m-0 text-[color:var(--color-text-muted)]">{t('cover_eyebrow')}</p>
                     <div className="flex items-start gap-3 min-w-0">
                         <h1 className="title-record m-0 min-w-0 line-clamp-3 text-[color:var(--color-text)] [overflow-wrap:anywhere]" title={placeName}>{short}</h1>
                         {actions && <div className="shrink-0 pt-1">{actions}</div>}
                     </div>
                     {parents.length > 0 && <PartOf parents={parents} />}
-                    {counts}
+                    {otherNames.length > 0 && (
+                        <p className="m-0 text-sm text-[color:var(--color-text-secondary)]">{t('also_recorded_as', { names: otherNames.join(', ') })}</p>
+                    )}
                     {map.kind === 'borrowed' && (
                         <p className="m-0 text-meta text-[color:var(--color-text-muted)]" role="note">
                             {t('borrowed_note', { place: short, parent: shortName(map.from) })}
                         </p>
                     )}
                 </div>
+                <Stats people={people} records={records} within={within} years={years} />
             </div>
         </header>
     );

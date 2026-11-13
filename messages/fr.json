@@ -5282,6 +5282,13 @@
     "lane_undated": "{count, plural, one {Sans date · # donnée ici} other {Sans date · # données ici}}",
     "show_all_people": "Afficher les {count} personnes",
     "show_fewer_people": "Afficher moins de personnes",
-    "more_people": "{count} de plus"
+    "more_people": "{count} de plus",
+    "cover_eyebrow": "Lieu",
+    "also_recorded_as": "Aussi noté {names}",
+    "full_map": "Carte complète",
+    "stat_people": "{count, plural, one {personne} other {personnes}}",
+    "stat_records": "{count, plural, one {acte} other {actes}}",
+    "stat_within": "{count, plural, one {lieu inclus} other {lieux inclus}}",
+    "stat_years": "du premier au dernier acte"
   }
 }

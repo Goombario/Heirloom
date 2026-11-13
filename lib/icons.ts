@@ -8,6 +8,7 @@ export {
   BookOpen,        // Library
   Paperclip,       // Attach image to a journal entry
   MapPin,          // Places
+  Map as MapIcon,  // Place cover: Full map
   Circle,          // Places — "no location pin" mark
   FolderSearch,    // Cases
   Settings,        // Options

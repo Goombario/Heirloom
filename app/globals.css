@@ -1785,7 +1785,7 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 .place-ce { width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 10px 12px 18px; margin-left: -1px; border: 0; border-left: 2px solid transparent; border-radius: 0 8px 8px 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .place-ce:hover { background: var(--color-surface-2); border-radius: 8px; }
 .place-ce[aria-expanded="true"] { background: var(--color-card); box-shadow: inset 3px 0 0 var(--rule-ro); border-radius: 8px 8px 0 0; }
-.place-ce__date { font-family: var(--font-mono); font-size: var(--text-meta); line-height: 1.4; color: var(--color-text-muted); }
+.place-ce__date { display: grid; gap: 1px; align-self: start; padding-top: 2px; }
 .place-ce__type { font-family: var(--font-fraunces), var(--font-literata), Georgia, serif; font-size: 15px; font-weight: 600; }
 .place-evsum { margin: 0 0 10px -1px; padding: 4px 18px 16px 92px; display: grid; gap: 12px; background: var(--color-card); box-shadow: inset 3px 0 0 var(--rule-ro), 0 1px 2px rgb(28 25 23 / 0.06); border-radius: 0 0 8px 8px; }
 .place-evsum__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--color-border); }
@@ -2877,6 +2877,14 @@ html.dark .react-flow__minimap-mask {
 }
 .place-cover__foot.hero-dark { padding: 56px var(--gutter) 26px; }
 .place-cover__drag { left: calc(var(--gutter) + 36px); right: var(--gutter); }
+.place-cover__foot.hero-dark { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
+.place-cover__full { position: absolute; top: 16px; right: var(--gutter); z-index: 3; }
+/* The cover's stat row (fix 06): big serif numbers over small words, on the right. */
+.place-cover__stats { margin: 0; display: flex; gap: 32px; padding-left: 32px; border-left: 1px solid color-mix(in srgb, var(--color-text) 20%, transparent); }
+.place-cover__stats dd { margin: 0; font-size: var(--text-meta); color: var(--color-text-secondary); }
+.place-cover__stat-n { font-family: var(--font-fraunces), var(--font-literata), Georgia, serif; font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--color-text); }
+.place-cover__stat-years { font-size: 20px; line-height: 1.4; padding-top: 2px; }
+.place-dec .place-ce__date { display: grid; gap: 1px; align-self: start; padding-top: 2px; font: inherit; }
 
 /* The v1.1 timeline (LedgerTimeline, locked person board): date column, hairline
    rule with small dots, the event, thumbnails on the right. */

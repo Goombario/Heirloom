@@ -5282,6 +5282,13 @@
     "lane_undated": "{count, plural, one {Без даты · # запись здесь} few {Без даты · # записи здесь} many {Без даты · # записей здесь} other {Без даты · # записи здесь}}",
     "show_all_people": "Показать всех ({count})",
     "show_fewer_people": "Показать меньше людей",
-    "more_people": "ещё {count}"
+    "more_people": "ещё {count}",
+    "cover_eyebrow": "Место",
+    "also_recorded_as": "Также записано как {names}",
+    "full_map": "Вся карта",
+    "stat_people": "{count, plural, one {человек} few {человека} many {человек} other {человека}}",
+    "stat_records": "{count, plural, one {запись} few {записи} many {записей} other {записи}}",
+    "stat_within": "{count, plural, one {место внутри} few {места внутри} many {мест внутри} other {места внутри}}",
+    "stat_years": "от первой до последней записи"
   }
 }

@@ -5282,6 +5282,13 @@
     "lane_undated": "{count, plural, one {Undated · # record here} other {Undated · # records here}}",
     "show_all_people": "Show all {count} people",
     "show_fewer_people": "Show fewer people",
-    "more_people": "{count} more"
+    "more_people": "{count} more",
+    "cover_eyebrow": "Place",
+    "also_recorded_as": "Also recorded as {names}",
+    "full_map": "Full map",
+    "stat_people": "{count, plural, one {person} other {people}}",
+    "stat_records": "{count, plural, one {record} other {records}}",
+    "stat_within": "{count, plural, one {place within} other {places within}}",
+    "stat_years": "first to last record"
   }
 }
