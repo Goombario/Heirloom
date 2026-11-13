@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { errorToastKey, redirectIfUnauthorized } from '@/lib/utils/data-error';
+import { ServerError } from '@/lib/data/errors';
 import { showErrorToast } from '@/app/components/ui';
 
 /**
@@ -27,7 +28,9 @@ export function useErrorToast(): {
 
   const reportError = useCallback((e: unknown) => {
     if (redirect(e)) return;
-    showErrorToast(t(errorToastKey(e)));
+    const message = t(errorToastKey(e));
+    // A server failure carries an id that is also in the server log (#8).
+    showErrorToast(e instanceof ServerError ? `${message} ${t('error_reference', { id: e.errorId })}` : message);
   }, [redirect, t]);
 
   return { reportError, redirectIfUnauthorized: redirect };

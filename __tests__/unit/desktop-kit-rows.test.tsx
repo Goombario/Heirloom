@@ -56,6 +56,23 @@ describe('FamilyRecordRow (#55)', () => {
     expect(link.querySelector('svg')).toBeNull();
     expect(link.contains(screen.getByRole('button', { name: 'Remove Anna from this family' }))).toBe(false);
   });
+
+  it('wraps a long family name instead of cutting it off, with the unlink shown (#48)', () => {
+    const long = 'Maximiliana Charlotta & Karl-Johan Östergren-Lindqvist’s family';
+    const sub = 'Marriage · 1902 · 11 children';
+    const { container } = wrap(<FamilyRecordRow density="desktop" arrow={false} href="/families/view?id=1" title={long} sub={sub} stack={stack} treeId={null}
+      unlink={{ label: 'Remove Anna from this family', onClick: () => {} }} />);
+    const link = screen.getByRole('link', { name: new RegExp(long) });
+    const title = screen.getByText(long);
+    expect(title.className).toContain('break-words');
+    for (const el of [title, screen.getByText(sub)]) {
+      expect(el.className).not.toMatch(/truncate|line-clamp|text-ellipsis|whitespace-nowrap/);
+    }
+    // The stack and the unlink keep their size and centre on the wrapped text.
+    expect(link.querySelector('[aria-hidden="true"].shrink-0')).not.toBeNull();
+    expect(container.querySelector('.family-record-row')!.className).toContain('items-center');
+    expect(screen.getByRole('button', { name: 'Remove Anna from this family' })).toBeInTheDocument();
+  });
 });
 
 describe('SuggestionRow and EmptySlot (#55)', () => {

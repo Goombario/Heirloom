@@ -1,13 +1,12 @@
 name: CI
 
 # No paths filter: CI is a required check on `main`, and a filtered-out run never
-# reports, which would leave a docs-only PR unmergeable.
+# reports, which would leave a docs-only PR unmergeable. Instead the `changes`
+# job below marks version-only (release bump) and docs-only PRs, and every other
+# job is skipped for them; a skipped job reports as passing (#75).
 on:
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
 
 # Cancel superseded runs on the same ref so rapid pushes to a PR don't stack
 # full pipelines. Nothing in this repository deploys a site (see
@@ -21,12 +20,32 @@ permissions:
   contents: read
 
 jobs:
+  # Cheap gate: is this PR only a version bump or only docs? See
+  # scripts/lib/pr-changes.mjs for the exact rules. HEAD is the PR's merge
+  # commit, so its first parent is the base it merges into. It fails open: if
+  # this job fails, `skip` is empty and every job below still runs.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.classify.outputs.version_only == 'true' || steps.classify.outputs.docs_only == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - id: classify
+        run: node scripts/ci-pr-changes.mjs HEAD^1
+
   # PR validation, split into parallel jobs. Runners have 2 vCPU and the test
   # tiers saturate them, so one serial job took 9–16 min while each extra job's
   # own checkout + `npm ci` costs only ~30s. Only the Postgres tier starts the
   # service container; the unit suite runs as two shards. Every PR targets
   # `main`, so every PR gets every job.
   lint:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,7 +66,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+  # A matrix job skipped at job level reports one "unit" check instead of the
+  # required "unit (1)" and "unit (2)", so this one skips its steps instead.
   unit:
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     strategy:
       # Let the other shard finish so one run reports every failing file.
@@ -56,16 +79,23 @@ jobs:
         shard: [1, 2]
     env:
       AUTH_SECRET: test-secret-for-ci
+      SKIP: ${{ needs.changes.outputs.skip }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - if: env.SKIP != 'true'
+        uses: actions/checkout@v7
+      - if: env.SKIP != 'true'
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run test:unit -- --shard=${{ matrix.shard }}/2
+      - if: env.SKIP != 'true'
+        run: npm ci --ignore-scripts
+      - if: env.SKIP != 'true'
+        run: npm run test:unit -- --shard=${{ matrix.shard }}/2
 
   integration:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -96,6 +126,8 @@ jobs:
   # The same integration suite on PGlite, the static and desktop engine (#868).
   # It needs no Postgres service: vitest.pglite.config.ts boots PGlite per file.
   integration-pglite:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     env:
       AUTH_SECRET: test-secret-for-ci
@@ -115,9 +147,11 @@ jobs:
   # the postinstall `db:init` (which is the only thing that wanted a database).
   # This job is the check that a PR keeps the static build working.
   build:
-    needs: [lint, unit, integration, integration-pglite]
+    needs: [changes, lint, unit, integration, integration-pglite]
     if: >-
-      always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+      always() && needs.changes.outputs.skip != 'true'
+      && needs.lint.result == 'success' && needs.unit.result == 'success'
+      && needs.integration.result == 'success' && needs.integration-pglite.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
