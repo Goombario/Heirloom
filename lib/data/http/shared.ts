@@ -1,4 +1,4 @@
-import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadIntentConflictError, NotFoundError, PrimaryMediaConflictError, RateLimitError, StorageLimitError, UnauthorizedError, type StorageLimitMetadata } from '../errors';
+import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadIntentConflictError, NotFoundError, PrimaryMediaConflictError, RateLimitError, ServerError, StorageLimitError, UnauthorizedError, type StorageLimitMetadata } from '../errors';
 import { ValidationError } from '@/lib/validation';
 import type { Audited } from '../types';
 
@@ -9,10 +9,12 @@ export async function throwForStatus(res: Response): Promise<never> {
   let retryable = false;
   let retryAfterSeconds: number | undefined;
   let storageMetadata: StorageLimitMetadata | undefined;
+  let errorId: string | undefined;
   try {
     const data = await res.json();
     if (data && typeof data.error === 'string') message = data.error;
     if (data && typeof data.code === 'string') code = data.code;
+    if (data && typeof data.errorId === 'string' && /^[\w-]{1,40}$/.test(data.errorId)) errorId = data.errorId;
     if (data && data.retryable === true) retryable = true;
     if (data && typeof data.retryAfterSeconds === 'number' && Number.isFinite(data.retryAfterSeconds)) retryAfterSeconds = data.retryAfterSeconds;
     if (data && typeof data === 'object') {
@@ -47,6 +49,9 @@ export async function throwForStatus(res: Response): Promise<never> {
     case 507:
       throw new StorageLimitError(message, storageMetadata);
     default:
+      // A server failure's id (#8) lets a reported error be matched to its
+      // line in the server log.
+      if (errorId && res.status >= 500) throw new ServerError(message, errorId);
       throw new Error(message);
   }
 }
