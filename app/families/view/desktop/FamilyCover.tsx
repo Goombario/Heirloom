@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { Note } from '@/lib/data/types';
-import type { FamilyType } from '@/lib/db/schema';
+import type { FamilyType, Media } from '@/lib/db/schema';
 import { getInitials } from '@/lib/utils/initials';
 import { avatarClass } from '@/lib/utils/avatar';
 import GuardedLink from '@/app/components/GuardedLink';
@@ -25,8 +25,10 @@ import type { FamilyWrites } from './familyWrites';
  * place, the ⋯ menu beside the name, the split partner portrait hanging over the
  * band's edge (each half opens that partner) and "About this family" beside it.
  */
-export function FamilyCover({ familyId, type, partner1, partner2, began, ended, place, about, treeId, role, run, writes, onEditFamily }: {
+export function FamilyCover({ familyId, type, partner1, partner2, began, ended, place, about, photo, treeId, role, run, writes, onEditFamily }: {
   familyId: number;
+  /** The family photo (#119, ADR 0047): it fills the frame in place of the split portrait. */
+  photo?: Media | null;
   type: FamilyType | null;
   partner1: PartnerPerson | null;
   partner2: PartnerPerson | null;
@@ -72,7 +74,15 @@ export function FamilyCover({ familyId, type, partner1, partner2, began, ended, 
       titleSize="hero"
       meta={meta}
       titleAside={items.length > 0 ? <RecordMenu tone="island" recordName={title} items={items} /> : undefined}
-      portrait={<SplitPortrait halves={[partnerHalf(partner1, tc('unknown')), partnerHalf(partner2, tc('unknown'))]} treeId={treeId}
+      portrait={photo ? (
+        // Board "Main": one photo fills the 4:3 frame. Choosing or changing it is the
+        // lightbox's "Set as family photo", in the Media section below.
+        <span className="block rounded-card overflow-hidden">
+          <ProfileImage mediaId={photo.Id} treeId={treeId} alt={t('family_photo_alt', { family: title })}
+            focalX={photo.FocalX ?? 50} focalY={photo.FocalY ?? 50} focalRadius={photo.FocalRadius ?? null}
+            containerWidth={320} containerHeight={240} thumbSize={2048} circular={false} loading="eager" />
+        </span>
+      ) : <SplitPortrait halves={[partnerHalf(partner1, tc('unknown')), partnerHalf(partner2, tc('unknown'))]} treeId={treeId}
         addPartner={canWrite ? (slot, trigger) => (
           <PartnerFinder key={slot} slot={slot} other={slot === 'partner1' ? partner2 : partner1} treeId={treeId} writes={writes} trigger={trigger}
             takenIds={[partner1?.Id, partner2?.Id].filter((id): id is number => id != null)} align={slot === 'partner2' ? 'end' : 'start'} className="split-portrait__slot" />

@@ -611,6 +611,7 @@ export function generateGedcomWithReport(
     const mediaXrefById = assignMediaXrefs(extras?.media ?? []);
     const mediaByOwner = new Map<string, GedcomExportMediaLink[]>();
     const primaryPeopleByMedia = new Map<number, number[]>();
+    const primaryFamiliesByMedia = new Map<number, number[]>();
     for (const l of extras?.mediaLinks ?? []) {
         if (!mediaById.has(l.MediaId)) continue;
         if (!['People', 'Families', 'Sources', 'Events'].includes(l.OwnerTable)) continue;
@@ -624,6 +625,12 @@ export function generateGedcomWithReport(
             const people = primaryPeopleByMedia.get(l.MediaId) ?? [];
             people.push(l.OwnerId);
             primaryPeopleByMedia.set(l.MediaId, people);
+        }
+        // A family photo (#119, ADR 0047) is the same owner-specific pointer, to an @F…@.
+        if (l.OwnerTable === 'Families' && !l.OwnerFact && l.IsPrimary === 1) {
+            const families = primaryFamiliesByMedia.get(l.MediaId) ?? [];
+            families.push(l.OwnerId);
+            primaryFamiliesByMedia.set(l.MediaId, families);
         }
     }
     // (replaces the inlined INDI_XREF / takenXrefs / nextFreeXref block)
@@ -772,7 +779,10 @@ export function generateGedcomWithReport(
         const primaryPeople = (primaryPeopleByMedia.get(m.Id) ?? [])
             .map((id) => personIdMap.get(id))
             .filter((id): id is string => !!id);
-        pushTopLevelMediaRecord(lines, m, xref, primaryPeople);
+        const primaryFamilies = (primaryFamiliesByMedia.get(m.Id) ?? [])
+            .map((id) => familyIdMap.get(id))
+            .filter((id): id is string => !!id);
+        pushTopLevelMediaRecord(lines, m, xref, [...primaryPeople, ...primaryFamilies]);
     }
 
     // Passthrough pointers are stored as record ids (#979): name each record by the
@@ -1121,6 +1131,7 @@ function pushTopLevelMediaRecord(
     lines: string[],
     media: GedcomExportMedia,
     xref: string,
+    /** Owner xrefs this photo is the portrait (`@I…@`) or family photo (`@F…@`) of. */
     primaryPeople: string[],
 ): void {
     lines.push(`0 ${xref} OBJE`);

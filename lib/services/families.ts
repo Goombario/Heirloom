@@ -16,6 +16,7 @@ import {
 import { parseChildRelationships, type ChildRelationshipInput } from '@/lib/child-relationship';
 import { getEventsByFamilyId, getEventsByPersonIdsAndType } from '@/lib/db/queries/events';
 import { attachMediaToEvents, getMediaForOwner } from '@/lib/db/queries/media-links';
+import { getFamilyPhoto } from '@/lib/db/queries/media';
 import { attachNoteCountsToEvents } from '@/lib/db/queries/notes';
 import { validateDateField, validateNameField, validatePlaceIdField, ValidationError } from '@/lib/validation';
 import type { FactPlacePick } from '@/lib/db/queries/place-links';
@@ -148,6 +149,7 @@ export async function getFamilyService(params: GetFamilyParams): Promise<FamilyD
     scope.treeId,
   );
   const marriageMedia = await getMediaForOwner('Families', id, scope.treeId, 'Marriage');
+  const photo = await getFamilyPhoto(id, scope.treeId);
   // A child's adoption is a dated individual event (GEDCOM ADOP), shown on the
   // family timeline when one exists (#485).
   const childAdoptions = await getEventsByPersonIdsAndType((familyData.children ?? []).map((c) => c.Id), 'ADOP', scope.treeId);
@@ -168,6 +170,7 @@ export async function getFamilyService(params: GetFamilyParams): Promise<FamilyD
     events,
     marriageMedia,
     childAdoptions,
+    photo,
   };
 }
 

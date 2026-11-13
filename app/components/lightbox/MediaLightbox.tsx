@@ -69,6 +69,15 @@ export interface MediaLightboxProps {
     removeActionLabel?: string;
     /** Hide the destructive/unlink action for an inferred owner row. */
     showDeleteAction?: boolean;
+    /**
+     * A family's gallery (#119, ADR 0047): offers "Set as family photo", or marks the
+     * current one with a way to stop using it. The caller runs the write and refreshes.
+     */
+    familyPhoto?: {
+        isCurrent: (mediaId: number) => boolean;
+        onSet: (mediaId: number) => Promise<unknown>;
+        onClear: (mediaId: number) => Promise<unknown>;
+    };
 }
 
 /**
@@ -84,7 +93,7 @@ export interface MediaLightboxProps {
 export default function MediaLightbox({
     items, index, treeId, canEdit, canDelete, context = 'library', galleryPersonId, galleryPersonName,
     onClose, onChangeIndex, onPrimaryChanged, onTagsChanged, onDeleted,
-    onRemoveFromContext, canRemoveFromContext = false, removeActionLabel, showDeleteAction = true,
+    onRemoveFromContext, canRemoveFromContext = false, removeActionLabel, showDeleteAction = true, familyPhoto,
 }: MediaLightboxProps) {
     const t = useTranslations('mediaLightbox');
     const tc = useTranslations('common');
@@ -564,6 +573,17 @@ export default function MediaLightbox({
         downloadName: archiveMediaFilename({ Title: currentTitle, FilePath: media.FilePath || 'document.pdf' }),
     } : undefined;
 
+    // The family photo choice runs through the caller (its Undo toast and refresh).
+    const runFamilyPhoto = async (write: (mediaId: number) => Promise<unknown>) => {
+        setSaving(true);
+        try { await write(media.Id); } finally { setSaving(false); }
+    };
+    const familyPhotoRail = familyPhoto && canEdit && !isDocument ? {
+        current: familyPhoto.isCurrent(media.Id),
+        onSet: () => { void runFamilyPhoto(familyPhoto.onSet); },
+        onClear: () => { void runFamilyPhoto(familyPhoto.onClear); },
+    } : undefined;
+
     const evidenceProps: EvidencePanelProps = {
         canEdit: !!canEdit,
         canDelete,
@@ -604,6 +624,7 @@ export default function MediaLightbox({
         busy: saving,
         errorMessage: tagError ? t(tagError) : null,
         document: documentRail,
+        familyPhoto: familyPhotoRail,
     };
     const evidencePanel = <EvidencePanel {...evidenceProps} />;
 

@@ -6,7 +6,7 @@ import MediaLightbox, { type MediaLightboxProps } from '@/app/components/lightbo
 import MediaGalleryGrid, { type MediaGalleryItem } from './MediaGalleryGrid';
 
 interface MediaGalleryLightbox<T extends MediaGalleryItem = MediaGalleryItem>
-    extends Pick<MediaLightboxProps, 'context' | 'canEdit' | 'canDelete' | 'canRemoveFromContext' | 'galleryPersonId' | 'onPrimaryChanged' | 'onTagsChanged' | 'onDeleted' | 'removeActionLabel'> {
+    extends Pick<MediaLightboxProps, 'context' | 'canEdit' | 'canDelete' | 'canRemoveFromContext' | 'galleryPersonId' | 'onPrimaryChanged' | 'onTagsChanged' | 'onDeleted' | 'removeActionLabel' | 'familyPhoto'> {
     /** Context-specific unlink callback. MediaGallery only passes it for the active item when allowed. */
     onRemoveFromContext?: (mediaId: number) => Promise<void> | void;
     canRemoveItem?: (item: T) => boolean;
@@ -76,6 +76,7 @@ export function MediaGallery<T extends MediaGalleryItem>({
                     }
                     removeActionLabel={lightbox.removeActionLabel}
                     showDeleteAction={lightbox.showDeleteAction ? lightbox.showDeleteAction(activeItem) : true}
+                    familyPhoto={lightbox.familyPhoto}
                 />
             )}
         </>

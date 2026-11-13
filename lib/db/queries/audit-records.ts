@@ -138,7 +138,7 @@ function draftFor(entry: AuditLogEntry): Draft {
 }
 
 function capturedDraft(entry: AuditLogEntry): Draft {
-    const changes = (entry.Changes ?? {}) as { snapshot?: Row; fields?: Record<string, { old: unknown; new: unknown }>; summary?: { kind?: unknown }; personId?: unknown; places?: Row[] };
+    const changes = (entry.Changes ?? {}) as { snapshot?: Row; fields?: Record<string, { old: unknown; new: unknown }>; summary?: { kind?: unknown }; personId?: unknown; familyId?: unknown; places?: Row[] };
     const snap = changes.snapshot ?? {};
     const field = (name: string) => changes.fields?.[name]?.new;
     const id = num(entry.EntityId);
@@ -190,6 +190,12 @@ function capturedDraft(entry: AuditLogEntry): Draft {
                 draft.item = { kind: 'profilePicture', photo: null };
                 draft.photoId = id;
                 ownedBy(draft, changes.personId);
+                return draft;
+            }
+            if (changes.summary?.kind === 'family_photo') {
+                draft.item = { kind: 'familyPhoto', photo: null };
+                draft.photoId = id;
+                ownedBy(draft, null, changes.familyId);
                 return draft;
             }
             return { ...draft, kind: 'media', id, saved: text(snap.Title) ?? savedLabel(entry) };
@@ -316,7 +322,7 @@ export async function getAuditRecords(treeId: number, entries: AuditLogEntry[]):
             const child = draft.childId == null ? undefined : personRows.get(draft.childId);
             Object.assign(item, { name: text(child?.Name) ?? draft.savedChild ?? null, live: child != null });
         }
-        if ((item?.kind === 'photoTag' || item?.kind === 'profilePicture') && draft.photoId != null) item.photo = text(mediaRows.get(draft.photoId)?.Name);
+        if ((item?.kind === 'photoTag' || item?.kind === 'profilePicture' || item?.kind === 'familyPhoto') && draft.photoId != null) item.photo = text(mediaRows.get(draft.photoId)?.Name);
         if (item?.kind === 'citation') item.source = (draft.sourceId == null ? null : text(sourceRows.get(draft.sourceId)?.Name)) ?? draft.savedSource ?? null;
         records[entryId] = {
             kind: draft.kind,

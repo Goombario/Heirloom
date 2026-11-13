@@ -7,6 +7,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { describe, expect, it, vi } from 'vitest';
 import en from '@/messages/en.json';
 import type { PartnerFamilies, PartnerPerson } from '@/app/families/view/useFamilyDetail';
+import type { Media } from '@/lib/db/schema';
 
 const removeChild = vi.fn(async () => ({ auditId: 9 }));
 vi.mock('@/lib/data', () => ({ getDataClient: async () => ({ families: { removeChild }, people: { search: async () => [], list: async () => ({ people: [] }) } }) }));
@@ -54,6 +55,15 @@ describe('desktop family cover (#119)', () => {
     cover('editor');
     expect(screen.getByRole('link', { name: 'Open Johan Lindqvist' })).toHaveAttribute('href', '/people/view?id=1');
     expect(screen.getByRole('link', { name: 'Open Kristina Lindqvist' })).toHaveAttribute('href', '/people/view?id=2');
+  });
+
+  it('shows the family photo in place of the split portrait (ADR 0047)', () => {
+    wrap(
+      <FamilyCover familyId={100} type="Marriage" partner1={johan} partner2={kristina} began="1888" ended={null} place={null}
+        about={null} photo={{ Id: 9, FocalX: 50, FocalY: 40 } as Media} treeId={1} role="editor" run={vi.fn()} writes={writes()} onEditFamily={vi.fn()} />,
+    );
+    expect(screen.queryByRole('link', { name: 'Open Johan Lindqvist' })).toBeNull();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Johan & Kristina Lindqvist');
   });
 
   it('gives an editor Edit family and Delete family, and an unknown partner an Add partner half', () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Pencil, Eye, EyeOff, Star, Lock, X, Plus, Download, Trash2, UserRound, ExternalLink, LinkIcon } from '@/lib/icons';
+import { Pencil, Eye, EyeOff, Star, Lock, X, Plus, Download, Trash2, UserRound, ExternalLink, LinkIcon, ImageIcon } from '@/lib/icons';
 import { Avatar } from '@/app/components/ui/Avatar';
 import { Input } from '@/app/components/ui/Input';
 import { Button } from '@/app/components/ui/Button';
@@ -49,6 +49,8 @@ export interface EvidencePanelProps {
     errorMessage?: string | null;
     /** Set for a PDF (#510): Linked to and the file's actions replace faces and portraits. */
     document?: DocumentRail;
+    /** A family's gallery (#119): set this photo as the family photo, or stop using it. */
+    familyPhoto?: { current: boolean; onSet: () => void; onClear: () => void };
 }
 
 export default function EvidencePanel(props: EvidencePanelProps) {
@@ -58,7 +60,7 @@ export default function EvidencePanel(props: EvidencePanelProps) {
     const { canEdit = true, canDelete, title, date, editing, formTitle, formDate, onStartEdit, onChangeTitle, onChangeDate, onSaveEdit, onCancelEdit,
         tags, galleryPersonId, showNames, onToggleNames, onHoverTag, canRemoveTag, onStartRedraw, onRemoveTag,
         onStartTag, showPrimary, isPersonPrimary, onSetPrimary, setPrimaryLabel,
-        downloadHref, onDelete, showDeleteAction = canDelete, deleteLabel, busy, errorMessage, document } = props;
+        downloadHref, onDelete, showDeleteAction = canDelete, deleteLabel, busy, errorMessage, document, familyPhoto } = props;
     const td = useTranslations('documents');
     const fallbackTitle = document ? td('pdf_document') : t('photo_alt');
 
@@ -192,6 +194,19 @@ export default function EvidencePanel(props: EvidencePanelProps) {
                       </div>
                     : <Button type="button" variant="primary" onClick={onSetPrimary} disabled={busy} className="w-full text-meta">
                         <UserRound className="w-[14px] h-[14px]" aria-hidden="true" />{setPrimaryLabel}
+                      </Button>)}
+                {familyPhoto && !document && (familyPhoto.current
+                    ? <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-[6px] text-meta rounded-lg px-[11px] py-[7px] bg-white/15 text-white border border-white/25">
+                            <Star className="w-[14px] h-[14px]" aria-hidden="true" />{t('current_family_photo')}
+                        </span>
+                        <button type="button" onClick={familyPhoto.onClear} disabled={busy}
+                            className="text-meta text-white/80 underline-offset-2 hover:underline cursor-pointer bg-transparent border-0 p-0 disabled:opacity-50 focus-ring">
+                            {t('stop_family_photo')}
+                        </button>
+                      </div>
+                    : <Button type="button" variant="primary" onClick={familyPhoto.onSet} disabled={busy} className="w-full text-meta">
+                        <ImageIcon className="w-[14px] h-[14px]" aria-hidden="true" />{t('set_family_photo')}
                       </Button>)}
                 <div className="flex gap-[9px]">
                     {/* Delete is quiet red text on the left, never a second fill beside
