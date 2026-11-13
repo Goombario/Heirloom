@@ -915,7 +915,8 @@
     "ended_derived": "Déduit du décès de {name}.",
     "find_or_add": "Rechercher ou ajouter quelqu’un",
     "type_saved": "Type de famille enregistré",
-    "family_photo_alt": "Photo de famille : {family}"
+    "family_photo_alt": "Photo de famille : {family}",
+    "ages_hint": "Âges alors : {ages}."
   },
   "geocodingPrompt": {
     "title": "Rechercher les lieux en ligne ?",
@@ -3277,7 +3278,9 @@
     "ftype_divorce_filed": "Demande de divorce",
     "ftype_separation": "Séparation",
     "ftype_census": "Recensement",
-    "ftype_event": "Autre événement"
+    "ftype_event": "Autre événement",
+    "field_sources": "Sources",
+    "age_hint": "{name} avait environ {age} ans."
   },
   "eventTypes": {
     "BIRT": "Naissance",

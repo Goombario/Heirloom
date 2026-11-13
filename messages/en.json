@@ -915,7 +915,8 @@
     "ended_derived": "Worked out from {name}’s death.",
     "find_or_add": "Find or add someone",
     "type_saved": "Family type saved",
-    "family_photo_alt": "Family photo of {family}"
+    "family_photo_alt": "Family photo of {family}",
+    "ages_hint": "Ages then: {ages}."
   },
   "geocodingPrompt": {
     "title": "Look up places online?",
@@ -3277,7 +3278,9 @@
     "ftype_divorce_filed": "Divorce filed",
     "ftype_separation": "Separation",
     "ftype_census": "Census",
-    "ftype_event": "Other event"
+    "ftype_event": "Other event",
+    "field_sources": "Sources",
+    "age_hint": "{name} was about {age}."
   },
   "eventTypes": {
     "BIRT": "Birth",

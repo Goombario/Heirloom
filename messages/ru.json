@@ -915,7 +915,8 @@
     "ended_derived": "Определено по дате смерти: {name}.",
     "find_or_add": "Найти или добавить человека",
     "type_saved": "Тип семьи сохранён",
-    "family_photo_alt": "Фото семьи: {family}"
+    "family_photo_alt": "Фото семьи: {family}",
+    "ages_hint": "Возраст тогда: {ages}."
   },
   "geocodingPrompt": {
     "title": "Искать места в интернете?",
@@ -3277,7 +3278,9 @@
     "ftype_divorce_filed": "Заявление о разводе",
     "ftype_separation": "Раздельное проживание",
     "ftype_census": "Перепись",
-    "ftype_event": "Другое событие"
+    "ftype_event": "Другое событие",
+    "field_sources": "Источники",
+    "age_hint": "{name}: около {age} лет."
   },
   "eventTypes": {
     "BIRT": "Рождение",

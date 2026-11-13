@@ -243,6 +243,14 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
     items.sort(compareTimelineItems);
 
     const birthYear = sortableYear(person.BirthDate);
+    const tEdit = useTranslations('eventEdit');
+    /** "Anna Maria was about 15.", under the event panel's date (fix 02). */
+    const personAgeHint = (date: string): string | null => {
+        const y = sortableYear(date);
+        return birthYear != null && y != null && y > birthYear
+            ? tEdit('age_hint', { name: displayFullName(person) || tc('unknown'), age: y - birthYear })
+            : null;
+    };
 
     /** How many notes this event has: what a rail on this page last reported, else
      *  the count that came with the person payload. */
@@ -432,6 +440,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                     // Where a note is ADDED, including to an event that has none. Not the
                     // Description field, which is this event's own Events."Description".
                     notesSlot={notesRail(ev, 'plain')}
+                    sourcesSlot={item.citation}
+                    ageHint={personAgeHint}
                 />
             );
         } else if (item.isIntrinsic && editingVital === item.type) {
@@ -464,6 +474,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                     // The only way to create a vital's first note: the disclosure under
                     // the row appears only once a note exists.
                     notesSlot={itemFact ? vitalNotesRail(itemFact, 'plain') : undefined}
+                    sourcesSlot={item.citation}
+                    ageHint={vital === 'DEAT' ? personAgeHint : undefined}
                 />
             );
         }

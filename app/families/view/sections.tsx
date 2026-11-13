@@ -185,6 +185,16 @@ export function FamilyTimeline({
             return p && born != null && startYear > born ? [t('ledger_partner_age', { name: firstName(p), age: startYear - born })] : [];
         })
         .join(', ');
+    /** "Johan was about 27, Kristina 22." under the event panel's date (fix 02). */
+    const agesHint = (date: string): string | null => {
+        const y = sortableYear(date);
+        if (y == null) return null;
+        const ages = partners.flatMap((p) => {
+            const born = p ? sortableYear(p.BirthDate) : null;
+            return p && born != null && y > born ? [t('ledger_partner_age', { name: firstName(p), age: y - born })] : [];
+        });
+        return ages.length ? t('ages_hint', { ages: ages.join(', ') }) : null;
+    };
 
     type Row = Omit<LedgerItem, 'place'> & { sortKey: number | null; place?: string | null; placeId?: number | null };
     const rows: Row[] = [];
@@ -217,6 +227,8 @@ export function FamilyTimeline({
                 marriagePlace={family.MarriagePlace}
                 marriagePlaceId={family.MarriagePlaceId}
                 kindLabel={kindLabel}
+                sourcesSlot={marriagePins}
+                ageHint={agesHint}
                 canDelete={canDelete}
                 relevantPersonIds={relevantPersonIds}
                 onMediaChanged={onChanged}
@@ -267,6 +279,8 @@ export function FamilyTimeline({
                     onSaved={() => { setEditingId(null); onChanged(); }}
                     onDelete={canDelete ? () => requestDelete(ev) : undefined}
                     notesSlot={notesRail(ev)}
+                    sourcesSlot={citePins(FACT_TABLES.EVENTS, ev.Id, label)}
+                    ageHint={agesHint}
                 />
             ) : null,
         });
