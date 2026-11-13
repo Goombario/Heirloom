@@ -7,8 +7,12 @@ import { useTranslations } from 'next-intl';
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { formatDateForDisplay, sortableYear } from '@/lib/date-utils';
-import SourcesCitedCard from '@/app/components/SourcesCitedCard';
-import { OwnerNotesCard, NoteCount } from '@/app/components/notes/OwnerNotesCard';
+import { OwnerNotesCard, biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
+import type { Note } from '@/lib/data/types';
+import { useChange } from '@/app/people/view/mobile/useChange';
+import { SourcesSection } from '@/app/people/view/desktop/SourcesSection';
+import { FamilyCover } from './desktop/FamilyCover';
+import { FamilyRail } from './desktop/FamilyRail';
 import { OwnerMediaCard } from '@/app/components/media/OwnerMediaCard';
 import { DetailSkeleton } from '@/app/components/SkeletonLoader';
 import RecordNotFound from '@/app/components/RecordNotFound';
@@ -21,7 +25,7 @@ import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { chipCitations, citationFactFor, datedFactValue, describeCitationFact, numberSources, withFallbackCitationFacts } from '@/app/components/citations/factDescriptors';
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
-import { AddRow, DatesToCheckFlag, PageShell, DetailHero, HeroEditButton, DetailRail, DetailSection, InlineDataError, SectionHeader } from '@/app/components/ui';
+import { AddRow, DetailBody, PageShell, InlineDataError, SectionHeader } from '@/app/components/ui';
 import { cx } from '@/app/components/ui/cx';
 import { FACT_TABLES, isFactTableValue, type FactTableValue } from '@/lib/db/fact-tables';
 import { getDataClient } from '@/lib/data';
@@ -31,10 +35,9 @@ import type { FamilyType } from '@/lib/db/schema';
 import { familyEventLabel } from '@/app/components/familyEventTypes';
 import { useFamilyDetail } from './useFamilyDetail';
 import { FamilySummaryView } from './FamilySummaryView';
-import { FamilyHeroContent } from './FamilyHeroContent';
 import { FamilyHeroEditor, type FamilyHeroPatch } from './FamilyHeroEditor';
-import { hasRecordedDeath, partnerName, partnerShortName, sortChildrenByBirth, partnershipKindKey, partnershipYears, formatUnionRange, heroTitleParts, heroSubtitleParts, heroCopy, earlierDeathPartner, otherPartnershipsVisibility, endFromEvents, endEventOf, endReasonOf, END_REASON_TAGS, unionEndNoteParts } from './derive';
-import { PartnerCard, FamilyTimeline, ChildrenList, OtherPartnerships } from './sections';
+import { hasRecordedDeath, partnerName, sortChildrenByBirth, partnershipKindKey, partnershipYears, earlierDeathPartner, endFromEvents, endEventOf, endReasonOf, END_REASON_TAGS } from './derive';
+import { FamilyTimeline } from './sections';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { useDataCheckMarks } from '@/app/components/data-checks/marks';
 import { MobilePersonSkeleton } from '@/app/people/view/mobile/MobilePersonPage';
@@ -45,8 +48,6 @@ export default function FamilyDetailsClient() {
     const router = useRouter();
     const t = useTranslations('families');
     const tCommon = useTranslations('common');
-    const tNotes = useTranslations('notes');
-    const tMedia = useTranslations('ownerMedia');
     const tEvent = useTranslations('eventEdit');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
@@ -64,11 +65,20 @@ export default function FamilyDetailsClient() {
     const addEventRef = useReturnFocus(showInlineEvent);
 
     const [editingHero, setEditingHero] = useState(false);
-    const heroEditRef = useReturnFocus(editingHero);
     const [savingHero, setSavingHero] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [noteCount, setNoteCount] = useState(0);
+    const [familyNotes, setFamilyNotes] = useState<Note[]>([]);
+    const [mediaCount, setMediaCount] = useState<number | null>(null);
+    // About this family writes notes through its own calls: the Notes list refetches after.
+    const [notesRefresh, setNotesRefresh] = useState(0);
+    const tChecks = useTranslations('dataChecks');
+    const run = useChange({
+        treeId: activeTreeId,
+        canUndo: activePermission === 'owner' || activePermission === 'edit',
+        onChanged: () => { setNotesRefresh((n) => n + 1); return fetchFamily(); },
+    });
     // The family's dates to check (#833): the hero flag and the timeline marks.
     const familyNum = Number(familyId);
     const marks = useDataCheckMarks({ familyId: Number.isInteger(familyNum) && familyNum > 0 ? familyNum : undefined }, details);
@@ -170,19 +180,7 @@ export default function FamilyDetailsClient() {
     // outlive it, so the explicit end-event wins over the death derivation.
     const unionEnd = endFromEvents(details.events);
     const { began, ended } = partnershipYears(partner1, partner2, family.MarriageDate, unionEnd?.date);
-    const unionRange = formatUnionRange(began, ended);
-    const centerLabel = unionRange || (began ? t('married_year', { year: began }) : undefined);
-    const endNote = unionEndNoteParts(unionEnd);
-    // An undated divorce still ends the union: the note carries the reason even
-    // when there is no year to put in the range.
-    const centerNote = endNote ? t(endNote.reasonKey) : undefined;
-    const { title: heroTitle, subtitle } = heroCopy(
-        heroTitleParts(partnerShortName(partner1), partnerShortName(partner2)),
-        heroSubtitleParts(familyType, family.MarriagePlace),
-        t,
-    );
     const earlierPartner = earlierDeathPartner(partner1, partner2);
-    const otherPartnerships = otherPartnershipsVisibility(partner1Families, partner2Families, family.Id);
     const ownerTitle = `${partnerName(partner1) || tCommon('unknown')} + ${partnerName(partner2) || tCommon('unknown')}`;
     const citationValue = (date: string | null | undefined, place: string | null | undefined) =>
         datedFactValue(date ? formatDateForDisplay(date, language, dateWords) : null, place, tCommon('unknown'));
@@ -244,6 +242,7 @@ export default function FamilyDetailsClient() {
         />
     );
     const role = activePermission === 'view' ? 'viewer' : canDelete ? 'editor' : 'contributor';
+    const aboutNote = biographyNote(visibleNotes(familyNotes, 'unscoped'));
     // A fact's chips. A marriage's imported MARR citations ride the family's own pin.
     const citePins = (fact: { factTable: string; factId: number }, label: string) => {
         if (fact.factTable === FACT_TABLES.FAMILY_MARRIAGE || !isFactTableValue(fact.factTable)) return null;
@@ -293,13 +292,6 @@ export default function FamilyDetailsClient() {
         />
     );
 
-    // The footnote list shows only once the page cites something, with no skeleton
-    // for a card that may resolve to nothing (#904). The rail copy is the desktop
-    // one; the inline copy, after the timeline, is the one-column one.
-    const sourcesCited = (placement: 'sources-cited-rail' | 'sources-cited-inline') => (
-        <SourcesCitedCard facts={familyCitationFacts} title={t('detail_sources_cited')} className={placement} />
-    );
-
     return (
         <>
             <PageShell variant="detail" topBar={phonePage} contentClassName="max-md:hidden">
@@ -313,56 +305,97 @@ export default function FamilyDetailsClient() {
                     />
                 )}
 
-                {/* Segmented hero — title + partnership ribbon together */}
-                <DetailHero>
-                    <FamilyHeroContent
-                        title={heroTitle}
-                        subtitle={subtitle}
-                        flag={<DatesToCheckFlag count={marks.open.length} href={`/data-checks?family=${family.Id}`} />}
-                        editing={editingHero}
-                        centerLabel={centerLabel}
-                        centerNote={centerNote}
-                        action={canEdit && !editingHero && (
-                            <HeroEditButton ref={heroEditRef} onClick={() => setEditingHero(true)} />
-                        )}
-                        editor={editingHero ? (
-                            <FamilyHeroEditor
-                                partner1={partner1}
-                                partner2={partner2}
-                                type={(family.Type ?? 'Unknown') as FamilyType}
-                                marriageDate={family.MarriageDate ?? null}
-                                marriagePlace={family.MarriagePlace ?? null}
-                                marriagePlaceId={family.MarriagePlaceId ?? null}
-                                endEvent={endEventOf(details.events)}
-                                treeId={activeTreeId}
-                                saving={savingHero}
-                                canDelete={canDelete}
-                                onSave={handleSaveHero}
-                                onCancel={() => setEditingHero(false)}
-                                onDelete={() => setShowDeleteConfirm(true)}
-                            />
-                        ) : undefined}
-                        left={<PartnerCard partner={partner1} treeId={activeTreeId} />}
-                        right={<PartnerCard partner={partner2} treeId={activeTreeId} />}
-                    />
-                </DetailHero>
+                {/* The v1.1 board (#119, B without a family photo): the band with the
+                    split partner portrait and About this family beside it. */}
+                <FamilyCover
+                    familyId={family.Id}
+                    type={familyType}
+                    partner1={partner1 ?? null}
+                    partner2={partner2 ?? null}
+                    began={began || null}
+                    ended={ended || null}
+                    place={family.MarriagePlace ?? null}
+                    about={aboutNote}
+                    treeId={activeTreeId}
+                    role={role}
+                    run={run}
+                    onEditFamily={() => setEditingHero(true)}
+                    onDeleteFamily={() => setShowDeleteConfirm(true)}
+                />
 
-                {/* Two-column body — dimmed and inert while the hero edits, so Cancel
-                    plainly cancels only the hero (#759). */}
-                <div className={cx('layout-2col-family', editingHero && 'edit-dimmed')} inert={editingHero}>
+                {editingHero && (
+                    <div className="family-editor">
+                        <FamilyHeroEditor
+                            partner1={partner1}
+                            partner2={partner2}
+                            type={(family.Type ?? 'Unknown') as FamilyType}
+                            marriageDate={family.MarriageDate ?? null}
+                            marriagePlace={family.MarriagePlace ?? null}
+                            marriagePlaceId={family.MarriagePlaceId ?? null}
+                            endEvent={endEventOf(details.events)}
+                            treeId={activeTreeId}
+                            saving={savingHero}
+                            canDelete={canDelete}
+                            onSave={handleSaveHero}
+                            onCancel={() => setEditingHero(false)}
+                            onDelete={() => setShowDeleteConfirm(true)}
+                        />
+                    </div>
+                )}
 
-                    {/* Left column */}
-                    <div className="flex flex-col gap-6 min-w-0">
-                        <DetailSection title={t('timeline')}>
+                {[partner1Error && { msg: partner1Error, retry: retryPartner1 }, partner2Error && { msg: partner2Error, retry: retryPartner2 }, citationError && { msg: citationError, retry: retryCitations }]
+                    .filter((e): e is { msg: string; retry: () => Promise<void> } => Boolean(e))
+                    .map((e, i) => <InlineDataError key={i} message={e.msg} retryLabel={tCommon('retry')} onRetry={e.retry} className="mt-4" />)}
+
+                {/* Dimmed and inert while Edit family is open, so Cancel plainly cancels only it (#759). */}
+                <div className={cx(editingHero && 'edit-dimmed')} inert={editingHero}>
+                <DetailBody
+                    divided
+                    index={[
+                        { id: 'life-together', label: t('life_together') },
+                        { id: 'media', label: t('section_media') },
+                        { id: 'notes', label: t('section_notes') },
+                        { id: 'sources', label: t('section_sources') },
+                    ]}
+                    rail={(
+                        <FamilyRail
+                            family={family}
+                            partner1={partner1 ?? null}
+                            partner2={partner2 ?? null}
+                            partner1Families={partner1Families}
+                            partner2Families={partner2Families}
+                            childList={children}
+                            places={[
+                                { place: family.MarriagePlace, placeId: family.MarriagePlaceId },
+                                ...(details.events ?? []).map((e) => ({ place: e.Place, placeId: e.PlaceId })),
+                                ...children.map((c) => ({ place: c.BirthPlace, placeId: c.BirthPlaceId })),
+                            ]}
+                            placeCoords={placeCoords}
+                            treeId={activeTreeId}
+                            canEdit={canEdit}
+                            canDelete={canDelete}
+                            onChanged={fetchFamily}
+                        />
+                    )}
+                >
+                    <section id="life-together" aria-labelledby="life-together-title">
+                        <SectionHeader
+                            level="label"
+                            headingId="life-together-title"
+                            title={t('life_together')}
+                            action={marks.open.length > 0 ? (
+                                <a className="ledger-flag" href={`/data-checks?family=${family.Id}`}>{tChecks('flag_count', { count: marks.open.length })}</a>
+                            ) : undefined}
+                        />
                         <FamilyTimeline
                             family={{ ...family, events: details.events, marriageMedia: details.marriageMedia, childAdoptions: details.childAdoptions }}
                             childList={children}
+                            partners={[partner1, partner2]}
                             relevantPersonIds={relevantPersonIds}
                             citationMap={citationMap}
                             sourceNumbers={sourceNumbers}
                             canEdit={canEdit}
                             canDelete={canDelete}
-                            placeCoords={placeCoords}
                             isOpen={isOpen}
                             toggle={toggle}
                             earlierPartner={earlierPartner}
@@ -376,7 +409,7 @@ export default function FamilyDetailsClient() {
                             }}
                             onChanged={fetchFamily}
                             footer={canEdit && (showInlineEvent ? (
-                                <div className="p-3">
+                                <div className="pt-3">
                                     <InlineEventEditor
                                         target={{ kind: 'family', familyId: parseInt(familyId, 10) }}
                                         relevantPersonIds={relevantPersonIds}
@@ -389,89 +422,50 @@ export default function FamilyDetailsClient() {
                                     />
                                 </div>
                             ) : (
-                                <AddRow ref={addEventRef} label={t('detail_add_event')} onClick={() => setShowInlineEvent(true)} className="rounded-b-card" />
+                                <AddRow ref={addEventRef} label={t('detail_add_event')} onClick={() => setShowInlineEvent(true)} />
                             ))}
                         />
-                        </DetailSection>
+                    </section>
 
-                        {/* At one column, Sources cited follows the timeline (#904). */}
-                        {sourcesCited('sources-cited-inline')}
+                    {/* The phone page loads its own notes and media, so hidden desktop
+                        copies would only ask for them a second time (#1270). */}
+                    {!phoneCites && (
+                        <>
+                            <section id="media" aria-labelledby="media-title">
+                                <SectionHeader level="label" headingId="media-title" title={t('section_media')} count={mediaCount ?? undefined} />
+                                <OwnerMediaCard
+                                    look="strip"
+                                    ownerTable="Families"
+                                    ownerId={family.Id}
+                                    treeId={activeTreeId}
+                                    canEdit={canEdit}
+                                    canDelete={canDelete}
+                                    relevantPersonIds={relevantPersonIds}
+                                    onCount={setMediaCount}
+                                />
+                            </section>
 
-                        <DetailSection title={t('detail_children')} count={children.length}>
-                        <ChildrenList
-                            childList={children}
-                            partner1={partner1 ?? null}
-                            partner2={partner2 ?? null}
-                            treeId={activeTreeId}
-                            familyId={family.Id}
-                            canEdit={canEdit}
-                            canDelete={canDelete}
-                            onChanged={fetchFamily}
-                        />
-                        </DetailSection>
-                    </div>
+                            <section id="notes" aria-labelledby="notes-title">
+                                <SectionHeader level="label" headingId="notes-title" title={t('section_notes')} count={noteCount || undefined} />
+                                <OwnerNotesCard
+                                    ownerTable="Families"
+                                    ownerId={family.Id}
+                                    treeId={activeTreeId}
+                                    canEdit={canEdit}
+                                    canDelete={canDelete}
+                                    // The lead note is About this family, beside the portrait.
+                                    showPreferred={false}
+                                    refreshKey={notesRefresh}
+                                    onNotesChange={(notes) => { setNoteCount(notes.length); setFamilyNotes(notes); }}
+                                />
+                            </section>
+                        </>
+                    )}
 
-                    {/* Right column — flat rail matching the person page: shadowless
-                        hairline cards, each self-headed. */}
-                    <DetailRail sticky>
-                        {/* Sources cited tops the rail, beside the chips it numbers (#904). */}
-                        {citationError && (
-                            <InlineDataError message={citationError} retryLabel={tCommon('retry')} onRetry={retryCitations} />
-                        )}
-                        {sourcesCited('sources-cited-rail')}
-
-                        {otherPartnerships.card && (
-                            <div className="card overflow-hidden">
-                                <div className="pt-3.5 px-4 pb-1.5">
-                                    <SectionHeader level="rail" className="mb-0" title={t('detail_other_partnerships')} />
-                                </div>
-                                {otherPartnerships.p1 && <OtherPartnerships pf={partner1Families} currentFamilyId={family.Id} treeId={activeTreeId} />}
-                                {otherPartnerships.p2 && <OtherPartnerships pf={partner2Families} currentFamilyId={family.Id} treeId={activeTreeId} />}
-                            </div>
-                        )}
-
-                        {partner1Error && (
-                            <InlineDataError message={partner1Error} retryLabel={tCommon('retry')} onRetry={retryPartner1} />
-                        )}
-                        {partner2Error && (
-                            <InlineDataError message={partner2Error} retryLabel={tCommon('retry')} onRetry={retryPartner2} />
-                        )}
-
-
-                        {/* The phone page loads its own notes and media, so the rail's
-                            hidden copies would only ask for them a second time (#1270). */}
-                        {!phoneCites && (
-                            <>
-                            <OwnerNotesCard
-                                ownerTable="Families"
-                                ownerId={family.Id}
-                                treeId={activeTreeId}
-                                canEdit={canEdit}
-                                canDelete={canDelete}
-                                // Nothing on this page reads IsPrimary — only the PERSON
-                                // hero quotes a preferred note. Marriage-scoped notes stay
-                                // listed here (with their overline): a family has no
-                                // timeline to move them to.
-                                showPreferred={false}
-                                onNotesChange={(notes) => setNoteCount(notes.length)}
-                                headerRule
-                                header={
-                                    <SectionHeader level="rail" className="mb-0" title={<>{tNotes('section_title')} <NoteCount count={noteCount} /></>} />
-                                }
-                            />
-
-                            <OwnerMediaCard
-                                ownerTable="Families"
-                                ownerId={family.Id}
-                                treeId={activeTreeId}
-                                canEdit={canEdit}
-                                canDelete={canDelete}
-                                relevantPersonIds={relevantPersonIds}
-                                header={<SectionHeader level="rail" className="mb-0" title={tMedia('section_title')} />}
-                            />
-                            </>
-                        )}
-                    </DetailRail>
+                    <section id="sources" aria-labelledby="sources-title">
+                        <SourcesSection facts={familyCitationFacts} title={t('detail_sources_cited')} />
+                    </section>
+                </DetailBody>
                 </div>
             </PageShell>
 

@@ -73,7 +73,7 @@ vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en', setLanguage: vi.fn() }) }));
 vi.mock('@/app/components/useErrorToast', () => ({ useErrorToast: () => ({ reportError: vi.fn() }) }));
 vi.mock('@/app/components/SourcesCitedCard', () => ({ default: () => <div /> }));
-vi.mock('@/app/components/notes/OwnerNotesCard', () => ({ OwnerNotesCard: () => <div />, NoteCount: () => null }));
+vi.mock('@/app/components/notes/OwnerNotesCard', () => ({ OwnerNotesCard: () => <div />, NoteCount: () => null, biographyNote: () => null, visibleNotes: (n: unknown[]) => n }));
 vi.mock('@/app/components/media/OwnerMediaCard', () => ({ OwnerMediaCard: () => <div /> }));
 vi.mock('@/app/components/AttachSourceSidebar', () => ({ default: () => <div /> }));
 vi.mock('@/app/components/ConfirmDialog', () => ({ default: () => <div /> }));
@@ -85,15 +85,17 @@ vi.mock('@/app/components/ui', () => ({
     DetailHero: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     HeroEditButton: (props: Record<string, unknown>) => <button {...props} />,
     DetailRail: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    DetailSection: ({ title, children }: { title: string; children: React.ReactNode }) => <section>{title}{children}</section>,
+    DetailBody: ({ children, rail }: { children: React.ReactNode; rail?: React.ReactNode }) => <div>{children}{rail}</div>,
+    InlineDataError: () => null,
     SectionHeader: ({ title, action }: { title: string; action?: React.ReactNode }) => <div>{title}{action}</div>,
 }));
 vi.mock('@/app/components/data-checks/marks', () => ({ useDataCheckMarks: () => ({ open: [], byFact: new Map(), text: {} }) }));
 vi.mock('@/app/families/view/FamilySummaryView', () => ({ FamilySummaryView: () => <div /> }));
-vi.mock('@/app/families/view/FamilyHeroContent', () => ({ FamilyHeroContent: () => <div /> }));
+vi.mock('@/app/families/view/desktop/FamilyCover', () => ({ FamilyCover: () => <div /> }));
+vi.mock('@/app/families/view/desktop/FamilyRail', () => ({ FamilyRail: () => <div /> }));
+vi.mock('@/app/people/view/desktop/SourcesSection', () => ({ SourcesSection: () => <div /> }));
 vi.mock('@/app/families/view/FamilyHeroEditor', () => ({ FamilyHeroEditor: () => <div /> }));
 vi.mock('@/app/families/view/sections', () => ({
-    PartnerCard: () => <div />,
     // The Add event row and its panel are the timeline's footer (#760).
     FamilyTimeline: ({ footer }: { footer?: React.ReactNode }) => <div>{footer}</div>,
     ChildrenList: () => <div />,

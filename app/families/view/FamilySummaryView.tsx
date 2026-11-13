@@ -1,51 +1,15 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import PersonAvatar from '@/app/components/PersonAvatar';
 import { initialsFromName } from '@/lib/utils/initials';
 import { Skeleton } from '@/app/components/SkeletonLoader';
-import { PageShell, DetailHero, Lifespan } from '@/app/components/ui';
+import { CoverBand, PageShell } from '@/app/components/ui';
+import { shortPlace } from '@/app/people/view/desktop/PersonCover';
+import { kindKey } from './mobile/model';
+import { SplitPortrait, type PortraitHalf } from './desktop/FamilyCover';
 import type { FamilySummary } from './familyCache';
-import { yearOnly, shortNameFromDisplay, heroTitleParts, heroSubtitleParts, heroCopy, computeEndedYear, formatUnionRange, unionEndNoteParts } from './derive';
-import { FamilyHeroContent } from './FamilyHeroContent';
+import { yearOnly, shortNameFromDisplay, computeEndedYear } from './derive';
 import type { Person } from '@/lib/db/schema';
-
-function SummaryPartnerCard({
-    name, sex, mediaId, focalX, focalY, focalRadius, deathDate, treeId, unknownLabel,
-}: {
-    name: string | null;
-    sex: string | null;
-    mediaId: number | null;
-    focalX: number | null;
-    focalY: number | null;
-    focalRadius: number | null;
-    deathDate: string | null;
-    treeId: number | null;
-    unknownLabel: string;
-}) {
-    const label = name?.trim() || unknownLabel;
-    return (
-        <div className="card card-pad row gap-3.5 p-4 items-center">
-            <PersonAvatar
-                mediaId={mediaId}
-                treeId={treeId}
-                name={label}
-                initials={initialsFromName(name)}
-                sex={sex}
-                size={64}
-                focalX={focalX}
-                focalY={focalY}
-                focalRadius={focalRadius}
-            />
-            <div className="flex-1 min-w-0">
-                <div className="serif font-semibold leading-[1.2]" style={{ fontSize: 'var(--text-lg)', color: 'var(--color-text)' }}>
-                    {label}
-                </div>
-                <Lifespan variant="full" death={deathDate} className="muted text-meta mt-0.5 block" />
-            </div>
-        </div>
-    );
-}
 
 /**
  * Intermediate paint for a family whose full record isn't cached yet but whose
@@ -62,70 +26,48 @@ export function FamilySummaryView({ summary, treeId }: { summary: FamilySummary;
     const t = useTranslations('families');
     const tCommon = useTranslations('common');
 
-    const { title, subtitle } = heroCopy(
-        heroTitleParts(shortNameFromDisplay(summary.husbandName), shortNameFromDisplay(summary.wifeName)),
-        heroSubtitleParts(summary.Type, summary.MarriagePlace),
-        t,
-    );
+    const tk = useTranslations('familyPhone');
+    const a = shortNameFromDisplay(summary.husbandName);
+    const b = shortNameFromDisplay(summary.wifeName);
+    const shared = summary.partner1LastName && summary.partner1LastName === summary.partner2LastName ? summary.partner1LastName : null;
+    // The same title rule as the cover: "Johan & Kristina Lindqvist", else both full names.
+    const title = a && b
+        ? (shared ? t('cover_title_shared', { a, b, last: shared }) : t('hero_title_both', { a: summary.husbandName ?? a, b: summary.wifeName ?? b }))
+        : summary.husbandName || summary.wifeName || t('family_fallback');
     const began = yearOnly(summary.MarriageDate);
-    // The summary cache carries the list query's pre-derived end columns, which are
-    // the same explicit end-event the full view reads out of `events` — so the
-    // instant paint shows the divorce range too rather than flashing a death year.
     const ended = computeEndedYear(
         summary.partner1DeathDate ? ({ DeathDate: summary.partner1DeathDate } as Person) : null,
         summary.partner2DeathDate ? ({ DeathDate: summary.partner2DeathDate } as Person) : null,
         summary.EndedDate,
         summary.MarriageDate,
     );
-    const endNote = unionEndNoteParts({ date: summary.EndedDate, reason: summary.EndedReason });
-    const centerNote = endNote ? t(endNote.reasonKey) : undefined;
-    // Same formatter as FamilyDetailView: this summary is the instant paint before
-    // the full record loads, so an inline copy would flash the pre-fix '1931' (and a
-    // tight en dash) for a moment on every tap-through.
-    const unionRange = formatUnionRange(began, ended);
-    const centerLabel = unionRange || (began ? t('married_year', { year: began }) : undefined);
+    const where = shortPlace(summary.MarriagePlace);
+    const half = (id: number | null, name: string | null, sex: string | null, mediaId: number | null, focalX: number | null, focalY: number | null, focalRadius: number | null): PortraitHalf | null =>
+        id == null ? null : { id, name: name || tCommon('unknown'), first: shortNameFromDisplay(name) || name || tCommon('unknown'), initials: initialsFromName(name), sex, mediaId, focalX, focalY, focalRadius };
 
     return (
         <PageShell variant="detail" busy>
+                {/* The cover, painted from the summary the families list left behind. */}
+                <CoverBand
+                    eyebrow={tk(`kind_${kindKey(summary.Type)}`)}
+                    title={title}
+                    titleSize="hero"
+                    meta={began || where ? (
+                        <span className="cover-lifeline">
+                            {began && <span className="date-mono">{ended && ended !== began ? `${began} – ${ended}` : began}</span>}
+                            {began && where && ' · '}{where}
+                        </span>
+                    ) : undefined}
+                    portrait={<SplitPortrait treeId={treeId} halves={[
+                        half(summary.Partner1Id, summary.husbandName, summary.partner1Sex, summary.husbandMediaId, summary.husbandFocalX, summary.husbandFocalY, summary.husbandFocalRadius),
+                        half(summary.Partner2Id, summary.wifeName, summary.partner2Sex, summary.wifeMediaId, summary.wifeFocalX, summary.wifeFocalY, summary.wifeFocalRadius),
+                    ]} />}
+                    lead={<Skeleton className="h-4" style={{ width: '60%' }} />}
+                    className="cover--family"
+                />
 
-                {/* Segmented hero — title + partnership ribbon, painted from the summary */}
-                <DetailHero>
-                    <FamilyHeroContent
-                        title={title}
-                        subtitle={subtitle}
-                        centerLabel={centerLabel}
-                        centerNote={centerNote}
-                        left={
-                            <SummaryPartnerCard
-                                name={summary.husbandName}
-                                sex={summary.partner1Sex}
-                                mediaId={summary.husbandMediaId}
-                                focalX={summary.husbandFocalX}
-                                focalY={summary.husbandFocalY}
-                                focalRadius={summary.husbandFocalRadius}
-                                deathDate={summary.partner1DeathDate}
-                                treeId={treeId}
-                                unknownLabel={tCommon('unknown')}
-                            />
-                        }
-                        right={
-                            <SummaryPartnerCard
-                                name={summary.wifeName}
-                                sex={summary.partner2Sex}
-                                mediaId={summary.wifeMediaId}
-                                focalX={summary.wifeFocalX}
-                                focalY={summary.wifeFocalY}
-                                focalRadius={summary.wifeFocalRadius}
-                                deathDate={summary.partner2DeathDate}
-                                treeId={treeId}
-                                unknownLabel={tCommon('unknown')}
-                            />
-                        }
-                    />
-                </DetailHero>
-
-                {/* Body — still loading; mirrors the real two-column layout */}
-                <div className="layout-2col-family">
+                {/* Body still loading. */}
+                <div className="layout-2col-family mt-10">
                     <div className="flex flex-col gap-3.5 min-w-0">
                         <Skeleton className="h-4" style={{ width: '30%' }} />
                         <div className="card card-pad flex flex-col gap-3.5">

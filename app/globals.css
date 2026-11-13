@@ -1919,17 +1919,6 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   }
 }
 
-/* A main-column section (DetailSection, #764): one card with its heading inside.
-   The panel's own card folds into it, so the left column matches the rail. */
-.detail-section > .card {
-  border: 0;
-  box-shadow: none;
-  background: transparent;
-  margin: 0;
-  padding-top: 0;
-  border-radius: 0 0 var(--radius-card) var(--radius-card);
-}
-
 @layer components {
   /* Reusable white-on-dark FG scale for DARK ISLANDS — surfaces that stay dark in
      BOTH themes (the person/family hero + the photo lightbox). AA-tuned once here
@@ -2949,3 +2938,25 @@ html.dark .react-flow__minimap-mask {
 .rail-kids { margin-left: 17px; padding-left: 18px; border-left: 1px solid var(--color-border); display: grid; gap: 2px; }
 .rail-kids__label { display: block; margin: 6px 0 2px; font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-muted); }
 .rail-addrow { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--color-border); }
+
+/* ── Desktop family page (#119, locked board B "NoPhoto") ───────────────── */
+/* The split partner portrait: one half per partner, each opening that partner. */
+.split-portrait { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 100%; height: 100%; background: var(--color-surface); }
+.split-portrait__half { position: relative; display: block; min-width: 0; overflow: hidden; color: #fff; text-decoration: none; }
+.split-portrait__half > :first-child:not(.split-portrait__add) { width: 100%; height: 100%; }
+.split-portrait__half img { width: 100%; height: 100%; object-fit: cover; }
+.split-portrait__initials { display: grid; place-items: center; width: 100%; height: 100%; font-size: 52px; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.42); }
+.split-portrait__tag { position: absolute; left: 10px; right: 10px; bottom: 9px; display: flex; align-items: center; gap: 4px; font: 600 13px var(--font-sans); color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+a.split-portrait__half:hover .split-portrait__tag { text-decoration: underline; }
+.split-portrait__half--unknown {
+  display: grid; place-items: center; border: 0; padding: 0; cursor: default;
+  background: repeating-linear-gradient(135deg, var(--color-surface-2) 0 8px, var(--color-border-light) 8px 16px);
+  color: var(--text-secondary);
+}
+button.split-portrait__half--unknown { cursor: pointer; }
+.split-portrait__add { display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--font-sans); }
+.family-editor { margin-top: 24px; }
+/* Rail person rows: the hover actions float over the row's right end instead of
+   reserving their width, so long names fit the 280px rail as on the boards. */
+.rail-block .person-row { position: relative; }
+.rail-block .person-row > .ev-row-actions { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: var(--color-hover-surface); border-radius: var(--radius-btn, 8px); }

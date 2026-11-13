@@ -114,7 +114,7 @@ function FamilyPage({ familyId = 10, events, earlierPartnerId }: { familyId?: nu
             <FamilyTimeline
                 family={{ Id: familyId, MarriageDate: family.MarriageDate, MarriagePlace: null, Type: 'Marriage', events }}
                 childList={family.childIds.map(person)} citationMap={{}} sourceNumbers={new Map()}
-                canEdit canDelete placeCoords={{}} isOpen={() => false} toggle={() => {}}
+                canEdit canDelete  isOpen={() => false} toggle={() => {}}
                 earlierPartner={earlierPartnerId ? person(earlierPartnerId) : null}
                 onCitationClick={() => {}} onChanged={() => {}} marks={marks} />
         </>
@@ -224,7 +224,7 @@ describe('Data checks marks (#833)', () => {
         expect(within(rowOf(mark)).getByText('DIV')).toBeInTheDocument();
         expect(flaggedRows(container)).toHaveLength(1);
         expect(rowOf(screen.getByText(/Bridget/))).not.toHaveClass('is-flagged');
-        expect(rowOf(screen.getByText('Started'))).not.toHaveClass('is-flagged');
+        expect(rowOf(screen.getByText('Marriage'))).not.toHaveClass('is-flagged');
 
         const count = listFor({ familyId: 10 }).problems.length;
         expect(count).toBeGreaterThan(1);

@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useTranslations } from 'next-intl';
 import type { PersonGalleryMedia, PersonWithRelations } from '@/lib/db/schema';
 import type { Note } from '@/lib/data/types';
-import { getDataClient } from '@/lib/data';
 import { livingStatus } from '@/lib/living';
 import { getInitials } from '@/lib/utils/initials';
 import ProfileImage from '@/app/components/ProfileImage';
-import { ActionLink, CoverBand, InlinePanel, LeadText, Lifespan, RecordMenu, cx, fieldClass, type RecordMenuItem } from '@/app/components/ui';
+import { CoverBand, Lifespan, RecordMenu, cx, type RecordMenuItem } from '@/app/components/ui';
+import { LeadNote } from '@/app/components/notes/LeadNote';
 import { avatarClass, fullName } from '../derive';
 import { nameBarParts } from '../mobile/model';
 import type { RunChange } from '../mobile/useChange';
@@ -87,7 +87,7 @@ export function PersonCover({ person, media, treeId, role, biography, bioRequest
 }
 
 /** "Uppsala, Uppland, Sweden" → "Uppsala, Sweden". */
-function shortPlace(place: string | null | undefined): string {
+export function shortPlace(place: string | null | undefined): string {
   const parts = (place ?? '').split(',').map((x) => x.trim()).filter(Boolean);
   return parts.length > 1 ? `${parts[0]}, ${parts[parts.length - 1]}` : parts[0] ?? '';
 }
@@ -134,123 +134,25 @@ function Portrait({ person, media, treeId, canEdit, onAdd, onOpen }: {
   );
 }
 
-/**
- * The biography beside the portrait: three lines and "Read all ⌄", with "Edit
- * biography" opening it in place. It writes the person's preferred note (ADR
- * 0010/0012); a stand-in note (an imported one, #902) becomes the chosen one.
- * Clearing it removes the note from this person, with Undo for editors.
- */
+/** The biography beside the portrait: the person's lead note. */
 function Biography({ person, biography, treeId, canEdit, canDelete, run, request }: {
   person: PersonWithRelations; biography: Note | null; treeId: number | null;
   canEdit: boolean; canDelete: boolean; run: RunChange; request: number;
 }) {
   const t = useTranslations('personDesktop');
   const tp = useTranslations('mobileProfile');
-  const ids = useId();
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState('');
-  const [saving, setSaving] = useState(false);
-  // Closing hands focus back to whichever link opened the panel (#690).
-  const wrap = useRef<HTMLDivElement>(null);
   const given = nameBarParts(person).given || tp('this_person');
-  const saved = biography?.Text ?? '';
-
-  const close = () => {
-    setEditing(false);
-    requestAnimationFrame(() => Array.from(wrap.current?.querySelectorAll<HTMLElement>('button') ?? []).pop()?.focus());
-  };
-  const open = () => { setText(saved); setEditing(true); };
-  // Notes → Biography asks for the editor: bring the cover into view and open it.
-  const seen = useRef(request);
-  useEffect(() => {
-    if (request === seen.current || !canEdit) return;
-    seen.current = request;
-    setText(biography?.Text ?? '');
-    setEditing(true);
-    wrap.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [request, canEdit, biography]);
-
-  const save = async () => {
-    const body = text.trim();
-    if (saving) return;
-    if (body === saved.trim()) { close(); return; }
-    if (!body) { await remove(); return; }
-    setSaving(true);
-    const ok = await run(async () => {
-      const client = await getDataClient();
-      const auditIds: number[] = [];
-      let id = biography?.Id;
-      if (biography) {
-        auditIds.push(...(await client.notes.update(biography.Id, 'People', person.Id, body, treeId)).auditIds);
-      } else {
-        const note = await client.notes.create('People', person.Id, body, treeId);
-        auditIds.push(...note.auditIds);
-        id = note.Id;
-      }
-      if (id != null && biography?.IsPrimary !== 1) {
-        auditIds.push(...(await client.notes.setPrimary(id, 'People', person.Id, true, treeId)).auditIds);
-      }
-      return { auditIds };
-    }, { message: tp('bio_saved') });
-    setSaving(false);
-    if (ok) close();
-  };
-
-  const remove = async () => {
-    if (!biography) { close(); return; }
-    setSaving(true);
-    // Unlinking deletes the note only when no other record still points at it.
-    const ok = await run(async () => {
-      const client = await getDataClient();
-      return client.notes.remove(biography.Id, 'People', person.Id, treeId);
-    }, { message: t('bio_removed') });
-    setSaving(false);
-    if (ok) close();
-  };
-
-  // The board labels the lead "Biography" whenever there is one, or an editor can write one.
   return (
-    <div ref={wrap} className="grid gap-1.5">
-      {(biography || canEdit) && <h2 className="eyebrow m-0">{tp('biography')}</h2>}
-      {body()}
-    </div>
+    <LeadNote ownerTable="People" ownerId={person.Id} note={biography} treeId={treeId} canEdit={canEdit} canDelete={canDelete} run={run} request={request}
+      labels={{
+        heading: tp('biography'),
+        add: t('add_biography'),
+        hint: t('bio_hint', { name: given }),
+        edit: t('edit_biography'),
+        remove: t('delete_biography'),
+        placeholder: tp('bio_placeholder', { name: given }),
+        saved: tp('bio_saved'),
+        removed: t('bio_removed'),
+      }} />
   );
-
-  function body() {
-  if (editing) {
-    return (
-      <InlinePanel
-        label={t('edit_biography')}
-        onSave={save}
-        onCancel={close}
-        saving={saving}
-        dirty={text.trim() !== saved.trim()}
-        onDelete={canDelete && biography ? remove : undefined}
-        deleteLabel={t('delete_biography')}
-      >
-        <label htmlFor={`${ids}-bio`} className="sr-only">{tp('biography')}</label>
-        <textarea
-          id={`${ids}-bio`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={20000}
-          rows={6}
-          placeholder={tp('bio_placeholder', { name: given })}
-          className={cx(fieldClass(), 'serif text-md leading-relaxed resize-y min-h-[140px]')}
-        />
-      </InlinePanel>
-    );
-  }
-  if (!biography) {
-    return canEdit ? (
-      <>
-        <span><ActionLink onClick={open}>{t('add_biography')}</ActionLink></span>
-        <p className="m-0 text-meta text-text-muted">{t('bio_hint', { name: given })}</p>
-      </>
-    ) : null;
-  }
-  return (
-    <LeadText onEdit={canEdit ? open : undefined} editLabel={t('edit_biography')}>{biography.Text}</LeadText>
-  );
-  }
 }

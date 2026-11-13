@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { getDataClient } from '@/lib/data';
 import { errorToastKey } from '@/lib/utils/data-error';
 import { useErrorToast } from '@/app/components/useErrorToast';
-import { Badge, Button, InlineDataError } from '@/app/components/ui';
+import { AddRow, Badge, Button, InlineDataError } from '@/app/components/ui';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
 import MediaGallery from '@/app/components/media/MediaGallery';
 import { ImageUp } from '@/lib/icons';
@@ -41,7 +41,16 @@ export function OwnerMediaCard({
     targetPart,
     targetDate,
     onChanged,
+    look = 'card',
+    onCount,
 }: {
+    /**
+     * `strip`: the v1.1 desktop record page's Media section (#119): one row of six
+     * squares with "+N", no card, and a plain "Add media" line under it.
+     */
+    look?: 'card' | 'strip';
+    /** Reports how many items the owner has, for the section's count. */
+    onCount?: (count: number) => void;
     ownerTable: MediaOwnerTable;
     ownerId: number;
     /** The owner's vital fact this card is the panel for. Set from context, never chosen. */
@@ -124,6 +133,53 @@ export function OwnerMediaCard({
     const visibleMedia = mediaKey === scopeKey ? media : null;
     const visibleLoadError = loadErrorKey === scopeKey ? loadError : null;
     const hasMedia = visibleMedia && visibleMedia.length > 0;
+    const count = visibleMedia?.length ?? null;
+    useEffect(() => { if (count != null) onCount?.(count); }, [count, onCount]);
+
+    const lightbox = {
+        context: 'library' as const,
+        canEdit,
+        canDelete,
+        canRemoveFromContext: canEdit,
+        onRemoveFromContext: canEdit ? unlink : undefined,
+        canRemoveItem: (item: OwnerGalleryMedia) => item.IsExplicit && canEdit,
+        showDeleteAction: (item: OwnerGalleryMedia) => item.IsExplicit && canEdit,
+        removeActionLabel: t('remove'),
+    };
+    const addModal = addOpen && (
+        <AddMediaModal
+            target={{ kind: 'owner', ownerTable, ownerId, ownerFact, galleryPersonId }}
+            treeId={treeId}
+            targetName={targetName}
+            targetPart={targetPart}
+            targetDate={targetDate}
+            relevantPersonIds={relevantPersonIds}
+            onClose={() => setAddOpen(false)}
+            onMediaChanged={() => { load(); onChanged?.(); }}
+            onAdded={() => setAddOpen(false)}
+        />
+    );
+
+    if (look === 'strip') {
+        return (
+            <div>
+                {visibleLoadError != null && (
+                    <InlineDataError className="mb-3" message={String(tc(errorToastKey(visibleLoadError)))} retryLabel={String(tc('retry'))} onRetry={load} />
+                )}
+                {hasMedia && (
+                    <MediaGallery items={visibleMedia} treeId={treeId} strip={6} lightbox={lightbox}
+                        getAlt={(item) => [item.Title ?? t('photo_alt'), ownerFact ? null : mediaFactLabel(t, item.OwnerFacts)].filter(Boolean).join(', ')} />
+                )}
+                {canEdit && (
+                    <div className={hasMedia ? 'ledger-foot mt-3.5' : 'ledger-foot'}>
+                        <AddRow label={t('add_button')} onClick={() => setAddOpen(true)} disabled={busy} />
+                    </div>
+                )}
+                {addModal}
+            </div>
+        );
+    }
+
     return (
         <div className="card" style={{ overflow: 'hidden' }}>
             {header && <div className="pt-[14px] px-4 pb-[6px]">{header}</div>}
@@ -192,19 +248,7 @@ export function OwnerMediaCard({
                 </div>
             )}
 
-            {addOpen && (
-                <AddMediaModal
-                    target={{ kind: 'owner', ownerTable, ownerId, ownerFact, galleryPersonId }}
-                    treeId={treeId}
-                    targetName={targetName}
-                    targetPart={targetPart}
-                    targetDate={targetDate}
-                    relevantPersonIds={relevantPersonIds}
-                    onClose={() => setAddOpen(false)}
-                    onMediaChanged={() => { load(); onChanged?.(); }}
-                    onAdded={() => setAddOpen(false)}
-                />
-            )}
+            {addModal}
         </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { NextIntlClientProvider } from 'next-intl';
@@ -107,7 +107,7 @@ function Harness({ canEdit, canDelete, initiallyOpen = false, childList = [], on
                 sourceNumbers={new Map()}
                 canEdit={canEdit}
                 canDelete={canDelete}
-                placeCoords={{}}
+                
                 isOpen={(key) => open.has(key)}
                 toggle={(key) => setOpen((current) => {
                     const next = new Set(current);
@@ -127,12 +127,12 @@ describe('FamilyTimeline event notes rail', () => {
         const user = userEvent.setup();
         render(<Harness canEdit canDelete={false} />);
 
-        const show = screen.getByRole('button', { name: en.personDetail.event_notes_show.replace('{count}', '2') });
+        const show = screen.getByRole('button', { name: '2 notes' });
         expect(show).toHaveAttribute('aria-expanded', 'false');
         expect(screen.queryByTestId('notes-card')).not.toBeInTheDocument();
 
         await user.click(show);
-        expect(screen.getByRole('button', { name: en.personDetail.event_notes_hide.replace('{count}', '2') })).toHaveAttribute('aria-controls', 'family-event-notes-17');
+        expect(screen.getByRole('button', { name: en.personDesktop.hide_notes })).toHaveAttribute('aria-controls', 'family-event-notes-17');
         expect(document.getElementById('family-event-notes-17')).toContainElement(screen.getByTestId('notes-card'));
         expect(screen.getByTestId('notes-card')).toHaveAttribute('data-can-edit', 'true');
         expect(screen.getByTestId('notes-card')).toHaveAttribute('data-can-delete', 'false');
@@ -146,7 +146,7 @@ describe('FamilyTimeline event notes rail', () => {
         expect(screen.getByTestId('note-count')).toHaveTextContent('2');
         await user.click(screen.getByTestId('note-count-change'));
         expect(screen.getByTestId('note-count')).toHaveTextContent('1');
-        expect(screen.getByRole('button', { name: en.personDetail.event_notes_hide.replace('{count}', '1') })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: en.personDesktop.hide_notes })).toBeInTheDocument();
     });
 
     it('keeps contributors on edit-only actions while owners receive delete', async () => {
@@ -189,6 +189,9 @@ describe('FamilyTimeline event notes rail', () => {
             child(32, 'Bea', null, null, 'Evenmere'),
             child(33, 'Cora', '1770', null),
         ]} />);
+        // Long timelines fold after five rows (the v1.1 ledger): open them all.
+        const fold = screen.queryByRole('button', { name: /more event/ });
+        if (fold) fireEvent.click(fold);
 
         const adult = screen.getByTestId('timeline-cdeath-31');
         expect(adult).toHaveTextContent('Death of Ann');
@@ -214,7 +217,7 @@ describe('FamilyTimeline derived partnership end', () => {
                 sourceNumbers={new Map()}
                 canEdit={false}
                 canDelete={false}
-                placeCoords={{}}
+                
                 isOpen={() => false}
                 toggle={() => {}}
                 earlierPartner={{ Id: 3, FirstName: 'Mary Ellen', LastName: 'Byrne', BirthDate: '1813', DeathDate: deathDate, DeathPlace: null } as unknown as React.ComponentProps<typeof FamilyTimeline>['earlierPartner']}

@@ -122,7 +122,7 @@ vi.mock('next/link', () => ({
 vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en' }) }));
 vi.mock('@/app/components/useErrorToast', () => ({ useErrorToast: () => ({ reportError: h.reportError, redirectIfUnauthorized: h.redirectIfUnauthorized }) }));
 vi.mock('@/app/components/SourcesCitedCard', () => ({ default: ({ className }: { className?: string }) => <div data-testid="sources-cited" data-placement={className} /> }));
-vi.mock('@/app/components/notes/OwnerNotesCard', () => ({ OwnerNotesCard: () => <div />, NoteCount: () => null }));
+vi.mock('@/app/components/notes/OwnerNotesCard', () => ({ OwnerNotesCard: () => <div />, NoteCount: () => null, biographyNote: () => null, visibleNotes: (n: unknown[]) => n }));
 vi.mock('@/app/components/media/OwnerMediaCard', () => ({ OwnerMediaCard: () => <div /> }));
 vi.mock('@/app/components/AttachSourceSidebar', () => ({ default: () => <div /> }));
 vi.mock('@/app/components/InlineEventEditor', () => ({ default: () => <div /> }));
@@ -140,10 +140,8 @@ vi.mock('@/app/components/ui', async (importOriginal) => ({
     DetailSkeleton: () => <div data-testid="family-detail-skeleton" aria-busy="true" />,
 }));
 vi.mock('@/app/families/view/FamilySummaryView', () => ({ FamilySummaryView: () => <div /> }));
-vi.mock('@/app/families/view/FamilyHeroContent', () => ({ FamilyHeroContent: () => <div /> }));
 vi.mock('@/app/families/view/FamilyHeroEditor', () => ({ FamilyHeroEditor: () => <div /> }));
 vi.mock('@/app/families/view/sections', () => ({
-    PartnerCard: () => <div />,
     FamilyTimeline: () => <div />,
     ChildrenList: () => <div />,
     OtherPartnerships: () => <div />,
@@ -333,14 +331,16 @@ describe('FamilyDetailsClient Sources cited (#904)', () => {
         expect(container.querySelector('[aria-busy="true"]')).toBeNull();
     });
 
-    it('tops the rail and follows the timeline at one column', async () => {
+    it('closes the page as its own section, the last in the section list (#119)', async () => {
         h.familyGet.mockResolvedValue(h.family(1, 'Ada'));
         h.loadFamilyCitations.mockResolvedValue({});
 
         render(<FamilyDetailsClient />);
-        const cards = await screen.findAllByTestId('sources-cited');
-        expect(cards.map(c => c.dataset.placement)).toEqual(['sources-cited-inline', 'sources-cited-rail']);
-        const rail = cards[1].parentElement!;
-        expect(rail.firstElementChild).toBe(cards[1]);
+        await screen.findByRole('heading', { level: 1 });
+        const sources = document.getElementById('sources');
+        expect(sources).not.toBeNull();
+        expect(sources).toHaveTextContent('detail_sources_cited');
+        // The section list ends with Sources.
+        expect([...document.querySelectorAll('.detail-body section[id]')].map((s) => s.id).pop()).toBe('sources');
     });
 });
