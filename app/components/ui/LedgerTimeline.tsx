@@ -48,50 +48,45 @@ export interface LedgerItem {
 }
 
 /**
- * The v1.1 desktop timeline (locked person board): a date column (the year in
- * amber mono over the day and month), a hairline rule with small dots (filled for
- * birth and death), then the event with its thumbnails on the right. Long lists
- * fold after the first `head` rows into "… N more events 1920 – 1940", keeping
- * the last `pinned` rows (the death, and any undated rows after it) in view.
+ * The v1.1 desktop timeline (locked person and family boards): a date column (the
+ * year in amber mono over the day and month), a hairline rule with small dots (filled
+ * for birth and death), then the event with its thumbnails on the right. Long lists
+ * fold after the first `head` rows: each run of hidden rows becomes one
+ * "… N more events 1920 – 1940" line, and the rows named in `keep` (the death that
+ * closes a life, the end of a partnership) stay in view between them.
  */
-export function LedgerTimeline({ items, head = 5, pinned = 0, className }: {
+export function LedgerTimeline({ items, head = 5, keep = [], className }: {
   items: LedgerItem[];
   /** Rows shown before the fold. */
   head?: number;
-  /** Rows kept in view below the fold: the death that closes the life, and what follows it. */
-  pinned?: number;
+  /** Keys of rows kept in view below the fold. */
+  keep?: string[];
   className?: string;
 }) {
   const t = useTranslations('detailKit');
   const [expanded, setExpanded] = useState(false);
-  const foldable = items.length > head + pinned + 1;
-  // An open editor below the fold keeps the list open.
-  const editingHidden = items.slice(head, items.length - pinned).some((it) => it.override);
-  const folded = foldable && !expanded && !editingHidden;
+  const kept = new Set(keep);
+  const hides = (it: LedgerItem, i: number) => i >= head && !kept.has(it.key);
+  const hiddenCount = items.filter(hides).length;
+  // Folding a single row saves nothing; an open editor below the fold keeps it open.
+  const foldable = hiddenCount > 1;
+  const folded = foldable && !expanded && !items.some((it, i) => hides(it, i) && it.override);
 
-  const hidden = folded ? items.slice(head, items.length - pinned) : [];
-  const years = hidden.map((h) => h.sortYear).filter((y): y is number => y != null);
-  const range = years.length ? (years[0] === years[years.length - 1] ? String(years[0]) : `${years[0]} – ${years[years.length - 1]}`) : '';
+  // The rows in view, with each run of hidden rows as one fold line.
+  const parts: Array<{ row: LedgerItem } | { run: LedgerItem[] }> = [];
+  items.forEach((it, i) => {
+    if (!folded || !hides(it, i)) { parts.push({ row: it }); return; }
+    const last = parts[parts.length - 1];
+    if (last && 'run' in last) last.run.push(it);
+    else parts.push({ run: [it] });
+  });
 
-  const rows = folded ? items.slice(0, head) : items;
   return (
     <div className={cx('ledger', className)}>
       <ol className="ledger__list">
-        {rows.map((it) => <Row key={it.key} it={it} />)}
-        {folded && (
-          <li>
-            <button type="button" className="ledger__fold focus-ring" onClick={() => setExpanded(true)} aria-label={t('show_more_events', { count: hidden.length })}>
-              <span />
-              <span className="ledger__rule ledger__rule--dashed" aria-hidden="true" />
-              <span className="ledger__fold-body">
-                <span className="ledger__fold-dots" aria-hidden="true">…</span>
-                <span className="ledger__fold-label">{t('more_events', { count: hidden.length })}</span>
-                {range && <span className="ledger__fold-range">{range}</span>}
-              </span>
-            </button>
-          </li>
-        )}
-        {folded && items.slice(items.length - pinned).map((it) => <Row key={it.key} it={it} />)}
+        {parts.map((part) => 'row' in part
+          ? <Row key={part.row.key} it={part.row} />
+          : <Fold key={`fold-${part.run[0].key}`} run={part.run} onOpen={() => setExpanded(true)} label={t('more_events', { count: part.run.length })} aria={t('show_more_events', { count: part.run.length })} />)}
       </ol>
       {foldable && expanded && (
         <button type="button" className="ledger__fewer focus-ring" onClick={() => setExpanded(false)}>
@@ -99,6 +94,24 @@ export function LedgerTimeline({ items, head = 5, pinned = 0, className }: {
         </button>
       )}
     </div>
+  );
+}
+
+function Fold({ run, onOpen, label, aria }: { run: LedgerItem[]; onOpen: () => void; label: string; aria: string }) {
+  const years = run.map((h) => h.sortYear).filter((y): y is number => y != null);
+  const range = years.length ? (years[0] === years[years.length - 1] ? String(years[0]) : `${years[0]} – ${years[years.length - 1]}`) : '';
+  return (
+    <li>
+      <button type="button" className="ledger__fold focus-ring" onClick={onOpen} aria-label={aria}>
+        <span />
+        <span className="ledger__rule ledger__rule--dashed" aria-hidden="true" />
+        <span className="ledger__fold-body">
+          <span className="ledger__fold-dots" aria-hidden="true">…</span>
+          <span className="ledger__fold-label">{label}</span>
+          {range && <span className="ledger__fold-range">{range}</span>}
+        </span>
+      </button>
+    </li>
   );
 }
 
@@ -110,7 +123,7 @@ function Row({ it }: { it: LedgerItem }) {
     </GuardedLink>
   ) : it.title;
   return (
-    <li id={it.anchor} className={cx('ledger__ev', it.flagged && 'is-flagged', it.override != null && 'is-editing')}>
+    <li id={it.anchor} data-testid={`timeline-${it.key}`} className={cx('ledger__ev', it.flagged && 'is-flagged', it.override != null && 'is-editing')}>
       <span className="ledger__when">
         {it.year != null && it.year !== '' && <span className={cx('ledger__year', it.ghost && 'is-ghost')}>{it.year}</span>}
         {it.day && <span className="ledger__day">{it.day}</span>}

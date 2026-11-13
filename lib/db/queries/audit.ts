@@ -6,7 +6,7 @@ import { revertPlaceDelete, revertPlaceEdits, revertPlaceMove, revertPlaceRename
 import { revertPlaceNames, type PlaceNamesSnapshot } from './place-names';
 import { setCaseNoteStrike, type CaseNoteStrikeSnapshot } from './cases';
 import { FACT_PLACE_COLUMNS, factPlaceRefs, factPlaceTextColumns, savedFactPlaceRef, type FactPlaceField } from './place-links';
-import { PLACE_EDIT_SUMMARY } from './audit-capture';
+import { FAMILY_PHOTO_SUMMARY, PLACE_EDIT_SUMMARY } from './audit-capture';
 import { FACT_TABLES, isFactTableValue } from '@/lib/db/fact-tables';
 import { ValidationError } from '@/lib/validation';
 import { capturePersonDependents, restorePersonDependents, isPersonDependents } from './person-dependents';
@@ -21,6 +21,10 @@ import {
     lockPeopleForMediaMutation,
     setPrimaryMediaLink,
     upsertMediaLink,
+    clearFamilyPhotoLinks,
+    getFamilyPhotoLink,
+    lockFamilyForMediaMutation,
+    setFamilyPhotoLink,
 } from './media-links';
 
 const VALID_ENTITY_TYPES = new Set([
@@ -652,6 +656,10 @@ async function revertSingleEntry(
             await revertCanonicalPrimary(entry, treeId, treeOwnerId, userId, executor);
             return;
         }
+        if (summary?.kind === FAMILY_PHOTO_SUMMARY) {
+            await revertFamilyPhoto(entry, treeId, treeOwnerId, userId, executor);
+            return;
+        }
         if (summary?.kind === 'canonical_ownership') {
             throw new Error(`Audit entry #${entry.Id} canonical ownership summary is not revertible`);
         }
@@ -1086,6 +1094,59 @@ async function revertCanonicalPrimary(
                 summary: { kind: 'canonical_primary' },
                 personId,
                 fields: { CanonicalPrimaryMediaId: { old: current, new: earlier } },
+                snapshot: { revertOf: entry.Id },
+            }),
+        ],
+    );
+}
+
+/**
+ * Revert a family photo choice (#119, ADR 0047): the family gets its earlier photo
+ * back, or none. The photos stay linked either way; only the choice is undone.
+ */
+async function revertFamilyPhoto(
+    entry: AuditLogEntry,
+    treeId: number,
+    treeOwnerId: number,
+    userId: number,
+    executor: AuditExecutor,
+): Promise<void> {
+    const changes = entry.Changes as {
+        familyId?: unknown;
+        fields?: { FamilyPhotoMediaId?: { old?: unknown } };
+    };
+    const familyId = changes.familyId;
+    const earlier = changes.fields?.FamilyPhotoMediaId?.old;
+    if (typeof familyId !== 'number' || !(earlier === null || typeof earlier === 'number')) {
+        throw new Error(`Audit entry #${entry.Id} is not a revertable family photo change`);
+    }
+    if (!await lockFamilyForMediaMutation(familyId, treeId, executor)) {
+        throw new Error(`Audit entry #${entry.Id}: the family is no longer in this tree`);
+    }
+    if (earlier != null) {
+        const media = await executor.query(
+            `SELECT 1 FROM "Media" WHERE "Id" = $1 AND "TreeId" = $2`,
+            [earlier, treeId],
+        );
+        if (media.rows.length === 0) {
+            throw new Error(`Audit entry #${entry.Id}: the earlier family photo no longer exists`);
+        }
+    }
+    const current = await getFamilyPhotoLink(familyId, treeId, executor);
+    await clearFamilyPhotoLinks(familyId, executor);
+    if (earlier != null) {
+        await upsertMediaLink({ mediaId: earlier, ownerTable: 'Families', ownerId: familyId }, executor);
+        await setFamilyPhotoLink(earlier, familyId, executor);
+    }
+    await executor.query(
+        `INSERT INTO "AuditLog" ("TreeOwnerId", "UserId", "TreeId", "Action", "EntityType", "EntityId", "EntityLabel", "Changes")
+         VALUES ($1, $2, $3, 'update', 'media', $4, $5, $6)`,
+        [
+            treeOwnerId, userId, treeId, entry.EntityId, `Reverted: ${entry.EntityLabel ?? ''}`.trim(),
+            JSON.stringify({
+                summary: { kind: FAMILY_PHOTO_SUMMARY },
+                familyId,
+                fields: { FamilyPhotoMediaId: { old: current, new: earlier } },
                 snapshot: { revertOf: entry.Id },
             }),
         ],

@@ -171,6 +171,7 @@ export async function getMediaGalleryForOwner(
              HAVING COUNT(DISTINCT mt."PersonId") >= 2
          ), explicit AS (
              SELECT l."MediaId", bool_or(l."OwnerFact" IS NULL) AS "IsRecord",
+                    bool_or(l."OwnerFact" IS NULL AND l."IsPrimary" = 1) AS "IsFamilyPhoto",
                     ${ownerFactsAgg('l')} AS "OwnerFacts"
              FROM "MediaLink" l
              JOIN "Families" f ON f."Id" = l."OwnerId" AND f."TreeId" = $2
@@ -181,6 +182,7 @@ export async function getMediaGalleryForOwner(
          SELECT ${publicMediaColumns('m')},
                 COALESCE(e."IsRecord", FALSE) AS "IsExplicit",
                 (i."MediaId" IS NOT NULL) AS "IsInferred",
+                COALESCE(e."IsFamilyPhoto", FALSE) AS "IsFamilyPhoto",
                 COALESCE(e."OwnerFacts", ARRAY[]::text[]) AS "OwnerFacts"
          FROM "Media" m
          LEFT JOIN explicit e ON e."MediaId" = m."Id"
@@ -261,14 +263,14 @@ export async function clearPrimaryMediaLinksForPerson(
     );
 }
 
-/** A PDF document can't be a portrait (#510): drop any primary flag an import gave it. */
+/** A PDF document can't be a portrait or a family photo (#510, #119): drop any primary flag an import gave it. */
 export async function clearPrimaryMediaLinksForMedia(
     mediaId: number,
     exec: DbExecutor = { query },
 ): Promise<void> {
     await exec.query(
         `UPDATE "MediaLink" SET "IsPrimary" = 0
-         WHERE "MediaId" = $1 AND "OwnerTable" = 'People' AND "IsPrimary" <> 0`,
+         WHERE "MediaId" = $1 AND "OwnerTable" IN ('People', 'Families') AND "IsPrimary" <> 0`,
         [mediaId],
     );
 }
@@ -301,6 +303,62 @@ export async function getPrimaryMediaLinkForPerson(
         [personId, treeId],
     );
     return (result.rows[0] as { MediaId: number } | undefined)?.MediaId ?? null;
+}
+
+/** The family photo (#119, ADR 0047): the record-level Families link marked primary. */
+export async function getFamilyPhotoLink(
+    familyId: number,
+    treeId: number,
+    exec: DbExecutor = { query },
+): Promise<number | null> {
+    const result = await exec.query(
+        `SELECT l."MediaId"
+         FROM "MediaLink" l
+         JOIN "Media" m ON m."Id" = l."MediaId"
+         WHERE l."OwnerTable" = 'Families' AND l."OwnerId" = $1 AND l."OwnerFact" IS NULL
+           AND l."IsPrimary" = 1 AND m."TreeId" = $2
+         ORDER BY l."MediaId" ASC LIMIT 1`,
+        [familyId, treeId],
+    );
+    return (result.rows[0] as { MediaId: number } | undefined)?.MediaId ?? null;
+}
+
+/** Stop using any photo as this family's photo; the photos stay linked. */
+export async function clearFamilyPhotoLinks(
+    familyId: number,
+    exec: DbExecutor = { query },
+): Promise<void> {
+    await exec.query(
+        `UPDATE "MediaLink" SET "IsPrimary" = 0
+         WHERE "OwnerTable" = 'Families' AND "OwnerId" = $1 AND "OwnerFact" IS NULL AND "IsPrimary" <> 0`,
+        [familyId],
+    );
+}
+
+/** Mark the family's record-level link to this photo as its family photo. */
+export async function setFamilyPhotoLink(
+    mediaId: number,
+    familyId: number,
+    exec: DbExecutor = { query },
+): Promise<void> {
+    await exec.query(
+        `UPDATE "MediaLink" SET "IsPrimary" = 1
+         WHERE "MediaId" = $1 AND "OwnerTable" = 'Families' AND "OwnerId" = $2 AND "OwnerFact" IS NULL`,
+        [mediaId, familyId],
+    );
+}
+
+/** Lock the family row before its photo changes, so two choices can't race. */
+export async function lockFamilyForMediaMutation(
+    familyId: number,
+    treeId: number,
+    exec: DbExecutor,
+): Promise<boolean> {
+    const result = await exec.query(
+        `SELECT "Id" FROM "Families" WHERE "Id" = $1 AND "TreeId" = $2 FOR UPDATE`,
+        [familyId, treeId],
+    );
+    return result.rows.length > 0;
 }
 
 /** Lock People rows in one deterministic order before any MediaTag row lock. */

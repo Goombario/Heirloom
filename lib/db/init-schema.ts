@@ -22,7 +22,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 70;
+export const SCHEMA_VERSION = 71;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -1461,10 +1461,15 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
         OR ("OwnerTable" = 'Families' AND "OwnerFact" = 'Marriage'));
   `);
   // The portrait is always a record-level link: a fact-scoped link is never primary.
+  // v71 (#119, ADR 0047): a family can have one too, its family photo. The old
+  // People-only check is dropped for one that also admits Families; the partial
+  // unique index was already per owner, so it keeps one photo per family as well.
   await pool.query(`ALTER TABLE "MediaLink" DROP CONSTRAINT IF EXISTS "medialink_primary_people_only";`);
+  await pool.query(`ALTER TABLE "MediaLink" DROP CONSTRAINT IF EXISTS "medialink_primary_record_level";`);
   await pool.query(`
-    ALTER TABLE "MediaLink" ADD CONSTRAINT "medialink_primary_people_only"
-      CHECK ("IsPrimary" IN (0,1) AND ("IsPrimary" = 0 OR ("OwnerTable" = 'People' AND "OwnerFact" IS NULL)));
+    ALTER TABLE "MediaLink" ADD CONSTRAINT "medialink_primary_record_level"
+      CHECK ("IsPrimary" IN (0,1) AND ("IsPrimary" = 0
+        OR ("OwnerTable" IN ('People', 'Families') AND "OwnerFact" IS NULL)));
   `);
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS "idx_medialink_one_primary_person"

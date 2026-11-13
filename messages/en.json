@@ -311,7 +311,12 @@
     "portrait_of": "{name}’s profile picture",
     "delete_body_phone": "{count, plural, =0 {The photo goes. No one is tagged in it.} one {The photo and its face tag go ({names}). The person stays in the tree.} other {The photo and its # face tags go ({names}). The people stay in the tree.}}",
     "delete_photo_action": "Delete photo",
-    "photo_deleted": "Photo deleted"
+    "photo_deleted": "Photo deleted",
+    "set_family_photo": "Set as family photo",
+    "current_family_photo": "Family photo",
+    "stop_family_photo": "Stop using as family photo",
+    "family_photo_set": "Family photo set",
+    "family_photo_removed": "Family photo removed"
   },
   "faceTags": {
     "tag_people": "Tag people",
@@ -859,7 +864,34 @@
     "list_annulled": "Annulled",
     "list_no_children": "No children",
     "list_children_died_young": "{children}, {count} died young",
-    "new_family": "New family"
+    "new_family": "New family",
+    "ledger_partner_age": "{name} {age}",
+    "ledger_birth_of": "Birth of {name}",
+    "years_together": "{count, plural, one {# year together} other {# years together}}",
+    "cover_title_shared": "{a} & {b} {last}",
+    "about_heading": "About this family",
+    "about_add": "Add a note about this family",
+    "about_hint": "A few sentences about this family. It shows here, beside the portrait.",
+    "about_edit": "Edit note",
+    "about_remove": "Remove note",
+    "about_placeholder": "What should someone know about this family?",
+    "about_saved": "Note saved",
+    "about_removed": "Note removed",
+    "rail_partners": "Partners",
+    "rail_partner_unknown": "Partner unknown",
+    "age_at_marriage": "{age} at marriage",
+    "children_n": "{count, plural, one {# child} other {# children}}",
+    "no_children_short": "no children",
+    "where_they_lived": "Where they lived",
+    "places_n": "{count, plural, one {# place} other {# places}}",
+    "life_together": "Life together",
+    "section_media": "Media",
+    "section_notes": "Notes",
+    "section_sources": "Sources",
+    "ended_derived": "Worked out from {name}’s death.",
+    "find_or_add": "Find or add someone",
+    "type_saved": "Family type saved",
+    "family_photo_alt": "Family photo of {family}"
   },
   "geocodingPrompt": {
     "title": "Look up places online?",
@@ -1894,7 +1926,10 @@
     "summary_names_added": "added {names}",
     "summary_names_changed": "changed {names}",
     "summary_names_removed": "removed {names}",
-    "revert_n": "Revert {count, plural, one {# change} other {# changes}}"
+    "revert_n": "Revert {count, plural, one {# change} other {# changes}}",
+    "summary_family_photo_set": "Set as family photo",
+    "summary_family_photo_removed": "Family photo removed",
+    "rec_family_photo": "Family photo of <r>{record}</r>"
   },
   "cases": {
     "research_journal": "Research journal",

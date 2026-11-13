@@ -3,13 +3,12 @@
 import React, { useId, useRef, useState } from 'react';
 import { useEditorFocusReturn } from '@/app/hooks/useEditorFocusReturn';
 import { useTranslations } from 'next-intl';
-import { MapPin } from '@/lib/icons';
 import type { PersonWithRelations, GedcomEvent, EventWithMedia, PersonGalleryMedia } from '@/lib/db/schema';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
-import { formatDateForDisplay, formatYearOrEmpty, parseDateComponents, sortableYear } from '@/lib/date-utils';
+import { formatDateForDisplay, sortableYear } from '@/lib/date-utils';
+import { ledgerPlaces, useLedgerDate } from '@/app/components/ledgerCells';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
-import GuardedLink from '@/app/components/GuardedLink';
 import { ActionLink, LedgerTimeline, type LedgerItem } from '@/app/components/ui';
 import { useToggleSet } from '@/app/hooks/useToggleSet';
 import { compareTimelineItems, eventIsBirth, eventIsDeath, shouldRenderColumnBirth, shouldRenderColumnDeath } from './derive';
@@ -323,34 +322,9 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
             ev.Place,
         ].filter(Boolean).join(' · ');
 
-    /** The date column (locked board): the year, then the day and month under it. */
-    const dateColumn = (date: string | null): Pick<LedgerItem, 'year' | 'day' | 'sortYear'> => {
-        if (!date) return { year: '?', sortYear: null };
-        const c = parseDateComponents(date);
-        const year = formatYearOrEmpty(date) || '?';
-        // An exact "Mar 14, 1868" splits into "Mar 14" under "1868"; qualified and
-        // year-only dates show their year alone.
-        const day = c && c.precision !== 'year'
-            ? formatDateForDisplay(date, language, dateWords).replace(String(c.year), '').replace(/[\s,]+$/, '').trim()
-            : null;
-        return { year, day, sortYear: sortableYear(date) };
-    };
-
-    /** The place line: a link to the place's page, which has its map. A place the
-     *  row before already named reads as plain text, as on the board. */
-    let previousPlace: string | null = null;
-    const placeLine = (item: Item): React.ReactNode => {
-        if (!item.place) return null;
-        const repeat = item.place === previousPlace;
-        previousPlace = item.place;
-        if (repeat || item.placeId == null) return item.place;
-        return (
-            <GuardedLink href={`/places/view?id=${item.placeId}`} className="focus-ring rounded-sm">
-                <MapPin width="12" height="12" aria-hidden="true" className="shrink-0" />
-                <span className="min-w-0">{item.place}</span>
-            </GuardedLink>
-        );
-    };
+    const dateColumn = useLedgerDate(language);
+    const places = ledgerPlaces();
+    const placeLine = (item: Item) => places(item.place, item.placeId);
 
     const ageOf = (item: Item): React.ReactNode => {
         const age = birthYear !== null && item.sortKey !== null ? item.sortKey - birthYear : null;
@@ -513,7 +487,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
     // The death that closes a life stays in view under the fold, with the undated
     // rows that sort after it.
     const deathAt = items.findLastIndex((i) => !i.relative && eventIsDeath(i.type));
-    const pinned = deathAt >= 0 && ledger.slice(deathAt + 1).every((l) => l.sortYear == null) ? items.length - deathAt : 0;
+    const keep = deathAt >= 0 && ledger.slice(deathAt + 1).every((l) => l.sortYear == null) ? ledger.slice(deathAt).map((l) => l.key) : [];
 
     /**
      * Delete at once with Undo when the page gives a `run` (the v1.1 desktop page,
@@ -587,7 +561,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
     return (
         <div ref={panelRef} tabIndex={-1} className="outline-none">
             {ledger.length > 0
-                ? <LedgerTimeline items={ledger} pinned={pinned} />
+                ? <LedgerTimeline items={ledger} keep={keep} />
                 : <p className="m-0 py-3 text-sm text-text-muted">{canEdit ? tDesk('no_events_editor') : tDesk('no_events')}</p>}
             {footer && <div className="ledger-foot">{footer}</div>}
             {confirmDelete && (

@@ -408,6 +408,8 @@ export interface FamilyDetail {
   marriageMedia?: Media[];
   /** The children's adoption events (`ADOP` on the child), for the family timeline (#485). */
   childAdoptions?: GedcomEvent[];
+  /** The family photo (#119, ADR 0047); the cover shows the partners' split portrait without one. */
+  photo?: Media | null;
 }
 
 export type { ChildRelationshipType, ChildRelationshipInput };
@@ -587,6 +589,10 @@ export interface MediaClient {
   setPrimary(mediaId: number, personId: number, treeId?: number | null): Promise<Audited>;
   /** Stop using this photo as the person's portrait; it stays in their media. A no-op once another photo is. */
   clearPrimary(mediaId: number, personId: number, treeId?: number | null): Promise<Audited>;
+  /** Use this photo as the family's photo (#119); a photo shown only through tags gains a family link. */
+  setFamilyPhoto(mediaId: number, familyId: number, treeId?: number | null): Promise<Audited>;
+  /** Stop using this photo as the family's photo; it stays with the family. A no-op once another photo is. */
+  clearFamilyPhoto(mediaId: number, familyId: number, treeId?: number | null): Promise<Audited>;
   remove(id: number, treeId?: number | null): Promise<void>;
   /** Best-effort deletion of independent media rows, preserving item order. */
   removeMany(ids: number[], treeId?: number | null): Promise<MediaDeleteBatchResult>;
@@ -776,6 +782,7 @@ export type AuditRecordItem =
   | { kind: 'citation'; fact: string | null; eventCode: string | null; source: string | null }
   | { kind: 'photoTag'; photo: string | null }
   | { kind: 'profilePicture'; photo: string | null }
+  | { kind: 'familyPhoto'; photo: string | null }
   /** The child a child link names; `live` while they are still in the tree. */
   | { kind: 'child'; id: number | null; name: string | null; live: boolean }
   | { kind: 'nameVariant'; type: string | null; name: string | null }

@@ -311,7 +311,12 @@
     "portrait_of": "Photo de profil de {name}",
     "delete_body_phone": "{count, plural, =0 {La photo est supprimée. Personne n’y est identifié.} one {La photo et son identification sont supprimées ({names}). La personne reste dans l’arbre.} other {La photo et ses # identifications sont supprimées ({names}). Les personnes restent dans l’arbre.}}",
     "delete_photo_action": "Supprimer la photo",
-    "photo_deleted": "Photo supprimée"
+    "photo_deleted": "Photo supprimée",
+    "set_family_photo": "Définir comme photo de famille",
+    "current_family_photo": "Photo de famille",
+    "stop_family_photo": "Ne plus utiliser comme photo de famille",
+    "family_photo_set": "Photo de famille définie",
+    "family_photo_removed": "Photo de famille retirée"
   },
   "faceTags": {
     "tag_people": "Identifier des personnes",
@@ -859,7 +864,34 @@
     "list_annulled": "Annulé",
     "list_no_children": "Aucun enfant",
     "list_children_died_young": "{children}, dont {count} morts jeunes",
-    "new_family": "Nouvelle famille"
+    "new_family": "Nouvelle famille",
+    "ledger_partner_age": "{name} {age} ans",
+    "ledger_birth_of": "Naissance de {name}",
+    "years_together": "{count, plural, one {# an ensemble} other {# ans ensemble}}",
+    "cover_title_shared": "{a} et {b} {last}",
+    "about_heading": "À propos de cette famille",
+    "about_add": "Ajouter une note sur cette famille",
+    "about_hint": "Quelques phrases sur cette famille. Elles s’affichent ici, à côté du portrait.",
+    "about_edit": "Modifier la note",
+    "about_remove": "Retirer la note",
+    "about_placeholder": "Que faut-il savoir sur cette famille ?",
+    "about_saved": "Note enregistrée",
+    "about_removed": "Note retirée",
+    "rail_partners": "Partenaires",
+    "rail_partner_unknown": "Partenaire inconnu",
+    "age_at_marriage": "{age} ans au mariage",
+    "children_n": "{count, plural, one {# enfant} other {# enfants}}",
+    "no_children_short": "sans enfants",
+    "where_they_lived": "Où ils ont vécu",
+    "places_n": "{count, plural, one {# lieu} other {# lieux}}",
+    "life_together": "Vie commune",
+    "section_media": "Médias",
+    "section_notes": "Notes",
+    "section_sources": "Sources",
+    "ended_derived": "Déduit du décès de {name}.",
+    "find_or_add": "Rechercher ou ajouter quelqu’un",
+    "type_saved": "Type de famille enregistré",
+    "family_photo_alt": "Photo de famille : {family}"
   },
   "geocodingPrompt": {
     "title": "Rechercher les lieux en ligne ?",
@@ -1894,7 +1926,10 @@
     "summary_names_added": "ajouté {names}",
     "summary_names_changed": "modifié {names}",
     "summary_names_removed": "retiré {names}",
-    "revert_n": "Annuler {count, plural, one {# modification} other {# modifications}}"
+    "revert_n": "Annuler {count, plural, one {# modification} other {# modifications}}",
+    "summary_family_photo_set": "Définie comme photo de famille",
+    "summary_family_photo_removed": "Photo de famille retirée",
+    "rec_family_photo": "Photo de famille de <r>{record}</r>"
   },
   "cases": {
     "research_journal": "Journal de recherche",

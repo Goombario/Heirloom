@@ -311,7 +311,12 @@
     "portrait_of": "Фото профиля: {name}",
     "delete_body_phone": "{count, plural, =0 {Фото будет удалено. На нём никто не отмечен.} one {Фото и его отметка будут удалены ({names}). Человек останется в древе.} few {Фото и его # отметки будут удалены ({names}). Люди останутся в древе.} many {Фото и его # отметок будут удалены ({names}). Люди останутся в древе.} other {Фото и его # отметки будут удалены ({names}). Люди останутся в древе.}}",
     "delete_photo_action": "Удалить фото",
-    "photo_deleted": "Фото удалено"
+    "photo_deleted": "Фото удалено",
+    "set_family_photo": "Сделать фото семьи",
+    "current_family_photo": "Фото семьи",
+    "stop_family_photo": "Больше не использовать как фото семьи",
+    "family_photo_set": "Фото семьи выбрано",
+    "family_photo_removed": "Фото семьи убрано"
   },
   "faceTags": {
     "tag_people": "Отметить людей",
@@ -859,7 +864,34 @@
     "list_annulled": "Аннулирован",
     "list_no_children": "Нет детей",
     "list_children_died_young": "{children}, из них {count} умерли в детстве",
-    "new_family": "Новая семья"
+    "new_family": "Новая семья",
+    "ledger_partner_age": "{name}, {age}",
+    "ledger_birth_of": "Рождение: {name}",
+    "years_together": "{count, plural, one {# год вместе} few {# года вместе} many {# лет вместе} other {# года вместе}}",
+    "cover_title_shared": "{a} и {b} {last}",
+    "about_heading": "Об этой семье",
+    "about_add": "Добавить заметку об этой семье",
+    "about_hint": "Несколько фраз об этой семье. Они появятся здесь, рядом с портретом.",
+    "about_edit": "Изменить заметку",
+    "about_remove": "Удалить заметку",
+    "about_placeholder": "Что стоит знать об этой семье?",
+    "about_saved": "Заметка сохранена",
+    "about_removed": "Заметка удалена",
+    "rail_partners": "Супруги",
+    "rail_partner_unknown": "Супруг(а) неизвестен(на)",
+    "age_at_marriage": "{age} при браке",
+    "children_n": "{count, plural, one {# ребёнок} few {# ребёнка} many {# детей} other {# ребёнка}}",
+    "no_children_short": "без детей",
+    "where_they_lived": "Где они жили",
+    "places_n": "{count, plural, one {# место} few {# места} many {# мест} other {# места}}",
+    "life_together": "Совместная жизнь",
+    "section_media": "Медиа",
+    "section_notes": "Заметки",
+    "section_sources": "Источники",
+    "ended_derived": "Определено по дате смерти: {name}.",
+    "find_or_add": "Найти или добавить человека",
+    "type_saved": "Тип семьи сохранён",
+    "family_photo_alt": "Фото семьи: {family}"
   },
   "geocodingPrompt": {
     "title": "Искать места в интернете?",
@@ -1894,7 +1926,10 @@
     "summary_names_added": "добавлено: {names}",
     "summary_names_changed": "изменено: {names}",
     "summary_names_removed": "удалено: {names}",
-    "revert_n": "Отменить {count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}"
+    "revert_n": "Отменить {count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}",
+    "summary_family_photo_set": "Выбрано фото семьи",
+    "summary_family_photo_removed": "Фото семьи убрано",
+    "rec_family_photo": "Фото семьи — <r>{record}</r>"
   },
   "cases": {
     "research_journal": "Журнал исследования",
