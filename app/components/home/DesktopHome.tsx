@@ -472,7 +472,8 @@ function ButtonLink({ href, children }: { href: string; children: ReactNode }) {
 /** A brand-new tree's three ways in (Heirloom #127, board D1): one card, one column each. */
 function FirstRunPaths({ canRestore, onGo }: { canRestore: boolean; onGo: (href: string) => void }) {
     const t = useTranslations('home');
-    const icon = 'grid place-items-center w-11 h-11 rounded-card border border-border text-text-secondary';
+    // bg-card keeps the tile and button edges visible on the tinted Restore column in dark mode.
+    const icon = 'grid place-items-center w-11 h-11 rounded-btn border border-border bg-card text-text-secondary';
     const col = 'grid content-start gap-2.5 p-6 border-border-light';
     return (
         <section aria-label={t('first_run_ways')}
@@ -499,7 +500,9 @@ function FirstRunPaths({ canRestore, onGo }: { canRestore: boolean; onGo: (href:
                     <h2 className="m-0 serif text-lg font-semibold">{t('first_run_restore_title')}</h2>
                     <p className="m-0 text-sm text-text-secondary">{t('first_run_restore_body')}</p>
                     <div className="pt-2">
-                        <Button variant="outline" onClick={() => onGo('/import-export?job=restore')}>{t('first_run_restore_button')}</Button>
+                        <span className="inline-flex rounded-btn bg-card">
+                            <Button variant="outline" onClick={() => onGo('/import-export?job=restore')}>{t('first_run_restore_button')}</Button>
+                        </span>
                     </div>
                 </div>
             )}
