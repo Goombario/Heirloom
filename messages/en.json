@@ -2462,7 +2462,12 @@
     "col_why": "Why",
     "help_rowid_title": "The row ID column",
     "help_dropdowns_title": "The dropdown columns",
-    "help_duplicates_title": "How duplicates are found"
+    "help_duplicates_title": "How duplicates are found",
+    "action_download": "Download",
+    "action_export": "Export",
+    "action_choose": "Choose file",
+    "action_start": "Start",
+    "action_restore": "Restore"
   },
   "spreadsheetImport": {
     "title": "Import using template",
@@ -5056,7 +5061,7 @@
     "note_now_biography": "Note is now the biography"
   },
   "addPersonDialog": {
-    "title": "Add a person",
+    "title": "New person",
     "save_open": "Save and open",
     "save_another": "Save and add another",
     "cite": "Cite a source",
@@ -5073,7 +5078,8 @@
     "find_parents_hint": "The family {name} was born or adopted into",
     "find_partner": "Find a partner",
     "find_partner_hint": "A spouse or partner of {name}",
-    "more_on_page": "Children, notes and the cause of death are added on their page after saving."
+    "more_on_page": "Children, notes and the cause of death are added on their page after saving.",
+    "cite_short": "Cite"
   },
   "newFamilyDialog": {
     "save_open": "Save and open",

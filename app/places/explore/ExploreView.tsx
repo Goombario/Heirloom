@@ -122,12 +122,15 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
   // The selected-place pane is Narrow (420px) by default; Wide gives it more room.
   // Kept for the session only: the map takes whatever is left either way.
   const [wide, setWide] = useState(false);
+  const picked = state.selected != null;
 
   return (
     // Three panes, each scrolling on its own (#56): the list rail, the selected place,
     // and the map filling the rest. Below lg there is no room for the map, so it drops
     // and the two panes share the width.
-    <div className={`explore-workspace flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] ${wide ? 'lg:grid-cols-[320px_640px_minmax(0,1fr)]' : 'lg:grid-cols-[320px_420px_minmax(0,1fr)]'}`}>
+    // Until a place is chosen there is no middle pane on wide screens: the map takes
+    // its room rather than an empty pane asking for a pick (locked places board).
+    <div className={`explore-workspace flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] ${!picked ? 'lg:grid-cols-[320px_minmax(0,1fr)]' : wide ? 'lg:grid-cols-[320px_640px_minmax(0,1fr)]' : 'lg:grid-cols-[320px_420px_minmax(0,1fr)]'}`}>
       <div className="min-h-0 flex flex-col bg-card border-r border-border">
         <ExploreDrill
           state={state}
@@ -137,7 +140,7 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
           onClearSearch={onClearSearch}
         />
       </div>
-      <div className="min-h-0 flex flex-col bg-card border-r border-border relative">
+      <div className={`min-h-0 flex flex-col bg-card border-r border-border relative${picked ? '' : ' lg:hidden'}`}>
         <button
           type="button"
           onClick={() => setWide((w) => !w)}

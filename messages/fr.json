@@ -2462,7 +2462,12 @@
     "col_why": "Motif",
     "help_rowid_title": "La colonne RowID",
     "help_dropdowns_title": "Les colonnes à liste",
-    "help_duplicates_title": "Comment les doublons sont repérés"
+    "help_duplicates_title": "Comment les doublons sont repérés",
+    "action_download": "Télécharger",
+    "action_export": "Exporter",
+    "action_choose": "Choisir un fichier",
+    "action_start": "Commencer",
+    "action_restore": "Restaurer"
   },
   "spreadsheetImport": {
     "title": "Importer via un modèle",
@@ -5056,7 +5061,7 @@
     "note_now_biography": "La note est maintenant la biographie"
   },
   "addPersonDialog": {
-    "title": "Ajouter une personne",
+    "title": "Nouvelle personne",
     "save_open": "Enregistrer et ouvrir",
     "save_another": "Enregistrer et en ajouter une autre",
     "cite": "Citer une source",
@@ -5073,7 +5078,8 @@
     "find_parents_hint": "La famille où {name} est né·e ou a été adopté·e",
     "find_partner": "Trouver un conjoint",
     "find_partner_hint": "Un conjoint ou partenaire de {name}",
-    "more_on_page": "Les enfants, les notes et la cause du décès s’ajoutent sur sa page après l’enregistrement."
+    "more_on_page": "Les enfants, les notes et la cause du décès s’ajoutent sur sa page après l’enregistrement.",
+    "cite_short": "Citer"
   },
   "newFamilyDialog": {
     "save_open": "Enregistrer et ouvrir",
