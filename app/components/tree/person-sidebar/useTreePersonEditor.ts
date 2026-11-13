@@ -39,6 +39,10 @@ interface SidebarPlaceIds {
 
 const NO_PLACE_IDS: SidebarPlaceIds = { birth: null, death: null };
 
+
+/** How long the desktop panel waits before sliding in (#14); matched by the canvas panels in globals.css. */
+const SLIDE_IN_DELAY_MS = 220;
+
 export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params) {
     const { activeTreeId, activePermission } = useTree();
     const t = useTranslations('treeSidebar');
@@ -217,10 +221,23 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
         return () => clearTimeout(timer);
     }, [isActuallyLoading]);
 
-    // Slide-in animation
+    // Slide-in animation. On desktop it waits out a double-click (#14): the first
+    // click of a double-click opens the panel and the second re-roots the tree,
+    // which closes it again. Holding the slide for SLIDE_IN_DELAY_MS means a
+    // double-click closes the panel before it ever shows, instead of flashing it.
+    // A phone has no double-click on a card, so its sheet rises at once.
     useEffect(() => {
-        requestAnimationFrame(() => setVisible(true));
-        return () => setVisible(false);
+        const phone = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 767px)').matches;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const frame = requestAnimationFrame(() => {
+            if (phone) setVisible(true);
+            else timer = setTimeout(() => setVisible(true), SLIDE_IN_DELAY_MS);
+        });
+        return () => {
+            cancelAnimationFrame(frame);
+            if (timer) clearTimeout(timer);
+            setVisible(false);
+        };
     }, []);
 
     // Track dirty state whenever form changes

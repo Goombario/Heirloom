@@ -8,7 +8,8 @@ import { TreeDisplayControls, type TreeDisplayProps } from '@/app/tree/TreeDispl
 const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
-    depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(), ...over,
+    depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
+    showStatus: true, onShowStatusChange: vi.fn(), ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
     <NextIntlClientProvider locale="en" messages={en}><TreeDisplayControls {...p} /></NextIntlClientProvider>,
@@ -41,5 +42,15 @@ describe('TreeDisplayControls', () => {
         expect(sw.getAttribute('aria-checked')).toBe('false');
         fireEvent.click(sw);
         expect(p.onShowAgesChange).toHaveBeenCalledWith(true);
+    });
+
+    // The living-status mark can be hidden from the Display menu (#68).
+    it('toggles Show living status, on by default', () => {
+        const p = props();
+        renderControls(p);
+        const sw = screen.getByRole('switch', { name: en.treeView.show_living_status });
+        expect(sw.getAttribute('aria-checked')).toBe('true');
+        fireEvent.click(sw);
+        expect(p.onShowStatusChange).toHaveBeenCalledWith(false);
     });
 });

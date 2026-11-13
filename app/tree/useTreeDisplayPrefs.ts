@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 export function useTreeDisplayPrefs() {
     const [colorblindMode, setColorblindMode] = useState(false);
     const [showAgeIndicator, setShowAgeIndicatorState] = useState(false);
+    const [showStatusMark, setShowStatusMarkState] = useState(true);
 
     // Read persisted prefs after mount (server render + first client paint use the
     // defaults, so there is no hydration mismatch).
@@ -13,6 +14,8 @@ export function useTreeDisplayPrefs() {
         function loadPrefs() {
             setColorblindMode(localStorage.getItem('treeColorblindMode') === 'true');
             setShowAgeIndicatorState(localStorage.getItem('treeShowAgeIndicator') === 'true');
+            // On unless turned off (#68), so trees look as they did before the switch.
+            setShowStatusMarkState(localStorage.getItem('treeShowStatusMark') !== 'false');
             // Debug-only card styles with no switch anywhere, removed by #271.
             localStorage.removeItem('treeRoundedPhotos');
             localStorage.removeItem('treeGreyscaleMode');
@@ -27,5 +30,11 @@ export function useTreeDisplayPrefs() {
         localStorage.setItem('treeShowAgeIndicator', String(value));
     }, []);
 
-    return { colorblindMode, showAgeIndicator, setShowAgeIndicator };
+    // The living-status mark on the cards (#68): off hides only the mark, never a card.
+    const setShowStatusMark = useCallback((value: boolean) => {
+        setShowStatusMarkState(value);
+        localStorage.setItem('treeShowStatusMark', String(value));
+    }, []);
+
+    return { colorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark };
 }

@@ -2658,6 +2658,9 @@ html.dark .react-flow__minimap-mask {
     transform: translateX(calc(-1 * var(--tree-panel-inset, 0px)));
     transition: transform 300ms ease-in-out;
   }
+  /* Opening waits with the person panel (SLIDE_IN_DELAY_MS, #14), so a
+     double-click that re-roots never nudges the minimap either. */
+  .tree-canvas[data-panel-open] .react-flow__panel.right { transition-delay: 220ms; }
 }
 
 @media (prefers-reduced-motion: reduce) {

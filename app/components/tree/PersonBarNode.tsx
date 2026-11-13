@@ -148,7 +148,7 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
         {shownAge !== null && (
           <span aria-hidden="true" className="tree-bar-age">{shownAge}</span>
         )}
-        <StatusMark status={status} size="tree" label={tc(status)} />
+        {data.showStatusMark !== false && <StatusMark status={status} size="tree" label={tc(status)} />}
       </div>
     </>
   );
