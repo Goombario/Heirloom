@@ -3103,7 +3103,6 @@
     "unnamed": "(Без имени)",
     "col_type": "Тип",
     "col_name": "Имя",
-    "col_dates": "Период использования",
     "vtype_given": "Личное имя",
     "vtype_nickname": "Прозвище",
     "vtype_maiden": "Девичья фамилия",
@@ -3116,9 +3115,6 @@
     "unset_primary": "Основное имя",
     "variant_remove_title": "Удалить это имя?",
     "variant_remove_body": "Удалить «{name}» из имён и вариантов этого человека?",
-    "dates_birth_death": "рождение – смерть",
-    "dates_birth_present": "рождение – настоящее время",
-    "throughout_life": "на протяжении жизни",
     "variant_used_from": "Используется с",
     "variant_used_to": "Используется до",
     "dates_from": "с {date}",
@@ -4958,7 +4954,10 @@
     "finder_none": "В этом древе нет совпадений с «{query}»",
     "finder_add_n": "Добавить {count, plural, one {# человека} few {# человек} many {# человек} other {# человека}}",
     "finder_cancel": "Отмена",
-    "range_of": "{from}–{to} из {total}"
+    "range_of": "{from}–{to} из {total}",
+    "more_events": "{count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
+    "show_more_events": "Показать {count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
+    "show_fewer": "Показать меньше"
   },
   "personDesktop": {
     "this_person": "этот человек",
@@ -5053,7 +5052,21 @@
     "note_saved": "Заметка сохранена",
     "note_added": "Заметка добавлена",
     "note_deleted": "Заметка удалена",
-    "note_now_biography": "Заметка теперь биография"
+    "note_now_biography": "Заметка теперь биография",
+    "lifeline_places": "{from} — {to}",
+    "age_n": "возраст {age}",
+    "notes_n": "{count, plural, one {# заметка} few {# заметки} many {# заметок} other {# заметки}}",
+    "hide_notes": "Скрыть заметки",
+    "no_events": "Событий пока нет.",
+    "no_events_editor": "Событий пока нет. Начните с рождения или любого известного события.",
+    "media_on_timeline": "{count} также в хронологии",
+    "bio_hint": "Несколько предложений о том, кем был(а) {name}. Они видны здесь, рядом с портретом.",
+    "partners_children_heading": "{count, plural, one {Супруг(а) и дети} few {Супруги и дети} many {Супруги и дети} other {Супруги и дети}}",
+    "partners_heading": "{count, plural, one {Супруг(а)} few {Супруги} many {Супруги} other {Супруги}}",
+    "married_year": "бр. {year}",
+    "n_of_total": "{n} из {m}",
+    "name_on_record": "Имя по документам",
+    "name_shown": "показано"
   },
   "addPersonDialog": {
     "title": "Добавить человека",

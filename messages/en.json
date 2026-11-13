@@ -3103,7 +3103,6 @@
     "unnamed": "(Unnamed)",
     "col_type": "Type",
     "col_name": "Name",
-    "col_dates": "Dates used",
     "vtype_given": "Given",
     "vtype_nickname": "Nickname",
     "vtype_maiden": "Maiden",
@@ -3116,9 +3115,6 @@
     "unset_primary": "Primary name",
     "variant_remove_title": "Remove this name?",
     "variant_remove_body": "Remove “{name}” from this person's names & aliases?",
-    "dates_birth_death": "birth – death",
-    "dates_birth_present": "birth – present",
-    "throughout_life": "throughout life",
     "variant_used_from": "Used from",
     "variant_used_to": "Used to",
     "dates_from": "from {date}",
@@ -4958,7 +4954,10 @@
     "finder_none": "No one in this tree matches “{query}”",
     "finder_add_n": "Add {count, plural, one {# person} other {# people}}",
     "finder_cancel": "Cancel",
-    "range_of": "{from}–{to} of {total}"
+    "range_of": "{from}–{to} of {total}",
+    "more_events": "{count, plural, one {# more event} other {# more events}}",
+    "show_more_events": "Show {count, plural, one {# more event} other {# more events}}",
+    "show_fewer": "Show fewer"
   },
   "personDesktop": {
     "this_person": "this person",
@@ -5053,7 +5052,21 @@
     "note_saved": "Note saved",
     "note_added": "Note added",
     "note_deleted": "Note deleted",
-    "note_now_biography": "Note is now the biography"
+    "note_now_biography": "Note is now the biography",
+    "lifeline_places": "{from} to {to}",
+    "age_n": "age {age}",
+    "notes_n": "{count, plural, one {# note} other {# notes}}",
+    "hide_notes": "Hide notes",
+    "no_events": "No life events yet.",
+    "no_events_editor": "No life events yet. Start with a birth, or any event you know about.",
+    "media_on_timeline": "{count} also on the timeline",
+    "bio_hint": "A few sentences about who {name} was. It shows here, beside the portrait.",
+    "partners_children_heading": "{count, plural, one {Partner and children} other {Partners and children}}",
+    "partners_heading": "{count, plural, one {Partner} other {Partners}}",
+    "married_year": "m. {year}",
+    "n_of_total": "{n} of {m}",
+    "name_on_record": "Name on record",
+    "name_shown": "shown"
   },
   "addPersonDialog": {
     "title": "Add a person",

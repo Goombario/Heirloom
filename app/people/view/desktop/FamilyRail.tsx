@@ -81,54 +81,66 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
       : t('partner_unlinked_alone', { name: given }),
   );
 
+  const parentSets = family.parentBlocks.length;
+  const partners = family.partnerBlocks;
+  const withChildren = partners.some((b) => b.children.length > 0);
+  const partnerHeading = withChildren
+    ? t('partners_children_heading', { count: partners.length })
+    : t('partners_heading', { count: Math.max(partners.length, 1) });
+
   return (
-    <DetailRail look="open">
+    // The locked board's rail: Open in tree, then PARENTS and PARTNER AND CHILDREN as
+    // two sections behind hairline bars, each family's people under its record row,
+    // siblings and children nested on a guide line.
+    <DetailRail look="open" className="rail-bars">
       <OpenInTreeRow personId={person.Id} firstName={given} />
 
-      {family.parentBlocks.length === 0 ? (
-        <section id="parents" aria-labelledby="rail-parents" className="rail-anchor">
-          <SectionHeader level="label" as="h3" headingId="rail-parents" title={t('parents')} />
-          <p className="m-0 text-sm text-text-muted">{t('no_parents')}</p>
-        </section>
-      ) : family.parentBlocks.map((b, i) => (
-        <ParentSection
-          key={b.familyId}
-          block={b}
-          index={i}
-          total={family.parentBlocks.length}
-          treeId={treeId}
-          unlink={canDelete ? () => removeAsChild(b.familyId, person, given, b.card) : undefined}
-          unlinkLabel={t('remove_from_family', { name: given })}
-        />
-      ))}
+      <section id="parents" aria-labelledby="rail-parents" className="rail-anchor">
+        <SectionHeader level="label" as="h3" headingId="rail-parents" title={t('parents')} />
+        {parentSets === 0 && <p className="m-0 text-sm text-text-muted">{t('no_parents')}</p>}
+        {family.parentBlocks.map((b, i) => (
+          <ParentBlockView
+            key={b.familyId}
+            block={b}
+            index={i}
+            total={parentSets}
+            treeId={treeId}
+            unlink={canDelete ? () => removeAsChild(b.familyId, person, given, b.card) : undefined}
+            unlinkLabel={t('remove_from_family', { name: given })}
+          />
+        ))}
+      </section>
 
-      {family.partnerBlocks.map((b, i) => (
-        <PartnerSection
-          key={b.familyId}
-          block={b}
-          index={i}
-          total={family.partnerBlocks.length}
-          treeId={treeId}
-          given={given}
-          unlinkSelf={canDelete ? () => removePartnerSlot(b) : undefined}
-          unlinkChild={canDelete ? (c) => removeAsChild(b.familyId, c.person, displayFullName(c.person) || t('this_person'), b.card) : undefined}
-        />
-      ))}
-
-      {canEdit && (
-        <section aria-labelledby="rail-add">
-          <h3 id="rail-add" className="sr-only">{t('add_family')}</h3>
-          <ActionLink ref={addRef} kind="expand" expanded={adding} onClick={() => setAdding((v) => !v)}>{t('add_family')}</ActionLink>
-          {adding && (
-            // Escape closes it and hands focus back to "Add family" (#690).
-            <div className="mt-2" onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); addRef.current?.focus(); } }}>
-              <AddFamilyPanel
-                person={person}
-                treeId={treeId}
-                canUndo={canDelete}
-                run={run}
-                onClose={() => { setAdding(false); addRef.current?.focus(); }}
-              />
+      {(partners.length > 0 || canEdit) && (
+        <section aria-labelledby="rail-partners">
+          <SectionHeader level="label" as="h3" headingId="rail-partners" title={partnerHeading} />
+          {partners.map((b, i) => (
+            <PartnerBlockView
+              key={b.familyId}
+              block={b}
+              index={i}
+              total={partners.length}
+              treeId={treeId}
+              given={given}
+              unlinkSelf={canDelete ? () => removePartnerSlot(b) : undefined}
+              unlinkChild={canDelete ? (c) => removeAsChild(b.familyId, c.person, displayFullName(c.person) || t('this_person'), b.card) : undefined}
+            />
+          ))}
+          {canEdit && (
+            <div className={partners.length > 0 ? 'rail-addrow' : undefined}>
+              <ActionLink ref={addRef} kind="expand" expanded={adding} onClick={() => setAdding((v) => !v)}>{t('add_family')}</ActionLink>
+              {adding && (
+                // Escape closes it and hands focus back to "Add family" (#690).
+                <div className="mt-2" onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); addRef.current?.focus(); } }}>
+                  <AddFamilyPanel
+                    person={person}
+                    treeId={treeId}
+                    canUndo={canDelete}
+                    run={run}
+                    onClose={() => { setAdding(false); addRef.current?.focus(); }}
+                  />
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -191,97 +203,102 @@ function Row({ person, treeId, role, unlink }: { person: PortraitPerson; treeId:
   );
 }
 
-function ofTotal(t: Translate, title: string, index: number, total: number) {
-  return total > 1 ? t('n_of_m', { title, n: index + 1, m: total }) : title;
+
+/** With more than one set: "Adoptive parents · 2 of 2" over the set. */
+function SetHead({ title, index, total }: { title: string; index: number; total: number }) {
+  const t = useTranslations('personDesktop');
+  if (total < 2) return null;
+  return (
+    <p className="rail-subhead">
+      <b>{title}</b>
+      <span>{t('n_of_total', { n: index + 1, m: total })}</span>
+    </p>
+  );
 }
 
-function ParentSection({ block, index, total, treeId, unlink, unlinkLabel }: {
+function ParentBlockView({ block, index, total, treeId, unlink, unlinkLabel }: {
   block: ParentBlock; index: number; total: number; treeId: number | null;
   unlink?: () => void; unlinkLabel: string;
 }) {
   const t = useTranslations('personDesktop');
   const rowText = useFamilyRowText();
   const { title, sub } = rowText(block.card);
-  const headingId = `rail-parents-${block.familyId}`;
   const heading = block.headingLink ? t(`parents_${block.headingLink}`) : t('parents');
   const sibRole = (s: SiblingEntry) => (s.kind === 'half' ? t('half_sibling') : s.kind === 'step' ? t('step_sibling') : null);
   return (
-    <section id={index === 0 ? 'parents' : undefined} aria-labelledby={headingId} className="rail-anchor">
-      <SectionHeader level="label" as="h3" headingId={headingId} title={ofTotal(t, heading, index, total)} />
-      <div className="grid gap-1">
-        <FamilyRecordRow
-          density="desktop"
-          arrow={false}
-          href={`/families/view?id=${block.familyId}`}
-          title={title}
-          sub={sub}
-          stack={block.card.stack}
-          treeId={treeId}
-          unlink={unlink ? { label: unlinkLabel, onClick: unlink } : undefined}
-        />
-        {block.parents.length === 0 && <p className="m-0 px-1 text-sm text-text-muted">{t('parents_unknown')}</p>}
-        {block.parents.map((p) => (
-          <Row key={p.person.Id} person={p.person} treeId={treeId} role={t(p.link ? `role_${p.role}_${p.link}` : `role_${p.role}`)} />
-        ))}
-        {block.siblings.length > 0 && (
-          <>
-            <p className="m-0 mt-2 px-1 text-meta font-semibold text-text-secondary">{t('siblings', { count: block.siblings.length })}</p>
-            {block.siblings.map((s) => <Row key={s.person.Id} person={s.person} treeId={treeId} role={sibRole(s)} />)}
-          </>
-        )}
-      </div>
-    </section>
+    <div className="rail-block">
+      <SetHead title={heading} index={index} total={total} />
+      <FamilyRecordRow
+        density="desktop"
+        arrow={false}
+        href={`/families/view?id=${block.familyId}`}
+        title={title}
+        sub={sub}
+        stack={block.card.stack}
+        treeId={treeId}
+        unlink={unlink ? { label: unlinkLabel, onClick: unlink } : undefined}
+      />
+      {block.parents.length === 0 && <p className="m-0 px-1 text-sm text-text-muted">{t('parents_unknown')}</p>}
+      {/* A parent's role shows only when the link isn't by birth ("Stepfather"). */}
+      {block.parents.map((p) => (
+        <Row key={p.person.Id} person={p.person} treeId={treeId} role={p.link ? t(`role_${p.role}_${p.link}`) : null} />
+      ))}
+      {block.siblings.length > 0 && (
+        <div className="rail-kids">
+          <span className="rail-kids__label">{t('siblings', { count: block.siblings.length })}</span>
+          {block.siblings.map((s) => <Row key={s.person.Id} person={s.person} treeId={treeId} role={sibRole(s)} />)}
+        </div>
+      )}
+    </div>
   );
 }
 
-function PartnerSection({ block, index, total, treeId, given, unlinkSelf, unlinkChild }: {
+function PartnerBlockView({ block, index, total, treeId, given, unlinkSelf, unlinkChild }: {
   block: PartnerBlock; index: number; total: number; treeId: number | null; given: string;
   unlinkSelf?: () => void; unlinkChild?: (c: ChildEntry) => void;
 }) {
   const t = useTranslations('personDesktop');
   const rowText = useFamilyRowText();
   const { title, sub } = rowText(block.card);
-  const headingId = `rail-partner-${block.familyId}`;
   const childRole = (c: ChildEntry) => {
     if (!c.role) return null;
     if (c.role === 'step') return t(c.person.Sex === 'M' ? 'stepson' : c.person.Sex === 'F' ? 'stepdaughter' : 'stepchild');
     return t(`child_${c.role}`);
   };
-  const partnerRole = block.partner
-    ? t(block.partner.Sex === 'M' ? 'role_husband' : block.partner.Sex === 'F' ? 'role_wife' : 'role_partner')
-    : null;
+  // "m. 1919" on a marriage with a year; otherwise the partner's word.
+  const married = block.type === 'Marriage' || block.type == null;
+  const year = formatYearOrEmpty(block.startDate);
+  const partnerRole = married && year ? t('married_year', { year }) : married ? null : t('role_partner');
   return (
-    <section aria-labelledby={headingId}>
-      <SectionHeader level="label" as="h3" headingId={headingId} title={ofTotal(t, t('partner'), index, total)} />
-      <div className="grid gap-1">
-        <FamilyRecordRow
-          density="desktop"
-          arrow={false}
-          href={`/families/view?id=${block.familyId}`}
-          title={title}
-          sub={sub}
-          stack={block.card.stack}
-          treeId={treeId}
-          unlink={unlinkSelf ? { label: t('remove_as_partner', { name: given }), onClick: unlinkSelf } : undefined}
-        />
-        {block.partner
-          ? <Row person={block.partner} treeId={treeId} role={block.type === 'Marriage' || block.type == null ? partnerRole : t('role_partner')} />
-          : <p className="m-0 px-1 text-sm text-text-muted">{t('partner_unknown')}</p>}
-        {block.children.length > 0 && (
-          <>
-            <p className="m-0 mt-2 px-1 text-meta font-semibold text-text-secondary">{t('children', { count: block.children.length })}</p>
-            {block.children.map((c) => (
-              <Row
-                key={c.person.Id}
-                person={c.person}
-                treeId={treeId}
-                role={childRole(c)}
-                unlink={unlinkChild ? { label: t('remove_child', { name: displayFullName(c.person) || t('unknown') }), onClick: () => unlinkChild(c) } : undefined}
-              />
-            ))}
-          </>
-        )}
-      </div>
-    </section>
+    <div className="rail-block">
+      <SetHead title={t('partner')} index={index} total={total} />
+      <FamilyRecordRow
+        density="desktop"
+        arrow={false}
+        href={`/families/view?id=${block.familyId}`}
+        title={title}
+        sub={sub}
+        stack={block.card.stack}
+        treeId={treeId}
+        unlink={unlinkSelf ? { label: t('remove_as_partner', { name: given }), onClick: unlinkSelf } : undefined}
+      />
+      {block.partner
+        ? <Row person={block.partner} treeId={treeId} role={partnerRole} />
+        : <p className="m-0 px-1 text-sm text-text-muted">{t('partner_unknown')}</p>}
+      {block.children.length > 0 && (
+        <div className="rail-kids">
+          <span className="sr-only">{t('children', { count: block.children.length })}</span>
+          {block.children.map((c) => (
+            <Row
+              key={c.person.Id}
+              person={c.person}
+              treeId={treeId}
+              role={childRole(c)}
+              unlink={unlinkChild ? { label: t('remove_child', { name: displayFullName(c.person) || t('unknown') }), onClick: () => unlinkChild(c) } : undefined}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

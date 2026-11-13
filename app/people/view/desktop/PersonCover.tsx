@@ -6,10 +6,9 @@ import { useTranslations } from 'next-intl';
 import type { PersonGalleryMedia, PersonWithRelations } from '@/lib/db/schema';
 import type { Note } from '@/lib/data/types';
 import { getDataClient } from '@/lib/data';
-import { calculateAge } from '@/lib/date-utils';
+import { livingStatus } from '@/lib/living';
 import { getInitials } from '@/lib/utils/initials';
 import ProfileImage from '@/app/components/ProfileImage';
-import { WarningDot } from '@/app/components/ui/DatesToCheckFlag';
 import { ActionLink, CoverBand, InlinePanel, LeadText, Lifespan, RecordMenu, cx, fieldClass, type RecordMenuItem } from '@/app/components/ui';
 import { avatarClass, fullName } from '../derive';
 import { nameBarParts } from '../mobile/model';
@@ -20,13 +19,11 @@ import type { RunChange } from '../mobile/useChange';
  * hanging over its lower edge, the name and life line, the one ⋯ menu (Edit person,
  * Descendants, Delete person) and the biography beside the portrait.
  */
-export function PersonCover({ person, media, treeId, role, datesToCheck, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
+export function PersonCover({ person, media, treeId, role, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
   person: PersonWithRelations;
   media: PersonGalleryMedia[];
   treeId: number | null;
   role: 'viewer' | 'contributor' | 'editor';
-  /** Open dates to check on this person (#833): the header pill. */
-  datesToCheck: number;
   biography: Note | null;
   /** Bumped by Notes → Biography: opens the biography editor here. */
   bioRequest?: number;
@@ -41,7 +38,6 @@ export function PersonCover({ person, media, treeId, role, datesToCheck, biograp
 }) {
   const t = useTranslations('personDesktop');
   const tp = useTranslations('personDetail');
-  const td = useTranslations('dataChecks');
   const name = fullName(person, tp('unknown'));
   const canWrite = role !== 'viewer';
 
@@ -50,12 +46,6 @@ export function PersonCover({ person, media, treeId, role, datesToCheck, biograp
     ...(hasDescendants ? [{ label: tp('descendants_label'), onSelect: onDescendants }] : []),
     ...(role === 'editor' ? [{ label: t('delete_person'), danger: true, separated: true, onSelect: onDelete }] : []),
   ];
-
-  const ageResult = calculateAge(person.BirthDate, person.DeathDate, person.IsDeceased === 1);
-  const age = ageResult == null || ageResult.kind === 'deceased' ? null
-    : ageResult.kind === 'months' ? tp('age_months', { count: ageResult.value })
-      : ageResult.kind === 'years_approx' ? tp('age_years_approx', { count: ageResult.value })
-        : tp('age_years', { count: ageResult.value });
 
   const nickname = person.Nickname ?? null;
   const title = (
@@ -67,26 +57,39 @@ export function PersonCover({ person, media, treeId, role, datesToCheck, biograp
     </>
   );
 
+  // The board's life line: "1894 – 1971 · Uppsala, Sweden to Minneapolis, Minnesota".
+  // Places keep their first and last parts; one place, or the same twice, shows once.
+  const from = shortPlace(person.BirthPlace);
+  const to = shortPlace(person.DeathPlace);
+  const places = from && to && from !== to ? t('lifeline_places', { from, to }) : from || to;
+  const status = livingStatus(person);
+  const hasYears = Boolean(person.BirthDate || person.DeathDate);
+  const parts = [
+    hasYears ? <Lifespan key="y" birth={person.BirthDate} death={person.DeathDate} status={status} tone="evidence" /> : null,
+    places || null,
+    status === 'living' ? t('status_living') : null,
+  ].filter(Boolean);
+
   return (
     <CoverBand
       title={title}
       titleSize="hero"
-      meta={(
-        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-          <Lifespan variant="full" birth={person.BirthDate} death={person.DeathDate} birthPlace={person.BirthPlace} deathPlace={person.DeathPlace} />
-          {age && <span>· {age}</span>}
-          {datesToCheck > 0 && (
-            <span className="inline-flex items-center gap-1.5 min-h-6 rounded-full border border-warning-border bg-warning-bg text-warning-text py-px pl-[3px] pr-2.5 text-meta font-semibold whitespace-nowrap">
-              <WarningDot />{td('flag_count', { count: datesToCheck })}
-            </span>
-          )}
+      meta={parts.length > 0 ? (
+        <span className="cover-lifeline">
+          {parts.map((p, i) => <span key={i}>{i > 0 && ' · '}{p}</span>)}
         </span>
-      )}
-      actions={items.length > 0 ? <RecordMenu tone="island" recordName={name} items={items} /> : undefined}
+      ) : undefined}
+      titleAside={items.length > 0 ? <RecordMenu tone="island" recordName={name} items={items} /> : undefined}
       portrait={<Portrait person={person} media={media} treeId={treeId} canEdit={canWrite} onAdd={onAddPortrait} onOpen={onOpenPortrait} />}
       lead={<Biography person={person} biography={biography} treeId={treeId} canEdit={canWrite} canDelete={role === 'editor'} run={run} request={bioRequest} />}
     />
   );
+}
+
+/** "Uppsala, Uppland, Sweden" → "Uppsala, Sweden". */
+function shortPlace(place: string | null | undefined): string {
+  const parts = (place ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  return parts.length > 1 ? `${parts[0]}, ${parts[parts.length - 1]}` : parts[0] ?? '';
 }
 
 const noSubscribe = () => () => {};
@@ -120,7 +123,7 @@ function Portrait({ person, media, treeId, canEdit, onAdd, onOpen }: {
     // Initials on the sex colour, the same tile the loading paint and Home show; it
     // fills the 4:3 frame at any width (the portrait narrows to 220px below 1024px).
     <span className={cx('relative grid place-items-center rounded-card overflow-hidden', avatarClass(person.Sex))}>
-      <span role="img" aria-label={name} className="serif text-5xl text-[color:var(--color-on-media)] opacity-70">{getInitials(person.FirstName, person.LastName)}</span>
+      <span role="img" aria-label={name} className="cover-portrait__initials serif">{getInitials(person.FirstName, person.LastName)}</span>
       {canEdit && (
         <button type="button" className="hero-portrait-invite" onClick={onAdd} aria-label={tp('add_portrait')}>
           <span aria-hidden="true" className="text-xl leading-[1]">＋</span>
@@ -205,7 +208,13 @@ function Biography({ person, biography, treeId, canEdit, canDelete, run, request
     if (ok) close();
   };
 
-  return <div ref={wrap}>{body()}</div>;
+  // The board labels the lead "Biography" whenever there is one, or an editor can write one.
+  return (
+    <div ref={wrap} className="grid gap-1.5">
+      {(biography || canEdit) && <h2 className="eyebrow m-0">{tp('biography')}</h2>}
+      {body()}
+    </div>
+  );
 
   function body() {
   if (editing) {
@@ -233,9 +242,12 @@ function Biography({ person, biography, treeId, canEdit, canDelete, run, request
     );
   }
   if (!biography) {
-    return canEdit
-      ? <ActionLink onClick={open}>{t('add_biography')}</ActionLink>
-      : null;
+    return canEdit ? (
+      <>
+        <span><ActionLink onClick={open}>{t('add_biography')}</ActionLink></span>
+        <p className="m-0 text-meta text-text-muted">{t('bio_hint', { name: given })}</p>
+      </>
+    ) : null;
   }
   return (
     <LeadText onEdit={canEdit ? open : undefined} editLabel={t('edit_biography')}>{biography.Text}</LeadText>

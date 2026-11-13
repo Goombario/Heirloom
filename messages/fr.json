@@ -3103,7 +3103,6 @@
     "unnamed": "(Sans nom)",
     "col_type": "Type",
     "col_name": "Nom",
-    "col_dates": "Dates d'usage",
     "vtype_given": "Prénom",
     "vtype_nickname": "Surnom",
     "vtype_maiden": "Jeune fille",
@@ -3116,9 +3115,6 @@
     "unset_primary": "Nom principal",
     "variant_remove_title": "Supprimer ce nom ?",
     "variant_remove_body": "Supprimer « {name} » des noms et variantes de cette personne ?",
-    "dates_birth_death": "naissance – décès",
-    "dates_birth_present": "naissance – aujourd'hui",
-    "throughout_life": "toute la vie",
     "variant_used_from": "Utilisé depuis",
     "variant_used_to": "Utilisé jusqu’à",
     "dates_from": "depuis {date}",
@@ -4958,7 +4954,10 @@
     "finder_none": "Personne dans cet arbre ne correspond à « {query} »",
     "finder_add_n": "Ajouter {count, plural, one {# personne} other {# personnes}}",
     "finder_cancel": "Annuler",
-    "range_of": "{from}–{to} sur {total}"
+    "range_of": "{from}–{to} sur {total}",
+    "more_events": "{count, plural, one {# autre événement} other {# autres événements}}",
+    "show_more_events": "Afficher {count, plural, one {# autre événement} other {# autres événements}}",
+    "show_fewer": "Afficher moins"
   },
   "personDesktop": {
     "this_person": "cette personne",
@@ -5053,7 +5052,21 @@
     "note_saved": "Note enregistrée",
     "note_added": "Note ajoutée",
     "note_deleted": "Note supprimée",
-    "note_now_biography": "La note est maintenant la biographie"
+    "note_now_biography": "La note est maintenant la biographie",
+    "lifeline_places": "{from} à {to}",
+    "age_n": "{age} ans",
+    "notes_n": "{count, plural, one {# note} other {# notes}}",
+    "hide_notes": "Masquer les notes",
+    "no_events": "Aucun événement pour l’instant.",
+    "no_events_editor": "Aucun événement pour l’instant. Commencez par une naissance, ou tout événement connu.",
+    "media_on_timeline": "{count} aussi dans la chronologie",
+    "bio_hint": "Quelques phrases sur qui était {name}. Elles s’affichent ici, à côté du portrait.",
+    "partners_children_heading": "{count, plural, one {Conjoint et enfants} other {Conjoints et enfants}}",
+    "partners_heading": "{count, plural, one {Conjoint} other {Conjoints}}",
+    "married_year": "m. {year}",
+    "n_of_total": "{n} sur {m}",
+    "name_on_record": "Nom à l’état civil",
+    "name_shown": "affiché"
   },
   "addPersonDialog": {
     "title": "Ajouter une personne",

@@ -29,6 +29,11 @@ export interface CoverBandProps {
    * the Tools pages leave it empty.
    */
   actions?: React.ReactNode;
+  /**
+   * A control beside the title instead of top-right: the person page's ⋯ menu,
+   * which the locked board draws right after the name.
+   */
+  titleAside?: React.ReactNode;
   /** `cover` only: the hanging portrait (a `PortraitFrame`-like 4:3 element). */
   portrait?: React.ReactNode;
   /** `cover` only: the lead text beside the portrait (`LeadText`). */
@@ -56,6 +61,7 @@ export function CoverBand({
   titleSize,
   meta,
   actions,
+  titleAside,
   portrait,
   lead,
   className,
@@ -67,7 +73,14 @@ export function CoverBand({
       <div className={cx('hero-dark cover-band', `cover-band--${variant}`)}>
         <div className="cover-band__text">
           {eyebrow && <div className="eyebrow cover-band__eyebrow">{eyebrow}</div>}
-          <h1 id={titleId} className={cx(TITLE_CLASS[size], 'm-0 cover-band__title')}>{title}</h1>
+          {titleAside ? (
+            <div className="cover-band__nameline">
+              <h1 id={titleId} className={cx(TITLE_CLASS[size], 'm-0 cover-band__title')}>{title}</h1>
+              <div className="cover-band__aside">{titleAside}</div>
+            </div>
+          ) : (
+            <h1 id={titleId} className={cx(TITLE_CLASS[size], 'm-0 cover-band__title')}>{title}</h1>
+          )}
           {meta && <div className="cover-band__meta">{meta}</div>}
         </div>
         {actions && <div className="cover-band__actions">{actions}</div>}

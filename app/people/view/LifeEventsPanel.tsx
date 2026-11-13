@@ -3,16 +3,15 @@
 import React, { useId, useRef, useState } from 'react';
 import { useEditorFocusReturn } from '@/app/hooks/useEditorFocusReturn';
 import { useTranslations } from 'next-intl';
-import { MapPin, StickyNote } from '@/lib/icons';
+import { MapPin } from '@/lib/icons';
 import type { PersonWithRelations, GedcomEvent, EventWithMedia, PersonGalleryMedia } from '@/lib/db/schema';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
-import { formatDateForDisplay, sortableYear } from '@/lib/date-utils';
+import { formatDateForDisplay, formatYearOrEmpty, parseDateComponents, sortableYear } from '@/lib/date-utils';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
-import LocationMap from '@/app/components/LocationMap';
+import GuardedLink from '@/app/components/GuardedLink';
+import { ActionLink, LedgerTimeline, type LedgerItem } from '@/app/components/ui';
 import { useToggleSet } from '@/app/hooks/useToggleSet';
-import { Timeline, TimelineWhenWhere, type TimelineItem } from '@/app/components/Timeline';
-import { eventGlyph } from '@/app/components/eventGlyph';
 import { compareTimelineItems, eventIsBirth, eventIsDeath, shouldRenderColumnBirth, shouldRenderColumnDeath } from './derive';
 import { EventRowActions } from '@/app/components/EventRowActions';
 import { useTimelineMarks, type DataCheckMarks } from '@/app/components/data-checks/marks';
@@ -24,7 +23,6 @@ import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { vitalDeletePatchFor } from '@/app/components/person-form/vitalEvent';
-import { factPlaceEntry } from '@/lib/places/place-key';
 import type { RunChange } from './mobile/useChange';
 import { displayFullName } from '@/lib/utils/names';
 
@@ -33,7 +31,6 @@ interface LifeEventsPanelProps {
     language: string;
     renderCitePin: (factTable: string, factId: number, factLabel: string) => React.ReactNode;
     tTypes: ReturnType<typeof useTranslations>;
-    placeCoords: Record<string, { lat: number; lng: number }>;
     /** Show the per-row edit/delete affordances (owner/edit permission). */
     canEdit: boolean;
     /** Permit destructive note deletion in the event-note rails. */
@@ -68,7 +65,7 @@ interface LifeEventsPanelProps {
     run?: RunChange;
 }
 
-export function LifeEventsPanel({ person, language, renderCitePin, tTypes, placeCoords, canEdit, canDelete, onChanged, personNotes, personMedia, onMediaChanged, footer, marks, run }: LifeEventsPanelProps) {
+export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEdit, canDelete, onChanged, personNotes, personMedia, onMediaChanged, footer, marks, run }: LifeEventsPanelProps) {
     const t = useTranslations('personDetail');
     const tc = useTranslations('common');
     const te = useTranslations('eventEdit');
@@ -245,24 +242,6 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
 
     items.sort(compareTimelineItems);
 
-    if (items.length === 0) {
-        return (
-            /* The diagonal hatch this used to carry read as a disabled/placeholder
-               treatment rather than an empty state, and matched nothing else in the
-               app (#429). Plain card + centred text, the same shape the gallery and
-               relationships empty states use. */
-            <div className="card">
-                <div className="p-9" style={{ textAlign: 'center' }}>
-                    <div className="serif text-lg font-semibold mb-1.5">{t('no_events_title')}</div>
-                    <p className="muted text-sm mb-0">
-                        {t('no_events_desc')}
-                    </p>
-                </div>
-                {footer && <div className="border-t border-border-light">{footer}</div>}
-            </div>
-        );
-    }
-
     const birthYear = sortableYear(person.BirthDate);
 
     /** How many notes this event has: what a rail on this page last reported, else
@@ -344,29 +323,51 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
             ev.Place,
         ].filter(Boolean).join(' · ');
 
-    /** A relative's row: its title leaves for the record it is edited on (↗). */
-    const relativeRow = (item: Item): TimelineItem => {
-        const { Icon } = eventGlyph(item.type);
-        const age = birthYear !== null && item.sortKey !== null ? item.sortKey - birthYear : null;
-        const ageLabel = age != null && age > 0 ? String(age) : '';
-        return {
-            key: item.key,
-            icon: <Icon size={15} strokeWidth={2} aria-hidden="true" />,
-            title: item.title,
-            href: item.relative!.href,
-            ageLabel,
-            ageTitle: ageLabel ? t('age_at_event_title', { age: ageLabel }) : undefined,
-            meta: (item.date || item.place) ? (
-                <TimelineWhenWhere
-                    date={item.date && <span className="date-mono text-sm">{formatDateForDisplay(item.date, language, dateWords)}</span>}
-                    place={item.place}
-                />
-            ) : null,
-        };
+    /** The date column (locked board): the year, then the day and month under it. */
+    const dateColumn = (date: string | null): Pick<LedgerItem, 'year' | 'day' | 'sortYear'> => {
+        if (!date) return { year: '?', sortYear: null };
+        const c = parseDateComponents(date);
+        const year = formatYearOrEmpty(date) || '?';
+        // An exact "Mar 14, 1868" splits into "Mar 14" under "1868"; qualified and
+        // year-only dates show their year alone.
+        const day = c && c.precision !== 'year'
+            ? formatDateForDisplay(date, language, dateWords).replace(String(c.year), '').replace(/[\s,]+$/, '').trim()
+            : null;
+        return { year, day, sortYear: sortableYear(date) };
     };
 
-    const timelineItems: TimelineItem[] = items.map((item) => {
-        if (item.relative) return relativeRow(item);
+    /** The place line: a link to the place's page, which has its map. A place the
+     *  row before already named reads as plain text, as on the board. */
+    let previousPlace: string | null = null;
+    const placeLine = (item: Item): React.ReactNode => {
+        if (!item.place) return null;
+        const repeat = item.place === previousPlace;
+        previousPlace = item.place;
+        if (repeat || item.placeId == null) return item.place;
+        return (
+            <GuardedLink href={`/places/view?id=${item.placeId}`} className="focus-ring rounded-sm">
+                <MapPin width="12" height="12" aria-hidden="true" className="shrink-0" />
+                <span className="min-w-0">{item.place}</span>
+            </GuardedLink>
+        );
+    };
+
+    const ageOf = (item: Item): React.ReactNode => {
+        const age = birthYear !== null && item.sortKey !== null ? item.sortKey - birthYear : null;
+        return age != null && age > 0 && item.type !== 'BIRT' ? tDesk('age_n', { age }) : null;
+    };
+
+    const ledger: LedgerItem[] = items.map((item) => {
+        if (item.relative) {
+            return {
+                key: item.key,
+                ...dateColumn(item.date),
+                title: item.title,
+                href: item.relative.href,
+                age: ageOf(item),
+                place: placeLine(item),
+            };
+        }
         // Translate the event title where a localized label exists.
         let displayTitle = item.title;
         try {
@@ -378,99 +379,28 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
             // fall back to the default title
         }
 
-        const { Icon, dim } = eventGlyph(item.type);
-
-        // Age track — the person's age at the event (blank for birth / pre-birth).
-        const age = birthYear !== null && item.sortKey !== null ? item.sortKey - birthYear : null;
-        const ageLabel = age != null && age > 0 ? String(age) : '';
-        const ageTitle = ageLabel ? t('age_at_event_title', { age: ageLabel }) : undefined;
-
-        const itemPlaceCoords = factPlaceEntry(placeCoords, item.place, item.placeId);
-        const mapOpen = isOpen(item.key);
-
-        // Null when the row has neither, so the timeline doesn't render an empty
-        // meta line. TimelineWhenWhere keeps "·" off both line ends (#808).
-        const meta = (item.date || item.place) ? (
-            <TimelineWhenWhere
-                date={item.date && <span className="date-mono text-sm">{formatDateForDisplay(item.date, language, dateWords)}</span>}
-                place={item.place}
-            />
-        ) : null;
-
         const itemMediaFact = factOf(item);
         const eventMedia = itemMediaFact
             ? (personMedia ?? []).filter((m) => m.OwnerFacts?.includes(itemMediaFact))
             : item.event?.media ?? [];
-        // `aria-expanded` alone tells a screen reader that something opened but
-        // not WHAT: `aria-controls` plus a matching id on the revealed region is
-        // the other half. Both disclosures on the row get it, not just the notes
-        // one — a row whose two adjacent toggles behaved differently would be
-        // worse than either state.
-        const mapRegionId = `${idPrefix}map-${item.key}`;
-        const mapControl = itemPlaceCoords ? (
-            <>
-                <button
-                    type="button"
-                    onClick={() => toggle(item.key)}
-                    className="inline-flex items-center gap-1 p-0 text-meta text-link hover:underline rounded-lg transition-colors bg-transparent border-0 cursor-pointer"
-                    aria-expanded={mapOpen}
-                    aria-controls={mapRegionId}
-                >
-                    <MapPin width="11" height="11" aria-hidden="true" />
-                    {mapOpen ? tc('hide_map') : tc('show_map')}
-                </button>
-                {mapOpen && (
-                    <div className="mt-2" id={mapRegionId}>
-                        <LocationMap
-                            markers={[{ lat: itemPlaceCoords.lat, lng: itemPlaceCoords.lng, label: item.place! }]}
-                            variant="mini"
-                        />
-                    </div>
-                )}
-            </>
-        ) : null;
         // Notes attached to the Events ROW (Note + NoteLink) — what a GEDCOM
-        // `2 NOTE` under an event imports as. Offered on rows that HAVE notes, for
-        // every reader including view-only: the count rides in with the person
-        // payload, so this costs no request until the reader opens it, and the rail
-        // itself is what fetches the text. Not the editor's "Note" box, which is
-        // this event's own Events."Description" — the label says so.
+        // `2 NOTE` under an event imports as — or, for Birth and Death, to the
+        // person scoped by OwnerFact. "2 notes ⌄" under the row opens them, for every
+        // reader. `aria-controls` names the region it opens.
         const notesKey = `notes-${item.key}`;
         const notesOpen = isOpen(notesKey);
-        // Birth and Death carry their notes on the PERSON, scoped by OwnerFact; every
-        // other row carries them on its Events row. Either way the row owns a rail.
         const itemFact = factOf(item);
         const noteTotal = item.event ? noteCountFor(item.event) : itemFact ? vitalNoteCountFor(itemFact) : 0;
         const rowNotesRail = item.event ? notesRail(item.event) : itemFact ? vitalNotesRail(itemFact) : null;
         const notesRegionId = `${idPrefix}${notesKey}`;
         // `|| notesOpen` keeps an OPEN disclosure mounted after its last note is
-        // deleted. Gating on the count alone unmounted the toggle, the region and
-        // the rail in the same commit the rail was moving focus to its own add
-        // affordance, dropping the keyboard user on <body>. Open, the toggle reads
-        // "Hide notes (0)" over the empty rail, so a replacement can be typed
-        // straight away and the disclosure the user opened can still be closed.
-        const notesControl = rowNotesRail && (noteTotal > 0 || notesOpen) ? (
-            // Its own block so the toggle never shares a line with the map toggle.
-            <div className={mapControl ? 'mt-1' : undefined}>
-                <button
-                    type="button"
-                    onClick={() => toggle(notesKey)}
-                    className="inline-flex items-center gap-1 p-0 text-meta text-link hover:underline rounded-lg transition-colors bg-transparent border-0 cursor-pointer"
-                    aria-expanded={notesOpen}
-                    aria-controls={notesRegionId}
-                >
-                    <StickyNote width="11" height="11" aria-hidden="true" />
-                    {notesOpen ? t('event_notes_hide', { count: noteTotal }) : t('event_notes_show', { count: noteTotal })}
-                </button>
-                {notesOpen && <div className="mt-2" id={notesRegionId}>{rowNotesRail}</div>}
-            </div>
-        ) : null;
-
-        const extra = (eventMedia.length > 0 || mapControl || notesControl) ? (
+        // deleted, so focus has somewhere to land and the reader can close it.
+        const below = rowNotesRail && (noteTotal > 0 || notesOpen) ? (
             <>
-                <EventMediaStrip media={eventMedia} treeId={activeTreeId} />
-                {mapControl}
-                {notesControl}
+                <ActionLink kind="expand" expanded={notesOpen} controls={notesRegionId} onClick={() => toggle(notesKey)}>
+                    {notesOpen ? tDesk('hide_notes') : tDesk('notes_n', { count: noteTotal })}
+                </ActionLink>
+                {notesOpen && <div className="mt-2" id={notesRegionId}>{rowNotesRail}</div>}
             </>
         ) : null;
 
@@ -478,8 +408,6 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
         let actions: React.ReactNode = null;
         if (canEdit) {
             if (item.isIntrinsic) {
-                // Birth/Death now edit in place via the same InlineEventEditor,
-                // routing the save to the People columns (Option A) — no deep-link.
                 const vital = item.type as 'BIRT' | 'DEAT';
                 actions = (
                     <EventRowActions
@@ -512,13 +440,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
                     onRefresh={onChanged}
                     onSaved={() => { setEditingId(null); onChanged(); }}
                     onDelete={canDelete ? () => requestDelete(ev) : undefined}
-                    // The same rail, always shown while the row is open for edit — this
-                    // is where a note is ADDED, including to an event that has none (so
-                    // no disclosure toggle above). Inside the editor's block now, not
-                    // stacked beneath it, where it read as a second notes section next
-                    // to the Description field. Deliberately NOT that field, which is
-                    // this event's own Events."Description"; the heading names the
-                    // difference and the two are never merged.
+                    // Where a note is ADDED, including to an event that has none. Not the
+                    // Description field, which is this event's own Events."Description".
                     notesSlot={notesRail(ev)}
                 />
             );
@@ -547,11 +470,8 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
                     onRefresh={onMediaChanged}
                     onCancel={() => setEditingVital(null)}
                     onSaved={() => { setEditingVital(null); onChanged(); }}
-                    // Replaces #545's write-only "Note" box, which saved a fact-scoped
-                    // note and then told the user to go read it on the person's rail —
-                    // where it no longer appears. The rail lists them here instead, and
-                    // is also the ONLY way to create the first one: the disclosure above
-                    // this row appears only once a note exists.
+                    // The only way to create a vital's first note: the disclosure under
+                    // the row appears only once a note exists.
                     notesSlot={itemFact ? vitalNotesRail(itemFact) : undefined}
                 />
             );
@@ -567,28 +487,33 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
             : undefined;
         const marked = factKey && !override ? markRow(factKey, editRow) : {};
 
+        const note = item.isIntrinsic && item.type === 'DEAT' && item.description
+            ? t('cause_label', { cause: item.description })
+            : item.isIntrinsic ? null : item.description;
+
         return {
             ...marked,
             key: item.key,
             // "#birth", "#death", "#event-44": Home's Next steps link straight to the row (#53).
             anchor: item.key,
-            icon: <Icon size={15} strokeWidth={2} aria-hidden="true" />,
+            ...dateColumn(item.date),
+            vital: item.isIntrinsic || eventIsBirth(item.type) || eventIsDeath(item.type),
             title: displayTitle,
+            age: ageOf(item),
             citations: item.citation,
-            ageLabel,
-            ageTitle,
-            meta,
-            note: item.isIntrinsic && item.type === 'DEAT' && item.description
-                ? t('cause_label', { cause: item.description })
-                : item.isIntrinsic
-                    ? null
-                    : item.description,
-            extra,
+            place: placeLine(item),
+            lines: note,
+            thumbs: eventMedia.length > 0 ? <EventMediaStrip variant="ledger" media={eventMedia} treeId={activeTreeId} /> : null,
+            below,
             actions,
             override,
-            dim: dim || item.modifier === 'dim',
         };
     });
+
+    // The death that closes a life stays in view under the fold, with the undated
+    // rows that sort after it.
+    const deathAt = items.findLastIndex((i) => !i.relative && eventIsDeath(i.type));
+    const pinned = deathAt >= 0 && ledger.slice(deathAt + 1).every((l) => l.sortYear == null) ? items.length - deathAt : 0;
 
     /**
      * Delete at once with Undo when the page gives a `run` (the v1.1 desktop page,
@@ -660,9 +585,11 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, place
     };
 
     return (
-        <div className="card card-pad" ref={panelRef} tabIndex={-1}>
-            <Timeline items={timelineItems} />
-            {footer && <div className="-mx-4 -mb-4 mt-3 border-t border-border-light">{footer}</div>}
+        <div ref={panelRef} tabIndex={-1} className="outline-none">
+            {ledger.length > 0
+                ? <LedgerTimeline items={ledger} pinned={pinned} />
+                : <p className="m-0 py-3 text-sm text-text-muted">{canEdit ? tDesk('no_events_editor') : tDesk('no_events')}</p>}
+            {footer && <div className="ledger-foot">{footer}</div>}
             {confirmDelete && (
                 <ConfirmDialog
                     open

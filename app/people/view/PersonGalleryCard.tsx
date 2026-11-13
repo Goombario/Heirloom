@@ -3,39 +3,22 @@
 import { useTranslations } from 'next-intl';
 import type { PersonGalleryMedia } from '@/lib/db/schema';
 import MediaGallery from '@/app/components/media/MediaGallery';
-import { Badge, Button } from '@/app/components/ui';
-import { Plus } from '@/lib/icons';
+import { Badge } from '@/app/components/ui';
 import { mediaFactLabel } from '@/app/components/media/mediaFactLabel';
 
-export function PersonGalleryCard({ media, personId, treeId, canEdit, canDelete, onPrimaryChanged, onAddPhoto }: { media: PersonGalleryMedia[]; personId: number; treeId: number | null; canEdit: boolean; canDelete: boolean; onPrimaryChanged: () => void; /** Opens the upload modal — the empty state's call to action (#437). */ onAddPhoto?: () => void }) {
+export function PersonGalleryCard({ media, personId, treeId, canEdit, canDelete, onPrimaryChanged }: { media: PersonGalleryMedia[]; personId: number; treeId: number | null; canEdit: boolean; canDelete: boolean; onPrimaryChanged: () => void }) {
     const t = useTranslations('personDetail');
     const ft = useTranslations('faceTags');
     const tm = useTranslations('ownerMedia');
 
-    if (media.length === 0) {
-        // A bare line of muted text in the page flow read as a broken section next to
-        // every other panel's proper empty state (#437). Same card + centred shape as
-        // the timeline and relationships ones, and it carries the upload affordance so
-        // the empty state is also the way out of it.
-        return (
-            <div className="card card-pad p-9 text-center">
-                <div className="serif text-lg font-semibold mb-1.5">{t('no_photos_title')}</div>
-                <p className="muted text-sm mb-0">{t('no_photos_desc')}</p>
-                {canEdit && onAddPhoto && (
-                    <Button variant="outline" size="sm" icon={<Plus className="w-4 h-4" aria-hidden="true" />} className="mt-3.5" onClick={onAddPhoto}>
-                        {t('add_picture')}
-                    </Button>
-                )}
-            </div>
-        );
-    }
+    // The locked board's empty Media section is just its "Add media" row (the
+    // page renders it); a reader sees the section only when there is media.
+    if (media.length === 0) return null;
 
-    // The same grid at every count: #765's strip of 80px thumbnails left one to
-    // three photos looking lost (#780). px-1 + the grid's p-3 meets the
-    // DetailSection header's 16px edge.
+    // One row of six squares, the sixth "+N" (locked person board).
     return (
-        <div className="card px-1 pb-1">
-            <MediaGallery
+        <MediaGallery
+                strip={6}
                 items={media}
                 treeId={treeId}
                 lightbox={{ context: 'person', galleryPersonId: personId, canEdit, canDelete, onPrimaryChanged, onTagsChanged: onPrimaryChanged, onDeleted: onPrimaryChanged }}
@@ -52,6 +35,5 @@ export function PersonGalleryCard({ media, personId, treeId, canEdit, canDelete,
                     </>
                 )}
             />
-        </div>
     );
 }

@@ -39,6 +39,7 @@ export type { Column } from './DataTable';
 export { DatesToCheckFlag, ReviewLink, WarningDot } from './DatesToCheckFlag';
 export { CoverBand } from './CoverBand';
 export { LeadText } from './LeadText';
+export { LedgerTimeline, type LedgerItem } from './LedgerTimeline';
 export { ActionLink } from './ActionLink';
 export { RecordMenu } from './RecordMenu';
 export type { RecordMenuItem } from './RecordMenu';
