@@ -53,7 +53,7 @@ function renderPanel(run?: (write: () => Promise<{ auditIds: number[] }>, toast:
                 language="en"
                 renderCitePin={() => null}
                 tTypes={((k: string) => ({ PROB: 'Probate', BIRT: 'Birth', DEAT: 'Death' } as Record<string, string>)[k] ?? k) as never}
-                placeCoords={{}}
+               
                 canEdit
                 canDelete
                 onChanged={() => {}}

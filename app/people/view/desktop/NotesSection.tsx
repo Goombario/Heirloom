@@ -7,7 +7,7 @@ import type { Note, NoteLinkEnd, NoteOwnerFact } from '@/lib/data/types';
 import type { PersonWithRelations } from '@/lib/db/schema';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
 import { sortableYear } from '@/lib/date-utils';
-import { ActionLink, AddRow, Card, InlinePanel, SectionHeader, SelectField, cx, fieldClass } from '@/app/components/ui';
+import { ActionLink, AddRow, InlinePanel, SectionHeader, SelectField, cx, fieldClass } from '@/app/components/ui';
 import { biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
 import { hasBirthFact, hasDeathFact } from '../derive';
 import { nameBarParts } from '../mobile/model';
@@ -235,24 +235,25 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
       {rows.length === 0 && !canEdit ? (
         <p className="m-0 text-sm text-text-muted">{tn('empty')}</p>
       ) : (
-        <Card pad={false}>
+        <>
+          {/* Open rows with hairlines between (locked board), no card. */}
           {rows.length > 0 && (
-            <ul className="list-none m-0 p-2">
+            <ul className="note-list">
               {rows.map((r) => {
                 const key = rowKey(r);
                 return (
-                  <li key={key} className="border-t border-border-light first:border-t-0">
-                    {open === key && canEdit ? <div className="p-2">{panel(r)}</div> : (
+                  <li key={key} className="note-list__row">
+                    {open === key && canEdit ? <div className="py-2">{panel(r)}</div> : (
                       <button
                         type="button"
                         data-note-row={key}
                         disabled={!canEdit}
                         onClick={() => start(r)}
                         aria-label={canEdit ? tn('edit_for', { excerpt: excerpt(r.note.Text) }) : undefined}
-                        className="block w-full text-left rounded-btn border-0 bg-transparent px-2 py-2.5 enabled:hover:bg-hover-surface enabled:cursor-pointer focus-ring disabled:cursor-default"
+                        className="note-list__btn focus-ring"
                       >
-                        <span className="block eyebrow mb-1">{r.label}</span>
-                        <span className="block text-base leading-[1.6] text-text whitespace-pre-wrap break-words line-clamp-4">{r.note.Text}</span>
+                        <span className="note-list__label">{r.label}</span>
+                        <span className="block text-base leading-[1.5] text-text whitespace-pre-wrap break-words line-clamp-4">{r.note.Text}</span>
                       </button>
                     )}
                   </li>
@@ -261,9 +262,9 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
             </ul>
           )}
           {canEdit && (open === 'new'
-            ? <div className={cx('p-4', rows.length > 0 && 'border-t border-border-light')}>{panel(null)}</div>
-            : <AddRow data-note-add label={tn('add_button')} onClick={() => start(null)} className={cx(rows.length > 0 && 'border-t border-border-light')} />)}
-        </Card>
+            ? <div className="pt-3">{panel(null)}</div>
+            : <div className="ledger-foot ledger-foot--plain"><AddRow data-note-add label={tn('add_button')} onClick={() => start(null)} /></div>)}
+        </>
       )}
     </div>
   );

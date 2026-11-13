@@ -78,7 +78,7 @@ function renderPanel(person: PersonWithRelations, canEdit: boolean, personNotes:
                 language="en"
                 renderCitePin={() => null}
                 tTypes={((k: string) => k) as never}
-                placeCoords={{}}
+               
                 canEdit={canEdit}
                 canDelete={canDelete}
                 onChanged={() => {}}
@@ -93,9 +93,9 @@ async function openEditor(user: ReturnType<typeof userEvent.setup>) {
     await user.click(await screen.findByRole('button', { name: new RegExp(`^${editPrefix} `) }));
 }
 
-/** The row's "Show notes (n)" disclosure. */
+/** The row's "2 notes ⌄" disclosure (locked person board). */
 function showNotesButton(count: number) {
-    return screen.getAllByRole('button', { name: en.personDetail.event_notes_show.replace('{count}', String(count)) });
+    return screen.getAllByRole('button', { name: count === 1 ? '1 note' : `${count} notes` });
 }
 
 beforeEach(() => {
@@ -121,7 +121,7 @@ describe('event notes rail — read-only reader', () => {
         expect(await screen.findByText(NOTE.Text)).toBeInTheDocument();
         expect(screen.getByText(en.personDetail.event_notes_title)).toBeInTheDocument();
         expect(
-            screen.getByRole('button', { name: en.personDetail.event_notes_hide.replace('{count}', '1') }),
+            screen.getByRole('button', { name: en.personDesktop.hide_notes }),
         ).toHaveAttribute('aria-expanded', 'true');
     });
 
@@ -248,11 +248,9 @@ describe('event notes rail — editor', () => {
         await waitFor(() =>
             expect(screen.getByRole('button', { name: en.notes.add_button })).toHaveFocus());
         expect(screen.getByText(en.notes.empty_edit)).toBeInTheDocument();
-        // The toggle stayed too, now reading "Hide notes (0)", so the user can
+        // The toggle stayed too, now reading "Hide notes", so the user can
         // close the rail they opened instead of being stranded in it.
-        expect(
-            screen.getByRole('button', { name: en.personDetail.event_notes_hide.replace('{count}', '0') }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: en.personDesktop.hide_notes })).toBeInTheDocument();
     });
 
     it('labels the rail so it is not the editor\'s Events."Description" box', async () => {
@@ -392,7 +390,7 @@ describe('vital notes rail — Birth and Death rows', () => {
             events: [],
         } as unknown as PersonWithRelations;
         renderPanel(bare, false, []);
-        expect(screen.getByText(en.personDetail.no_events_title)).toBeInTheDocument();
+        expect(screen.getByText(en.personDesktop.no_events)).toBeInTheDocument();
     });
 
     it('does not cancel the editor when Escape dismisses the delete confirm', async () => {

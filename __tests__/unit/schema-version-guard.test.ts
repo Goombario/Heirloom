@@ -128,7 +128,9 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // kinds; every case gets its question as a first lead. Additive.
 // v70 — Answer and close (#58, ADR 0046): "CaseClaims"."AppliedCitationAuditId", the audit
 // entry of the citation an applied claim put on the tree, so Undo reverts it too. Additive.
-const EXPECTED_FINGERPRINT = 'cb7ec1f6ce14392da8af5b03b3b593fada11b1df59754ad2fc7b1cacd8769362';
+// v71 — the family photo (#119, ADR 0047): the MediaLink primary check also admits a
+// record-level Families link, under its new name "medialink_primary_record_level".
+const EXPECTED_FINGERPRINT = 'c5b160fb66734708a38eecbc1d28455ee24123bdbd2caf93d7d579c648396433';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

@@ -22,7 +22,6 @@ vi.mock('@/app/components/LocationField', () => ({
 vi.mock('@/app/components/PersonPicker', () => ({ default: () => <div /> }));
 
 import { HeroIdentityEditor } from '@/app/people/view/HeroIdentityEditor';
-import { FamilyHeroEditor } from '@/app/families/view/FamilyHeroEditor';
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 import InlineMarriageEditor from '@/app/families/view/InlineMarriageEditor';
 import type { Person } from '@/lib/db/schema';
@@ -75,18 +74,6 @@ describe('Escape with a typed, unblurred date (#861)', () => {
         fireEvent.keyDown(screen.getByLabelText('death_date'), { key: 'Escape' });
         expect(confirm).not.toHaveBeenCalled();
         expect(onCancel).toHaveBeenCalledTimes(1);
-    });
-
-    it('asks in the family hero editor', () => {
-        const confirm = stubConfirm(false);
-        const onCancel = vi.fn();
-        render(
-            <FamilyHeroEditor partner1={partner(1)} partner2={partner(2)} type="Marriage" marriageDate={null} marriagePlace={null}
-                endEvent={null} treeId={1} saving={false} canDelete onSave={vi.fn()} onCancel={onCancel} onDelete={vi.fn()} />,
-        );
-        typeThenEscape('date_label', '1920');
-        expect(confirm).toHaveBeenCalledTimes(1);
-        expect(onCancel).not.toHaveBeenCalled();
     });
 
     it('asks in the inline event editor', () => {

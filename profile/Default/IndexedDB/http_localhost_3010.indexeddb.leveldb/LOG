@@ -1,0 +1,32 @@
+2026/11/12-22:36:31.866 2b59 Creating DB /home/user/Heirloom/profile/Default/IndexedDB/http_localhost_3010.indexeddb.leveldb since it was missing.
+2026/11/12-22:36:31.868 2b59 Reusing MANIFEST /home/user/Heirloom/profile/Default/IndexedDB/http_localhost_3010.indexeddb.leveldb/MANIFEST-000001
+2026/11/12-22:36:33.994 2b59 Level-0 table #5: started
+2026/11/12-22:36:34.006 2b59 Level-0 table #5: 860695 bytes OK
+2026/11/12-22:36:34.007 2b59 Delete type=0 #3
+2026/11/12-22:36:34.030 2b59 Level-0 table #7: started
+2026/11/12-22:36:34.037 2b59 Level-0 table #7: 825920 bytes OK
+2026/11/12-22:36:34.039 2b59 Delete type=0 #4
+2026/11/12-22:36:34.042 2b59 Compacting 1@1 + 1@2 files
+2026/11/12-22:36:34.075 2b59 Generated table #8@1: 4260 keys, 1679792 bytes
+2026/11/12-22:36:34.075 2b59 Compacted 1@1 + 1@2 files => 1679792 bytes
+2026/11/12-22:36:34.075 2b59 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/11/12-22:36:34.075 2b59 Delete type=2 #7
+2026/11/12-22:36:34.075 2b59 Delete type=2 #5
+2026/11/12-22:36:34.080 2b59 Level-0 table #10: started
+2026/11/12-22:36:34.095 2b59 Level-0 table #10: 806804 bytes OK
+2026/11/12-22:36:34.096 2b59 Delete type=0 #6
+2026/11/12-22:36:34.117 2b59 Compacting 1@1 + 1@2 files
+2026/11/12-22:36:34.148 2b59 Generated table #11@1: 4380 keys, 2132496 bytes
+2026/11/12-22:36:34.155 2b59 Generated table #12@1: 2008 keys, 350948 bytes
+2026/11/12-22:36:34.155 2b59 Compacted 1@1 + 1@2 files => 2483444 bytes
+2026/11/12-22:36:34.155 2b59 compacted to: files[ 0 0 2 0 0 0 0 ]
+2026/11/12-22:36:34.996 2b59 Level-0 table #14: started
+2026/11/12-22:36:35.004 2b59 Level-0 table #14: 1269529 bytes OK
+2026/11/12-22:36:35.005 2b59 Delete type=2 #8
+2026/11/12-22:36:35.005 2b59 Delete type=2 #10
+2026/11/12-22:36:35.005 2b59 Delete type=0 #9
+2026/11/12-22:36:35.019 2b59 Compacting 1@1 + 2@2 files
+2026/11/12-22:36:35.047 2b59 Generated table #15@1: 931 keys, 2128280 bytes
+2026/11/12-22:36:35.053 2b59 Generated table #16@1: 2664 keys, 419842 bytes
+2026/11/12-22:36:35.053 2b59 Compacted 1@1 + 2@2 files => 2548122 bytes
+2026/11/12-22:36:35.053 2b59 compacted to: files[ 0 0 2 0 0 0 0 ]

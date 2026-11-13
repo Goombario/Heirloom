@@ -87,18 +87,10 @@ export {
   CheckCircle2,    // Saved / success toast confirmation
   // Life-event medallion glyphs (Timeline / event types)
   Sprout,          // Birth
-  Flower2,         // Death / Burial (memorial)
   Home,            // Residence
-  Ship,            // Immigration
   Stamp,           // Naturalization
-  Briefcase,       // Occupation
-  GraduationCap,   // Education / Graduation
-  Droplets,        // Baptism / Christening
-  HeartHandshake,  // Adoption / engagement
   HeartCrack,      // Divorce / separation (family ending event)
   FileText,        // Marriage contract / license (family document event)
-  Armchair,        // Retirement
-  Scale,           // Probate
   ScrollText,      // Will
   Landmark,        // Census / civic record
   CalendarDays,    // Generic event fallback

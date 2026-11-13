@@ -276,3 +276,22 @@ describe('Lightbox header (#894)', () => {
         expect(screen.getByRole('button', { name: 'edit_details' })).toBeInTheDocument();
     });
 });
+
+describe('EvidencePanel family photo (#119)', () => {
+  it('offers Set as family photo, and on the current one a way to stop using it', () => {
+    const onSet = vi.fn();
+    const onClear = vi.fn();
+    renderPanel({ familyPhoto: { current: false, onSet, onClear } });
+    fireEvent.click(screen.getByRole('button', { name: 'set_family_photo' }));
+    expect(onSet).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the current family photo and stops using it', () => {
+    const onClear = vi.fn();
+    renderPanel({ familyPhoto: { current: true, onSet: vi.fn(), onClear } });
+    expect(screen.getByText('current_family_photo')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'set_family_photo' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'stop_family_photo' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+});

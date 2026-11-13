@@ -62,11 +62,14 @@ describe('desktop person rail (#49)', () => {
     const parents = screen.getByRole('region', { name: 'Parents' });
     expect(parents).toHaveAttribute('id', 'parents');
     expect(within(parents).getByRole('link', { name: /Johan & Kristina’s family/ })).toHaveAttribute('href', '/families/view?id=100');
-    expect(within(parents).getByRole('link', { name: /Johan Lind/ })).toHaveTextContent('Father');
+    // A birth parent carries no role; only a step or adoptive link is named.
+    expect(within(parents).getByRole('link', { name: /Johan Lind/ })).not.toHaveTextContent('Father');
     expect(within(parents).getByRole('link', { name: /Erik Lind/ })).toHaveTextContent('half-sibling');
-    expect(screen.getByRole('region', { name: 'Partner 1 of 2' })).toHaveTextContent('Husband');
-    expect(within(screen.getByRole('region', { name: 'Partner 1 of 2' })).getByRole('link', { name: /Nils Lind/ })).toHaveTextContent('adopted');
-    expect(screen.getByRole('region', { name: 'Partner 2 of 2' })).toHaveTextContent('Partner unknown');
+    const partners = screen.getByRole('region', { name: 'Partners and children' });
+    expect(partners).toHaveTextContent('1 of 2');
+    expect(partners).toHaveTextContent('m. 1890');
+    expect(within(partners).getByRole('link', { name: /Nils Lind/ })).toHaveTextContent('adopted');
+    expect(partners).toHaveTextContent('Partner unknown');
     expect(screen.getByRole('button', { name: /See the journey/ })).toBeInTheDocument();
   });
 
@@ -85,14 +88,15 @@ describe('desktop person rail (#49)', () => {
 
 describe('desktop person cover (#49)', () => {
   const cover = (role: 'viewer' | 'contributor' | 'editor') => wrap(
-    <PersonCover person={anna} media={[]} treeId={1} role={role} datesToCheck={2} biography={null} run={vi.fn()}
+    <PersonCover person={anna} media={[]} treeId={1} role={role} biography={null} run={vi.fn()}
       onEdit={() => {}} onDescendants={() => {}} hasDescendants onDelete={() => {}} onAddPortrait={() => {}} onOpenPortrait={() => {}} />,
   );
 
-  it('names the person and shows the dates-to-check pill', () => {
+  it('names the person, labels the biography and offers to write one', () => {
     cover('editor');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Anna Lind');
-    expect(screen.getByText('2 dates to check')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Biography' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add a biography' })).toBeInTheDocument();
   });
 
   it('puts Edit person, Descendants and Delete person in the ⋯ menu for editors', () => {

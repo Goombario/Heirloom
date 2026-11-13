@@ -133,13 +133,14 @@ describe('NamesPanel display (#898)', () => {
         expect(screen.queryByText(/ABT/)).toBeNull();
         expect(screen.getByText(/1890 – 1902/)).toBeTruthy();
         expect(screen.getByText(en.personDetail.dates_from.replace('{date}', 'Mar 1890'))).toBeTruthy();
-        expect(screen.getByText(en.personDetail.throughout_life)).toBeTruthy();
+        // A name used throughout life shows no range.
+        expect(document.querySelectorAll('.name-list__meta .date-mono')).toHaveLength(2);
     });
 
-    it('puts each cite pin beside its name and has no Source column', () => {
+    it('puts each cite pin beside its name, with no table columns', () => {
         renderRead([{ FromDate: null, ToDate: null }]);
-        expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).not.toContain('Source');
+        expect(screen.queryAllByRole('columnheader')).toHaveLength(0);
         const pin = screen.getByRole('button', { name: /pin NameVariant 10/ });
-        expect(pin.closest('td')?.textContent).toContain('Alias 0');
+        expect(pin.closest('.name-list__name')?.textContent).toContain('Alias 0');
     });
 });

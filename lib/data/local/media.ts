@@ -15,7 +15,7 @@ import { assertBrowserStorageCapacity } from '@/lib/media/storage-capacity';
 import { ALLOWED_EXTENSIONS, classifyUpload, fileExtension } from '@/lib/media/allowed-extensions';
 import { hashBytes } from '@/lib/media/content-hash';
 import { getMediaBlobsByIds, getMediaByUploadIntent, getMediaThumbStatesByIds, patchMediaDateIfUnset, patchMediaTitle, type MediaThumbState } from '@/lib/db/queries/media';
-import { createCanonicalMedia, listMediaService, updateMediaService, setPrimaryMediaService, clearPrimaryMediaService, listTagsService, createTagService, updateTagService, removeTagService, deleteMediaService, deleteMediaBatchService } from '@/lib/services/media';
+import { createCanonicalMedia, listMediaService, updateMediaService, setPrimaryMediaService, clearPrimaryMediaService, setFamilyPhotoService, clearFamilyPhotoService, listTagsService, createTagService, updateTagService, removeTagService, deleteMediaService, deleteMediaBatchService } from '@/lib/services/media';
 import { getMediaStorageSummaryService } from '@/lib/services/media-storage';
 import { findDuplicatesService } from '@/lib/services/media-duplicates';
 import { listGalleryForOwnerService, listLinkOwnersForMediaService, listMediaForOwnerService, unlinkMediaForOwnerService, linkMediaForOwnerService } from '@/lib/services/media-links';
@@ -202,6 +202,16 @@ export class LocalMediaClient implements MediaClient {
       mediaId,
       personId,
     });
+  }
+
+  async setFamilyPhoto(mediaId: number, familyId: number, treeId?: number | null): Promise<Audited> {
+    const currentUserId = await ensureLocalUser();
+    return setFamilyPhotoService({ requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId, mediaId, familyId });
+  }
+
+  async clearFamilyPhoto(mediaId: number, familyId: number, treeId?: number | null): Promise<Audited> {
+    const currentUserId = await ensureLocalUser();
+    return clearFamilyPhotoService({ requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId, mediaId, familyId });
   }
 
   async listTags(mediaId: number, treeId?: number | null): Promise<MediaTagWithPerson[]> {

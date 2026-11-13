@@ -63,7 +63,7 @@ export interface ParsedMedia {
 /** A standalone `0 @O@ OBJE` record retained once per xref. */
 export interface ParsedMediaRecord extends ParsedMedia {
     xref: string;
-    /** Canonical top-level primary owners emitted as `_PRIM @I...@`. */
+    /** Canonical top-level primary owners emitted as `_PRIM @I...@`, and family photos as `_PRIM @F...@` (#119). */
     primaryPersonXrefs: string[];
 }
 

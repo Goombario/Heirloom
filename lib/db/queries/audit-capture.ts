@@ -440,6 +440,43 @@ export async function auditCanonicalPrimaryChange(params: {
     }, params.exec);
 }
 
+/** Capture a family photo choice (#119, ADR 0047), as a profile picture change is captured. */
+export async function auditFamilyPhotoChange(params: {
+    familyId: number;
+    oldMediaId: number | null;
+    newMediaId: number | null;
+    treeOwnerId: number;
+    userId: number;
+    treeId: number;
+    exec: Queryable;
+}): Promise<number | null> {
+    if (params.oldMediaId === params.newMediaId) return null;
+    const entityId = params.newMediaId ?? params.oldMediaId;
+    if (entityId == null) return null;
+    let names: string | undefined;
+    try {
+        names = await familyNames(params.exec, params.treeId, params.familyId);
+    } catch {
+        // The label is cosmetic; a failed lookup keeps the id fallback.
+    }
+    return insertAuditEntry({
+        TreeOwnerId: params.treeOwnerId,
+        UserId: params.userId,
+        TreeId: params.treeId,
+        Action: 'update',
+        EntityType: 'media',
+        EntityId: entityId,
+        EntityLabel: `Family photo — ${names ?? `Family #${params.familyId}`}`,
+        Changes: ({
+            summary: { kind: FAMILY_PHOTO_SUMMARY },
+            familyId: params.familyId,
+            fields: {
+                FamilyPhotoMediaId: { old: params.oldMediaId, new: params.newMediaId },
+            },
+        } as unknown) as NewAuditLogEntry['Changes'],
+    }, params.exec);
+}
+
 /** Record canonical People ownership independently of lossy Media.PersonId mirrors. */
 export async function auditCanonicalMediaOwnershipChange(params: {
     mediaId: number;
@@ -730,6 +767,9 @@ export type PlaceEditKind = 'coordinates' | 'geocode' | 'pin_hidden' | 'pin_clea
 
 /** `Changes.summary.kind` of a revertable place edit entry. */
 export const PLACE_EDIT_SUMMARY = 'place_edit';
+
+/** `Changes.summary.kind` of a family photo choice (#119). */
+export const FAMILY_PHOTO_SUMMARY = 'family_photo';
 
 /** The readable values of one place state; the raw columns ride in `places`. */
 function placeDisplay(state: PlaceEditState | null, parentNames: Map<number, string>): Record<string, unknown> {

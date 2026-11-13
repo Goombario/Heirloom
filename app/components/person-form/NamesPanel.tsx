@@ -112,6 +112,7 @@ interface NamesPanelProps {
 
 export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete, onAdd, onRename, onRemove, onSetPrimary, busy = false }: NamesPanelProps) {
     const t = useTranslations('personDetail');
+    const tDesk = useTranslations('personDesktop');
     const tc = useTranslations('common');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
@@ -157,14 +158,14 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
     };
 
     // Stored values may be GEDCOM text ("ABT 1890"): always shown through the app's
-    // date formatting, never raw (#898).
-    const datesUsed = (v: NameVariant): string => {
+    // date formatting, never raw (#898). A name used throughout life shows no range.
+    const datesUsed = (v: NameVariant): string | null => {
         const from = formatDateForDisplay(v.FromDate, language, dateWords);
         const to = formatDateForDisplay(v.ToDate, language, dateWords);
         if (from && to) return `${from} – ${to}`;
         if (from) return t('dates_from', { date: from });
         if (to) return t('dates_until', { date: to });
-        return t('throughout_life');
+        return null;
     };
 
     const handleConfirmRemove = async () => {
@@ -187,114 +188,89 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
 
     const hasActions = canEdit || canDelete;
     const displayName = (v: NameVariant) => (v.Type === 'Nickname' ? `“${v.Name}”` : v.Name);
-    const colCount = 3 + (canEdit ? 1 : 0) + (hasActions ? 1 : 0);
+
+    /** The right-hand facts: the type, the dates used, and "shown" on the name the page uses. */
+    const meta = (type: string, dates: string | null, shown: boolean) => (
+        <span className="name-list__meta">
+            {type}
+            {dates && <> · <span className="date-mono">{dates}</span></>}
+            {shown && <> · {tDesk('name_shown')}</>}
+        </span>
+    );
 
     return (
-        <div className="card">
-            {/* Row hover only where the rows actually do something: with edit rights each
-                variant row has a primary star and Edit/Remove. The read-only rendering has
-                none of those, so it gets no hover (#430). */}
-            {/* The table clips to the card's top corners; the add panel below stays
-                unclipped so its type menu can open past the card. */}
-            <div className="overflow-hidden rounded-t-card">
-            <table className={canEdit ? 't t-rows-interactive' : 't'}>
-                <thead>
-                    <tr>
-                        {canEdit && <th className="w-11" aria-hidden="true" />}
-                        <th className="sm:w-[120px]">{t('col_type')}</th>
-                        <th>{t('col_name')}</th>
-                        {/* Dates used hides on phones (#807). No Source column: each
-                            name's cite pin sits beside it (#898). */}
-                        <th className="hidden sm:table-cell">{t('col_dates')}</th>
-                        {hasActions && <th aria-hidden="true" />}
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr className="[&>td]:!align-middle">
-                        {canEdit && (
-                            <td>
-                                <PrimaryStar
-                                    active={!hasPrimaryVariant}
-                                    onClick={() => onSetPrimary(null)}
-                                    label={!hasPrimaryVariant ? t('unset_primary') : t('set_primary')}
-                                    disabled={busy}
+        <div>
+            {/* The v1.1 board's names list: each name in serif with its cite pin, its
+                type and dates muted on the right, hairlines between. */}
+            <ul className="name-list">
+                <li className="name-list__row">
+                    <span className="name-list__name">
+                        <span className="serif">{givenName}</span>
+                        {renderCitePin(FACT_TABLES.PERSON_NAME, person.Id, t('col_name'))}
+                    </span>
+                    {meta(tDesk('name_on_record'), null, !hasPrimaryVariant)}
+                    {canEdit && (
+                        <PrimaryStar
+                            active={!hasPrimaryVariant}
+                            onClick={() => onSetPrimary(null)}
+                            label={!hasPrimaryVariant ? t('unset_primary') : t('set_primary')}
+                            disabled={busy}
+                        />
+                    )}
+                    {hasActions && <span />}
+                </li>
+                {variants.map(v => editingId === v.Id ? (
+                    <li key={v.Id} className="name-list__editor">
+                        <div className="inline-panel flex flex-col gap-3" role="group" aria-label={tc('edit_named', { name: v.Name })}>
+                            <div className="row gap-3 items-center flex-wrap">
+                                <span className="text-meta text-text-muted">{vtypeLabel(v.Type)}</span>
+                                <Input
+                                    size="sm"
+                                    wrapClassName="flex-1 min-w-[160px]"
+                                    value={editingName}
+                                    onChange={(e) => setEditingName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') { e.preventDefault(); commitEditVariant(); }
+                                        else if (e.key === 'Escape') { e.preventDefault(); cancelEditVariant(); }
+                                    }}
+                                    autoFocus
+                                    aria-label={t('variant_edit_name')}
                                 />
-                            </td>
+                            </div>
+                            <DatesUsedFields value={editingDates} onChange={setEditingDates} />
+                            <EditorActions size="sm" onSave={commitEditVariant} onCancel={cancelEditVariant} saving={busy} saveDisabled={!editingName.trim()} />
+                        </div>
+                    </li>
+                ) : (
+                    <li key={v.Id} className={cx('name-list__row', hasActions && 'row-host')}>
+                        <span className="name-list__name">
+                            <span className="serif">{displayName(v)}</span>
+                            {renderCitePin(FACT_TABLES.NAME_VARIANT, v.Id, vtypeLabel(v.Type))}
+                        </span>
+                        {meta(vtypeLabel(v.Type), datesUsed(v), !!v.IsPrimary)}
+                        {canEdit && (
+                            <PrimaryStar
+                                active={!!v.IsPrimary}
+                                onClick={() => onSetPrimary(v.Id)}
+                                label={v.IsPrimary ? t('unset_primary') : t('set_primary')}
+                                disabled={busy}
+                            />
                         )}
-                        {/* A name's type is a fact about it, so muted text, not a tag (#757). */}
-                        <td className="text-meta text-text-muted">{t('vtype_given')}</td>
-                        <td>
-                            <span className="inline-flex items-center gap-1.5 flex-wrap">
-                                {givenName}
-                                {renderCitePin(FACT_TABLES.PERSON_NAME, person.Id, t('col_name'))}
-                            </span>
-                        </td>
-                        <td className="muted hidden sm:table-cell">{person.DeathDate ? t('dates_birth_death') : t('dates_birth_present')}</td>
-                        {hasActions && <td />}
-                    </tr>
-                    {variants.map(v => editingId === v.Id ? (
-                        <tr key={v.Id}>
-                            <td colSpan={colCount} className="!p-2">
-                                <div className="inline-panel flex flex-col gap-3" role="group" aria-label={tc('edit_named', { name: v.Name })}>
-                                    <div className="row gap-3 items-center flex-wrap">
-                                        <span className="text-meta text-text-muted">{vtypeLabel(v.Type)}</span>
-                                        <Input
-                                            size="sm"
-                                            wrapClassName="flex-1 min-w-[160px]"
-                                            value={editingName}
-                                            onChange={(e) => setEditingName(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') { e.preventDefault(); commitEditVariant(); }
-                                                else if (e.key === 'Escape') { e.preventDefault(); cancelEditVariant(); }
-                                            }}
-                                            autoFocus
-                                            aria-label={t('variant_edit_name')}
-                                        />
-                                    </div>
-                                    <DatesUsedFields value={editingDates} onChange={setEditingDates} />
-                                    <EditorActions size="sm" onSave={commitEditVariant} onCancel={cancelEditVariant} saving={busy} saveDisabled={!editingName.trim()} />
-                                </div>
-                            </td>
-                        </tr>
-                    ) : (
-                        <tr key={v.Id} className={cx('[&>td]:!align-middle', hasActions && 'row-host')}>
-                            {canEdit && (
-                                <td>
-                                    <PrimaryStar
-                                        active={!!v.IsPrimary}
-                                        onClick={() => onSetPrimary(v.Id)}
-                                        label={v.IsPrimary ? t('unset_primary') : t('set_primary')}
-                                        disabled={busy}
-                                    />
-                                </td>
-                            )}
-                            <td className="text-meta text-text-muted">{vtypeLabel(v.Type)}</td>
-                            <td>
-                                <span className="inline-flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-medium">{displayName(v)}</span>
-                                    {renderCitePin(FACT_TABLES.NAME_VARIANT, v.Id, vtypeLabel(v.Type))}
-                                </span>
-                            </td>
-                            <td className="muted hidden sm:table-cell">{datesUsed(v)}</td>
-                            {hasActions && (
-                                <td style={{ textAlign: 'right' }}>
-                                    <RowActions
-                                        editLabel={tc('edit_named', { name: v.Name })}
-                                        onEdit={canEdit ? () => startEditVariant(v) : undefined}
-                                        deleteText={tc('remove')}
-                                        deleteLabel={tc('remove_named', { name: v.Name })}
-                                        onDelete={canDelete ? () => setConfirmRemove(v) : undefined}
-                                        disabled={busy}
-                                    />
-                                </td>
-                            )}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            </div>
+                        {hasActions && (
+                            <RowActions
+                                editLabel={tc('edit_named', { name: v.Name })}
+                                onEdit={canEdit ? () => startEditVariant(v) : undefined}
+                                deleteText={tc('remove')}
+                                deleteLabel={tc('remove_named', { name: v.Name })}
+                                onDelete={canDelete ? () => setConfirmRemove(v) : undefined}
+                                disabled={busy}
+                            />
+                        )}
+                    </li>
+                ))}
+            </ul>
             {canEdit && (adding ? (
-                <div className="inline-panel m-3 flex flex-col gap-3" role="group" aria-label={t('add_name')}>
+                <div className="inline-panel mt-3 flex flex-col gap-3" role="group" aria-label={t('add_name')}>
                     <div className="row gap-2 flex-wrap items-center">
                         <Select
                             label={t('col_type')}
@@ -323,7 +299,7 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
                     <EditorActions size="sm" onSave={handleAdd} onCancel={cancelAdd} saving={busy} saveLabel={t('add_name')} saveDisabled={!newName.trim()} />
                 </div>
             ) : (
-                <AddRow ref={addRef} label={t('add_name')} onClick={() => { cancelEditVariant(); setAdding(true); }} disabled={busy} className="border-t border-border-light rounded-b-card" />
+                <div className="ledger-foot ledger-foot--plain"><AddRow ref={addRef} label={t('add_name')} onClick={() => { cancelEditVariant(); setAdding(true); }} disabled={busy} /></div>
             ))}
             {confirmRemove && (
                 <ConfirmDialog
