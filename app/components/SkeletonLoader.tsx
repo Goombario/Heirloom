@@ -59,7 +59,7 @@ function RowBars({ rows }: { rows: number }) {
  * loaded `CoverBand` lands on the same shapes. `split` is the family page's two
  * partner halves. It draws bars, never an empty heading.
  */
-export function CoverSkeleton({ portrait = 'single', className }: { portrait?: 'single' | 'split'; className?: string }) {
+function CoverSkeleton({ portrait = 'single', className }: { portrait?: 'single' | 'split'; className?: string }) {
     return (
         <div className={`cover cover--cover cover--portrait${className ? ` ${className}` : ''}`} data-testid="cover-skeleton">
             <div className="hero-dark cover-band cover-band--cover">
