@@ -106,7 +106,9 @@ describe('PhotosPanel (#1155)', () => {
     render(<ControlledPhotosPanel />);
 
     const panel = screen.getByRole('complementary', { name: 'Filter photos' });
-    expect(panel).toHaveClass('sticky', 'rounded-panel', 'bg-card');
+    // An open pane on the parchment (no white card), kept in view while the list scrolls.
+    expect(panel).toHaveClass('sticky');
+    expect(panel).not.toHaveClass('bg-card');
     expect(screen.getByRole('button', { name: 'All media 146' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('104')).toHaveClass('text-evidence');
     expect(screen.queryByText('Photo order')).not.toBeInTheDocument();

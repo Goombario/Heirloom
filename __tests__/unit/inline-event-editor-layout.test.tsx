@@ -80,7 +80,9 @@ describe('InlineEventEditor action row and mobile sheet (#797)', () => {
         expect(screen.getByRole('heading', { name: 'edit_named' })).toBeInTheDocument();
         expect(panel).toHaveClass('inline-panel');
         expect(panel.contains(document.activeElement)).toBe(true);
-        expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'field_type' }));
+        // Editing keeps its type behind "Change type" (fix 02), so the date comes first.
+        expect(screen.queryByRole('combobox', { name: 'field_type' })).toBeNull();
+        expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'qualifier_label' }));
     });
 
     it('opens in a sheet below md, with the qualifier stacked and the notes rail flat', () => {

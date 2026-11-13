@@ -19,10 +19,10 @@ describe('date field layout contracts', () => {
         expect(editor).toContain('<div className="grid gap-2.5 mb-2.5">');
     });
 
-    it('stacks the family timeline marriage Date above Place', () => {
+    it('keeps the family timeline marriage Date at least 240px wide, wrapping Place below when narrow', () => {
         const marriageEditor = source('app/families/view/InlineMarriageEditor.tsx');
 
-        expect(marriageEditor).toContain('<div className="grid grid-cols-1 gap-3">');
+        expect(marriageEditor).toContain('grid-cols-[repeat(auto-fit,minmax(240px,1fr))]');
         expect(marriageEditor).not.toContain('sm:grid-cols-[1fr_2fr]');
     });
 });

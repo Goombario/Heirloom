@@ -78,11 +78,19 @@ describe('desktop person timeline (#49)', () => {
         expect(screen.getByRole('button', { name: en.common.save_changes })).toBeInTheDocument();
     });
 
-    it('shows the marriage and the births of own and adopted children, read-only, never a step-child', () => {
+    it('shows the marriage and the births of own and adopted children, read-only, never a step-child', async () => {
+        const user = userEvent.setup();
         renderPanel();
-        expect(screen.getByRole('link', { name: /Marriage to Bob Owner/ })).toHaveAttribute('href', '/families/view?id=300');
-        expect(screen.getByRole('link', { name: /Birth of Cara Owner/ })).toHaveAttribute('href', '/people/view?id=20');
-        expect(screen.getByRole('link', { name: /Birth of Dan Owner/ })).toBeInTheDocument();
+        // Rows edited elsewhere open read-only in place, with a link to where they are edited (fix 01).
+        const marriage = screen.getByRole('button', { name: /Marriage to Bob Owner/ });
+        expect(marriage).toHaveAttribute('aria-expanded', 'false');
+        await user.click(marriage);
+        expect(marriage).toHaveAttribute('aria-expanded', 'true');
+        expect(document.querySelector('a.ledger-ro__edit')).toHaveAttribute('href', '/families/view?id=300');
+        await user.click(marriage);
+        await user.click(screen.getByRole('button', { name: /Birth of Cara Owner/ }));
+        expect(document.querySelector('a.ledger-ro__edit')).toHaveAttribute('href', '/people/view?id=20');
+        expect(screen.getByRole('button', { name: /Birth of Dan Owner/ })).toBeInTheDocument();
         expect(screen.queryByText(/Birth of Eve/)).toBeNull();
         // Read-only: only the person's own rows carry a delete.
         expect(screen.queryByRole('button', { name: new RegExp(`^${deleteName('')}.*Marriage`, 'i') })).toBeNull();
