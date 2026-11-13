@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllEvents, getEventsByPersonId, getEventsByFamilyId } from '@/lib/db/queries/events';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
         const { searchParams } = new URL(request.url);
 
         const event = await createEventService({

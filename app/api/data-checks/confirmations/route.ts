@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const body = (await request.json().catch(() => null)) as { problemId?: unknown; reason?: unknown } | null;
+        const body = (await readJsonObject(request).catch(() => null)) as { problemId?: unknown; reason?: unknown } | null;
         if (!body || typeof body !== 'object') {
             return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
         }

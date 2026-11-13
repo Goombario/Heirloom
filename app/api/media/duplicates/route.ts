@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { rateLimit } from '@/lib/rate-limit';
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         // A malformed body is a client error, not a 500: fall through to the
         // service's own "hashes must be an array" ValidationError → 400.
-        const body = await request.json().catch(() => ({}));
+        const body = await readJsonObject(request).catch(() => ({}));
 
         const matches = await findDuplicatesService({
             hashes: (body as { hashes?: unknown }).hashes,

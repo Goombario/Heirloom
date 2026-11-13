@@ -35,3 +35,17 @@ export function parseOptionalIdParam(value: string | null | undefined, name: str
     if (id === null) throw new ValidationError(`Invalid ${name}`);
     return id;
 }
+
+/**
+ * An id read from a JSON body: a whole positive number, or its digits as a
+ * string. Anything else (an array, `1.5`, `true`) is a ValidationError rather
+ * than a value that `Number()` coerces and SQL then writes or rejects (#51, L-1).
+ * `null` and `undefined` pass through, for fields where clearing is allowed.
+ */
+export function parseBodyId(value: unknown, name: string): number | null | undefined {
+    if (value === undefined || value === null) return value;
+    if (typeof value !== 'number' && typeof value !== 'string') throw new ValidationError(`Invalid ${name}`);
+    const id = parseIdParam(value);
+    if (id === null) throw new ValidationError(`Invalid ${name}`);
+    return id;
+}

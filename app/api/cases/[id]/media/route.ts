@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -20,7 +21,7 @@ export async function POST(
         const requestedTreeId = parseIdParam(searchParams.get('treeId'));
         const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
         const mediaIds: number[] = Array.isArray(body.mediaIds)
             ? body.mediaIds.map((mid: unknown) => Number(mid)).filter((n: number) => !isNaN(n))
             : [];

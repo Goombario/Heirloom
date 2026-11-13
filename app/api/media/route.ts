@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { deleteMediaBatchService, listMediaService } from '@/lib/services/media';
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
 
         const { searchParams } = new URL(request.url);
         const media = await createMetadataMediaService({
@@ -117,7 +118,7 @@ export async function DELETE(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         let body: unknown;
         try {
-            body = await request.json();
+            body = await readJsonObject(request);
         } catch {
             throw new ValidationError('Request body must be valid JSON');
         }

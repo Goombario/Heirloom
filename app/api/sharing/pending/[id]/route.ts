@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isDesktopMode } from '@/lib/auth/get-user-from-request';
 import { updatePendingShareService, deletePendingShareService } from '@/lib/services/sharing';
@@ -27,7 +28,7 @@ export async function PUT(
             return NextResponse.json({ error: 'Invalid share ID' }, { status: 400 });
         }
 
-        const body = await request.json() as { permission?: unknown };
+        const body = await readJsonObject(request) as { permission?: unknown };
         const pending = await updatePendingShareService({
             pendingId,
             permission: body.permission,

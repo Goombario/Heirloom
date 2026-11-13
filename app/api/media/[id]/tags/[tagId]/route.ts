@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { updateTagService, removeTagService } from '@/lib/services/media';
@@ -24,7 +25,7 @@ export async function PUT(
             return NextResponse.json({ error: 'Invalid tag ID' }, { status: 400 });
         }
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
         const { searchParams } = new URL(request.url);
         const tag = await updateTagService({
             requestedTreeId: parseIdParam(searchParams.get('treeId')),
