@@ -89,4 +89,15 @@ describe('desktop home data (#53)', () => {
     expect(dash.openCases[0].LastCommentAt).toBeTruthy();
     expect(dash.resumedPerson?.nextSteps.total).toBeGreaterThanOrEqual(0);
   });
+
+  it('shows the person the tree opens at when no person was edited (#127)', async () => {
+    expect((await getDashboardService(ctx())).startPerson).toBeNull();
+    // As after an import: the people exist but the audit log names none of them.
+    await query(`DELETE FROM "AuditLog" WHERE "TreeId" = $1 AND "EntityType" = 'person'`, [treeId]);
+    const dash = await getDashboardService(ctx());
+    expect(dash.resumedPerson).toBeNull();
+    // Elsa and Per both head three generations; the tie goes to the first one added.
+    expect(dash.startPerson).toMatchObject({ FirstName: 'Elsa', LastName: 'Berg' });
+    expect(dash.startPerson?.nextSteps.steps.length).toBeGreaterThan(0);
+  });
 });

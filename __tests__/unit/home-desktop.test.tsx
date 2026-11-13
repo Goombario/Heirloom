@@ -42,6 +42,7 @@ const data: DashboardData = {
   placeTotals: { places: 30, countries: 4 },
   yearSpan: { first: 1702, last: 1998 },
   resumedPerson: anna,
+  startPerson: null,
   recentPeople: [{ Id: 2, FirstName: 'Johan', LastName: 'Lindqvist', EffectiveFirstName: 'Johan', Nickname: null, Sex: 'M', PrimaryMediaId: null, FocalX: null, FocalY: null, FocalRadius: null, lastChange: change }],
 };
 
@@ -49,13 +50,13 @@ const wrap = (ui: ReactNode) => render(<NextIntlClientProvider locale="en" messa
 
 describe('DesktopHome (#53)', () => {
   it('names the tree with its counts and years in the band', () => {
-    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit treeId={1} />);
+    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Lindqvist family' })).toBeInTheDocument();
     expect(screen.getByText(/412 people · 96 families/)).toHaveTextContent('1702–1998');
   });
 
   it('shows Next steps for editors, each leaving for the person page', () => {
-    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit treeId={1} />);
+    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
     const next = screen.getByRole('heading', { name: 'Next for Anna' }).closest('div')!.parentElement!;
     expect(within(next).getByText('5 open')).toBeInTheDocument();
     expect(within(next).getByRole('link', { name: /Death place/ })).toHaveAttribute('href', '/people/view?id=1#death');
@@ -65,7 +66,7 @@ describe('DesktopHome (#53)', () => {
   });
 
   it('gives a viewer Last updated, no Next steps, no Quick add and no data-check rows', () => {
-    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit={false} treeId={1} />);
+    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit={false} canRestore={false} treeId={1} />);
     expect(screen.getByText('Last updated')).toBeInTheDocument();
     expect(screen.queryByText('Next for Anna')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Quick add' })).toBeNull();
@@ -74,7 +75,7 @@ describe('DesktopHome (#53)', () => {
   });
 
   it('lists recent people with the time at the right, and cases with their last comment', () => {
-    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit treeId={1} />);
+    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
     const johan = screen.getByRole('link', { name: /Johan Lindqvist/ });
     expect(johan).toHaveTextContent('2 hours ago');
     const kase = screen.getByRole('link', { name: /Where did Anna live/ });
@@ -84,9 +85,42 @@ describe('DesktopHome (#53)', () => {
   });
 
   it('shows each place with its country and the rail foot line', () => {
-    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit treeId={1} />);
+    wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
     // The count shows as a number; its accessible name says what it counts.
     expect(screen.getByRole('link', { name: /Duluth USA 12 records/ })).toHaveTextContent('12');
     expect(screen.getByText(/30 places in 4 countries/)).toBeInTheDocument();
+  });
+
+  it('shows the starting person with the same wording when nothing was edited (#127)', () => {
+    const { lastChange: _, ...start } = anna;
+    void _;
+    wrap(<DesktopHome data={{ ...data, resumedPerson: null, startPerson: start }} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
+    const card = screen.getByRole('region', { name: 'Pick up where you left off' });
+    expect(within(card).getByRole('link', { name: /Anna Lindqvist/ })).toHaveAttribute('href', '/people/view?id=1');
+    expect(within(card).getByRole('heading', { name: 'Next for Anna' })).toBeInTheDocument();
+    expect(card).not.toHaveTextContent(/ago/);
+    // A viewer sees the same wording: there is no "last update" to name.
+    wrap(<DesktopHome data={{ ...data, resumedPerson: null, startPerson: start }} phase="ready" datesToCheck={0} duplicates={0} canEdit={false} canRestore={false} treeId={1} />);
+    expect(screen.queryByText('Last updated')).toBeNull();
+  });
+
+  it('keeps empty sections on the page with a line about what goes there (#127)', () => {
+    const quiet: DashboardData = { ...data, openCases: [], recentPeople: [], places: [], placeTotals: { places: 0, countries: 0 } };
+    wrap(<DesktopHome data={quiet} phase="ready" datesToCheck={0} duplicates={0} canEdit canRestore treeId={1} />);
+    expect(screen.getByRole('heading', { name: 'Recently edited' })).toBeInTheDocument();
+    expect(screen.getByText('Nothing edited yet')).toBeInTheDocument();
+    expect(screen.getByText('No open cases')).toBeInTheDocument();
+    const research = screen.getByRole('region', { name: 'Research' });
+    expect(within(research).getByRole('link', { name: 'New case' })).toHaveAttribute('href', '/cases/new');
+    expect(screen.getByText('All clear')).toBeInTheDocument();
+    expect(screen.getByText('No places yet')).toBeInTheDocument();
+  });
+
+  it('gives a viewer no New case button and no All clear row (#127)', () => {
+    const quiet: DashboardData = { ...data, openCases: [], recentPeople: [] };
+    wrap(<DesktopHome data={quiet} phase="ready" datesToCheck={0} duplicates={0} canEdit={false} canRestore={false} treeId={1} />);
+    expect(screen.getByText('Editors start cases for open questions.')).toBeInTheDocument();
+    expect(screen.queryAllByRole('link', { name: 'New case' })).toHaveLength(0);
+    expect(screen.queryByText('All clear')).toBeNull();
   });
 });

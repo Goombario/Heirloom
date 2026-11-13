@@ -825,7 +825,8 @@ export interface OpenCase {
   /** The last comment's time and author (#53), null with no comment. */
   LastCommentAt: string | null; LastCommentUserId: number | null; LastCommentAuthor: string | null;
 }
-export interface ResumedPerson {
+/** A person as the desktop home's pick-up card shows them, without the change that brought them there. */
+export interface CardPerson {
   Id: number; FirstName: string | null; LastName: string | null; EffectiveFirstName: string | null;
   Nickname: string | null; Sex: string | null; BirthDate: string | null; BirthPlace: string | null;
   DeathDate: string | null; DeathPlace: string | null; IsDeceased: number | null; PrimaryMediaId: number | null;
@@ -835,6 +836,8 @@ export interface ResumedPerson {
   totalFacts: number; sourcedFacts: number;
   /** The desktop home's "Next for <name>" (#53): up to three gaps, and how many in all. */
   nextSteps: { steps: NextStep[]; total: number };
+}
+export interface ResumedPerson extends CardPerson {
   lastChange: { Action: string; EntityLabel: string | null; Changes: { fields?: Record<string, { old: unknown; new: unknown }> }; CreatedAt: string };
 }
 /** A recently edited person and their latest change (the phone home's "Recently edited"). */
@@ -856,6 +859,11 @@ export interface DashboardData {
   /** The earliest and latest birth or death year (#53's band). */
   yearSpan: { first: number | null; last: number | null };
   resumedPerson: ResumedPerson | null;
+  /**
+   * With no `resumedPerson` and at least one person: the person the tree opens at,
+   * which the desktop pick-up card shows instead (Heirloom #127). Null otherwise.
+   */
+  startPerson: CardPerson | null;
   /** Up to six other recently edited people, newest first, skipping `resumedPerson`. */
   recentPeople: RecentPerson[];
 }

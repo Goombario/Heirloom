@@ -11,6 +11,7 @@ import { DesktopHome } from '@/app/components/home/DesktopHome';
 export default function Home() {
     const { activeTreeId, activePermission, currentUserId } = useTree();
     const canEdit = activePermission !== 'view';
+    const canRestore = activePermission === 'owner' || activePermission === 'edit';
 
     // Let failures reject so useCachedResource records the error instead of caching
     // a swallowed null/[] as a successful value (which would stick until a write
@@ -51,7 +52,7 @@ export default function Home() {
 
     return (
         <PageShell topBar={phonePage} contentClassName="max-md:hidden">
-            <DesktopHome data={data} phase={phase} datesToCheck={datesToCheck} duplicates={duplicates} canEdit={canEdit} treeId={activeTreeId} />
+            <DesktopHome data={data} phase={phase} datesToCheck={datesToCheck} duplicates={duplicates} canEdit={canEdit} canRestore={canRestore} treeId={activeTreeId} />
         </PageShell>
     );
 }
