@@ -3321,7 +3321,8 @@
     "save_changes": "Save changes",
     "person_not_found": "Person not found",
     "unknown_person": "Unknown",
-    "note": "Note"
+    "note": "Note",
+    "quick_edit": "Quick edit"
   },
   "dateInput": {
     "placeholder": "e.g. 15 Mar 1945",

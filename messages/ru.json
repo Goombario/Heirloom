@@ -3321,7 +3321,8 @@
     "save_changes": "Сохранить",
     "person_not_found": "Человек не найден",
     "unknown_person": "Неизвестно",
-    "note": "Заметка"
+    "note": "Заметка",
+    "quick_edit": "Быстрое изменение"
   },
   "dateInput": {
     "placeholder": "напр. 15 марта 1945",

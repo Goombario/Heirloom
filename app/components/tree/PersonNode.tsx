@@ -9,6 +9,7 @@ import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
 import { StatusMark } from '../ui/StatusMark';
+import { Home as House } from '@/lib/icons';
 
 const PHOTO_HEIGHT = 64;
 
@@ -69,14 +70,14 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all overflow-hidden border border-border ${
-          data.isSelected
-            ? 'outline-6 outline-primary ring-10 ring-primary/50'
-            : data.isSidebarSelected
-            ? 'outline-4 outline-border ring-6 ring-border/30'
-            : ''
+          data.isSidebarSelected ? 'tree-card--picked' : ''
         }`}
         style={{ width: `${PERSON_CARD_WIDTH}px`, height: `${PERSON_CARD_HEIGHT}px`, display: 'flex', flexDirection: 'column', position: 'relative' }}
       >
+        {/* The start person keeps a small house marker; the open card is outlined navy (fix 09). */}
+        {data.isSelected && (
+          <span className="tree-card-start" aria-hidden="true"><House className="w-2.5 h-2.5" /></span>
+        )}
         {/* Photo Area */}
         <div
           className="relative flex items-center justify-center overflow-hidden"
