@@ -161,10 +161,10 @@ function measureRoute(page) {
       return style.visibility !== 'hidden' && style.display !== 'none';
     };
     const h1 = [...document.querySelectorAll('h1')].find(isVisible) || null;
-    // A v1.1 desktop page titles itself in the navy cover band (#55), its h1 inset
-    // in the band: the band's own edge is what lines up with the other pages' titles.
-    const band = h1 ? h1.closest('.cover-band') : null;
-    const h1Left = h1 ? (band || h1).getBoundingClientRect().left : null;
+    // A v1.1 desktop page titles itself in the cover band (#55). The band runs edge
+    // to edge and pads its content back to the column, so the h1's own edge is what
+    // lines up with the other pages' titles.
+    const h1Left = h1 ? h1.getBoundingClientRect().left : null;
 
     return { mainCount, pageShellVariant, h1Left };
   });
