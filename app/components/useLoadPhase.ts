@@ -71,5 +71,10 @@ export function useLoadPhase(
     return () => clearTimeout(holdTimer);
   }, [loading, delay, minDuration]);
 
+  // The effect above moves the phase one render late. On the render where
+  // `loading` turns true the stored phase can still be `ready` from the last
+  // record, and a page would draw its not-found state for a frame (#67), so
+  // that render already reports the phase the effect is about to set.
+  if (loading && phase === 'ready') return delay === 0 ? 'loading' : 'pending';
   return phase;
 }

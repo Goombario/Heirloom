@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { initialsFromName } from '@/lib/utils/initials';
-import { Skeleton } from '@/app/components/SkeletonLoader';
+import { DetailBodySkeleton, Skeleton } from '@/app/components/SkeletonLoader';
 import { CoverBand, PageShell } from '@/app/components/ui';
 import { shortPlace } from '@/app/people/view/desktop/PersonCover';
 import { kindKey } from './mobile/model';
@@ -66,40 +66,8 @@ export function FamilySummaryView({ summary, treeId }: { summary: FamilySummary;
                     className="cover--family"
                 />
 
-                {/* Body still loading. */}
-                <div className="layout-2col-family mt-10">
-                    <div className="flex flex-col gap-3.5 min-w-0">
-                        <Skeleton className="h-4" style={{ width: '30%' }} />
-                        <div className="card card-pad flex flex-col gap-3.5">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className="flex flex-col gap-1.5">
-                                    <Skeleton className="h-[13px]" style={{ width: '35%' }} />
-                                    <Skeleton className="h-[11px]" style={{ width: '55%' }} />
-                                </div>
-                            ))}
-                        </div>
-                        <Skeleton className="h-4" style={{ width: '25%' }} />
-                        <div className="card card-pad flex flex-col gap-3">
-                            {Array.from({ length: 2 }).map((_, i) => (
-                                <div key={i} className="flex items-center gap-2.5">
-                                    <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                                    <Skeleton className="h-3 flex-1" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                        <Skeleton className="h-4" style={{ width: '50%' }} />
-                        <div className="card card-pad flex flex-col gap-3">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <div key={i} className="flex items-center gap-2.5">
-                                    <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                                    <Skeleton className="h-3 flex-1" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </PageShell>
+                {/* Body still loading: the live page's indexed body and rail (#63). */}
+                <DetailBodySkeleton />
+        </PageShell>
     );
 }
