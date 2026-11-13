@@ -6,6 +6,9 @@ import { formatDateForDisplay, formatYearOrEmpty, parseDateComponents, sortableY
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import GuardedLink from '@/app/components/GuardedLink';
 import type { LedgerItem } from '@/app/components/ui';
+import PersonAvatar from '@/app/components/PersonAvatar';
+import { displayFullName, type DisplayNameParts } from '@/lib/utils/names';
+import { getInitials } from '@/lib/utils/initials';
 
 /**
  * The ledger's date column (v1.1 locked boards): the year, then the day and month
@@ -43,4 +46,31 @@ export function ledgerPlaces() {
       </GuardedLink>
     );
   };
+}
+
+interface LedgerPerson extends DisplayNameParts {
+  Id: number;
+  Sex?: string | null;
+  PrimaryMediaId?: number | null;
+  FocalX?: number | null;
+  FocalY?: number | null;
+  FocalRadius?: number | null;
+}
+
+/** The people a read-only event names: a face and a serif name, each a link to the person. */
+export function LedgerPeople({ people, treeId }: { people: LedgerPerson[]; treeId: number | null }) {
+  return (
+    <>
+      {people.map((p) => {
+        const name = displayFullName(p) || '?';
+        return (
+          <GuardedLink key={p.Id} href={`/people/view?id=${p.Id}`} className="ledger-ro__person focus-ring rounded-sm">
+            <PersonAvatar as="span" mediaId={p.PrimaryMediaId} treeId={treeId} name={name} initials={getInitials(p.FirstName, p.LastName)}
+              sex={p.Sex} size={24} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius} />
+            {name}
+          </GuardedLink>
+        );
+      })}
+    </>
+  );
 }

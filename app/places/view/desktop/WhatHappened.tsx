@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ActionLink, AvatarStack, FilterChip, SectionHeader, SegmentedControl } from '@/app/components/ui';
+import { ActionLink, AvatarStack, Button, FilterChip, SectionHeader, SegmentedControl } from '@/app/components/ui';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import { initialsFromName } from '@/lib/utils/initials';
 import { useLanguage } from '@/app/components/LanguageProvider';
@@ -87,10 +87,11 @@ function RecordPlace({ record, placeId, placeName }: { record: PlaceRecord; plac
  * The read-only summary an opened record shows in place (#56): its date and place,
  * its people, and "Edit on X's page ↗" for those who can edit.
  */
-function RecordSummary({ record, placeId, placeName, canEdit, treeId }: {
-    record: PlaceRecord; placeId: number | null; placeName: string; canEdit: boolean; treeId: number | null;
+function RecordSummary({ record, placeId, placeName, canEdit, treeId, onClose }: {
+    record: PlaceRecord; placeId: number | null; placeName: string; canEdit: boolean; treeId: number | null; onClose: () => void;
 }) {
     const t = useTranslations('placeDesktop');
+    const tKit = useTranslations('detailKit');
     const date = useDate();
     return (
         <div className="place-evsum">
@@ -109,7 +110,7 @@ function RecordSummary({ record, placeId, placeName, canEdit, treeId }: {
             <RecordPeople record={record} treeId={treeId} />
             <div className="place-evsum__foot">
                 {canEdit ? <EditLink record={record} /> : <span />}
-                <span className="text-meta text-text-muted">{t('read_only_here')}</span>
+                <Button variant="outline" size="sm" onClick={onClose}>{tKit('ro_close')}</Button>
             </div>
         </div>
     );
@@ -142,7 +143,7 @@ function ChronicleRow({ record, open, onToggle, placeId, placeName, canEdit, tre
                 </span>
                 <AvatarStack people={record.people.map((p) => ({ id: p.id, name: p.name, sex: p.sex, mediaId: p.mediaId }))} size={28} max={FACES} treeId={treeId} />
             </button>
-            {open && <RecordSummary record={record} placeId={placeId} placeName={placeName} canEdit={canEdit} treeId={treeId} />}
+            {open && <RecordSummary record={record} placeId={placeId} placeName={placeName} canEdit={canEdit} treeId={treeId} onClose={onToggle} />}
         </li>
     );
 }

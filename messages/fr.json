@@ -5037,7 +5037,12 @@
     "range_of": "{from}–{to} sur {total}",
     "more_events": "{count, plural, one {# autre événement} other {# autres événements}}",
     "show_more_events": "Afficher {count, plural, one {# autre événement} other {# autres événements}}",
-    "show_fewer": "Afficher moins"
+    "show_fewer": "Afficher moins",
+    "ro_date": "Date",
+    "ro_place": "Lieu",
+    "ro_close": "Fermer",
+    "edit_on_page": "Modifier sur la page de {name}",
+    "edit_on_family": "Modifier sur la page de la famille"
   },
   "personDesktop": {
     "this_person": "cette personne",
@@ -5256,7 +5261,6 @@
     "search_use_anyway": "L’utiliser quand même",
     "old_pin": "Ancienne épingle",
     "location_saved": "Épingle de {place} déplacée",
-    "read_only_here": "Lecture seule ici. Les données se modifient sur leur propre page.",
     "names_and": "{first} et {last}",
     "record_of": "<type></type> de {who}",
     "show_all_records": "Afficher les {count} données",

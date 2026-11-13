@@ -5037,7 +5037,12 @@
     "range_of": "{from}–{to} of {total}",
     "more_events": "{count, plural, one {# more event} other {# more events}}",
     "show_more_events": "Show {count, plural, one {# more event} other {# more events}}",
-    "show_fewer": "Show fewer"
+    "show_fewer": "Show fewer",
+    "ro_date": "Date",
+    "ro_place": "Place",
+    "ro_close": "Close",
+    "edit_on_page": "Edit on {name}'s page",
+    "edit_on_family": "Edit on the family page"
   },
   "personDesktop": {
     "this_person": "this person",
@@ -5256,7 +5261,6 @@
     "search_use_anyway": "Use it anyway",
     "old_pin": "Old pin",
     "location_saved": "Moved the pin for {place}",
-    "read_only_here": "Read only here. Records are edited on their own page.",
     "names_and": "{first} and {last}",
     "record_of": "<type></type> of {who}",
     "show_all_records": "Show all {count} records",

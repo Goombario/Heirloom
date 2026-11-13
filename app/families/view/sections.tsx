@@ -12,7 +12,8 @@ import { getInitials } from '@/lib/utils/initials';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import Cite from '@/app/components/Cite';
 import { ActionLink, AddRow, Badge, Button, EditorActions, LedgerTimeline, Lifespan, PersonRow, RowAction, RowActions, Select, cx, type LedgerItem } from '@/app/components/ui';
-import { ledgerPlaces, useLedgerDate } from '@/app/components/ledgerCells';
+import { LedgerPeople, ledgerPlaces, useLedgerDate } from '@/app/components/ledgerCells';
+import { displayFullName } from '@/lib/utils/names';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { escapeToCancel, useEditorFocusReturn } from '@/app/hooks/useEditorFocusReturn';
 import PersonPicker, { type PersonPickerHandle } from '@/app/components/PersonPicker';
@@ -107,6 +108,7 @@ export function FamilyTimeline({
     const markRow = useTimelineMarks(marks);
     const [noteCounts, setNoteCounts] = useState<Record<number, number>>({});
     const dateColumn = useLedgerDate(language);
+    const tKit = useTranslations('detailKit');
 
     // The date as the row shows it, not the stored GEDCOM form (#901).
     const eventWhen = (ev: GedcomEvent) => [ev.Date && formatDateForDisplay(ev.Date, language, dateWords), ev.Place?.split(',')[0]?.trim()].filter(Boolean).join(' · ') || undefined;
@@ -280,7 +282,13 @@ export function FamilyTimeline({
             sortKey: sortableYear(child.BirthDate),
             ...dateColumn(child.BirthDate),
             title: t('ledger_birth_of', { name }),
-            href: `/people/view?id=${child.Id}`,
+            readOnly: {
+                date: child.BirthDate ? formatDateForDisplay(child.BirthDate, language, dateWords) : undefined,
+                place: child.BirthPlace ?? undefined,
+                people: <LedgerPeople people={[child]} treeId={activeTreeId} />,
+                editHref: canEdit ? `/people/view?id=${child.Id}` : undefined,
+                editLabel: tKit('edit_on_page', { name: displayFullName(child) || '?' }),
+            },
             place: child.BirthPlace,
             placeId: child.BirthPlaceId,
             // Only a recorded birth: the child's page shows no birth row to carry an empty one's citation.
@@ -298,7 +306,13 @@ export function FamilyTimeline({
             sortKey: sortableYear(ev.Date),
             ...dateColumn(ev.Date),
             title: label,
-            href: `/people/view?id=${child.Id}`,
+            readOnly: {
+                date: ev.Date ? formatDateForDisplay(ev.Date, language, dateWords) : undefined,
+                place: ev.Place ?? undefined,
+                people: <LedgerPeople people={[child]} treeId={activeTreeId} />,
+                editHref: canEdit ? `/people/view?id=${child.Id}` : undefined,
+                editLabel: tKit('edit_on_page', { name: displayFullName(child) || '?' }),
+            },
             place: ev.Place,
             placeId: ev.PlaceId,
             lines: ev.Description,
@@ -316,7 +330,13 @@ export function FamilyTimeline({
             sortKey: sortableYear(child.DeathDate),
             ...dateColumn(child.DeathDate),
             title: deathLabel,
-            href: `/people/view?id=${child.Id}`,
+            readOnly: {
+                date: child.DeathDate ? formatDateForDisplay(child.DeathDate, language, dateWords) : undefined,
+                place: child.DeathPlace ?? undefined,
+                people: <LedgerPeople people={[child]} treeId={activeTreeId} />,
+                editHref: canEdit ? `/people/view?id=${child.Id}` : undefined,
+                editLabel: tKit('edit_on_page', { name: displayFullName(child) || '?' }),
+            },
             age: age !== null ? tDesk('age_n', { age }) : null,
             place: child.DeathPlace,
             placeId: child.DeathPlaceId,
