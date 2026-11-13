@@ -77,12 +77,13 @@ export function EditorActions({ onSave, onCancel, saving, saveLabel, saveDisable
         </Button>
       )}
       {leading}
+      {/* Cancel, then the copper main action last, as on the locked boards. */}
       <div className="ml-auto flex items-center gap-2 flex-wrap">
+        <Button variant="ghost" size={size} onClick={onCancel} disabled={saving}>
+          {tc('cancel')}
+        </Button>
         <Button variant="primary" size={size} onClick={onSave} disabled={saving || saveDisabled}>
           {saving ? tc('saving') : saveLabel ?? tc('save_changes')}
-        </Button>
-        <Button variant="outline" size={size} onClick={onCancel} disabled={saving}>
-          {tc('cancel')}
         </Button>
       </div>
     </div>

@@ -68,7 +68,7 @@ export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, ca
                                     <LeadStatusDot status={status} className="mt-1 self-start" />
                                     <span className="grid min-w-0">
                                         <span className="text-sm font-medium leading-snug break-words">{lead.Question}</span>
-                                        <span className={cx('text-meta', current ? 'text-on-segment/70' : 'text-text-muted')}>{t(`status_${status}`)}</span>
+                                        <span className={cx('text-meta', current ? 'lead-rail-current__sub' : 'text-text-muted')}>{t(`status_${status}`)}</span>
                                     </span>
                                 </RailButton>
                             </li>
@@ -86,7 +86,7 @@ export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, ca
                 )}
                 <RailButton current={view?.kind === 'evidence'} onClick={() => onOpen({ kind: 'evidence' })} plain>
                     <span className="text-sm font-medium min-w-0 flex-1">{t('all_evidence')}</span>
-                    <span className={cx('font-mono text-meta', view?.kind === 'evidence' ? 'text-on-segment/70' : 'text-text-muted')}>{evidenceCount}</span>
+                    <span className={cx('font-mono text-meta', view?.kind === 'evidence' ? 'lead-rail-current__sub' : 'text-text-muted')}>{evidenceCount}</span>
                 </RailButton>
             </section>
 
@@ -177,7 +177,8 @@ export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, ca
     );
 }
 
-/** A rail row: bordered on white, filled navy when it is the page shown. */
+/** A rail row: bordered on white, filled with the band colour when it is the page shown
+ *  (navy light, the band's brown dark; the old ink fill went white in dark mode). */
 function RailButton({ current, onClick, plain = false, children }: { current: boolean; onClick: () => void; plain?: boolean; children: React.ReactNode }) {
     return (
         <button
@@ -188,11 +189,11 @@ function RailButton({ current, onClick, plain = false, children }: { current: bo
                 'rounded-card',
                 'w-full flex gap-2.5 border px-3 py-2.5 text-left cursor-pointer focus-ring',
                 plain ? 'items-center' : 'items-start',
-                current ? 'bg-segment-on text-on-segment border-segment-on' : 'bg-card text-text border-border hover:border-text-secondary',
+                current ? 'lead-rail-current' : 'bg-card text-text border-border hover:border-text-secondary',
             )}
         >
             {children}
-            <ChevronRight className={cx('w-4 h-4 shrink-0 self-center', current ? 'text-on-segment/70' : 'text-text-muted')} aria-hidden="true" />
+            <ChevronRight className={cx('w-4 h-4 shrink-0 self-center', current ? 'lead-rail-current__sub' : 'text-text-muted')} aria-hidden="true" />
         </button>
     );
 }

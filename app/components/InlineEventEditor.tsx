@@ -4,7 +4,9 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import DateInput from '@/app/components/DateInput';
 import { hasUncommittedDate } from '@/app/components/date-input/DateInput';
-import { EditorActions, fieldClass, SelectField } from '@/app/components/ui';
+import { EditorActions, FilterChip, fieldClass, Input, SelectField } from '@/app/components/ui';
+import { useLanguage } from '@/app/components/LanguageProvider';
+import { EVENT_TYPE_GROUPS } from '@/app/people/view/mobile/model';
 import { Sheet } from '@/app/components/ui/Sheet';
 import { useTree } from '@/app/contexts/TreeContext';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
@@ -121,6 +123,11 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     const [persistedEvent, setPersistedEvent] = useState<GedcomEvent | null>(() => event ?? null);
     const isEdit = persistedEvent != null;
     const isMobile = useIsMobile();
+    const tGroups = useTranslations('mobileEvents');
+    const { language } = useLanguage();
+    const dateFieldId = useId();
+    const placeFieldId = useId();
+    const headingId = useId();
     // Opening the editor puts focus in its first field (#798, KB-2).
     const panelRef = useRef<HTMLDivElement>(null);
     useFocusFirstField(panelRef);
@@ -147,6 +154,13 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     // Lazy initializers seed edit-mode state on first paint (no effect → no flicker).
     // A new event starts with no type: the user picks one before Save enables (FL-1).
     const [type, setType] = useState(() => event?.Type ?? defaultType ?? vitalLock ?? '');
+    // Picking a type on the chooser moves on to the date, as the board does.
+    const pickedType = useRef(false);
+    useEffect(() => {
+        if (!pickedType.current || !type) return;
+        pickedType.current = false;
+        panelRef.current?.querySelector<HTMLInputElement>(`#${CSS.escape(dateFieldId)}`)?.focus();
+    }, [type, dateFieldId]);
     const [date, setDate] = useState(() => event?.Date ?? '');
     const [place, setPlace] = useState(() => event?.Place ?? '');
     const [placeResolution, setPlaceResolution] = useState<HierarchyLevel[] | null | undefined>(undefined);
@@ -541,6 +555,150 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
         </>
     );
 
+    // ── The desktop panel (locked person board): a heading, a type chooser for a new
+    // event, then date and place side by side, a one-line description, the event's
+    // notes, its media, and Delete · Cancel · the copper Save on the action row.
+    const typeName = (value: string) => {
+        const name = optionLabel(value);
+        // "Add occupation": a lower-case type reads as English prose; other
+        // languages keep the label as written.
+        return language.startsWith('en') ? name.toLocaleLowerCase('en') : name;
+    };
+    // A new event with no preset type starts on the chooser, and can go back to it.
+    const choosing = !isEdit && !isSyntheticVital && !type;
+    const canChangeType = !isEdit && !isSyntheticVital && !defaultType && !!type;
+    const heading = choosing ? t('add_life_event')
+        : isEdit ? t('edit_named', { type: typeName(type) })
+        : t('add_named', { type: typeName(type) });
+    const chooserGroups: { key: string; label: string; types: string[] }[] = isPerson
+        ? [
+            ...EVENT_TYPE_GROUPS.map((g) => ({
+                key: g.key,
+                label: tGroups(`group_${g.key}`),
+                types: g.types.filter((v) => (v === 'BIRT' ? allowVital?.birth ?? false : v === 'DEAT' ? allowVital?.death ?? false : true)),
+            })),
+            { key: 'other', label: t('group_other'), types: ['EVEN'] },
+        ].filter((g) => g.types.length > 0)
+        : [{ key: 'family', label: '', types: typeOptions.map((o) => o.value) }];
+
+    const desktopChooser = (
+        <>
+            {chooserGroups.map((g) => (
+                <div key={g.key} className="grid gap-1.5">
+                    {g.label && <h4 className="eyebrow m-0 text-text-muted">{g.label}</h4>}
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label={g.label || heading}>
+                        {g.types.map((v) => (
+                            <FilterChip key={v} label={optionLabel(v)} onClick={() => { pickedType.current = true; setType(v); }} />
+                        ))}
+                    </div>
+                </div>
+            ))}
+            {isPerson && <p className="m-0 text-meta text-text-muted">{t('marriages_from_family')}</p>}
+            <div className="flex justify-end">
+                <button type="button" onClick={onCancel} className="inline-flex items-center h-8 px-3 rounded-btn text-sm text-text-secondary bg-transparent border-0 cursor-pointer hover:bg-hover-surface focus-ring">{tc('cancel')}</button>
+            </div>
+        </>
+    );
+
+    const fieldLabel = 'block text-meta font-medium mb-1 text-[color:var(--text-2)]';
+    const desktopFields = (
+        <>
+            {/* Type: only when editing an event that can change type (a new one picked it above). */}
+            {isEdit && !isSyntheticVital && (
+                <div className="max-w-[340px]">
+                    <label htmlFor={typeFieldId} className={fieldLabel}>{t('field_type')}</label>
+                    <SelectField id={typeFieldId} size="sm" value={type} onChange={setType}
+                        options={typeOptions.map((opt) => ({ value: opt.value, label: optionLabel(opt.value) }))} />
+                </div>
+            )}
+            <div className="grid gap-x-4 gap-y-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">
+                <div className="min-w-0">
+                    <label htmlFor={dateFieldId} className={fieldLabel}>{t('field_date')}</label>
+                    <DateInput id={dateFieldId} value={date} onChange={setDate} className={fieldClass('sm')} />
+                    <p className="m-0 mt-1 text-xs text-text-muted">{t('date_hint')}</p>
+                </div>
+                <div className="min-w-0">
+                    <label htmlFor={placeFieldId} className={fieldLabel}>{t('field_place')}</label>
+                    <LocationField
+                        id={placeFieldId}
+                        value={place}
+                        onChange={setPlace}
+                        onResolve={setPlaceResolution}
+                        onRemove={() => setPlaceResolution(null)}
+                        initialChain={factPlaceEntry(placeChains, place, placeId) ?? null}
+                        placeId={placeId}
+                        onPlaceIdChange={setPlaceId}
+                        treeId={activeTreeId}
+                        className={fieldClass('sm')}
+                        placeholder={t('place_search_placeholder')}
+                    />
+                </div>
+            </div>
+            {showCauseInput && (
+                <div>
+                    <label htmlFor={causeFieldId} className={fieldLabel}>{t('field_cause_of_death')}</label>
+                    <Input id={causeFieldId} size="sm" value={cause} onChange={(e) => setCause(e.target.value)} placeholder={t('cause_placeholder')} />
+                </div>
+            )}
+            {!isSyntheticVital && (isScopedVitalComposer ? (
+                <div>
+                    <label htmlFor={descriptionFieldId} className={fieldLabel}>{t('field_note')}</label>
+                    <textarea id={descriptionFieldId} rows={2} className={`${fieldClass('sm')} resize-y`} aria-describedby={noteHintId}
+                        value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('note_placeholder')} />
+                    <p id={noteHintId} className="m-0 mt-1 text-xs text-text-muted">
+                        {type === 'DEAT' ? t('note_scoped_death_hint') : t('note_scoped_birth_hint')}
+                    </p>
+                </div>
+            ) : (
+                <div>
+                    <label htmlFor={descriptionFieldId} className={fieldLabel}>{t('field_description')}</label>
+                    <Input id={descriptionFieldId} size="sm" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('description_line_placeholder')} />
+                </div>
+            ))}
+            {notesSlot && <div>{notesSlot}</div>}
+            {isSyntheticVital && target.kind === 'person' ? (
+                <div className="event-panel__media">
+                    <span className={fieldLabel}>{t('field_media_short')}</span>
+                    <OwnerMediaCard look="strip" ownerTable="People" ownerId={target.personId} ownerFact={vitalLock === 'DEAT' ? 'Death' : 'Birth'}
+                        treeId={activeTreeId} canEdit canDelete={canDelete} relevantPersonIds={relevantPersonIds ?? [target.personId]} onChanged={onRefresh} />
+                </div>
+            ) : isScopedVitalComposer && !vitalMediaStaged ? null : persistedEvent && draft.items.length === 0 && draft.failures.length === 0 ? (
+                <div className="event-panel__media">
+                    <span className={fieldLabel}>{t('field_media_short')}</span>
+                    <OwnerMediaCard look="strip" ownerTable="Events" ownerId={persistedEvent.Id} treeId={activeTreeId} canEdit canDelete={canDelete}
+                        relevantPersonIds={relevantPersonIds ?? (target.kind === 'person' ? [target.personId] : undefined)}
+                        galleryPersonId={target.kind === 'person' ? target.personId : undefined} />
+                </div>
+            ) : (
+                <div className="event-panel__media">
+                    <span className={fieldLabel}>{t('field_media_short')}</span>
+                    {vitalMediaStaged && <p className="mb-1.5 text-meta text-warning-text" role="status">{t('vital_media_unsupported')}</p>}
+                    <EventMediaDraftPanel
+                        look="plain"
+                        treeId={activeTreeId}
+                        draft={draft}
+                        ownerId={persistedEvent?.Id}
+                        relevantPersonIds={relevantPersonIds ?? (target.kind === 'person' ? [target.personId] : undefined)}
+                        galleryPersonId={target.kind === 'person' ? target.personId : undefined}
+                        onRetry={attachmentBusy || !persistedEvent ? undefined : () => { void processAttachments(persistedEvent.Id); }}
+                    />
+                </div>
+            )}
+            {attachmentNotice && <div className="text-sm text-warning-text" role="status">{attachmentNotice}</div>}
+            {error && <div className="text-meta" style={{ color: 'var(--error)' }}>{error}</div>}
+            <EditorActions
+                size="sm"
+                onSave={handleSave}
+                onCancel={onCancel}
+                saving={saving}
+                saveLabel={isEdit ? undefined : t('add_event')}
+                saveDisabled={!type || vitalMediaStaged}
+                onDelete={isEdit ? onDelete : undefined}
+                deleteLabel={t('delete_event')}
+            />
+        </>
+    );
+
     // Below md the editor opens in a bottom sheet with every field full width,
     // rather than squeezed beside the timeline's year gutter (#797, M-2).
     if (isMobile) {
@@ -551,10 +709,18 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
         );
     }
 
-    // One panel style for add and edit (#760): the collections pattern's inline panel.
+    // One panel style for add and edit (#760): the collections pattern's inline panel,
+    // headed and laid out as on the locked person board.
     return (
-        <div ref={panelRef} className="inline-panel" role="group" aria-label={label}>
-            {fields}
+        <div ref={panelRef} className="inline-panel event-panel grid gap-3.5" role="group" aria-labelledby={headingId}>
+            <div className="flex items-baseline justify-between gap-2.5">
+                <h3 id={headingId} className="m-0 text-base font-semibold text-text">{heading}</h3>
+                {choosing && <span className="text-meta text-text-muted">{t('choose_type')}</span>}
+                {canChangeType && (
+                    <button type="button" onClick={() => setType('')} className="p-0 bg-transparent border-0 text-sm text-link cursor-pointer hover:underline focus-ring rounded-sm">{t('change_type')}</button>
+                )}
+            </div>
+            {choosing ? desktopChooser : desktopFields}
         </div>
     );
 }

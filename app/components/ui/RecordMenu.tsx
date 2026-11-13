@@ -91,7 +91,7 @@ export function RecordMenu({ recordName, items, tone = 'surface', reveal = 'alwa
           setOpen(true);
         }}
         className={cx(
-          'grid place-items-center w-9 h-9 rounded-btn border cursor-pointer focus-ring transition-colors',
+          'grid place-items-center w-9 h-9 rounded-full border cursor-pointer focus-ring transition-colors',
           tone === 'island'
             ? 'border-[color:var(--color-control-border)] text-[color:var(--color-text)] hover:bg-[color:var(--color-surface-2)]'
             : cx('border-border text-text-secondary bg-card hover:bg-hover-surface', open && 'bg-surface-2 text-text'),

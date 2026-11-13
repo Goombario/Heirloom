@@ -23,6 +23,9 @@ vi.mock('@/lib/data', () => ({
 vi.mock('@/app/contexts/TreeContext', () => ({
     useTree: () => ({ activeTreeId: 99 }),
 }));
+vi.mock('@/app/components/LanguageProvider', () => ({
+    useLanguage: () => ({ language: 'en', setLanguage: vi.fn() }),
+}));
 vi.mock('@/app/components/media/OwnerMediaCard', () => ({
     OwnerMediaCard: () => null,
 }));
@@ -56,13 +59,19 @@ function renderPanel() {
     );
 }
 
-const deleteName = (event: string) => en.eventEdit.delete_event_named.replace('{event}', event);
+const editName = (event: string) => en.eventEdit.edit_event_named.replace('{event}', event);
+
+/** Rows open their editor; Delete lives on the editor's action row (v1.1). */
+async function openDelete(user: ReturnType<typeof userEvent.setup>, event: string) {
+    await user.click(await screen.findByRole('button', { name: new RegExp(`^${editName('')}.*${event}`, 'i') }));
+    await user.click(await screen.findByRole('button', { name: en.eventEdit.delete_event }));
+}
 
 describe('delete-event confirm label (#901)', () => {
     it('shows a custom event\'s date formatted, with the translated type', async () => {
         const user = userEvent.setup();
         renderPanel();
-        await user.click(await screen.findByRole('button', { name: new RegExp(`^${deleteName('')}.*Probate`, 'i') }));
+        await openDelete(user, 'Probate');
         expect(await screen.findByText('Probate · About 1955 · Deptford')).toBeInTheDocument();
         expect(screen.queryByText(/ABT 1955/)).not.toBeInTheDocument();
     });
@@ -70,7 +79,7 @@ describe('delete-event confirm label (#901)', () => {
     it('shows a vital\'s date formatted', async () => {
         const user = userEvent.setup();
         renderPanel();
-        await user.click(await screen.findByRole('button', { name: new RegExp(`^${deleteName('')}.*Birth`, 'i') }));
+        await openDelete(user, 'Birth');
         expect(await screen.findByText('Birth · Before 1900')).toBeInTheDocument();
     });
 });

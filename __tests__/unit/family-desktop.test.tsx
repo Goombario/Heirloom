@@ -104,9 +104,14 @@ describe('desktop family rail (#119)', () => {
     { person: johan, family: { Id: 100, MarriageDate: '1888' }, children: [] },
     { person: nils, family: { Id: 101, MarriageDate: '1935', Type: 'Marriage' }, children: [] },
   ] } as unknown as PartnerFamilies;
-  const rail = (canDelete: boolean, w = writes(), partner2: PartnerPerson | null = kristina, kids: PartnerPerson[] = [hilda]) => wrap(
+  const places = [
+    { place: 'Uppsala', title: 'Marriage', date: '24 SEP 1888' },
+    { place: 'Lund', title: 'Birth · Hilda', date: '1890' },
+    { place: 'Uppsala', title: 'Residence', date: null },
+  ];
+  const rail = (canDelete: boolean, w = writes(), partner2: PartnerPerson | null = kristina, kids: PartnerPerson[] = [hilda], placeCoords: Record<string, { lat: number; lng: number }> = {}) => wrap(
     <FamilyRail family={{ Id: 100, MarriageDate: '24 SEP 1888' }} partner1={johan} partner2={partner2} partner1Families={null} partner2Families={p1}
-      childList={kids} places={[{ place: 'Uppsala' }, { place: 'Lund' }, { place: 'Uppsala' }]} placeCoords={{}}
+      childList={kids} places={places} placeCoords={placeCoords}
       treeId={1} canEdit canDelete={canDelete} onChanged={vi.fn()} writes={w} />,
   );
 
@@ -137,6 +142,14 @@ describe('desktop family rail (#119)', () => {
   it('counts each place they lived once', () => {
     rail(false);
     expect(screen.getByRole('region', { name: 'Where they lived' })).toHaveTextContent('2 places');
+    // Nothing is pinned, so there is no map to open.
+    expect(screen.queryByRole('button', { name: 'Open the map of this family’s places' })).toBeNull();
+  });
+
+  it('opens the map of their places from the mini map', () => {
+    rail(false, writes(), kristina, [hilda], { Uppsala: { lat: 59.86, lng: 17.64 }, Lund: { lat: 55.7, lng: 13.19 } });
+    const lived = screen.getByRole('region', { name: 'Where they lived' });
+    expect(within(lived).getByRole('button', { name: 'Open the map of this family’s places' })).toHaveTextContent('2 places');
   });
 
   it('removes a partner at once, and deletes the family instead when nobody else is in it', () => {

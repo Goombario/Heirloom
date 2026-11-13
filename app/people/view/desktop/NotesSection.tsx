@@ -206,6 +206,8 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
       onCancel={close}
       saving={saving}
       saveDisabled={!text.trim()}
+      // A new note's button names what it adds (locked board: "Add note").
+      saveLabel={r ? undefined : tn('add_button')}
       dirty={dirty}
       onDelete={r && canDelete ? remove : undefined}
       deleteLabel={t('note_delete')}

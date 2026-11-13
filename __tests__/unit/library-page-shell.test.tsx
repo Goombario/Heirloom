@@ -87,7 +87,7 @@ describe('Library tabs and toolbar', () => {
   it('has three tabs: Repositories and Uncited are Sources filters now', async () => {
     render(<LibraryPage />);
     const tabs = await screen.findAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent?.trim().replace(/\s*\(\d+\)$/, ''))).toEqual(['Sources', 'Photos', 'Faces']);
+    expect(tabs.map((tab) => tab.textContent?.trim().replace(/\s*\(\d+\)$/, ''))).toEqual(['Photos', 'Sources', 'Faces']);
     expect(screen.getByRole('complementary', { name: 'Filter sources' })).toBeInTheDocument();
   });
 

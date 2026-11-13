@@ -2848,6 +2848,15 @@ html.dark .react-flow__minimap-mask {
 .ledger__title { font-weight: 600; color: var(--color-text); }
 .ledger__title-link { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text); text-decoration: none; }
 .ledger__title-link:hover { text-decoration: underline; }
+/* The research rail: the open page takes the band colour (locked case board), never
+   the white ink fill the dark theme gives a selected control, which glared. */
+.lead-rail-current { background: var(--color-hero-bg); color: #fff; border-color: var(--color-hero-bg); }
+.lead-rail-current__sub { color: rgba(255, 255, 255, 0.72); }
+/* A row that opens its editor (locked person board): the whole row is the target. */
+.ledger__body.is-click { cursor: pointer; }
+.ledger__body.is-click:hover { background: var(--color-surface-2); }
+.ledger__ev.is-flagged .ledger__body.is-click:hover { background: var(--color-warning-bg); }
+.ledger__title-btn { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--color-text); text-align: left; cursor: pointer; }
 .ledger__age { font-size: var(--text-sm); color: var(--color-text-muted); }
 .ledger__place { font-size: var(--text-sm); color: var(--color-text-muted); }
 .ledger__place a { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; color: var(--color-link); text-decoration: none; }
@@ -2888,6 +2897,15 @@ html.dark .react-flow__minimap-mask {
 .ledger-foot > button { padding-inline: 0; min-height: 44px; font-size: var(--text-sm); font-weight: 400; }
 .ledger-foot > button:hover { background: transparent; text-decoration: underline; }
 .ledger-foot--plain { border-top: 0; margin-top: 0; }
+/* Notes inside the event panel (locked person board): no card, rows on hairlines. */
+.owner-notes--plain > div:first-child { padding: 0 0 2px; }
+.owner-notes--plain [data-note-row] { padding-left: 0; }
+.owner-notes--plain [data-note-add] { min-height: 32px; padding: 4px 0; border-top: 0; font-size: var(--text-sm); font-weight: 400; }
+.owner-notes--plain [data-note-add]:hover { background: transparent; text-decoration: underline; }
+/* The event panel's media (locked person board): a label, the squares, a plain Add line. */
+.event-panel__media > span:first-child { display: block; }
+.event-panel__media .ledger-foot { border-top: 0; margin-top: 0; }
+.event-panel__media .ledger-foot > button { min-height: 32px; padding-block: 4px; }
 /* Names (locked board): serif name and cite pin, the type and dates muted on the right. */
 .name-list { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--color-border); }
 .name-list__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 45px; padding: 6px 0; border-top: 1px solid var(--color-border); }
@@ -2901,8 +2919,11 @@ html.dark .react-flow__minimap-mask {
 .note-list__btn:enabled { cursor: pointer; }
 .note-list__btn:enabled:hover { background: var(--color-hover-surface); }
 .note-list__label { display: block; margin-bottom: 4px; font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--text-muted); }
-.cover-band__nameline { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; min-width: 0; }
-.cover-band__aside { flex: none; margin-top: 4px; }
+/* The ⋯ follows the name's last word, so a name that wraps to two lines keeps it on
+   the line it ends on, not dropped to a row of its own (rc.3 polish). */
+.cover-band__nameline { min-width: 0; }
+.cover-band__nameline > .cover-band__title { display: inline; }
+.cover-band__aside { display: inline-block; margin-left: 14px; vertical-align: 0.1em; line-height: 0; }
 /* The ⋯ beside the name: a round glass button (locked board). */
 .cover-band__aside button { width: 36px; height: 36px; min-width: 36px; padding: 0; border-radius: 18px; background: rgba(0, 0, 0, 0.38); border: 1px solid rgba(255, 255, 255, 0.22); color: #fff; }
 .cover-band__aside button:hover, .cover-band__aside button[aria-expanded="true"] { background: rgba(0, 0, 0, 0.6); border-color: rgba(255, 255, 255, 0.5); }

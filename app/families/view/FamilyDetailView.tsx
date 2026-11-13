@@ -319,9 +319,9 @@ export default function FamilyDetailsClient() {
                             partner2Families={partner2Families}
                             childList={children}
                             places={[
-                                { place: family.MarriagePlace, placeId: family.MarriagePlaceId },
-                                ...(details.events ?? []).map((e) => ({ place: e.Place, placeId: e.PlaceId })),
-                                ...children.map((c) => ({ place: c.BirthPlace, placeId: c.BirthPlaceId })),
+                                { place: family.MarriagePlace, placeId: family.MarriagePlaceId, title: t(partnershipKindKey(familyType)), date: family.MarriageDate },
+                                ...(details.events ?? []).map((e) => ({ place: e.Place, placeId: e.PlaceId, title: familyEventLabel(e.Type, tEvent), date: e.Date })),
+                                ...children.map((c) => ({ place: c.BirthPlace, placeId: c.BirthPlaceId, title: `${t('birth_label')} · ${childFirstName(c)}`, date: c.BirthDate })),
                             ]}
                             placeCoords={placeCoords}
                             treeId={activeTreeId}

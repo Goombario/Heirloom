@@ -81,6 +81,9 @@ vi.mock('@/app/components/media/EventMediaDraftPanel', () => ({
 
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 
+/** The desktop event panel's save button: "Add event" for a new event, "Save changes" for an edit. */
+const SAVE = /^(add_event|save_changes)$/;
+
 const event = (id: number, target: { personId?: number; familyId?: number } = { personId: 4 }) => ({
     Id: id,
     UserId: 1,
@@ -136,7 +139,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
 
         expect(screen.getByTestId('event-media-draft-panel')).toBeInTheDocument();
         expect(screen.queryByText('media_save_first')).not.toBeInTheDocument();
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         expect(h.eventsUpdate).not.toHaveBeenCalled();
@@ -146,7 +149,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
     it('creates a new family event once with no media and passes the family owner', async () => {
         const user = userEvent.setup();
         renderNew({ kind: 'family', familyId: 22 });
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         expect(h.eventsCreate.mock.calls[0][0]).toMatchObject({ FamilyId: 22, PersonId: null });
@@ -156,7 +159,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         const user = userEvent.setup();
         renderNew({ kind: 'person', personId: 4 });
         await stageExistingAndFiles(user);
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         await waitFor(() => expect(h.mediaLinkToOwner).toHaveBeenCalledWith(11, 'Events', 701, 99));
@@ -173,7 +176,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         h.mediaUpload.mockRejectedValue(new Error('upload unavailable'));
         renderNew({ kind: 'person', personId: 4 });
         await stageExistingAndFiles(user);
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         expect(screen.getByTestId('event-media-draft-panel')).toBeInTheDocument();
@@ -195,7 +198,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
             .mockResolvedValueOnce(media(802));
         renderNew({ kind: 'person', personId: 4 });
         await stageExistingAndFiles(user, 2);
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.mediaUpload).toHaveBeenCalledTimes(2));
 
         // The parent must update the draft view while preserving the mounted editor.
@@ -217,12 +220,12 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         h.mediaUpload.mockReturnValueOnce(new Promise((resolve) => { resolveAttachments = resolve; }));
         renderNew({ kind: 'person', personId: 4 });
         await user.click(screen.getByText('stage_file'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
 
         await user.clear(screen.getByPlaceholderText('place'));
         await user.type(screen.getByPlaceholderText('place'), 'York');
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsUpdate).toHaveBeenCalledWith(701, expect.objectContaining({ Place: 'York' }), 99));
         expect(h.eventsCreate).toHaveBeenCalledTimes(1);
         resolveAttachments(media(803));
@@ -234,7 +237,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         h.mediaUpload.mockReturnValueOnce(new Promise((resolve) => { resolveAttachments = resolve; }));
         renderNew({ kind: 'person', personId: 4 });
         await user.click(screen.getByText('stage_file'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         await user.clear(screen.getByPlaceholderText('place'));
         await user.type(screen.getByPlaceholderText('place'), 'York');
@@ -252,7 +255,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         h.mediaUpload.mockReturnValueOnce(new Promise((resolve) => { resolveAttachments = resolve; }));
         renderNew({ kind: 'person', personId: 4 });
         await user.click(screen.getByText('stage_file'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         await user.clear(screen.getByPlaceholderText('place'));
         await user.type(screen.getByPlaceholderText('place'), 'York');
@@ -260,7 +263,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         resolveAttachments(media(806));
         await waitFor(() => expect(screen.queryByTestId('draft-item-file-0')).not.toBeInTheDocument());
         expect(screen.getByTestId('owner-media-card')).toBeInTheDocument();
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(h.eventsUpdate).toHaveBeenCalledTimes(1));
         expect(h.saved).toHaveBeenCalledTimes(1);
@@ -274,11 +277,11 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         h.eventsUpdate.mockReturnValueOnce(new Promise((resolve) => { resolveUpdate = resolve; }));
         renderNew({ kind: 'person', personId: 4 });
         await user.click(screen.getByText('stage_file'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
         await user.clear(screen.getByPlaceholderText('place'));
         await user.type(screen.getByPlaceholderText('place'), 'York');
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsUpdate).toHaveBeenCalledTimes(1));
 
         resolveAttachments(media(805));
@@ -294,7 +297,7 @@ describe('InlineEventEditor — create-once event/media attachment flow (Batch 6
         h.mediaUpload.mockReturnValue(new Promise(() => undefined));
         renderNew({ kind: 'person', personId: 4 });
         await user.click(screen.getByText('stage_file'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(h.eventsCreate).toHaveBeenCalledTimes(1));
 
         await user.click(screen.getByText('cancel'));
@@ -325,7 +328,7 @@ describe('InlineEventEditor — add-event Birth/Death has no media box (#927)', 
         render(<InlineEventEditor target={{ kind: 'person', personId: 4 }} defaultType="BIRT" onCancel={h.cancelled} onSaved={h.saved} />);
 
         expect(screen.queryByTestId('event-media-draft-panel')).not.toBeInTheDocument();
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(h.saved).toHaveBeenCalledTimes(1));
         expect(h.peopleUpdate).toHaveBeenCalledTimes(1);
@@ -336,16 +339,18 @@ describe('InlineEventEditor — add-event Birth/Death has no media box (#927)', 
 
     it('blocks Save when media was staged before switching the type to Death', async () => {
         const user = userEvent.setup();
-        render(<InlineEventEditor target={{ kind: 'person', personId: 4 }} defaultType="RESI" allowVital={{ birth: true, death: true }} onCancel={h.cancelled} onSaved={h.saved} />);
+        render(<InlineEventEditor target={{ kind: 'person', personId: 4 }} allowVital={{ birth: true, death: true }} onCancel={h.cancelled} onSaved={h.saved} />);
+        // The desktop panel starts on the type chips; Change type goes back to them.
+        await user.click(screen.getByRole('button', { name: 'RESI' }));
         await stageExistingAndFiles(user);
 
-        await user.click(screen.getByRole('combobox', { name: 'field_type' }));
-        await user.click(screen.getByRole('option', { name: 'DEAT' }));
+        await user.click(screen.getByRole('button', { name: 'change_type' }));
+        await user.click(screen.getByRole('button', { name: 'DEAT' }));
 
         expect(screen.getByTestId('event-media-draft-panel')).toBeInTheDocument();
         expect(screen.getByText('vital_media_unsupported')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'save_event' })).toBeDisabled();
-        await user.click(screen.getByText('save_event'));
+        expect(screen.getByRole('button', { name: SAVE })).toBeDisabled();
+        await user.click(screen.getByRole('button', { name: SAVE }));
         expect(h.peopleUpdate).not.toHaveBeenCalled();
         expect(h.saved).not.toHaveBeenCalled();
     });

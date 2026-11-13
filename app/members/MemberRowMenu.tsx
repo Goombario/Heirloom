@@ -78,7 +78,7 @@ export function MemberRowMenu({ member, lastAdmin, actions }: {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cx(
-          'grid place-items-center w-8 h-8 rounded-lg border text-text-muted cursor-pointer focus-ring',
+          'grid place-items-center w-8 h-8 rounded-full border text-text-muted cursor-pointer focus-ring',
           open ? 'border-border bg-surface-2 text-text' : 'border-transparent hover:bg-surface-2',
         )}
       >
