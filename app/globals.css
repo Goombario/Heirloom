@@ -3063,7 +3063,11 @@ button.split-portrait__half--unknown .split-portrait__add { flex-direction: colu
 /* Rail person rows: the hover actions float over the row's right end instead of
    reserving their width, so long names fit the 280px rail as on the boards. */
 .rail-block .person-row { position: relative; }
-.rail-block .person-row > .ev-row-actions { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: var(--color-hover-surface); border-radius: var(--radius-btn, 8px); }
+.rail-block .person-row > .ev-row-actions { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); gap: 6px; }
+/* Rail row actions are white round 32px buttons, Edit then a red Remove (fix 08). */
+.rail-block .person-row > .ev-row-actions .ev-act { width: 32px; height: 32px; padding: 0; justify-content: center; border-radius: 9999px; background: var(--color-card); border: 1px solid var(--color-border); box-shadow: 0 1px 2px rgb(28 25 23 / 0.08); color: var(--color-text); }
+.rail-block .person-row > .ev-row-actions .ev-act.danger { color: var(--color-error); }
+.rail-block .person-row > .ev-row-actions .ev-act:hover { background: var(--color-surface-2); }
 /* The rail's empty partner slot (#119, board "Partial"): a dashed disc, "Partner
    unknown" in the row's serif, and "Find or add someone" for writers. */
 .rail-unknown { display: flex; width: 100%; align-items: center; gap: 12px; padding: 6px 4px; border: 0; border-radius: var(--radius-btn, 8px); background: transparent; text-align: left; color: inherit; }
