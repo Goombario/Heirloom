@@ -476,7 +476,7 @@ export function OwnerNotesCard({
                                 carry the same label, and the rail's own heading already
                                 says which record these belong to. */}
                             {n.OwnerFact && factScope === undefined && (
-                                <div data-testid="note-scope" className="eyebrow mb-0.5">{scopeLabel(t, n.OwnerFact)}</div>
+                                <div data-testid="note-scope" className={look === 'plain' ? 'note-list__label' : 'eyebrow mb-0.5'}>{scopeLabel(t, n.OwnerFact)}</div>
                             )}
                             <div className="text-base leading-[1.6] text-text whitespace-pre-wrap break-words">
                                 {n.Text}
