@@ -776,7 +776,9 @@ export default function PlaceDetailClient() {
                         <WhatHappened
                             key={`events-${scopeKey}`}
                             links={detail.factLinks}
+                            people={detail.people}
                             placeId={detail.id ?? null}
+                            placeName={placeName}
                             treeId={activeTreeId}
                             canEdit={canEdit}
                             deletable={canDelete && !inUse}

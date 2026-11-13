@@ -22,20 +22,14 @@ describe('placeRecords', () => {
 });
 
 describe('decadeBlocks', () => {
-    it('folds empty decades onto one quiet stretch', () => {
-        const recs = placeRecords([link({ date: '1801' }), link({ date: '1835' })]);
-        expect(decadeBlocks(recs).map((b) => (b.kind === 'decade' ? b.decade : `${b.from}-${b.to}`))).toEqual([1800, '1810-1820', 1830]);
-    });
-
-    it('in a long chronicle, folds decades with one or two records behind Show N', () => {
+    it('lists only decades with records, oldest first, and folds none away', () => {
         const recs = placeRecords([
+            link({ date: '1835' }), link({ date: '1801' }),
             ...Array.from({ length: 12 }, () => link({ date: '1900' })),
             link({ date: '1915' }),
-            ...Array.from({ length: 3 }, () => link({ date: '1920' })),
         ]);
         const blocks = decadeBlocks(recs);
-        expect(blocks.map((b) => b.kind)).toEqual(['decade', 'quiet', 'decade']);
-        expect(blocks[1]!.records).toHaveLength(1);
+        expect(blocks.map((b) => [b.decade, b.records.length])).toEqual([[1800, 1], [1830, 1], [1900, 12], [1910, 1]]);
     });
 });
 

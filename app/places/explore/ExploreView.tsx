@@ -11,14 +11,15 @@
 //
 // Desktop and tablet only: phones get MobilePlacesExplore (#1118).
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocationMap from '@/app/components/LocationMap';
 import { collapseEmptyIntermediaries, type PlaceTreeNode } from '@/lib/places/hierarchy';
 import { findNodeById, useExploreState } from './useExploreState';
 import { ExploreDrill } from './ExploreDrill';
-import { ExploreDetail } from './ExploreDetail';
+import { ExploreDetail, type ExploreOverview } from './ExploreDetail';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { ScrollArea } from '@/app/components/ui/ScrollArea';
 import { collectPins } from './collectPins';
 import { MapPin } from '@/lib/icons';
@@ -119,18 +120,76 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
     if (node) prefetch(node.id ?? node.name);
   };
 
-  // The selected-place pane is Narrow (420px) by default; Wide gives it more room.
-  // Kept for the session only: the map takes whatever is left either way.
-  const [wide, setWide] = useState(false);
-  const picked = state.selected != null;
+  // The place pane stays up whether or not a place is picked (#56 review), so picking
+  // one never moves the map. Beside the map on wide windows, its width dragged by the
+  // edge; under the map below lg, so the map never drops out, its height dragged instead.
+  const stacked = useIsMobile('lg');
+  const [paneW, setPaneW] = usePaneSize(WIDTH_KEY, PANE_W);
+  const [paneH, setPaneH] = usePaneSize(HEIGHT_KEY, PANE_H);
+  const workRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = workRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([e]) => setBox({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // The map always keeps room of its own: the pane stops short of it.
+  const maxW = Math.max(PANE_W_MIN, box.w - RAIL_W - MAP_MIN);
+  const maxH = Math.max(PANE_H_MIN, box.h - MAP_MIN_H);
+  const width = clamp(paneW, PANE_W_MIN, maxW);
+  const height = clamp(paneH, PANE_H_MIN, maxH);
+
+  const overview = useMemo<ExploreOverview>(() => {
+    const all: PlaceTreeNode[] = [];
+    const walk = (ns: PlaceTreeNode[]) => ns.forEach((n) => { if (n.children.length === 0 && n.id != null) all.push(n); walk(n.children); });
+    walk(displayRoots);
+    return {
+      records: displayRoots.reduce((sum, n) => sum + n.rolledCount, 0),
+      top: all.sort((a, b) => b.rolledCount - a.rolledCount).slice(0, 6),
+    };
+  }, [displayRoots]);
+
+  const pane = (
+    <ScrollArea className="flex-1 min-h-0">
+      <ExploreDetail
+        placeName={state.selected?.name ?? null}
+        placeId={state.selected?.id ?? null}
+        treeId={treeId}
+        overview={overview}
+        onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) onRowClick(node); }}
+      />
+    </ScrollArea>
+  );
+  const map = (
+    <div className="relative min-h-0 min-w-0 flex-1" style={{ background: 'var(--map-well-bg)' }}>
+      {markers.length === 0 ? (
+        // No place in view has coordinates (most GEDCOMs carry none): a line saying
+        // how to get one instead of an empty map (FR-5).
+        <p className="absolute inset-0 m-0 flex items-center justify-center gap-2 p-6 text-sm text-text-muted text-center">
+          <MapPin size={16} className="shrink-0" aria-hidden="true" />
+          {t('map_none_explore')}
+        </p>
+      ) : (
+        <LocationMap
+          markers={markers}
+          variant="full"
+          height="100%"
+          className="rounded-none!"
+          onMarkerClick={onMarkerClick}
+          onMarkerHover={onMarkerHover}
+          highlightedIds={highlightedIds}
+          refitOnResize
+        />
+      )}
+    </div>
+  );
 
   return (
-    // Three panes, each scrolling on its own (#56): the list rail, the selected place,
-    // and the map filling the rest. Below lg there is no room for the map, so it drops
-    // and the two panes share the width.
-    // Until a place is chosen there is no middle pane on wide screens: the map takes
-    // its room rather than an empty pane asking for a pick (locked places board).
-    <div className={`explore-workspace flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] ${!picked ? 'lg:grid-cols-[320px_minmax(0,1fr)]' : wide ? 'lg:grid-cols-[320px_640px_minmax(0,1fr)]' : 'lg:grid-cols-[320px_420px_minmax(0,1fr)]'}`}>
+    // Three panes, each scrolling on its own (#56): the list rail, the place pane and
+    // the map. Below lg the pane docks under the map instead of beside it.
+    <div ref={workRef} className="explore-workspace flex-1 min-h-0 grid" style={{ gridTemplateColumns: `${stacked ? RAIL_W_NARROW : RAIL_W}px minmax(0,1fr)` }}>
       <div className="min-h-0 flex flex-col bg-card border-r border-border">
         <ExploreDrill
           state={state}
@@ -140,44 +199,106 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
           onClearSearch={onClearSearch}
         />
       </div>
-      <div className={`min-h-0 flex flex-col bg-card border-r border-border relative${picked ? '' : ' lg:hidden'}`}>
-        <button
-          type="button"
-          onClick={() => setWide((w) => !w)}
-          aria-pressed={wide}
-          className="hidden lg:inline-flex absolute top-3 right-3 z-10 items-center min-h-7 px-2 rounded-md border border-border bg-card text-xs text-text-secondary cursor-pointer hover:bg-hover-surface focus-ring"
-        >
-          {wide ? t('pane_narrow') : t('pane_wide')}
-        </button>
-        <ScrollArea className="flex-1 min-h-0">
-          <ExploreDetail
-            placeName={state.selected?.name ?? null}
-            placeId={state.selected?.id ?? null}
-            treeId={treeId}
-            onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) onRowClick(node); }}
-          />
-        </ScrollArea>
-      </div>
-      <div className="hidden lg:block relative min-h-0" style={{ background: 'var(--map-well-bg)' }}>
-        {markers.length === 0 ? (
-          // No place in view has coordinates (most GEDCOMs carry none): a line saying
-          // how to get one instead of an empty map (FR-5).
-          <p className="absolute inset-0 m-0 flex items-center justify-center gap-2 p-6 text-sm text-text-muted text-center">
-            <MapPin size={16} className="shrink-0" aria-hidden="true" />
-            {t('map_none_explore')}
-          </p>
-        ) : (
-          <LocationMap
-            markers={markers}
-            variant="full"
-            height="100%"
-            className="rounded-none!"
-            onMarkerClick={onMarkerClick}
-            onMarkerHover={onMarkerHover}
-            highlightedIds={highlightedIds}
-          />
-        )}
-      </div>
+      {stacked ? (
+        <div className="min-h-0 min-w-0 flex flex-col">
+          {map}
+          <PaneResizer orientation="horizontal" value={height} min={PANE_H_MIN} max={maxH} onChange={setPaneH} label={t('pane_resize')} invert />
+          <div className="shrink-0 min-h-0 flex flex-col bg-card" style={{ height }}>{pane}</div>
+        </div>
+      ) : (
+        <div className="min-h-0 min-w-0 flex">
+          <div className="shrink-0 min-h-0 flex flex-col bg-card" style={{ width }}>{pane}</div>
+          <PaneResizer orientation="vertical" value={width} min={PANE_W_MIN} max={maxW} onChange={setPaneW} label={t('pane_resize')} />
+          {map}
+        </div>
+      )}
     </div>
+  );
+}
+
+const RAIL_W = 320;
+const RAIL_W_NARROW = 300;
+/** The place pane's width beside the map: 420 to start, never under 360. */
+const PANE_W = 420;
+const PANE_W_MIN = 360;
+/** The pane's height docked under the map. */
+const PANE_H = 360;
+const PANE_H_MIN = 200;
+/** What the map keeps, whichever way the pane is dragged. */
+const MAP_MIN = 320;
+const MAP_MIN_H = 200;
+const WIDTH_KEY = 'places-explore-pane-width';
+const HEIGHT_KEY = 'places-explore-pane-height';
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+
+/** A dragged pane size, kept as a preference on this device. */
+function usePaneSize(key: string, initial: number): [number, (n: number) => void] {
+  // A lazy read is hydration-safe here: Explore only renders after the client-side fetch.
+  const [size, setSize] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem(key));
+      return Number.isFinite(saved) && saved > 0 ? saved : initial;
+    } catch {
+      return initial;
+    }
+  });
+  const save = useCallback((n: number) => {
+    setSize(n);
+    try { localStorage.setItem(key, String(Math.round(n))); } catch { /* ignore */ }
+  }, [key]);
+  return [size, save];
+}
+
+/**
+ * The pane's draggable edge: a window splitter (role="separator") the pointer drags and the
+ * arrow keys step, 16px at a time (Home and End go to the limits). `invert` is for a pane
+ * BELOW its edge, which grows as the edge moves up.
+ */
+function PaneResizer({ orientation, value, min, max, onChange, label, invert = false }: {
+  orientation: 'vertical' | 'horizontal'; value: number; min: number; max: number;
+  onChange: (n: number) => void; label: string; invert?: boolean;
+}) {
+  const start = useRef<{ pos: number; value: number } | null>(null);
+  const vertical = orientation === 'vertical';
+  const set = (n: number) => onChange(clamp(Math.round(n), min, max));
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    start.current = { pos: vertical ? e.clientX : e.clientY, value };
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!start.current) return;
+    const delta = (vertical ? e.clientX : e.clientY) - start.current.pos;
+    set(start.current.value + (invert ? -delta : delta));
+  };
+  const end = () => { start.current = null; };
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const grow = vertical ? 'ArrowRight' : invert ? 'ArrowUp' : 'ArrowDown';
+    const shrink = vertical ? 'ArrowLeft' : invert ? 'ArrowDown' : 'ArrowUp';
+    if (e.key === grow) set(value + 16);
+    else if (e.key === shrink) set(value - 16);
+    else if (e.key === 'Home') set(min);
+    else if (e.key === 'End') set(max);
+    else return;
+    e.preventDefault();
+  };
+  return (
+    <div
+      role="separator"
+      tabIndex={0}
+      aria-label={label}
+      aria-orientation={orientation}
+      aria-valuenow={Math.round(value)}
+      aria-valuemin={min}
+      aria-valuemax={Math.round(max)}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onKeyDown={onKeyDown}
+      className={`explore-resizer explore-resizer--${orientation} shrink-0 focus-ring-inset`}
+    />
   );
 }

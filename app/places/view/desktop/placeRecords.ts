@@ -69,42 +69,29 @@ export function chipGroupOf(type: string): ChipGroup | null {
     return null;
 }
 
-/** A run of decades in the chronicle: one with records shown, or a quiet stretch folded onto the dotted rail. */
-export type DecadeBlock =
-    | { kind: 'decade'; decade: number; records: PlaceRecord[] }
-    | { kind: 'quiet'; from: number; to: number; records: PlaceRecord[] };
+/** One decade of the By decade chronicle, with every dated record in it. */
+export interface DecadeBlock {
+    decade: number;
+    records: PlaceRecord[];
+}
 
-/** Records per decade at or under this count fold when the chronicle is long. */
-const QUIET_MAX = 2;
-/** The chronicle folds quiet decades only past this many dated records. */
-const FOLD_FROM = 12;
+/** A decade shows this many records until it is opened in place (#56 review, 2026-11-13). */
+export const DECADE_FIRST_ROWS = 5;
 
 /**
- * The By decade chronicle's blocks, oldest first. Empty decades always fold onto
- * the dotted rail; in a long chronicle, decades with only one or two records fold
- * too, behind "Show N records". Neighbouring folds join into one stretch.
+ * The By decade chronicle's decades, oldest first. Only decades with a record are
+ * listed; none is folded away, a long decade instead opens at its first
+ * DECADE_FIRST_ROWS records with "Show all N" beneath.
  */
 export function decadeBlocks(dated: readonly PlaceRecord[]): DecadeBlock[] {
-    if (dated.length === 0) return [];
     const byDecade = new Map<number, PlaceRecord[]>();
     for (const r of dated) {
-        const d = Math.floor(r.year! / 10) * 10;
-        byDecade.set(d, [...(byDecade.get(d) ?? []), r]);
+        if (r.year == null) continue;
+        const d = Math.floor(r.year / 10) * 10;
+        const list = byDecade.get(d);
+        if (list) list.push(r); else byDecade.set(d, [r]);
     }
-    const decades = [...byDecade.keys()].sort((a, b) => a - b);
-    const first = decades[0]!;
-    const last = decades[decades.length - 1]!;
-    const foldQuiet = dated.length > FOLD_FROM;
-    const blocks: DecadeBlock[] = [];
-    for (let d = first; d <= last; d += 10) {
-        const records = byDecade.get(d) ?? [];
-        const quiet = records.length === 0 || (foldQuiet && records.length <= QUIET_MAX);
-        if (!quiet) { blocks.push({ kind: 'decade', decade: d, records }); continue; }
-        const prev = blocks[blocks.length - 1];
-        if (prev?.kind === 'quiet') { prev.to = d; prev.records.push(...records); }
-        else blocks.push({ kind: 'quiet', from: d, to: d, records: [...records] });
-    }
-    return blocks;
+    return [...byDecade.entries()].sort((a, b) => a[0] - b[0]).map(([decade, records]) => ({ decade, records }));
 }
 
 /** One person's lane in Who was here when: their spans and markers, by first record here. */

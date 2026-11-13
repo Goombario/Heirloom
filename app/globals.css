@@ -1763,6 +1763,65 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   pointer-events: none;
 }
 .place-cover--borrowed .location-map-pin-body svg { opacity: 0.7; }
+/* The Explore place pane's draggable edge (#56 review): a hairline that thickens on hover,
+   focus and drag, with a wider invisible grip around it. */
+.explore-resizer { position: relative; z-index: 2; background: var(--color-border); touch-action: none; }
+.explore-resizer--vertical { width: 1px; cursor: col-resize; }
+.explore-resizer--horizontal { height: 1px; cursor: row-resize; }
+.explore-resizer::before { content: ''; position: absolute; inset: 0 -5px; }
+.explore-resizer--horizontal::before { inset: -5px 0; }
+.explore-resizer::after { content: ''; position: absolute; inset: 0 -1px; background: transparent; transition: background var(--dur-fast); }
+.explore-resizer--horizontal::after { inset: -1px 0; }
+.explore-resizer:hover::after, .explore-resizer:active::after, .explore-resizer:focus-visible::after { background: var(--place-mark); }
+/* The lanes' and chronicle's ink: the navy band colour in light mode, lifted toward the text
+   colour so it still reads on the dark theme's near-black (where the band is umber). */
+.explore-resizer, .place-dec, .place-lanes, .place-lleg, .place-evsum { --place-mark: color-mix(in srgb, var(--color-hero-bg) 60%, var(--color-text)); }
+/* What happened here, By decade (#56, locked PlaceMapCover board): the decade in the
+   left gutter, its records on a hairline rail, an opened record as a card on the rail. */
+.place-dec { display: grid; grid-template-columns: 88px minmax(0, 1fr); column-gap: 20px; padding-top: 6px; }
+.place-dec__head { margin: 0; padding-top: 14px; position: sticky; top: 16px; align-self: start; font-family: var(--font-mono); font-size: 15px; font-weight: 500; color: var(--color-date); }
+.place-dec__head small { display: block; margin-top: 2px; font-family: var(--font-sans, inherit); font-size: var(--text-xs); font-weight: 400; color: var(--color-text-muted); }
+.place-dec__list { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--color-border); }
+.place-ce { width: 100%; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 10px 12px 18px; margin-left: -1px; border: 0; border-left: 2px solid transparent; border-radius: 0 8px 8px 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.place-ce:hover { background: var(--color-surface-2); border-left-color: var(--color-text); }
+.place-ce[aria-expanded="true"] { background: var(--color-card); border-left-color: var(--place-mark); border-radius: 0 8px 0 0; }
+.place-ce__date { font-family: var(--font-mono); font-size: var(--text-meta); line-height: 1.4; color: var(--color-text-muted); }
+.place-ce__type { font-family: var(--font-fraunces), var(--font-literata), Georgia, serif; font-size: 15px; font-weight: 600; }
+.place-evsum { margin: 0 0 10px -1px; padding: 4px 18px 16px 92px; display: grid; gap: 12px; background: var(--color-card); border-left: 2px solid var(--place-mark); border-radius: 0 0 8px 0; box-shadow: 0 6px 16px rgb(28 25 23 / 0.06); }
+.place-evsum__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--color-border); }
+/* Who was here when: a histogram over a shared axis, one lane per person. */
+.place-lanes { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 20px; }
+.place-lanes__hist { position: relative; height: 64px; }
+.place-lanes__hist i { position: absolute; bottom: 0; border-radius: 2px 2px 0 0; background: color-mix(in srgb, var(--color-link) 45%, var(--color-surface)); }
+.place-lanes__hist i.is-top { background: var(--color-link); }
+.place-lanes__hist i.is-fold { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-link) 45%, var(--color-surface)) 0 3px, transparent 3px 6px); }
+.place-lanes__axis { position: relative; height: 22px; border-bottom: 1px solid var(--color-border); }
+.place-lanes__axis > span { position: absolute; bottom: 4px; transform: translateX(-50%); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
+.place-lanes__foldbtn { position: absolute; bottom: 2px; height: 18px; padding: 0 2px; border: 0; background: var(--color-card); color: var(--color-link); font-family: var(--font-mono); font-size: var(--text-xs); white-space: nowrap; cursor: pointer; text-align: left; }
+.place-lanes__foldbtn:hover { text-decoration: underline; }
+.place-lanes__name { display: flex; align-items: center; gap: 10px; height: 52px; min-width: 0; border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent); color: var(--color-text); }
+.place-lanes__name:hover .place-lanes__nm { text-decoration: underline; }
+.place-lanes__nm { font-family: var(--font-fraunces), var(--font-literata), Georgia, serif; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.place-lanes__yrs { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); }
+.place-lane { position: relative; height: 52px; border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent); }
+.place-lane__grid { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--color-border) 55%, transparent); }
+.place-lane__fold { position: absolute; top: 0; bottom: 0; border-right: 2px dotted var(--color-text-muted); background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--color-border) 45%, transparent) 6px 7px); }
+.place-lane__span { position: absolute; top: 21px; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--place-mark) 22%, var(--color-card)); }
+.place-lane__undated { position: absolute; top: 17px; font-size: var(--text-meta); font-style: italic; color: var(--color-text-muted); }
+.place-mk { position: absolute; top: 26px; transform: translate(-50%, -50%); display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; z-index: 1; color: var(--place-mark); }
+.place-mk:hover, .place-mk[aria-expanded="true"] { z-index: 2; }
+.place-mk__dot { display: block; box-sizing: border-box; border-radius: 50%; }
+.place-mk--b .place-mk__dot { width: 12px; height: 12px; background: var(--place-mark); }
+.place-mk--m .place-mk__dot { width: 14px; height: 14px; background: var(--color-card); border: 3px solid var(--place-mark); }
+.place-mk--d .place-mk__dot { width: 11px; height: 11px; border-radius: 0; background: var(--color-text); transform: rotate(45deg); }
+.place-mk--e .place-mk__dot, .place-mk--i .place-mk__dot { width: 18px; height: 18px; display: grid; place-items: center; background: var(--color-card); border: 1.5px solid var(--place-mark); }
+.place-mk--o .place-mk__dot { width: 8px; height: 8px; background: var(--color-card); border: 1.5px solid var(--color-text-muted); }
+.place-mk:hover .place-mk__dot, .place-mk[aria-expanded="true"] .place-mk__dot { box-shadow: 0 0 0 4px color-mix(in srgb, var(--place-mark) 25%, transparent); }
+.place-mk__lb { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); font-family: var(--font-mono); font-size: 10.5px; color: var(--color-text-secondary); white-space: nowrap; pointer-events: none; }
+.place-lleg { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: var(--text-meta); color: var(--color-text-secondary); }
+.place-lleg > span { display: inline-flex; align-items: center; gap: 8px; }
+.place-lleg .place-mk { position: static; transform: none; cursor: default; }
+.place-lleg__sw { width: 22px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--place-mark) 22%, var(--color-card)); }
 .lead-text__body {
   font-size: var(--text-md);
   line-height: 1.6;
