@@ -57,9 +57,10 @@ interface LocationMapProps {
 }
 
 /** Room kept around framed pins. A full map's pin stands 40px tall above its point, so
- *  the top keeps more than the sides, or the northernmost pin's head is cut off. */
+ *  the top keeps more than the sides, or the northernmost pin's head is cut off. The
+ *  sides keep a clear margin too, so no pin sits on the map's edge (owner review 2026-11-13). */
 function fitPadding(variant: 'full' | 'mini') {
-  return variant === 'full' ? { top: 60, right: 40, bottom: 30, left: 40 } : 30;
+  return variant === 'full' ? { top: 88, right: 72, bottom: 56, left: 72 } : 30;
 }
 
 /** Stable empty default — a fresh `[]` in the parameter list would be a new array every

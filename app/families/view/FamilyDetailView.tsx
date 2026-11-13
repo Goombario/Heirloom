@@ -304,6 +304,7 @@ export default function FamilyDetailsClient() {
                 <div className={cx(editingHero && 'edit-dimmed')} inert={editingHero}>
                 <DetailBody
                     divided
+                    sheet
                     index={[
                         { id: 'life-together', label: t('life_together') },
                         { id: 'media', label: t('section_media') },

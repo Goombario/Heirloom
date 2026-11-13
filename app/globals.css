@@ -89,6 +89,8 @@
   /* The family record row's tint (S6): a soft step off the page. */
   --color-family-row: #E2DFD8;
   --color-family-row-hover: #D6D3CC;
+  /* The detail pages' main column (#131): a cream sheet between the section list and the rail. */
+  --color-column: #F7F5F0;
 
   /* Card backgrounds */
   --color-card: #FFFFFF;
@@ -454,6 +456,7 @@ html.dark {
   --color-surface-2: #0C0A09;
   --color-family-row: #2E2925;
   --color-family-row-hover: #3A3430;
+  --color-column: #24211F;
   --color-toast-bg: #F3ECE5;
   --color-toast-fg: #231B16;
   --color-toast-action: #9A4A1A;
@@ -552,6 +555,7 @@ html.dark {
     --color-surface-2: #0C0A09;
     --color-family-row: #2E2925;
     --color-family-row-hover: #3A3430;
+    --color-column: #24211F;
     --color-toast-bg: #F3ECE5;
     --color-toast-fg: #231B16;
     --color-toast-action: #9A4A1A;
@@ -1733,8 +1737,6 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 .cover-lead { flex: 1 1 auto; min-width: 0; padding-top: 18px; max-width: 68ch; }
 .place-cover { position: relative; margin-bottom: 28px; border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-card); }
 .place-cover__map { border-radius: 0 !important; }
-/* The name sits over the map's foot (#56), so the attribution moves to the top. */
-.place-cover .maplibregl-ctrl-bottom-right { top: 0; bottom: auto; }
 .place-cover__foot.hero-dark {
   position: absolute;
   inset: auto 0 0 0;
@@ -1942,6 +1944,32 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 /* S6: the family row's tint, a soft step off the page in both themes. */
 .family-record-row { background: var(--color-family-row); }
 .family-record-row:hover { background: var(--color-family-row-hover); }
+
+/* #131 option C: the main column is a cream sheet between the section list and the
+   rail (person, family and place pages opt in with DetailBody `sheet`; Home doesn't).
+   Text keeps its place: the sheet reaches half a gutter to the left, with a hairline,
+   and runs right up to the rail's divider; its padding matches the negative margins.
+   Below 768px there is no rail beside it, so the column stays on the parchment. */
+@media (min-width: 768px) {
+  .detail-body--sheet { --sheet-l: 14px; --sheet-r: 28px; --sheet-top: 32px; }
+  .detail-body--sheet.detail-body--divided { padding-top: 0; }
+  .detail-body--sheet > .detail-body__main {
+    background: var(--color-column);
+    box-shadow: inset 1px 0 var(--color-border);
+    margin-left: calc(-1 * var(--sheet-l));
+    margin-right: calc(-1 * var(--sheet-r));
+    padding: var(--sheet-top) var(--sheet-r) 48px var(--sheet-l);
+  }
+  .detail-body--sheet > .detail-body__rail { padding-top: var(--sheet-top); }
+  .detail-body--sheet > .detail-body__index { padding-top: calc(var(--sheet-top) + 2px); }
+  .detail-body--sheet > .detail-body__main .card { box-shadow: none; }
+}
+@media (min-width: 1024px) {
+  .detail-body--sheet { --sheet-r: 56px; }
+}
+@media (min-width: 1180px) {
+  .detail-body--sheet.detail-body--index { --sheet-l: 28px; }
+}
 
 /* Filled tile, ink icon (fix 13): the icon carries the contrast (11.6:1 light), so
    the tile edge can stay a soft fill. */
@@ -2895,7 +2923,10 @@ html.dark .react-flow__minimap-mask {
   border-radius: 0;
   box-shadow: none;
 }
-.place-cover__foot.hero-dark { padding: 56px var(--gutter) 26px; }
+/* The name and stats sit on their own navy band under the map (owner review
+   2026-11-13: the gradient over the map's foot read too heavy), so the map is whole. */
+.place-cover__foot.hero-dark { position: relative; inset: auto; padding: 24px var(--gutter) 22px; background: var(--color-hero-bg); pointer-events: auto; }
+.place-body.detail-body--sheet { margin-top: -28px; }
 .place-cover__drag { left: calc(var(--gutter) + 36px); right: var(--gutter); }
 .place-cover__foot.hero-dark { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
 .place-cover__full { position: absolute; top: 16px; right: var(--gutter); z-index: 3; }

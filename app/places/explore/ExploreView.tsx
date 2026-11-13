@@ -158,7 +158,7 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
         placeId={state.selected?.id ?? null}
         treeId={treeId}
         overview={overview}
-        onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) onRowClick(node); }}
+        onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) state.reveal(node); }}
       />
     </ScrollArea>
   );

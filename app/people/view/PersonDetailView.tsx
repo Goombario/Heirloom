@@ -425,6 +425,7 @@ export default function PersonDetailsClient() {
 
                 <DetailBody
                     divided
+                    sheet
                     index={[
                         { id: 'life-events', label: t('life_events') },
                         { id: 'media', label: tDesk('media') },
