@@ -274,7 +274,7 @@ function Form({ onClose, onCreated }: { onClose: () => void; onCreated: (familyI
         busy={saving}
         footer={(close) => (
           <>
-            <Button variant="outline" onClick={close}>{tc('cancel')}</Button>
+            <Button variant="ghost" onClick={close}>{tc('cancel')}</Button>
             <Button variant="primary" disabled={!valid || saving} onClick={() => void save()}>{saving ? tc('saving') : t('save_open')}</Button>
           </>
         )}

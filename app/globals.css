@@ -2875,6 +2875,14 @@ html.dark .react-flow__minimap-mask {
 /* Tree (fix 09): the open card is outlined navy; the start person keeps a small house marker. */
 .tree-card--picked { outline: 3px solid color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); outline-offset: 1px; }
 .tree-card-start { position: absolute; top: 6px; left: 6px; z-index: 2; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 9999px; background: color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); color: var(--color-card); box-shadow: 0 0 0 2px var(--color-card); }
+/* Form dialogs (fix 10): joined segmented controls with dividers and a full-height
+   selected segment, and the date precision folded into the date field. */
+.form-dialog [role='radiogroup'][aria-orientation='horizontal'] { gap: 0; padding: 0; overflow: hidden; border-radius: 8px; }
+.form-dialog [role='radiogroup'][aria-orientation='horizontal'] > .segment-option { border-radius: 0; border-left: 1px solid var(--color-border); padding-inline: 12px; white-space: nowrap; flex: 1 1 auto; }
+.form-dialog [role='radiogroup'][aria-orientation='horizontal'] > .segment-option:first-child { border-left: 0; }
+.form-dialog .date-field-row { flex-wrap: nowrap; gap: 0; }
+.form-dialog .date-field-row > :first-child button, .form-dialog .date-field-row > :first-child [role='combobox'] { border-top-right-radius: 0; border-bottom-right-radius: 0; background: var(--color-surface-2); }
+.form-dialog .date-field-row > input { margin-left: -1px; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 
 /* S1 on the place page: the map cover runs edge to edge too (board PlaceMapCover),
    its name and actions on the page column. */

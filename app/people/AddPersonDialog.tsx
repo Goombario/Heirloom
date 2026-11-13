@@ -105,7 +105,7 @@ function AddPersonBody({ onClose, treeId }: { onClose: () => void; treeId: numbe
         footerStart={<Button variant="ghost" disabled={!canSave} onClick={() => save(true)} title="Ctrl+Enter">{t('save_another')}</Button>}
         footer={(close) => (
           <>
-            <Button variant="outline" onClick={close}>{tc('cancel')}</Button>
+            <Button variant="ghost" onClick={close}>{tc('cancel')}</Button>
             <Button variant="primary" disabled={!canSave} onClick={() => save(false)}>{fm.saving ? tc('saving') : t('save_open')}</Button>
           </>
         )}
