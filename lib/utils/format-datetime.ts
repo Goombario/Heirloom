@@ -65,3 +65,39 @@ export function formatActivityTime(
   if (hrs < 24) return t('time_hours_ago', { count: hrs });
   return formatTimestamp(value, timezone, locale, 'date');
 }
+
+type DayTranslator = (key: 'time_today_at' | 'time_yesterday_at', values: { time: string }) => string;
+
+/** The calendar day of `d` in `timezone`, as "YYYY-MM-DD", or null on a bad zone. */
+function zonedDay(d: Date, timezone: string): string | null {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: timezone }).format(d);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A log row's time on one line (the audit log, locked list-pages board): "Today 14:02",
+ * "Yesterday 21:48", then "3 Nov 09:12", with the year once it is not this year.
+ */
+export function formatDayTime(
+  value: Date | string,
+  timezone: string,
+  locale: string,
+  t: DayTranslator,
+  now: number = Date.now(),
+): string {
+  const d = parseTimestamp(value);
+  try {
+    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', timeZone: timezone }).format(d);
+    const day = zonedDay(d, timezone);
+    if (day && day === zonedDay(new Date(now), timezone)) return t('time_today_at', { time });
+    if (day && day === zonedDay(new Date(now - 86_400_000), timezone)) return t('time_yesterday_at', { time });
+    const sameYear = day?.slice(0, 4) === zonedDay(new Date(now), timezone)?.slice(0, 4);
+    const date = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }), timeZone: timezone }).format(d);
+    return `${date} ${time}`;
+  } catch {
+    return typeof value === 'string' ? value : d.toISOString();
+  }
+}

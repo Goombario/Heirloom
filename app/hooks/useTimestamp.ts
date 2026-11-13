@@ -3,12 +3,13 @@
 import { useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useLanguage } from '@/app/components/LanguageProvider';
-import { formatActivityTime, formatTimestamp, type TimestampStyle } from '@/lib/utils/format-datetime';
+import { formatActivityTime, formatDayTime, formatTimestamp, type TimestampStyle } from '@/lib/utils/format-datetime';
 
 /**
  * Timestamp formatters bound to the app's language and time zone (#699).
  * `timestamp` is the absolute form; `activityTime` is for activity feeds
- * (relative under 24 hours, absolute date after).
+ * (relative under 24 hours, absolute date after); `dayTime` is a log row's
+ * one-line time ("Today 14:02").
  */
 export function useTimestamp() {
   const { language, timezone } = useLanguage();
@@ -21,5 +22,9 @@ export function useTimestamp() {
     (value: Date | string) => formatActivityTime(value, timezone, language, t),
     [timezone, language, t],
   );
-  return { timestamp, activityTime };
+  const dayTime = useCallback(
+    (value: Date | string) => formatDayTime(value, timezone, language, t),
+    [timezone, language, t],
+  );
+  return { timestamp, activityTime, dayTime };
 }

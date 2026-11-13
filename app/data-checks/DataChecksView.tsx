@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { CoverBand, EmptyState, FilterChip, InlineDataError, Input, PageShell, SegmentedControl, Select, cx, showSuccessToast } from '@/app/components/ui';
+import { Card, CoverBand, EmptyState, FilterChip, InlineDataError, Input, PageShell, SegmentedControl, Select, cx, showSuccessToast } from '@/app/components/ui';
 import { SkeletonList } from '@/app/components/SkeletonLoader';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { useTree } from '@/app/contexts/TreeContext';
@@ -17,7 +17,7 @@ import { parseIdParam } from '@/lib/utils/parse-id';
 import { DataCheckDetail } from './DataCheckDetail';
 import { DataCheckList } from './DataCheckList';
 import {
-    PAGE_SIZE, applyRule, entriesInTab, filterEntries, pageCount, pageGroups, pageOfIndex, personName, ruleCounts,
+    PAGE_SIZE, applyRule, entriesInTab, filterEntries, pageCount, pageGroups, pageKindGroups, pageOfIndex, personName, ruleCounts,
     type DataCheckTab,
 } from './model';
 import { useDataCheckText } from './useDataCheckText';
@@ -91,6 +91,7 @@ export default function DataChecksView() {
     const currentIndex = selectedIndex >= 0 ? selectedIndex : Math.min((shownPage - 1) * PAGE_SIZE, entries.length - 1);
     const current = currentIndex >= 0 ? entries[currentIndex] : null;
     const groups = useMemo(() => pageGroups(entries, shownPage), [entries, shownPage]);
+    const kindGroups = useMemo(() => pageKindGroups(entries, shownPage), [entries, shownPage]);
 
     // A linked entry (Back, a deep link, a hero flag) opens the list at its page.
     const linkedPage = selectedIndex >= 0 ? pageOfIndex(selectedIndex) : null;
@@ -229,7 +230,7 @@ export default function DataChecksView() {
                 switch with counts, the search, then the Show select. */}
             <div className="mb-4">
                 <CoverBand variant="short" eyebrow={tNav('tools')} title={t('title')}
-                    meta={result == null ? t('subtitle') : <span className="tabular-nums">{tNav('data_checks_count', { count: openTotal })}</span>} />
+                    meta={result == null ? t('subtitle') : <>{t('subtitle')} · <span className="tabular-nums">{tNav('data_checks_count', { count: openTotal })}</span></>} />
             </div>
             <div className={cx('flex flex-wrap items-center gap-2.5 mb-4', shown && 'hidden md:flex')}>
                 <SegmentedControl
@@ -270,26 +271,24 @@ export default function DataChecksView() {
             ) : entries.length === 0 ? (
                 <EmptyState variant="filtered" message={t('empty_filtered')} clearLabel={t('clear_filters')} onClear={resetFilters} />
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[380px_minmax(0,1fr)] md:rounded-2xl md:border md:border-border md:bg-card md:overflow-hidden md:shadow-[var(--panel-shadow)]">
-                    <div className={cx(
-                        '-mx-4 sm:mx-0 bg-card border-y border-border md:border-y-0 md:border-r',
-                        shown && 'hidden md:block',
-                    )}>
-                        <DataCheckList groups={groups} selectedId={current?.id ?? null} hrefFor={hrefFor}
+                // Two panels side by side, the list and the entry (locked list-pages board).
+                <div className="grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[380px_minmax(0,1fr)] gap-5 items-start">
+                    <Card pad={false} className={cx('overflow-hidden', shown && 'hidden md:block')}>
+                        <DataCheckList groups={kindGroups} selectedId={current?.id ?? null} hrefFor={hrefFor}
                             onOpen={(id) => { focusDetail.current = id; }}
-                            page={shownPage} pages={pages} onPage={(p) => setPage(p)} text={text} treeId={activeTreeId} />
+                            page={shownPage} pages={pages} onPage={(p) => setPage(p)} text={text} />
                         {/* "N other checks found nothing" closes the list (#59). */}
                         {tab === 'open' && clean > 0 && (
-                            <p className="m-0 border-t border-border-light px-4 py-2.5 text-meta text-text-muted">{t('clean_checks', { count: clean })}</p>
+                            <p className="m-0 border-t border-border px-4 py-2.5 bg-card-alt text-meta text-text-muted">{t('clean_checks', { count: clean })}</p>
                         )}
-                    </div>
+                    </Card>
                     {current && (
-                        <div className={cx(!shown && 'hidden md:block')}>
+                        <Card pad={false} className={cx('overflow-hidden', !shown && 'hidden md:block')}>
                             <DataCheckDetail ref={headingRef} key={current.id} entry={current} text={text}
                                 position={currentIndex + 1} total={entries.length}
                                 onStep={(d) => open(currentIndex + d)} onChanged={(m) => void onChanged(m)} onFixed={onFixed}
-                                canConfirm={canConfirm} canReopen={canReopen} backHref={hrefFor(null)} treeId={activeTreeId} />
-                        </div>
+                                canConfirm={canConfirm} canReopen={canReopen} treeId={activeTreeId} />
+                        </Card>
                     )}
                 </div>
             )}

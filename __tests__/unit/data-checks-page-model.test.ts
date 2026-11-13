@@ -7,7 +7,7 @@ import { runDataChecks } from '@/lib/data-checks/engine';
 import { DATA_CHECK_RULES, type DataCheckInput } from '@/lib/data-checks/rules';
 import type { DataCheckEntry } from '@/lib/data/types';
 import {
-    PAGE_SIZE, applyRule, entryCount, filterEntries, messageArgs, pageCount, pageGroups, pageOfIndex,
+    PAGE_SIZE, applyRule, entryCount, entryYear, filterEntries, messageArgs, pageCount, pageGroups, pageKindGroups, pageOfIndex,
     peopleById, ruleCounts, timelineRows,
 } from '@/app/data-checks/model';
 
@@ -80,6 +80,17 @@ describe('Data checks page model (#831)', () => {
         expect(page2).toHaveLength(1);
         expect(page2[0]).toMatchObject({ rule: 'child_born_after_mother_death', total: 30 });
         expect(page2[0].entries).toHaveLength(6);
+    });
+
+    it('groups the desktop list by kind, with whole-list totals', () => {
+        const groups = pageKindGroups(entries, 1);
+        expect(groups.map((g) => g.kind)).toEqual(['impossible', 'unlikely']);
+        expect(groups[0].total).toBe(entries.filter((e) => e.kind === 'impossible').length);
+        expect(groups.flatMap((g) => g.entries)).toEqual(entries);
+    });
+
+    it("shows the year of the date to check: Mary Ellen's death, 1814", () => {
+        expect(entryYear(find('child_born_after_mother_death:1'))).toBe(1814);
     });
 
     it("marks only the date to fix: Mary Ellen's death, not her children's births", () => {
