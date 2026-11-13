@@ -42,6 +42,7 @@ function dashboardWith(people: number) {
     placeTotals: { places: 0, countries: 0 },
     yearSpan: { first: null, last: null },
     resumedPerson: null,
+    startPerson: null,
     recentPeople: [],
   };
 }
@@ -49,12 +50,17 @@ function dashboardWith(people: number) {
 describe('home first run (FR-1)', () => {
   beforeEach(() => { push.mockClear(); });
 
-  it('offers Import a GEDCOM on an empty tree and hides the empty sections', () => {
+  it('offers three ways in on an empty tree and hides the empty sections (#127)', () => {
     dashboard = dashboardWith(0);
     render(<Home />);
     expect(screen.getByRole('heading', { level: 1, name: 'welcome_first_run' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'first_run_import_title' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'first_run_person_title' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'first_run_restore_title' })).toBeInTheDocument();
     screen.getByRole('button', { name: 'import_gedcom' }).click();
-    expect(push).toHaveBeenCalledWith('/import-export');
+    expect(push).toHaveBeenCalledWith('/import-export?job=add');
+    screen.getByRole('button', { name: 'first_run_restore_button' }).click();
+    expect(push).toHaveBeenCalledWith('/import-export?job=restore');
     expect(screen.queryByText('mobile_research')).toBeNull();
     expect(screen.queryByText('quick_add')).toBeNull();
   });

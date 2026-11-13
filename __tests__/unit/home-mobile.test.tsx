@@ -40,6 +40,7 @@ function dashboard(people: number): DashboardData {
     openCases: [], recentActivity: [], places: [],
     placeTotals: { places: 0, countries: 0 }, yearSpan: { first: null, last: null },
     resumedPerson: people ? resumed : null,
+    startPerson: null,
     recentPeople: people ? [recent(2, 'Anders'), recent(3, 'Ingrid'), recent(4, 'Nils'), recent(5, 'Elsa')] : [],
   };
 }

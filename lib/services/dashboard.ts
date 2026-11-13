@@ -7,8 +7,8 @@ import { getTopPlacesByRecordCount } from '@/lib/db/queries/places';
 import { factPlaceTextColumns } from '@/lib/db/queries/place-links';
 import { getLikelyDuplicates } from '@/lib/db/queries/data-quality';
 import { getRecentlyEditedPeople } from '@/lib/db/queries/recent-people';
-import { getPersonNextSteps, getPlaceCountries, getTreeYearSpan } from '@/lib/db/queries/home';
-import type { DashboardData, Suggestion } from '@/lib/data/types';
+import { getDefaultRootPersonId, getPersonNextSteps, getPlaceCountries, getTreeYearSpan } from '@/lib/db/queries/home';
+import type { CardPerson, DashboardData, Suggestion } from '@/lib/data/types';
 import { groupActivityRuns } from '@/lib/utils/activity-groups';
 import { liveChildLinkSql, liveEventSql } from '@/lib/db/queries/live-owner';
 
@@ -82,44 +82,15 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
   // Resumed person: most recent person edit, with role pills and the same
   // "X/Y sourced" tag as the person hero (Female · Spouse · Mother · 2/4 sourced).
   let resumedPerson: DashboardData['resumedPerson'] = null;
+  let startPerson: DashboardData['startPerson'] = null;
 
   const lastPersonAudit = lastPersonRow.rows[0];
   const lastPersonId = lastPersonAudit?.EntityId as number | undefined;
   if (lastPersonId) {
-    const [r, sourcing, nextSteps] = await Promise.all([query(
-      `SELECT
-          p."Id", p."FirstName", p."LastName", p."Sex",
-          ${effectiveFirstName('p')} AS "EffectiveFirstName",
-          ${primaryNickname('p')} AS "Nickname",
-          p."BirthDate", p."DeathDate", p."IsDeceased", ${factPlaceTextColumns('people', 'p')},
-          m."Id" AS "PrimaryMediaId", m."FocalX", m."FocalY", m."FocalRadius",
-          (
-              SELECT COUNT(*) FROM "Families" f
-              WHERE f."TreeId" = $2
-                AND (COALESCE(f."Partner1Id", f."HusbandId") = p."Id"
-                  OR COALESCE(f."Partner2Id", f."WifeId") = p."Id")
-          )::int AS "partnershipCount",
-          (
-              SELECT COUNT(*) FROM "FamilyPerson" fp
-              WHERE ${liveChildLinkSql('fp')} AND fp."FamiliesAsChildId" IN (
-                  SELECT f."Id" FROM "Families" f
-                  WHERE f."TreeId" = $2
-                    AND (COALESCE(f."Partner1Id", f."HusbandId") = p."Id"
-                      OR COALESCE(f."Partner2Id", f."WifeId") = p."Id")
-              )
-          )::int AS "childrenCount"
-       FROM "People" p
-       ${primaryPhotoJoin('p', 'p."TreeId"', 'm')}
-       WHERE p."Id" = $1 AND p."TreeId" = $2
-       LIMIT 1`,
-      [lastPersonId, treeId]
-    ), getPersonSourcing(lastPersonId, treeId), getPersonNextSteps(lastPersonId, treeId)]);
-    const row = r.rows[0];
-    if (row && sourcing) {
+    const card = await getCardPerson(lastPersonId, treeId);
+    if (card) {
       resumedPerson = {
-        ...row,
-        ...sourcing,
-        nextSteps,
+        ...card,
         lastChange: {
           Action: lastPersonAudit.Action,
           EntityLabel: lastPersonAudit.EntityLabel,
@@ -128,6 +99,12 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
         },
       };
     }
+  }
+  // Nobody edited yet (a fresh import, say): the desktop card shows the person the
+  // tree opens at instead of disappearing (Heirloom #127). The phone keeps its rule.
+  if (!resumedPerson && stats.people > 0) {
+    const rootId = await getDefaultRootPersonId(treeId);
+    if (rootId !== undefined) startPerson = await getCardPerson(rootId, treeId);
   }
 
   // "Recently edited" (#1061 phone, four; #53 desktop, six in two columns): the
@@ -151,8 +128,44 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
     placeTotals: { places: placeCountries.placeCount, countries: placeCountries.countryCount },
     yearSpan,
     resumedPerson,
+    startPerson,
     recentPeople,
   };
+}
+
+/** The pick-up card's person: names, vitals, photo, family counts, sourcing and Next steps. */
+async function getCardPerson(personId: number, treeId: number): Promise<CardPerson | null> {
+  const [r, sourcing, nextSteps] = await Promise.all([query(
+    `SELECT
+        p."Id", p."FirstName", p."LastName", p."Sex",
+        ${effectiveFirstName('p')} AS "EffectiveFirstName",
+        ${primaryNickname('p')} AS "Nickname",
+        p."BirthDate", p."DeathDate", p."IsDeceased", ${factPlaceTextColumns('people', 'p')},
+        m."Id" AS "PrimaryMediaId", m."FocalX", m."FocalY", m."FocalRadius",
+        (
+            SELECT COUNT(*) FROM "Families" f
+            WHERE f."TreeId" = $2
+              AND (COALESCE(f."Partner1Id", f."HusbandId") = p."Id"
+                OR COALESCE(f."Partner2Id", f."WifeId") = p."Id")
+        )::int AS "partnershipCount",
+        (
+            SELECT COUNT(*) FROM "FamilyPerson" fp
+            WHERE ${liveChildLinkSql('fp')} AND fp."FamiliesAsChildId" IN (
+                SELECT f."Id" FROM "Families" f
+                WHERE f."TreeId" = $2
+                  AND (COALESCE(f."Partner1Id", f."HusbandId") = p."Id"
+                    OR COALESCE(f."Partner2Id", f."WifeId") = p."Id")
+            )
+        )::int AS "childrenCount"
+     FROM "People" p
+     ${primaryPhotoJoin('p', 'p."TreeId"', 'm')}
+     WHERE p."Id" = $1 AND p."TreeId" = $2
+     LIMIT 1`,
+    [personId, treeId]
+  ), getPersonSourcing(personId, treeId), getPersonNextSteps(personId, treeId)]);
+  const row = r.rows[0];
+  if (!row || !sourcing) return null;
+  return { ...row, ...sourcing, nextSteps } as CardPerson;
 }
 
 export interface GetSuggestionsParams {

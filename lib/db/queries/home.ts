@@ -1,5 +1,6 @@
 import { query } from '@/lib/db/connection';
 import { liveChildLinkSql } from '@/lib/db/queries/live-owner';
+import { pickDefaultRoot } from '@/lib/tree/defaultRoot';
 
 /**
  * Reads for the v1.1 desktop home (#53): the pick-up card's Next steps, the band's
@@ -98,6 +99,35 @@ export async function getPersonNextSteps(personId: number, treeId: number, limit
     for (const g of groups) if (g[round] && steps.length < limit) steps.push(g[round]);
   }
   return { steps, total: vitals.length + sources.length + family.length };
+}
+
+/**
+ * The person the tree page opens at when nothing is asked for (#1055's rule, the
+ * same reads as the tree service): the home page's pick-up card shows them while
+ * no person has been edited yet, so the card is never missing.
+ */
+export async function getDefaultRootPersonId(treeId: number): Promise<number | undefined> {
+  const [people, families, links] = await Promise.all([
+    query(`SELECT "Id" FROM "People" WHERE "TreeId" = $1`, [treeId]),
+    query(`SELECT f."Id", f."Partner1Id", f."Partner2Id" FROM "Families" f WHERE f."TreeId" = $1`, [treeId]),
+    query(
+      `SELECT fp."FamiliesAsChildId", fp."ChildrenId" FROM "FamilyPerson" fp
+       INNER JOIN "Families" f ON fp."FamiliesAsChildId" = f."Id"
+       WHERE f."TreeId" = $1`,
+      [treeId],
+    ),
+  ]);
+  const childrenByFamilyId = new Map<number, number[]>();
+  for (const fp of links.rows as Array<{ FamiliesAsChildId: number; ChildrenId: number }>) {
+    let kids = childrenByFamilyId.get(fp.FamiliesAsChildId);
+    if (!kids) childrenByFamilyId.set(fp.FamiliesAsChildId, kids = []);
+    kids.push(fp.ChildrenId);
+  }
+  return pickDefaultRoot(
+    (people.rows as Array<{ Id: number }>).map((r) => r.Id),
+    families.rows as Array<{ Id: number; Partner1Id: number | null; Partner2Id: number | null }>,
+    childrenByFamilyId,
+  );
 }
 
 /** The band's "1702–1998": the earliest and latest year of any birth or death. */

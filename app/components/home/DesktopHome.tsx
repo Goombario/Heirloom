@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import GuardedLink from '@/app/components/GuardedLink';
@@ -9,12 +10,12 @@ import { ActionLink, Button, CoverBand, DetailBody, DetailRail, Lifespan, OpenIn
 import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
 import type { LoadPhase } from '@/app/components/useLoadPhase';
-import type { DashboardData, OpenCase, RecentPerson, ResumedPerson } from '@/lib/data/types';
+import type { CardPerson, DashboardData, OpenCase, RecentPerson, ResumedPerson } from '@/lib/data/types';
 import type { NextStep } from '@/lib/db/queries/home';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
 import { livingStatus } from '@/lib/living';
 import { placeHref } from '@/lib/places/place-key';
-import { ArrowUpRight, FolderSearch, Plus, Upload, UserRound, Users } from '@/lib/icons';
+import { ArrowUpRight, Check, Clock, FolderSearch, MapPin, Plus, RotateCcw, Upload, UserRound, Users } from '@/lib/icons';
 import { avatarClass } from '@/lib/utils/avatar';
 import { getInitials } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
@@ -34,6 +35,8 @@ export interface DesktopHomeProps {
     duplicates: number;
     /** Editors and contributors. Viewers get no Next steps, Quick add or data-check rows. */
     canEdit: boolean;
+    /** Owners and editors: a new tree offers Restore a backup. */
+    canRestore: boolean;
     treeId: number | null;
 }
 
@@ -82,7 +85,7 @@ function useStepText() {
     };
 }
 
-export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, treeId }: DesktopHomeProps) {
+export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, canRestore, treeId }: DesktopHomeProps) {
     const t = useTranslations('home');
     const router = useRouter();
     const treeName = useActiveTreeName();
@@ -97,7 +100,7 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, tr
             eyebrow={firstRun ? t('mobile_new_tree') : t('mobile_your_tree')}
             title={firstRun ? t('welcome_first_run') : treeName}
             titleSize="hero"
-            meta={firstRun ? undefined : ready && stats ? (
+            meta={firstRun ? (canEdit ? t('first_run_band_meta') : undefined) : ready && stats ? (
                 t.rich(span?.first != null && span.last != null ? 'desk_counts_span' : 'desk_counts', {
                     people: stats.people,
                     families: stats.families,
@@ -111,27 +114,27 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, tr
 
     if (firstRun) {
         return (
-            <div className="desktop-home grid gap-6">
+            <div className="desktop-home grid">
                 {band}
-                <div className="grid gap-4 max-w-[620px]">
-                    <p className="m-0 text-base text-text-secondary">{t('first_run_subtitle')}</p>
-                    {canEdit && (
-                        <div className="flex flex-wrap gap-2">
-                            <Button variant="primary" icon={<Upload className="w-4 h-4" aria-hidden="true" />} onClick={() => router.push('/import-export')}>{t('import_gedcom')}</Button>
-                            <Button variant="outline" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => router.push('/people/new')}>{t('add_person_short')}</Button>
-                        </div>
-                    )}
-                </div>
+                {canEdit ? (
+                    <FirstRunPaths canRestore={canRestore} onGo={(href) => router.push(href)} />
+                ) : (
+                    <div className="mt-6">
+                        <QuietBox icon={<UserRound className="w-4 h-4" />} title={t('first_run_viewer_title')} message={t('first_run_viewer_body')} />
+                    </div>
+                )}
             </div>
         );
     }
 
     const resumed = data?.resumedPerson ?? null;
+    // Nothing edited yet: the card shows the person the tree opens at (Heirloom #127).
+    const cardPerson: CardPerson | null = resumed ?? data?.startPerson ?? null;
     const rail = (
         <DetailRail look="open">
             {canEdit && <QuickAdd />}
             <NeedsAttention canEdit={canEdit} datesToCheck={datesToCheck} duplicates={duplicates} cases={stats?.casesInProgress ?? 0} ready={ready} />
-            {ready && data.places.length > 0 && <WhereTheyLived data={data} />}
+            {ready && <WhereTheyLived data={data} />}
         </DetailRail>
     );
 
@@ -139,16 +142,16 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, tr
         <div className="desktop-home grid">
             {band}
             {phase === 'loading' && <PickUpSkeleton />}
-            {ready && resumed && <PickUp person={resumed} treeId={treeId} viewer={!canEdit} />}
+            {ready && cardPerson && <PickUp person={cardPerson} lastChange={resumed?.lastChange ?? null} treeId={treeId} viewer={!canEdit} />}
             <DetailBody divided rail={rail}>
                 <RecentlyEdited people={data?.recentPeople ?? []} treeId={treeId} canEdit={canEdit} loading={phase === 'loading'} />
-                <Research cases={data?.openCases ?? []} loading={phase === 'loading'} />
+                <Research cases={data?.openCases ?? []} loading={phase === 'loading'} canEdit={canEdit} />
             </DetailBody>
         </div>
     );
 }
 
-function Portrait({ person, treeId }: { person: ResumedPerson; treeId: number | null }) {
+function Portrait({ person, treeId }: { person: CardPerson; treeId: number | null }) {
     return (
         <span className={cx('relative grid place-items-center w-[240px] h-[180px] shrink-0 rounded-card overflow-hidden', avatarClass(person.Sex))}>
             <span aria-hidden="true" className="serif text-4xl text-[color:var(--color-on-media)] opacity-70">{getInitials(person.FirstName, person.LastName)}</span>
@@ -163,12 +166,16 @@ function Portrait({ person, treeId }: { person: ResumedPerson; treeId: number | 
     );
 }
 
-/** "Pick up where you left off": one white card, with "Next for <name>" in its tinted right column. */
-function PickUp({ person, treeId, viewer }: { person: ResumedPerson; treeId: number | null; viewer: boolean }) {
+/**
+ * "Pick up where you left off": one white card, with "Next for <name>" in its tinted
+ * right column. With no `lastChange` (nothing edited yet) it shows the tree's
+ * starting person with the same wording and no change line.
+ */
+function PickUp({ person, lastChange, treeId, viewer }: { person: CardPerson; lastChange: ResumedPerson['lastChange'] | null; treeId: number | null; viewer: boolean }) {
     const t = useTranslations('home');
     const changeLine = useChangeLine();
     const stepText = useStepText();
-    const name = displayFullName(person) || person.lastChange.EntityLabel || t('person_fallback', { id: person.Id });
+    const name = displayFullName(person) || lastChange?.EntityLabel || t('person_fallback', { id: person.Id });
     const first = person.EffectiveFirstName || person.FirstName || name;
     const href = `/people/view?id=${person.Id}`;
     const { steps, total } = person.nextSteps;
@@ -181,7 +188,7 @@ function PickUp({ person, treeId, viewer }: { person: ResumedPerson; treeId: num
                     <Portrait person={person} treeId={treeId} />
                 </GuardedLink>
                 <div className="grid min-w-[220px] flex-1 content-start gap-1.5">
-                    <span className="eyebrow" id="home-pickup">{viewer ? t('mobile_last_updated') : t('mobile_pick_up')}</span>
+                    <span className="eyebrow" id="home-pickup">{viewer && lastChange ? t('mobile_last_updated') : t('mobile_pick_up')}</span>
                     <h2 className="m-0">
                         <GuardedLink href={href} className="serif inline-flex items-baseline gap-1 text-2xl font-semibold leading-tight text-text no-underline hover:underline focus-ring rounded-sm">
                             {name}<ArrowUpRight className="w-5 h-5 shrink-0 self-center text-text-muted" aria-hidden="true" />
@@ -190,7 +197,7 @@ function PickUp({ person, treeId, viewer }: { person: ResumedPerson; treeId: num
                     {(person.BirthDate || person.DeathDate) && (
                         <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} tone="evidence" className="text-sm" />
                     )}
-                    <span className="text-sm text-text-secondary">{changeLine(person.lastChange)}</span>
+                    {lastChange && <span className="text-sm text-text-secondary">{changeLine(lastChange)}</span>}
                     <OpenInTreeRow personId={person.Id} firstName={first} className="mt-3 max-w-[360px]" />
                 </div>
             </div>
@@ -239,12 +246,15 @@ function PickUpSkeleton() {
 function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPerson[]; treeId: number | null; canEdit: boolean; loading: boolean }) {
     const t = useTranslations('home');
     const changeParts = useChangeParts();
-    if (!loading && people.length === 0) return null;
+    // An empty list keeps its section (Heirloom #127), so the page keeps its shape;
+    // a lone row gets a dashed slot beside it in the two-column layout.
     return (
         <section aria-labelledby="home-recent" className="mb-10">
             <SectionHeader level="label" headingId="home-recent" title={canEdit ? t('mobile_recently_edited') : t('mobile_recently_updated')}
                 action={<ActionLink href="/audit">{t('mobile_full_history')}</ActionLink>} />
-            {loading ? <RowsSkeleton rows={4} /> : (
+            {loading ? <RowsSkeleton rows={4} /> : people.length === 0 ? (
+                <QuietBox icon={<Clock className="w-4 h-4" />} title={t('quiet_recent_title')} message={t('quiet_recent_body')} />
+            ) : (
                 <ul className="m-0 grid list-none gap-x-6 p-0 min-[1100px]:grid-cols-2">
                     {people.map((p) => {
                         const name = displayFullName(p) || t('person_fallback', { id: p.Id });
@@ -264,20 +274,28 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
                             </li>
                         );
                     })}
+                    {canEdit && people.length === 1 && (
+                        <li aria-hidden="true" className="hidden min-[1100px]:flex items-center gap-3 border-t border-dashed border-border px-2 py-3">
+                            <span className="w-9 h-9 shrink-0 rounded-full border border-dashed border-border" />
+                            <span className="text-meta text-text-muted">{t('quiet_recent_next')}</span>
+                        </li>
+                    )}
                 </ul>
             )}
         </section>
     );
 }
 
-function Research({ cases, loading }: { cases: OpenCase[]; loading: boolean }) {
+function Research({ cases, loading, canEdit }: { cases: OpenCase[]; loading: boolean; canEdit: boolean }) {
     const t = useTranslations('home');
     const { activityTime } = useTimestamp();
     return (
         <section aria-labelledby="home-research">
             <SectionHeader level="label" headingId="home-research" title={t('mobile_research')} action={<ActionLink href="/cases">{t('all_cases')}</ActionLink>} />
             {loading ? <RowsSkeleton rows={2} /> : cases.length === 0 ? (
-                <p className="m-0 text-sm text-text-muted">{t('no_cases_in_progress')}</p>
+                <QuietBox icon={<FolderSearch className="w-4 h-4" />} title={t('quiet_cases_title')}
+                    message={canEdit ? t('quiet_cases_body') : t('quiet_cases_body_viewer')}
+                    action={canEdit ? <ButtonLink href="/cases/new">{t('new_case')}</ButtonLink> : undefined} />
             ) : (
                 <ul className="m-0 grid list-none p-0">
                     {cases.map((c) => (
@@ -336,10 +354,22 @@ function NeedsAttention({ canEdit, datesToCheck, duplicates, cases, ready }: { c
         canEdit && duplicates > 0 && { href: '/people?filter=duplicates', label: t('mobile_possible_duplicates'), count: duplicates },
         { href: '/cases', label: t('cases_in_progress_title'), count: cases },
     ].filter(Boolean) as Array<{ href: string; label: string; count: number }>;
+    const allClear = canEdit && ready && datesToCheck === 0 && duplicates === 0;
     return (
         <section aria-labelledby="home-attention">
             <SectionHeader level="label" as="h3" headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
             <ul className="m-0 grid list-none p-0">
+                {allClear && (
+                    <li className="flex items-center gap-2.5 border-t border-border-light px-2 py-3">
+                        <span aria-hidden="true" className="grid place-items-center w-[22px] h-[22px] shrink-0 rounded-full border border-border text-text-secondary">
+                            <Check className="w-3 h-3" />
+                        </span>
+                        <span className="grid gap-0.5">
+                            <span className="text-sm font-medium">{t('all_clear')}</span>
+                            <span className="text-meta text-text-muted">{t('all_clear_body')}</span>
+                        </span>
+                    </li>
+                )}
                 {rows.map((r) => (
                     <li key={r.href}>
                         <GuardedLink href={r.href}
@@ -359,6 +389,14 @@ function WhereTheyLived({ data }: { data: DashboardData }) {
     const t = useTranslations('home');
     const max = Math.max(...data.places.map((p) => Number(p.person_count)), 1);
     const { places, countries } = data.placeTotals;
+    if (data.places.length === 0) {
+        return (
+            <section aria-labelledby="home-places">
+                <SectionHeader level="label" as="h3" headingId="home-places" title={t('where_they_lived')} action={<ActionLink href="/places">{t('all_places')}</ActionLink>} />
+                <QuietBox icon={<MapPin className="w-4 h-4" />} title={t('quiet_places_title')} message={t('quiet_places_body')} />
+            </section>
+        );
+    }
     return (
         <section aria-labelledby="home-places">
             <SectionHeader level="label" as="h3" headingId="home-places" title={t('where_they_lived')} action={<ActionLink href="/places">{t('all_places')}</ActionLink>} />
@@ -404,5 +442,70 @@ function RowsSkeleton({ rows }: { rows: number }) {
                 </span>
             ))}
         </div>
+    );
+}
+
+/** A section with nothing to show (Heirloom #127): a dashed box that says what goes here. */
+function QuietBox({ icon, title, message, action }: { icon: ReactNode; title: string; message: string; action?: ReactNode }) {
+    return (
+        <div className="quiet-box flex flex-wrap items-start gap-3.5 rounded-card border border-dashed border-border px-[18px] py-4">
+            <span aria-hidden="true" className="grid place-items-center w-8 h-8 shrink-0 rounded-btn border border-border text-text-secondary">{icon}</span>
+            <span className="grid min-w-[180px] flex-1 gap-0.5">
+                <span className="text-sm font-semibold">{title}</span>
+                <span className="text-meta text-text-muted">{message}</span>
+            </span>
+            {action}
+        </div>
+    );
+}
+
+/** A small outline button that navigates. */
+function ButtonLink({ href, children }: { href: string; children: ReactNode }) {
+    return (
+        <GuardedLink href={href}
+            className="inline-flex items-center h-8 shrink-0 rounded-btn border border-border bg-card px-3 text-sm font-medium text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
+            {children}
+        </GuardedLink>
+    );
+}
+
+/** A brand-new tree's three ways in (Heirloom #127, board D1): one card, one column each. */
+function FirstRunPaths({ canRestore, onGo }: { canRestore: boolean; onGo: (href: string) => void }) {
+    const t = useTranslations('home');
+    // bg-card keeps the tile and button edges visible on the tinted Restore column in dark mode.
+    const icon = 'grid place-items-center w-11 h-11 rounded-btn border border-border bg-card text-text-secondary';
+    const col = 'grid content-start gap-2.5 p-6 border-border-light';
+    return (
+        <section aria-label={t('first_run_ways')}
+            className={cx('first-run mt-6 grid overflow-hidden rounded-panel border border-border bg-card shadow-card', canRestore ? 'min-[900px]:grid-cols-3' : 'min-[900px]:grid-cols-2')}>
+            <div className={col}>
+                <span aria-hidden="true" className={icon}><Upload className="w-5 h-5" /></span>
+                <h2 className="m-0 serif text-lg font-semibold">{t('first_run_import_title')}</h2>
+                <p className="m-0 text-sm text-text-secondary">{t('first_run_import_body')}</p>
+                <div className="pt-2">
+                    <Button variant="primary" icon={<Upload className="w-4 h-4" aria-hidden="true" />} onClick={() => onGo('/import-export?job=add')}>{t('import_gedcom')}</Button>
+                </div>
+            </div>
+            <div className={cx(col, 'border-t min-[900px]:border-t-0 min-[900px]:border-l')}>
+                <span aria-hidden="true" className={icon}><UserRound className="w-5 h-5" /></span>
+                <h2 className="m-0 serif text-lg font-semibold">{t('first_run_person_title')}</h2>
+                <p className="m-0 text-sm text-text-secondary">{t('first_run_person_body')}</p>
+                <div className="pt-2">
+                    <Button variant="outline" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => onGo('/people/new')}>{t('add_person_short')}</Button>
+                </div>
+            </div>
+            {canRestore && (
+                <div className={cx(col, 'bg-card-alt border-t min-[900px]:border-t-0 min-[900px]:border-l')}>
+                    <span aria-hidden="true" className={icon}><RotateCcw className="w-5 h-5" /></span>
+                    <h2 className="m-0 serif text-lg font-semibold">{t('first_run_restore_title')}</h2>
+                    <p className="m-0 text-sm text-text-secondary">{t('first_run_restore_body')}</p>
+                    <div className="pt-2">
+                        <span className="inline-flex rounded-btn bg-card">
+                            <Button variant="outline" onClick={() => onGo('/import-export?job=restore')}>{t('first_run_restore_button')}</Button>
+                        </span>
+                    </div>
+                </div>
+            )}
+        </section>
     );
 }
