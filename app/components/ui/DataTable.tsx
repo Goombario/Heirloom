@@ -153,7 +153,7 @@ export function DataTable<T>({
                 <span className="gap-[5px]" style={{ display: 'inline-flex', alignItems: 'center' }}>
                   {col.header}
                   {col.sortable && (
-                    <span aria-hidden className="text-xs leading-[1]" style={{ opacity: active ? 1 : 0.4 }}>
+                    <span aria-hidden className={cx('text-xs leading-[1]', !active && 'data-table__sort-idle')}>
                       {arrow}
                     </span>
                   )}

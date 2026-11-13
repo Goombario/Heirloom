@@ -3094,3 +3094,17 @@ button.rail-unknown:hover { background: var(--color-hover-surface); }
 .cover--family .split-portrait > :first-child > .split-portrait__half { border-radius: var(--sp-r) 0 0 var(--sp-r); }
 .cover--family .split-portrait > .split-portrait__half:last-child,
 .cover--family .split-portrait > :last-child > .split-portrait__half { border-radius: 0 var(--sp-r) var(--sp-r) 0; }
+
+/* Fix 11: list toolbars. The search box's `/` hint, unset "+ add a filter" chips
+   drawn dashed on the parchment, the sort glyph only on the sorted column (and
+   on hover or focus), and the numbered pager. */
+.list-toolbar__kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 500 11px var(--font-mono); line-height: 16px; padding: 0 5px; border: 1px solid var(--color-border); border-radius: 4px; color: var(--text-muted); pointer-events: none; }
+.list-toolbar__search:focus-within .list-toolbar__kbd { display: none; }
+.list-toolbar .filter-chip.is-off:has(> svg:first-child, > button > svg:first-child) { border-style: dashed; border-width: 1px; border-color: var(--color-text-muted); background: transparent; }
+.list-toolbar .filter-chip.is-off:has(> svg:first-child, > button > svg:first-child):hover { background: var(--color-surface-2); }
+.data-table__sort-idle { opacity: 0; transition: opacity .12s; }
+th:hover > span > .data-table__sort-idle, th:focus-visible > span > .data-table__sort-idle { opacity: .45; }
+.pager__num { min-width: 30px; height: 30px; padding: 0 8px; border-radius: 15px; font: 500 13px var(--font-sans); color: var(--text-secondary); font-variant-numeric: tabular-nums; cursor: pointer; }
+.pager__num:hover { background: var(--color-surface-2); }
+.pager__num.is-current { background: var(--color-segment-on); color: var(--color-on-segment); }
+.pager__gap { min-width: 22px; text-align: center; color: var(--text-muted); }

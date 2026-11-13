@@ -5047,7 +5047,8 @@
     "ro_place": "Lieu",
     "ro_close": "Fermer",
     "edit_on_page": "Modifier sur la page de {name}",
-    "edit_on_family": "Modifier sur la page de la famille"
+    "edit_on_family": "Modifier sur la page de la famille",
+    "pagination": "Pages"
   },
   "personDesktop": {
     "this_person": "cette personne",

@@ -5047,7 +5047,8 @@
     "ro_place": "Место",
     "ro_close": "Закрыть",
     "edit_on_page": "Изменить на странице: {name}",
-    "edit_on_family": "Изменить на странице семьи"
+    "edit_on_family": "Изменить на странице семьи",
+    "pagination": "Страницы"
   },
   "personDesktop": {
     "this_person": "этот человек",
