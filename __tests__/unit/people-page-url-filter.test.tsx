@@ -64,8 +64,8 @@ describe('PeoplePageClient removed suggestion URLs (#834)', () => {
     render(<PeoplePageClient initialPeople={null} />);
 
     const table = screen.getByRole('table');
-    expect(within(table).getByRole('cell', { name: /Byron\s*,\s*Ada/ })).toBeInTheDocument();
-    expect(within(table).getByRole('cell', { name: /Byron\s*,\s*Charles/ })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: /Ada Byron/ })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: /Charles Byron/ })).toBeInTheDocument();
   });
 });
 
@@ -76,12 +76,12 @@ describe.each(['duplicates'])('PeoplePageClient ?filter=%s (#794)', (filter) => 
     render(<PeoplePageClient initialPeople={null} />);
 
     const table = screen.getByRole('table');
-    expect(within(table).getByRole('cell', { name: /Byron\s*,\s*Charles/ })).toBeInTheDocument();
-    expect(within(table).queryByRole('cell', { name: /Byron\s*,\s*Ada/ })).not.toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: /Charles Byron/ })).toBeInTheDocument();
+    expect(within(table).queryByRole('cell', { name: /Ada Byron/ })).not.toBeInTheDocument();
 
     // The phone chips and the desktop chips both clear it; take the first.
     fireEvent.click(screen.getAllByRole('button', { name: 'filter_duplicates' })[0]);
-    expect(within(screen.getByRole('table')).getByRole('cell', { name: /Byron\s*,\s*Ada/ })).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByRole('cell', { name: /Ada Byron/ })).toBeInTheDocument();
     expect(url.replace).toHaveBeenCalledWith('/people', { scroll: false });
   });
 });

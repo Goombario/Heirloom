@@ -19,7 +19,7 @@ import { FilterChip } from '@/app/components/ui';
 import { SkeletonList } from '@/app/components/SkeletonLoader';
 import { useLoadPhase } from '@/app/components/useLoadPhase';
 import { getInitials } from '@/lib/utils/initials';
-import { displayFirstName, displayGivenNames, displayFullName } from '@/lib/utils/names';
+import { displayFirstName, displayFullName } from '@/lib/utils/names';
 import { MobilePeopleFilters, MobilePeopleRows, type PeopleSortColumn } from './MobilePeopleList';
 import { getDataClient } from '@/lib/data';
 import { prefetchPerson, cachePersonSummaries } from '@/app/people/view/personCache';
@@ -40,33 +40,6 @@ type SortColumn = PeopleSortColumn;
 type SortDirection = 'asc' | 'desc';
 
 const ITEMS_PER_PAGE = 50;
-
-/**
- * Surname and given names, told apart at a glance (#426). The full name used to
- * render as one undifferentiated string, and the surname is what the eye is
- * actually hunting for in this list — it is also what the surname filter chip and
- * the grouping popover key on, so making it the dominant half reinforces those
- * rather than competing with them.
- *
- * Weight AND colour, never colour alone. Both are token-backed (`text-text` /
- * `text-text-secondary`) so the split survives theming and the
- * `ds/no-inline-static-literal` rule.
- */
-function SplitName({ person, unnamed, surnameFirst }: {
-    person: PersonWithParentFamily;
-    unnamed: string;
-    /** Table order is "Surname, Given"; otherwise natural order. */
-    surnameFirst?: boolean;
-}) {
-    const given = displayGivenNames(person);
-    const surname = person.LastName;
-    if (!surname) return <>{given || unnamed}</>;
-    const surnameEl = <span className="font-semibold text-text">{surname}</span>;
-    const givenEl = given ? <span className="font-normal text-text-secondary">{given}</span> : null;
-    return surnameFirst
-        ? <>{surnameEl}{givenEl && <>, {givenEl}</>}</>
-        : <>{givenEl}{givenEl && ' '}{surnameEl}</>;
-}
 
 /**
  * A chip for an invertible filter: off → matches → does not match → off.
@@ -420,20 +393,22 @@ export default function PeoplePageClient({
                             name={String(fullName)}
                             initials={initials}
                             sex={person.Sex}
-                            size={32}
+                            size={28}
                             focalX={person.FocalX}
                             focalY={person.FocalY}
                             focalRadius={person.FocalRadius}
                         />
                         <div>
                             <Link href={`/people/view?id=${person.Id}`} className="serif text-base font-semibold text-text no-underline hover:underline">
-                                <SplitName person={person} unnamed={String(fullName)} surnameFirst />
+                                {fullName}
                             </Link>
-                            {/* The parent line is always laid out, empty or not, so every
-                                row has the same height (TB-2, #747). */}
-                            <div className="muted text-xs mt-px" aria-hidden={!(person.FatherFirstName || person.MotherFirstName) || undefined}>
-                                {[person.FatherFirstName && `${person.FatherFirstName} ${person.FatherLastName || ''}`.trim(), person.MotherFirstName && `${person.MotherFirstName} ${person.MotherLastName || ''}`.trim()].filter(Boolean).join(' & ') || '\u00a0'}
-                            </div>
+                            {/* The parents as the name's sub-line, when known; rows centre
+                                on the row either way (locked list board, v1.1). */}
+                            {(person.FatherFirstName || person.MotherFirstName) && (
+                                <div className="muted text-xs mt-px">
+                                    {[person.FatherFirstName && `${person.FatherFirstName} ${person.FatherLastName || ''}`.trim(), person.MotherFirstName && `${person.MotherFirstName} ${person.MotherLastName || ''}`.trim()].filter(Boolean).join(' & ')}
+                                </div>
+                            )}
                         </div>
                     </div>
                 );
@@ -444,14 +419,16 @@ export default function PeoplePageClient({
             header: t('col_born'),
             sortable: true,
             className: 'whitespace-nowrap',
-            render: (person) => <span className="date-mono date-muted text-sm">{formatDateForDisplay(person.BirthDate, language, dateWords) || <span className="muted">—</span>}</span>,
+            render: (person) => <span className="date-mono text-sm">{formatDateForDisplay(person.BirthDate, language, dateWords) || <span className="muted">—</span>}</span>,
         },
         {
             key: 'death',
             header: t('col_died'),
             sortable: true,
             className: 'whitespace-nowrap',
-            render: (person) => <span className="date-mono date-muted text-sm">{formatDateForDisplay(person.DeathDate, language, dateWords) || <span className="muted">—</span>}</span>,
+            render: (person) => person.DeathDate
+                ? <span className="date-mono text-sm">{formatDateForDisplay(person.DeathDate, language, dateWords)}</span>
+                : livingStatus(person) === 'living' ? <span className="text-sm text-text-muted">{t('living')}</span> : <span className="date-mono text-sm"><span className="muted">—</span></span>,
         },
         {
             key: 'place',
@@ -717,6 +694,7 @@ export default function PeoplePageClient({
                                     sort={{ key: sortColumn, dir: sortDirection }}
                                     onSortChange={(key) => handleSort(key as SortColumn)}
                                     onRowPrefetch={(p) => prefetchPerson(p.Id, activeTreeId)}
+                                    density="list"
                                 />
                             </TablePanel>
                         </div>

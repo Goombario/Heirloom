@@ -104,7 +104,7 @@ describe('import pages name their target tree (FR-2)', () => {
     renderJob(null);
     expect(await screen.findByText('nothing_to_back_up')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /restore/ })).toBeNull();
-    expect(screen.getByRole('button', { name: 'download_backup' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'action_download' })).toBeDisabled();
   });
 
   it('refuses a file that is not a GEDCOM or backup and keeps Check disabled', async () => {
@@ -118,7 +118,7 @@ describe('import pages name their target tree (FR-2)', () => {
   it('opens a job from the hub and comes back with the breadcrumb', async () => {
     state.getCounts.mockResolvedValue({ ...EMPTY, people: 120, families: 25 });
     renderJob(null);
-    fireEvent.click(await screen.findByRole('button', { name: /^add_from_spreadsheet/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'action_start' }));
     expect(window.location.search).toBe('?job=spreadsheet');
     expect(await screen.findByRole('heading', { name: 'add_from_spreadsheet', level: 1 })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^title/ }));

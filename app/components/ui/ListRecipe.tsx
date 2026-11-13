@@ -59,9 +59,9 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
         aria-label={searchLabel}
         aria-keyshortcuts="/"
         icon={<Search className="w-4 h-4" aria-hidden="true" />}
-        wrapClassName="w-full min-[720px]:w-[260px] shrink-0"
+        wrapClassName="w-full min-[720px]:w-[230px] shrink-0"
       />
-      {filters && <div className="flex flex-wrap items-center gap-2 min-w-0 min-[720px]:flex-1">{filters}</div>}
+      {filters && <div className="flex flex-wrap items-center gap-1.5 min-w-0 min-[720px]:flex-1">{filters}</div>}
       {action && <div className="ml-auto flex items-center gap-2 shrink-0 self-start">{action}</div>}
     </div>
   );

@@ -2497,7 +2497,12 @@
     "col_why": "Причина",
     "help_rowid_title": "Столбец RowID",
     "help_dropdowns_title": "Столбцы со списками",
-    "help_duplicates_title": "Как находятся дубликаты"
+    "help_duplicates_title": "Как находятся дубликаты",
+    "action_download": "Скачать",
+    "action_export": "Экспорт",
+    "action_choose": "Выбрать файл",
+    "action_start": "Начать",
+    "action_restore": "Восстановить"
   },
   "spreadsheetImport": {
     "title": "Импорт из шаблона",
@@ -5104,7 +5109,7 @@
     "name_shown": "показано"
   },
   "addPersonDialog": {
-    "title": "Добавить человека",
+    "title": "Новый человек",
     "save_open": "Сохранить и открыть",
     "save_another": "Сохранить и добавить ещё",
     "cite": "Указать источник",
@@ -5121,7 +5126,8 @@
     "find_parents_hint": "Семья, в которой {name} родился(-ась) или был(а) усыновлён(а)",
     "find_partner": "Найти супруга",
     "find_partner_hint": "Супруг или партнёр: {name}",
-    "more_on_page": "Детей, заметки и причину смерти можно добавить на странице человека после сохранения."
+    "more_on_page": "Детей, заметки и причину смерти можно добавить на странице человека после сохранения.",
+    "cite_short": "Источник"
   },
   "newFamilyDialog": {
     "save_open": "Сохранить и открыть",

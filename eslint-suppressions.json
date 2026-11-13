@@ -79,7 +79,7 @@
   },
   "app/components/ui/DataTable.tsx": {
     "ds/no-inline-static-literal": {
-      "count": 2
+      "count": 1
     }
   },
   "app/library/RepositoryModal.tsx": {

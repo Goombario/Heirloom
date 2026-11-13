@@ -82,13 +82,14 @@ function AddPersonBody({ onClose, treeId }: { onClose: () => void; treeId: numbe
     setStatusAsk(null);
   };
 
-  const citeLink = (factTable: FactTableValue, label: string) => {
+  // The name block says "Cite a source"; the narrower Born and Died columns say "Cite" (locked board).
+  const citeLink = (factTable: FactTableValue, label: string, short = false) => {
     const n = fm.pendingCitations.filter((p) => p.factTable === factTable).length;
     return (
       <span className="inline-flex items-center gap-1.5">
         {n > 0 && <span className={citeClass({ square: false })}>{n}</span>}
         <ActionLink kind="action" aria-label={tm('cite_fact', { fact: label })}
-          onClick={() => fm.setAttachTarget({ factTable, factId: -1, factLabel: label })}>{t('cite')}</ActionLink>
+          onClick={() => fm.setAttachTarget({ factTable, factId: -1, factLabel: label })}>{short ? t('cite_short') : t('cite')}</ActionLink>
       </span>
     );
   };
@@ -140,14 +141,14 @@ function AddPersonBody({ onClose, treeId }: { onClose: () => void; treeId: numbe
             )}
             {naming
               ? <NamePanel fm={fm} given={given} onClose={() => setNaming(false)} />
-              : <div><ActionLink kind="action" onClick={() => setNaming(true)}>{t('add_name')}</ActionLink></div>}
+              : <div><ActionLink plus onClick={() => setNaming(true)}>{t('add_name')}</ActionLink></div>}
             <Duplicates fm={fm} />
           </FormBlock>
 
           <div className="pt-5">
             <FieldColumns>
               <Segment label={tm('sex')}>
-                <SegmentedControl aria-label={tm('sex')} fullWidth value={form.Sex} onChange={(v) => setField('Sex', v)}
+                <SegmentedControl aria-label={tm('sex')} fullWidth className="whitespace-nowrap" value={form.Sex} onChange={(v) => setField('Sex', v)}
                   options={[
                     { v: '', l: tm('sex_unknown') }, { v: 'M', l: tm('sex_male') },
                     { v: 'F', l: tm('sex_female') }, { v: 'X', l: tm('sex_nonbinary') },
@@ -164,7 +165,7 @@ function AddPersonBody({ onClose, treeId }: { onClose: () => void; treeId: numbe
 
           <div className="pt-5">
             <FieldColumns>
-              <FieldColumn title={tm('group_born')} action={citeLink(FACT_TABLES.PERSON_BIRTH, tm('group_born'))}>
+              <FieldColumn title={tm('group_born')} action={citeLink(FACT_TABLES.PERSON_BIRTH, tm('group_born'), true)}>
                 <Labelled id={`${ids}-bdate`} label={tm('date')}>
                   <DateInput id={`${ids}-bdate`} value={form.BirthDate} onChange={(v) => setField('BirthDate', v)} className={fieldClass('sm')} />
                 </Labelled>
@@ -176,7 +177,7 @@ function AddPersonBody({ onClose, treeId }: { onClose: () => void; treeId: numbe
                 </Labelled>
               </FieldColumn>
               <FieldColumn title={tm('group_died')} inactive={form.IsDeceased === '0'} inactiveReason={t('died_living')}
-                action={citeLink(FACT_TABLES.PERSON_DEATH, tm('group_died'))}>
+                action={citeLink(FACT_TABLES.PERSON_DEATH, tm('group_died'), true)}>
                 <Labelled id={`${ids}-ddate`} label={tm('date')}>
                   <DateInput id={`${ids}-ddate`} value={form.DeathDate} onChange={(v) => setField('DeathDate', v)} className={fieldClass('sm')} />
                 </Labelled>

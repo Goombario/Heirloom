@@ -20,7 +20,7 @@ import { useErrorToast } from '@/app/components/useErrorToast';
 import { usePlaceResolutionFlush } from '@/app/components/usePlaceResolutionFlush';
 import {
   ActionLink, Button, EmptySlot, FieldColumn, FieldColumns, FilterChip, FormBlock, FormDialog, Lifespan, ParentRelationshipSelects,
-  PersonFinder, PersonIdentity, RecordBlock, SegmentedControl, SelectField, SuggestionRow, WarningLine, citeClass, fieldClass,
+  PersonFinder, PersonIdentity, RecordBlock, SegmentedControl, SuggestionRow, WarningLine, citeClass, fieldClass,
   showChangeToast, showErrorToast,
 } from '@/app/components/ui';
 import { useTree } from '@/app/contexts/TreeContext';
@@ -292,11 +292,12 @@ function Form({ onClose, onCreated }: { onClose: () => void; onCreated: (familyI
         </FormBlock>
 
         <div className="pt-5">
-          <FieldColumns>
+          {/* Type keeps its four choices on one row (board): it takes the width it needs and Status the rest. */}
+          <FieldColumns className="min-[560px]:grid-cols-[auto_minmax(0,1fr)]">
             <div className="grid gap-2.5 content-start">
-              <label htmlFor={`${ids}-type`} className="eyebrow">{tp('row_type')}</label>
-              <SelectField id={`${ids}-type`} size="sm" value={type} onChange={(v) => setType(v as FamilyType)}
-                options={FAMILY_TYPES.map((v) => ({ value: v, label: tf(`ftype_${ftypeKey(v)}`) }))} />
+              <span className="eyebrow">{tp('row_type')}</span>
+              <SegmentedControl value={type} onChange={(v) => setType(v as FamilyType)} aria-label={tp('row_type')}
+                className="whitespace-nowrap" options={FAMILY_TYPES.map((v) => ({ v, l: tf(`ftype_${ftypeKey(v)}`) }))} />
             </div>
             <div className="grid gap-2.5 content-start">
               {/* The control names itself; the eyebrow is for the eye. */}
@@ -387,7 +388,7 @@ function Form({ onClose, onCreated }: { onClose: () => void; onCreated: (familyI
             onCreate={(typed) => addChildren([draft(typed, faces[0]?.LastName ?? '')])}
             addManyLabel={(count) => t('add_n_children', { count })}
             trigger={(tp2) => (children.length
-              ? <div><ActionLink kind="action" {...tp2}>{tn('add_more_children')}</ActionLink></div>
+              ? <div><ActionLink kind="action" plus {...tp2}>{tn('add_more_children')}</ActionLink></div>
               : <EmptySlot {...tp2} title={tn('add_children')} hint={names ? t('children_hint', { names }) : t('children_hint_alone')} />)}
           />
         </FormBlock>

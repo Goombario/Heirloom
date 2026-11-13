@@ -337,11 +337,13 @@ export default function FamiliesPageClient({
                     >
                         <div className="flex items-center">
                             {partnerAvatar(f.husbandName, f.partner1Sex, f.husbandMediaId, f.husbandFocalX, f.husbandFocalY, f.husbandFocalRadius, activeTreeId, false)}
-                            <span className="muted my-0 mx-1 text-sm" aria-hidden="true">+</span>
-                            {partnerAvatar(f.wifeName, f.partner2Sex, f.wifeMediaId, f.wifeFocalX, f.wifeFocalY, f.wifeFocalRadius, activeTreeId, false)}
+                            {partnerAvatar(f.wifeName, f.partner2Sex, f.wifeMediaId, f.wifeFocalX, f.wifeFocalY, f.wifeFocalRadius, activeTreeId, true)}
                         </div>
+                        {/* The couple on one line, "Johan Lindqvist & Anna Holm", as on the locked list board. */}
                         <span className="serif text-base font-semibold text-text min-w-0">
-                            <PartnerNameLines lines={nameLines} fallback={t('partnership_fallback', { id: f.Id })} className="block" />
+                            {nameLines.length === 0 ? t('partnership_fallback', { id: f.Id }) : nameLines.map((name, i) => (
+                                <span key={name + String(i)}>{i > 0 && <span className="font-sans font-normal text-text-muted"> &amp; </span>}{name}</span>
+                            ))}
                             {seqRank && <span className="block font-sans text-xs font-normal text-text-muted">{seqRank}</span>}
                         </span>
                     </Link>
@@ -366,7 +368,7 @@ export default function FamiliesPageClient({
             // Full date, like the People table's Birth and Death (#780, TB-2); the
             // Ended column stays a compact "year · reason" state line (#757).
             className: 'whitespace-nowrap',
-            render: (f) => <span className="date-mono date-muted text-sm">{formatDateForDisplay(f.MarriageDate, language, dateWords) || <span className="muted">—</span>}</span>,
+            render: (f) => <span className="date-mono text-sm">{formatDateForDisplay(f.MarriageDate, language, dateWords) || <span className="muted">—</span>}</span>,
         },
         {
             key: 'ended',
@@ -544,6 +546,7 @@ export default function FamiliesPageClient({
                                     sort={{ key: sortKey, dir: sortDir }}
                                     onSortChange={(key) => toggleSort(key as SortKey)}
                                     onRowPrefetch={(f) => prefetchFamily(f.Id, activeTreeId)}
+                                    density="list"
                                 />
                             </TablePanel>
                         </div>
