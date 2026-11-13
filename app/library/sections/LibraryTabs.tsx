@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRef } from 'react';
 import type { LibraryView } from '@/app/library/useLibraryTab';
 
-/** The three desktop Library views: Sources, Photos and the Faces review queue (#487). */
+/** The three desktop Library views: Media, Sources and the Faces review queue (#487). */
 interface LibraryTabsProps {
   activeTab: LibraryView;
   /**
@@ -30,8 +30,9 @@ interface LibraryTabsProps {
 // Repositories and Uncited were tabs until #444: they are now the Sources panel's
 // Repository and Show filters, with Manage repositories at its foot (#1154).
 const TAB_ORDER: { id: LibraryView; labelKey: string; namespace?: 'faceTags' }[] = [
-  { id: 'sources', labelKey: 'tab_sources_label' },
+  // Media first: it is the tab a bare /library opens (#1157).
   { id: 'photos', labelKey: 'tab_photos_label' },
+  { id: 'sources', labelKey: 'tab_sources_label' },
   { id: 'faces', labelKey: 'queue_tab', namespace: 'faceTags' },
 ];
 

@@ -27,6 +27,7 @@ vi.mock('@/app/components/InlineEventEditor', () => ({
     default: ({ notesSlot, onDelete }: { notesSlot?: React.ReactNode; onDelete?: () => void }) => (
         <div data-testid="family-event-editor" data-has-delete={String(Boolean(onDelete))}>
             {notesSlot}
+            {onDelete && <button type="button" onClick={onDelete}>Delete event</button>}
         </div>
     ),
 }));
@@ -122,6 +123,9 @@ function Harness({ canEdit, canDelete, initiallyOpen = false, childList = [], on
     );
 }
 
+/** The row's own control: "Edit DIV" (the familyEventTypes mock returns the code). */
+const editDiv = new RegExp(`^${en.eventEdit.edit_event_named.replace('{event}', '')}`);
+
 describe('FamilyTimeline event notes rail', () => {
     it('lazily discloses persisted family-event notes with an accessible region', async () => {
         const user = userEvent.setup();
@@ -153,19 +157,21 @@ describe('FamilyTimeline event notes rail', () => {
         const user = userEvent.setup();
         const { unmount } = render(<Harness canEdit canDelete={false} />);
         const eventRow = screen.getByTestId('timeline-fevent-17');
-        expect(eventRow).toHaveTextContent('Edit event');
-        expect(screen.queryByRole('button', { name: 'Delete event' })).not.toBeInTheDocument();
-        await user.click(within(eventRow).getByRole('button', { name: 'Edit event' }));
+        // The row opens its editor (locked board); Edit and Delete are not hover actions.
+        expect(within(eventRow).queryByRole('button', { name: 'Delete event' })).not.toBeInTheDocument();
+        await user.click(within(eventRow).getByRole('button', { name: editDiv }));
         expect(screen.getByTestId('family-event-editor')).toHaveAttribute('data-has-delete', 'false');
 
         unmount();
         render(<Harness canEdit canDelete />);
-        expect(screen.getByRole('button', { name: 'Delete event' })).toBeInTheDocument();
+        await user.click(within(screen.getByTestId('timeline-fevent-17')).getByRole('button', { name: editDiv }));
+        expect(screen.getByTestId('family-event-editor')).toHaveAttribute('data-has-delete', 'true');
     });
 
     it('names the event in the delete confirm with its date as the row shows it (#901)', async () => {
         const user = userEvent.setup();
         render(<Harness canEdit canDelete events={[{ ...event, Date: 'ABT 1910', Place: 'Deptford' } as EventWithMedia]} />);
+        await user.click(within(screen.getByTestId('timeline-fevent-17')).getByRole('button', { name: editDiv }));
         await user.click(screen.getByRole('button', { name: 'Delete event' }));
         expect(await screen.findByText('DIV · About 1910 · Deptford')).toBeInTheDocument();
     });

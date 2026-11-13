@@ -204,6 +204,9 @@ export function FamilyTimeline({
         lines: agesAtStart || null,
         thumbs: (family.marriageMedia?.length ?? 0) > 0 ? <EventMediaStrip variant="ledger" media={family.marriageMedia ?? []} treeId={activeTreeId} /> : null,
         actions: canEdit ? <EventRowActions label={kindLabel} onEdit={() => { rememberEventOpener(); setEditingMarriage(true); }} /> : null,
+        // The row itself opens its editor, as on the locked boards.
+        onOpen: canEdit && !editingMarriage ? () => { rememberEventOpener(); setEditingMarriage(true); } : undefined,
+        openLabel: te('edit_event_named', { event: kindLabel }),
         override: editingMarriage ? (
             <InlineMarriageEditor
                 familyId={family.Id}
@@ -250,6 +253,8 @@ export function FamilyTimeline({
                 </>
             ) : null,
             actions: canEdit ? <EventRowActions label={label} onEdit={() => { rememberEventOpener(); setEditingId(ev.Id); }} onDelete={canDelete ? () => requestDelete(ev) : undefined} /> : null,
+            onOpen: canEdit && editingId !== ev.Id ? () => { rememberEventOpener(); setEditingId(ev.Id); } : undefined,
+            openLabel: te('edit_event_named', { event: label }),
             override: editingId === ev.Id ? (
                 <InlineEventEditor
                     target={{ kind: 'family', familyId: family.Id }}

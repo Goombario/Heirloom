@@ -66,6 +66,9 @@ vi.mock('@/app/components/media/OwnerMediaCard', () => ({
 
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 
+/** The desktop event panel's save button: "Add event" for a new event, "Save changes" for an edit. */
+const SAVE = /^(add_event|save_changes)$/;
+
 /** The Description textarea — labelled, so it is found the way a user finds it. */
 const descriptionBox = () => screen.getByRole('textbox', { name: /field_description/ });
 const queryDescriptionBox = () => screen.queryByRole('textbox', { name: /field_description/ });
@@ -126,7 +129,7 @@ describe('InlineEventEditor — a synthetic vital row has no free-text box', () 
         const user = userEvent.setup();
         renderVital('DEAT');
 
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         // The vital still saves to the People columns, as it always did…
         await waitFor(() => expect(peopleUpdate).toHaveBeenCalled());
@@ -161,7 +164,7 @@ describe('InlineEventEditor — an add-event vital composes a scoped note', () =
 
         const cause = screen.getByRole('textbox', { name: /field_cause/ });
         await user.type(cause, 'Heart failure');
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(peopleUpdate).toHaveBeenCalledWith(
             4,
@@ -176,7 +179,7 @@ describe('InlineEventEditor — an add-event vital composes a scoped note', () =
 
         const note = screen.getByRole('textbox', { name: /field_note/ });
         await user.type(note, 'Remembered by the family.');
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(notesCreate).toHaveBeenCalledWith(
             'People', 4, 'Remembered by the family.', 99, 'Death',
@@ -211,7 +214,7 @@ describe('InlineEventEditor — the box on a REAL event row still writes Descrip
         expect(descriptionBox()).toHaveValue('Lodging with his brother.');
         await user.clear(descriptionBox());
         await user.type(descriptionBox(), 'Moved out by the spring.');
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(eventsUpdate).toHaveBeenCalled());
         expect(eventsUpdate.mock.calls[0][1]).toMatchObject({ Description: 'Moved out by the spring.' });

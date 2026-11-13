@@ -321,7 +321,7 @@ export function FaceDecisionRow({ row, actions, anchorId, rowRef }: {
             { label: ft('action_none_faces', { count: n }), onSelect: () => actions.onDismiss(row, row.candidates, 'not-a-face') },
           ]}
             trigger={<Ellipsis size={18} aria-hidden="true" />}
-            triggerClassName="grid h-8 w-8 place-items-center rounded-lg text-text-muted hover:bg-hover-surface cursor-pointer focus-ring disabled:opacity-50" />
+            triggerClassName="grid h-8 w-8 place-items-center rounded-full text-text-muted hover:bg-hover-surface cursor-pointer focus-ring disabled:opacity-50" />
         </div>
       )}
     </div>

@@ -23,7 +23,8 @@ vi.mock('@/lib/data', () => ({
         people: { update },
     }),
 }));
-vi.mock('@/app/contexts/TreeContext', () => ({ useTree: () => ({ activeTreeId: 99 }) }));
+vi.mock('@/app/contexts/TreeContext', () => ({ useTree: () => ({ activeTreeId: 99, activePermission: 'owner' }) }));
+vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en', setLanguage: vi.fn() }) }));
 vi.mock('@/app/components/media/OwnerMediaCard', () => ({ OwnerMediaCard: () => null }));
 vi.mock('@/app/components/GuardedLink', () => ({
     default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
@@ -65,8 +66,18 @@ function renderPanel(run?: (write: () => Promise<{ auditIds: number[] }>, toast:
 }
 
 const deleteName = (event: string) => en.eventEdit.delete_event_named.replace('{event}', event);
+const editName = (event: string) => en.eventEdit.edit_event_named.replace('{event}', event);
 
 describe('desktop person timeline (#49)', () => {
+    it('opens a row\'s editor from anywhere on the row, with no hover Edit or Delete', async () => {
+        const user = userEvent.setup();
+        renderPanel();
+        expect(screen.queryByRole('button', { name: deleteName('Probate') })).toBeNull();
+        await user.click(screen.getByTestId('timeline-event-42').querySelector('.ledger__body') as HTMLElement);
+        expect(screen.getByRole('heading', { name: 'Edit probate' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: en.common.save_changes })).toBeInTheDocument();
+    });
+
     it('shows the marriage and the births of own and adopted children, read-only, never a step-child', () => {
         renderPanel();
         expect(screen.getByRole('link', { name: /Marriage to Bob Owner/ })).toHaveAttribute('href', '/families/view?id=300');
@@ -81,7 +92,9 @@ describe('desktop person timeline (#49)', () => {
         const user = userEvent.setup();
         const run = vi.fn(async (write: () => Promise<{ auditIds: number[] }>, _toast: { message: string }) => { void _toast; await write(); return true; });
         renderPanel(run);
-        await user.click(await screen.findByRole('button', { name: new RegExp(`^${deleteName('')}.*Probate`, 'i') }));
+        // The row opens its editor, where Delete lives (locked person board).
+        await user.click(await screen.findByRole('button', { name: editName('Probate') }));
+        await user.click(screen.getByRole('button', { name: en.eventEdit.delete_event }));
         expect(screen.queryByRole('dialog')).toBeNull();
         expect(remove).toHaveBeenCalledWith(42, 99);
         expect(run.mock.calls[0][1]).toMatchObject({ message: 'Probate deleted' });
@@ -91,7 +104,8 @@ describe('desktop person timeline (#49)', () => {
         const user = userEvent.setup();
         const run = vi.fn(async (write: () => Promise<{ auditIds: number[] }>, _toast: { message: string }) => { void _toast; await write(); return true; });
         renderPanel(run);
-        await user.click(await screen.findByRole('button', { name: new RegExp(`^${deleteName('')}.*Death`, 'i') }));
+        await user.click(await screen.findByRole('button', { name: editName('Death') }));
+        await user.click(screen.getByRole('button', { name: en.eventEdit.delete_event }));
         expect(update).toHaveBeenCalledWith(7, expect.objectContaining({ DeathDate: null, IsDeceased: null }), 99);
         expect(run.mock.calls[0][1]).toMatchObject({ message: 'Death deleted · status unknown' });
     });

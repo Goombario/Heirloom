@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, Card, SectionHeader } from '@/app/components/ui';
+import { AddRow, Button, Card, SectionHeader } from '@/app/components/ui';
 import MediaImg from '@/app/components/MediaImg';
 import { ImageUp } from '@/lib/icons';
 import { classifyUpload } from '@/lib/media/allowed-extensions';
@@ -23,6 +23,11 @@ export interface EventMediaDraftPanelProps {
   targetName?: string | null;
   targetPart?: string | null;
   onRetry?: (key: string) => void;
+  /**
+   * `plain`: inside the desktop event panel (locked person board), with no card or
+   * heading of its own: the staged squares, then a plain "Add media" line.
+   */
+  look?: 'card' | 'plain';
 }
 
 /**
@@ -30,7 +35,7 @@ export interface EventMediaDraftPanelProps {
  * library picks here, and nothing is written until the event saves. The modal's own
  * duplicate check has already swapped a file the library holds for its library copy.
  */
-export default function EventMediaDraftPanel({ treeId, draft, ownerId, relevantPersonIds, galleryPersonId, targetName, targetPart, onRetry }: EventMediaDraftPanelProps) {
+export default function EventMediaDraftPanel({ treeId, draft, ownerId, relevantPersonIds, galleryPersonId, targetName, targetPart, onRetry, look = 'card' }: EventMediaDraftPanelProps) {
   const t = useTranslations('eventMediaDraft');
   const tc = useTranslations('common');
   const tm = useTranslations('ownerMedia');
@@ -39,6 +44,48 @@ export default function EventMediaDraftPanel({ treeId, draft, ownerId, relevantP
 
   function failureText(failure: EventMediaDraftFailure) {
     return `${t('error_prefix')}: ${t(`error_${failure.code}`)}`;
+  }
+
+  const addModal = addOpen && (
+    <AddMediaModal
+      target={{ kind: 'owner', ownerTable: 'Events', ownerId, galleryPersonId }}
+      treeId={treeId}
+      targetName={targetName}
+      targetPart={targetPart}
+      relevantPersonIds={relevantPersonIds}
+      stagedMediaIds={draft.stagedMediaIds}
+      onStage={({ files, mediaIds }) => { draft.addFiles(files); draft.addExisting(mediaIds); }}
+      onClose={() => setAddOpen(false)}
+      onAdded={() => setAddOpen(false)}
+    />
+  );
+
+  if (look === 'plain') {
+    return (
+      <div>
+        {draft.items.length > 0 && (
+          <ul className="m-0 mb-1 p-0 list-none grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-1.5">
+            {draft.items.map((item) => {
+              const failure = draft.failures.find(f => f.key === item.key);
+              const name = item.kind === 'existing' ? t('existing', { id: item.mediaId }) : t('file_label', { name: item.file.name });
+              return (
+                <li key={item.key} className="grid gap-1 min-w-0">
+                  <div className="relative aspect-square rounded overflow-hidden bg-surface-2" title={name}>
+                    {item.kind === 'existing'
+                      ? <MediaImg mediaId={item.mediaId} treeId={treeId} width={128} alt={t('existing_alt')} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <StagedFileThumb file={item.file} />}
+                  </div>
+                  {failure && <FailureRow failure={failure} text={failureText(failure)} onRetry={onRetry} t={t} />}
+                  <button type="button" aria-label={`${tc('remove')}: ${name}`} className="p-0 bg-transparent border-0 text-xs text-error hover:underline cursor-pointer focus-ring rounded-sm justify-self-start" onClick={() => draft.remove(item.key)}>{tc('remove')}</button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="ledger-foot ledger-foot--plain"><AddRow label={tm('add_button')} onClick={() => setAddOpen(true)} /></div>
+        {addModal}
+      </div>
+    );
   }
 
   return (
@@ -81,19 +128,7 @@ export default function EventMediaDraftPanel({ treeId, draft, ownerId, relevantP
         </div>
       )}
 
-      {addOpen && (
-        <AddMediaModal
-          target={{ kind: 'owner', ownerTable: 'Events', ownerId, galleryPersonId }}
-          treeId={treeId}
-          targetName={targetName}
-          targetPart={targetPart}
-          relevantPersonIds={relevantPersonIds}
-          stagedMediaIds={draft.stagedMediaIds}
-          onStage={({ files, mediaIds }) => { draft.addFiles(files); draft.addExisting(mediaIds); }}
-          onClose={() => setAddOpen(false)}
-          onAdded={() => setAddOpen(false)}
-        />
-      )}
+      {addModal}
     </Card>
   );
 }

@@ -42,6 +42,10 @@ vi.mock('@/app/components/LocationField', () => ({
     __esModule: true,
     default: ({ value }: { value: string }) => <input readOnly placeholder="place" value={value} />,
 }));
+// The event editor reads the language for its "Add occupation" heading.
+vi.mock('@/app/components/LanguageProvider', () => ({
+    useLanguage: () => ({ language: 'en', setLanguage: vi.fn() }),
+}));
 vi.mock('@/app/components/DateInput', () => ({
     __esModule: true,
     default: ({ value }: { value: string }) => <input readOnly placeholder="date" value={value} />,
@@ -258,12 +262,12 @@ describe('event notes rail — editor', () => {
         renderPanel(makePerson(0), true);
         await openEditor(user);
 
-        // The rail's heading names what these are: notes on the event RECORD.
-        expect(await screen.findByText(en.personDetail.event_notes_title)).toBeInTheDocument();
+        // Inside the editor the rail is labelled "Notes about this event" (locked board).
+        expect(await screen.findByText(en.personDetail.event_notes_about)).toBeInTheDocument();
         // The description field is still its own separate control, holding the
         // event's Description — the two surfaces are never merged.
         expect(screen.getByDisplayValue('Lodging with his brother.')).toBeInTheDocument();
-        expect(en.personDetail.event_notes_title).not.toBe(en.eventEdit.field_description);
+        expect(en.personDetail.event_notes_about).not.toBe(en.eventEdit.field_description);
     });
 
     /**
@@ -354,7 +358,7 @@ describe('vital notes rail — Birth and Death rows', () => {
         const editPrefix = en.eventEdit.edit_event_named.replace('{event}', '').trim();
         await user.click(screen.getAllByRole('button', { name: new RegExp(`^${editPrefix} `) })[0]);
 
-        expect(await screen.findByText(en.personDetail.birth_notes_title)).toBeInTheDocument();
+        expect(await screen.findByText(en.personDetail.event_notes_about)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: en.notes.add_button })).toBeInTheDocument();
         // #545's composer and its "read it in their notes" hint are gone.
         expect(screen.queryByText(/Read and edit it in their notes/)).not.toBeInTheDocument();
@@ -407,7 +411,7 @@ describe('vital notes rail — Birth and Death rows', () => {
         await user.keyboard('{Escape}');
 
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-        expect(screen.getByRole('group', { name: en.eventEdit.editing_event })).toBeInTheDocument();
+        expect(screen.getByRole('group', { name: /^Edit / })).toBeInTheDocument();
         expect(removeNote).not.toHaveBeenCalled();
     });
 

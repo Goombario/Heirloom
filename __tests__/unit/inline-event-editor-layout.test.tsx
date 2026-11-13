@@ -39,6 +39,9 @@ vi.mock('@/app/components/ui/Sheet', () => ({
 
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 
+/** The desktop event panel's save button: "Add event" for a new event, "Save changes" for an edit. */
+const SAVE = /^(add_event|save_changes)$/;
+
 function renderEdit() {
     return render(
         <InlineEventEditor
@@ -55,12 +58,12 @@ function renderEdit() {
 beforeEach(() => useIsMobile.mockReturnValue(false));
 
 describe('InlineEventEditor action row and mobile sheet (#797)', () => {
-    it('puts Delete on the left, and Save then Cancel on the right', () => {
+    it('puts Delete on the left, and Cancel then the copper Save on the right (locked board)', () => {
         renderEdit();
         const del = screen.getByRole('button', { name: 'delete_event' });
-        const save = screen.getByRole('button', { name: 'save_event' });
+        const save = screen.getByRole('button', { name: SAVE });
         const cancel = screen.getByRole('button', { name: 'cancel' });
-        const buttons = [del, save, cancel];
+        const buttons = [del, cancel, save];
         const order = Array.from(document.querySelectorAll('button')).filter((b) => buttons.includes(b));
         expect(order).toEqual(buttons);
         // Save and Cancel share the right-aligned group; Delete stays outside it.
@@ -72,7 +75,9 @@ describe('InlineEventEditor action row and mobile sheet (#797)', () => {
     it('renders inline on desktop, with focus in its first field (#798, KB-2)', () => {
         renderEdit();
         expect(screen.queryByTestId('sheet')).toBeNull();
-        const panel = screen.getByRole('group', { name: 'editing_event' });
+        // Headed as on the locked board ("Edit baptism"); the heading names the group.
+        const panel = screen.getByRole('group', { name: 'edit_named' });
+        expect(screen.getByRole('heading', { name: 'edit_named' })).toBeInTheDocument();
         expect(panel).toHaveClass('inline-panel');
         expect(panel.contains(document.activeElement)).toBe(true);
         expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'field_type' }));

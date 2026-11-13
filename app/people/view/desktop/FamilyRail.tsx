@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PersonGalleryMedia, PersonWithRelations } from '@/lib/db/schema';
 import type { AuditedChange } from '@/lib/data/types';
@@ -11,8 +11,9 @@ import { displayFullName } from '@/lib/utils/names';
 import { getInitials } from '@/lib/utils/initials';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { useUndoRemoval } from '@/app/hooks/useUndoRemoval';
+import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { kindKey } from '@/app/families/view/mobile/model';
-import { ActionLink, DetailRail, FamilyRecordRow, Lifespan, OpenInTreeRow, PersonRow, SectionHeader } from '@/app/components/ui';
+import { ActionLink, AddRow, DetailRail, FamilyRecordRow, Lifespan, OpenInTreeRow, PersonRow, SectionHeader } from '@/app/components/ui';
 import { AddFamilyPanel } from './AddFamilyPanel';
 import type { RunChange } from '../mobile/useChange';
 import { nameBarParts, type FamilyCard, type PortraitPerson } from '../mobile/model';
@@ -45,7 +46,8 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
   const { reportError } = useErrorToast();
   const offerUndo = useUndoRemoval(treeId);
   const [adding, setAdding] = useState(false);
-  const addRef = useRef<HTMLButtonElement>(null);
+  // The button unmounts while the panel is open; closing hands focus back (#690).
+  const addRef = useReturnFocus(adding);
 
   const unlink = async (write: () => Promise<AuditedChange[]>, message: string) => {
     try {
@@ -128,16 +130,18 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
           ))}
           {canEdit && (
             <div className={partners.length > 0 ? 'rail-addrow' : undefined}>
-              <ActionLink ref={addRef} kind="expand" expanded={adding} onClick={() => setAdding((v) => !v)}>{t('add_family')}</ActionLink>
+              {/* A plain "+ Add family" button, not an expander: the panel takes
+                  its place while open, as on the locked person page. */}
+              {!adding && <div className="ledger-foot ledger-foot--plain"><AddRow ref={addRef} label={t('add_family')} onClick={() => setAdding(true)} /></div>}
               {adding && (
-                // Escape closes it and hands focus back to "Add family" (#690).
-                <div className="mt-2" onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); addRef.current?.focus(); } }}>
+                // Escape closes it; the button comes back with focus (#690).
+                <div onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); } }}>
                   <AddFamilyPanel
                     person={person}
                     treeId={treeId}
                     canUndo={canDelete}
                     run={run}
-                    onClose={() => { setAdding(false); addRef.current?.focus(); }}
+                    onClose={() => setAdding(false)}
                   />
                 </div>
               )}

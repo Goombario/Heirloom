@@ -7,7 +7,7 @@
  * debounced Photon resolution (already covered in LocationField.test.tsx).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -67,6 +67,9 @@ vi.mock('@/app/components/LocationField', () => ({
 
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 
+/** The desktop event panel's save button: "Add event" for a new event, "Save changes" for an edit. */
+const SAVE = /^(add_event|save_changes)$/;
+
 beforeEach(() => {
     eventsCreate.mockResolvedValue({ Id: 7 });
     eventsUpdate.mockResolvedValue({ Id: 7 });
@@ -81,17 +84,26 @@ afterEach(() => {
 });
 
 describe('InlineEventEditor — new-event type default (FL-1)', () => {
-    it('starts with no type, keeps Save disabled, and lists Birth, Death and Burial first', async () => {
+    it('starts on the grouped type chips, with Birth, Death and Burial in Life first', async () => {
         const user = userEvent.setup();
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} allowVital={{ birth: true, death: true }} onCancel={() => {}} onSaved={() => {}} />);
-        const trigger = screen.getByRole('combobox', { name: 'field_type' });
-        expect(trigger).toHaveTextContent('choose_event');
-        expect(screen.getByText('save_event').closest('button')).toBeDisabled();
-        await user.click(trigger);
-        const labels = screen.getAllByRole('option').map((o) => o.textContent);
-        expect(labels.slice(0, 4)).toEqual(['choose_event', 'BIRT', 'DEAT', 'BURI']);
-        await user.click(screen.getByRole('option', { name: 'BURI' }));
-        expect(screen.getByText('save_event').closest('button')).toBeEnabled();
+        expect(screen.getByRole('heading', { name: 'add_life_event' })).toBeInTheDocument();
+        // No fields and no Save until a type is chosen (locked board).
+        expect(screen.queryByRole('button', { name: SAVE })).toBeNull();
+        const life = screen.getByRole('group', { name: 'group_life' });
+        expect(within(life).getAllByRole('button').map((b) => b.textContent)).toEqual(['BIRT', 'ADOP', 'DEAT', 'BURI']);
+        await user.click(screen.getByRole('button', { name: 'BURI' }));
+        expect(screen.getByRole('heading', { name: 'add_named' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: SAVE })).toBeEnabled();
+        // Change type goes back to the chips.
+        await user.click(screen.getByRole('button', { name: 'change_type' }));
+        expect(screen.getByRole('heading', { name: 'add_life_event' })).toBeInTheDocument();
+    });
+
+    it('leaves out a vital the person already has', () => {
+        render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} allowVital={{ birth: false, death: true }} onCancel={() => {}} onSaved={() => {}} />);
+        expect(screen.queryByRole('button', { name: 'BIRT' })).toBeNull();
+        expect(screen.getByRole('button', { name: 'DEAT' })).toBeInTheDocument();
     });
 });
 
@@ -102,7 +114,7 @@ describe('InlineEventEditor — pending place resolution (design spec §6.1)', (
         await user.type(screen.getByPlaceholderText('place'), 'Dover, Kent, England');
         await user.click(screen.getByText('Resolve'));
         expect(placesGeocodeUpsertHierarchy).not.toHaveBeenCalled();
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(placesGeocodeUpsertHierarchy).toHaveBeenCalledWith(
             [{ name: 'Dover, Kent, England', latitude: 51.1, longitude: 1.2 }], 99,
         ));
@@ -113,7 +125,7 @@ describe('InlineEventEditor — pending place resolution (design spec §6.1)', (
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} defaultType="RESI" onCancel={() => {}} onSaved={() => {}} />);
         await user.type(screen.getByPlaceholderText('place'), 'Dover, Kent, England');
         await user.click(screen.getByText('Remove'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(placesGeocodeUpsert).toHaveBeenCalledWith(
             { name: 'Dover, Kent, England', latitude: null, longitude: null, pinSuppressed: true }, 99,
         ));
@@ -124,7 +136,7 @@ describe('InlineEventEditor — pending place resolution (design spec §6.1)', (
         const user = userEvent.setup();
         const onSaved = vi.fn();
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} defaultType="RESI" onCancel={() => {}} onSaved={onSaved} />);
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
         await waitFor(() => expect(onSaved).toHaveBeenCalled());
         expect(placesGeocodeUpsertHierarchy).not.toHaveBeenCalled();
         expect(placesGeocodeUpsert).not.toHaveBeenCalled();
@@ -150,8 +162,8 @@ describe('InlineEventEditor — death cause is sent when its input renders (#480
                 onSaved={() => {}}
             />
         );
-        await user.type(screen.getByLabelText('field_cause'), 'Heart failure');
-        await user.click(screen.getByText('save_event'));
+        await user.type(screen.getByLabelText('field_cause_of_death'), 'Heart failure');
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(peopleUpdate).toHaveBeenCalled());
         const patch = peopleUpdate.mock.calls[0][1];
@@ -169,7 +181,7 @@ describe('InlineEventEditor — death cause is sent when its input renders (#480
                 onSaved={() => {}}
             />
         );
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(peopleUpdate).toHaveBeenCalled());
         expect(peopleUpdate.mock.calls[0][1]).toMatchObject({ DeathCause: 'Heart failure' });
@@ -187,7 +199,7 @@ describe('InlineEventEditor — death cause is sent when its input renders (#480
             />
         );
         await user.clear(screen.getByDisplayValue('Heart failure'));
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(peopleUpdate).toHaveBeenCalled());
         // An emptied input IS a statement — this one must reach the column as null.
@@ -231,7 +243,7 @@ describe('InlineEventEditor — persisted event writes', () => {
                 onSaved={onSaved}
             />
         );
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(eventsUpdate).toHaveBeenCalledWith(
             17,
@@ -247,7 +259,7 @@ describe('InlineEventEditor — persisted event writes', () => {
         eventsCreate.mockRejectedValueOnce(new Error('PGlite: relation Events does not exist'));
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} defaultType="RESI" onCancel={() => {}} onSaved={() => {}} />);
 
-        await user.click(screen.getByText('save_event'));
+        await user.click(screen.getByRole('button', { name: SAVE }));
 
         await waitFor(() => expect(screen.getByText('error_generic')).toBeInTheDocument());
         expect(screen.queryByText('PGlite: relation Events does not exist')).not.toBeInTheDocument();

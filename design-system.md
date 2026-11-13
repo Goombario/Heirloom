@@ -621,8 +621,8 @@ A detail page edits in exactly two ways: the record's **identity** in its hero, 
 1. **Record identity** (`HeroEditorPanel`). The hero becomes an edit panel in place;
    the title stays where it is. Fields sit in `HeroEditorRow`s, choices are
    `SegmentedControl`s with Unknown first, and the action row is fixed: the delete
-   as `danger-text` ("Delete person…", opening the confirm) on the left, **Save
-   changes** (the panel's one coloured fill) and **Cancel** on the right, which is
+   as `danger-text` ("Delete person…", opening the confirm) on the left, a ghost
+   **Cancel** and then **Save changes** (the panel's one coloured fill) on the right, which is
    `EditorActions` (#797) and ends every record editor, hero or inline. While it is
    open the page body carries `.edit-dimmed` plus `inert`, so Cancel plainly cancels
    only the hero. Family uses it; case, place and source move onto it when next
@@ -641,7 +641,11 @@ A detail page edits in exactly two ways: the record's **identity** in its hero, 
    `EditorActions` at `sm`. One panel is open at a time. `compact` drops the visible
    labels in a narrow rail (notes). Below `md` the event editor opens in a `Sheet`
    instead (#797, M-2), with the date qualifier stacked above the date and the notes
-   rail flattened (`.sheet-flat`) so no card nests inside the sheet.
+   rail flattened (`.sheet-flat`) so no card nests inside the sheet. On the v1.1 desktop
+   timelines (person and family) the row itself opens its editor (`LedgerItem.onOpen`:
+   the whole row is the pointer target, the title the keyboard control) and Delete
+   lives in the editor. The event panel is headed ("Add occupation", "Edit residence"),
+   a new event starts on grouped type chips, and date and place sit side by side.
 3. **One date** (`InlineDateEditor`, #832). Where the fix is only ever a date (the
    Data checks detail), the row becomes a date-only editor: the field labelled with
    whose date it is, `DateInput` with the date box focused, and Save and Cancel beside

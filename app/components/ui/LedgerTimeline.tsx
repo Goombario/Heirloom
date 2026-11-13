@@ -41,8 +41,15 @@ export interface LedgerItem {
   thumbs?: ReactNode;
   /** Under the row: the "2 notes ⌄" toggle and what it opens. */
   below?: ReactNode;
-  /** Hover controls (Edit, Delete), top-right of the row. */
+  /** Hover controls (Edit, Delete), top-right of the row. Not shown with `onOpen`. */
   actions?: ReactNode;
+  /**
+   * The row opens its editor (locked person board): the whole row is the click
+   * target and the title is the keyboard control, named `openLabel` ("Edit
+   * Occupation"). Delete then lives in the editor, so `actions` is dropped.
+   */
+  onOpen?: () => void;
+  openLabel?: string;
   /** Replaces the row's body: the inline editor. The date column stays. */
   override?: ReactNode;
 }
@@ -121,7 +128,15 @@ function Row({ it }: { it: LedgerItem }) {
       {it.title}
       <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-text-muted" aria-hidden="true" />
     </GuardedLink>
+  ) : it.onOpen ? (
+    <button type="button" className="ledger__title-btn focus-ring rounded-sm" aria-label={it.openLabel} onClick={it.onOpen}>{it.title}</button>
   ) : it.title;
+  // A click anywhere on the row opens it, except on its own links and buttons
+  // (the place, a citation pin, a thumbnail), which keep their own action.
+  const openFromRow = it.onOpen && !it.href ? (e: React.MouseEvent) => {
+    if ((e.target as Element).closest('a, button, input, select, textarea, [role="button"], [role="dialog"]')) return;
+    it.onOpen?.();
+  } : undefined;
   return (
     <li id={it.anchor} data-testid={`timeline-${it.key}`} className={cx('ledger__ev', it.flagged && 'is-flagged', it.override != null && 'is-editing')}>
       <span className="ledger__when">
@@ -134,7 +149,7 @@ function Row({ it }: { it: LedgerItem }) {
       <div className="min-w-0">
         {it.override ?? (
           <>
-            <div className="ledger__body row-host">
+            <div className={cx('ledger__body row-host', openFromRow && 'is-click')} onClick={openFromRow}>
               <div className="ledger__lines">
                 <div className="ledger__head">
                   <span className="ledger__title">{title}</span>
@@ -148,7 +163,7 @@ function Row({ it }: { it: LedgerItem }) {
                 {it.lines && <div className="ledger__note">{it.lines}</div>}
               </div>
               {it.thumbs ? <div className="ledger__thumbs">{it.thumbs}</div> : <span />}
-              {it.actions && !it.href && <div className="ledger__actions">{it.actions}</div>}
+              {it.actions && !it.href && !it.onOpen && <div className="ledger__actions">{it.actions}</div>}
             </div>
             {it.below && <div className="ledger__below">{it.below}</div>}
           </>

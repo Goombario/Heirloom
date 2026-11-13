@@ -181,7 +181,7 @@ describe('Data checks marks (#833)', () => {
         expect(screen.getByRole('button', { name: /^Check this date:/ })).toHaveFocus();
     });
 
-    it("puts the panel straight after its mark in Tab order, before the row's own actions (#843)", async () => {
+    it("puts the panel straight after its mark in Tab order (#843)", async () => {
         const user = userEvent.setup();
         render(wrap(<PersonPage />));
         const mark = await screen.findByRole('button', { name: /^Check this date:/ });
@@ -196,8 +196,9 @@ describe('Data checks marks (#833)', () => {
         expect(within(panel).getByRole('button', { name: 'Edit date' })).toHaveFocus();
         await user.tab();
         expect(within(panel).getByRole('link', { name: 'Open in Data checks' })).toHaveFocus();
+        // The row has no hover actions now (it opens its editor from its title),
+        // so Tab leaves the panel for whatever follows it.
         await user.tab();
-        expect(rowOf(mark).contains(document.activeElement)).toBe(true);
         expect(panel.contains(document.activeElement)).toBe(false);
     });
 

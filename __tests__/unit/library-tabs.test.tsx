@@ -12,12 +12,12 @@ vi.mock('next-intl', () => ({
 import LibraryTabs from '@/app/library/sections/LibraryTabs';
 
 describe('LibraryTabs', () => {
-  it('renders the three desktop tabs (Sources, Photos, Faces) with a matching panel relationship', () => {
+  it('renders the three desktop tabs (Media, Sources, Faces) with a matching panel relationship', () => {
     render(<LibraryTabs activeTab="sources" onSelect={vi.fn()} />);
 
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(3);
-    expect(tabs.map((tab) => tab.id)).toEqual(['library-tab-sources', 'library-tab-photos', 'library-tab-faces']);
+    expect(tabs.map((tab) => tab.id)).toEqual(['library-tab-photos', 'library-tab-sources', 'library-tab-faces']);
     for (const tab of tabs) {
       const name = tab.id.replace('library-tab-', '');
       expect(tab).toHaveAttribute('id', `library-tab-${name}`);
@@ -30,17 +30,17 @@ describe('LibraryTabs', () => {
 
   it('wraps keyboard movement, activates the destination, and focuses it', () => {
     const onSelect = vi.fn();
-    render(<LibraryTabs activeTab="sources" onSelect={onSelect} />);
+    render(<LibraryTabs activeTab="photos" onSelect={onSelect} />);
 
-    const sources = screen.getByRole('tab', { name: 'sources' });
-    fireEvent.keyDown(sources, { key: 'ArrowLeft' });
+    const photos = screen.getByRole('tab', { name: 'photos' });
+    fireEvent.keyDown(photos, { key: 'ArrowLeft' });
     expect(onSelect).toHaveBeenCalledWith('faces');
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Faces' }));
 
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'End' });
     expect(onSelect).toHaveBeenLastCalledWith('faces');
     fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Home' });
-    expect(onSelect).toHaveBeenLastCalledWith('sources');
-    expect(document.activeElement).toBe(sources);
+    expect(onSelect).toHaveBeenLastCalledWith('photos');
+    expect(document.activeElement).toBe(photos);
   });
 });

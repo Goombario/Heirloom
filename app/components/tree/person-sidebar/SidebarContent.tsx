@@ -411,16 +411,11 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                     )}
                 </FieldLabel>
                 {livingField}
-                <div className="grid grid-cols-2 gap-2.5">
-                    <div className="min-w-0">{birthDateField}</div>
-                    <div className="min-w-0">{birthPlaceField}</div>
-                </div>
-                {form.IsDeceased === 1 && (
-                    <div className="grid grid-cols-2 gap-2.5">
-                        <div className="min-w-0">{deathDateField}</div>
-                        <div className="min-w-0">{deathPlaceField}</div>
-                    </div>
-                )}
+                {/* Date and place each get the full width: a resolved place's pin
+                    chip and its name overflowed half a 340px panel. */}
+                {birthDateField}
+                {birthPlaceField}
+                {form.IsDeceased === 1 && <>{deathDateField}{deathPlaceField}</>}
                 {notesSection}
             </div>
 

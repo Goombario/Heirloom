@@ -80,7 +80,8 @@ describe('Escape with a typed, unblurred date (#861)', () => {
         const confirm = stubConfirm(false);
         const onCancel = vi.fn();
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} defaultType="RESI" onCancel={onCancel} onSaved={vi.fn()} />);
-        typeThenEscape('first_label', '1901');
+        // The desktop panel labels its date box "Date" through <label for>.
+        typeThenEscape('field_date', '1901');
         expect(confirm).toHaveBeenCalledTimes(1);
         expect(onCancel).not.toHaveBeenCalled();
     });

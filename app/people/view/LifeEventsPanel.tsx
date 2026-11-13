@@ -253,8 +253,9 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
      * permission prop, so a view-only reader gets the card's read-only rendering
      * — no composer, no ⋯ menu, no delete — rather than a second renderer.
      */
-    const notesRail = (ev: EventWithMedia) => (
+    const notesRail = (ev: EventWithMedia, look: 'card' | 'plain' = 'card') => (
         <OwnerNotesCard
+            look={look}
             ownerTable="Events"
             ownerId={ev.Id}
             treeId={activeTreeId}
@@ -265,11 +266,13 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
             showPreferred={false}
             onNotesChange={(notes) => setNoteCounts((prev) =>
                 prev[ev.Id] === notes.length ? prev : { ...prev, [ev.Id]: notes.length })}
-            header={
-                <h4 className="serif text-base font-semibold m-0">
-                    {t('event_notes_title')} <NoteCount count={noteCountFor(ev)} />
-                </h4>
-            }
+            header={look === 'plain'
+                ? <span className="block text-meta font-medium text-[color:var(--text-2)]">{t('event_notes_about')}</span>
+                : (
+                    <h4 className="serif text-base font-semibold m-0">
+                        {t('event_notes_title')} <NoteCount count={noteCountFor(ev)} />
+                    </h4>
+                )}
         />
     );
 
@@ -285,8 +288,9 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
      * already scoped, so they come back here rather than falling into the person's
      * general rail.
      */
-    const vitalNotesRail = (fact: NoteOwnerFact) => (
+    const vitalNotesRail = (fact: NoteOwnerFact, look: 'card' | 'plain' = 'card') => (
         <OwnerNotesCard
+            look={look}
             ownerTable="People"
             ownerId={person.Id}
             treeId={activeTreeId}
@@ -300,11 +304,13 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                 const next = visibleNotes(notes, fact).length;
                 return prev[fact] === next ? prev : { ...prev, [fact]: next };
             })}
-            header={
-                <h4 className="serif text-base font-semibold m-0">
-                    {fact === 'Birth' ? t('birth_notes_title') : t('death_notes_title')} <NoteCount count={vitalNoteCountFor(fact)} />
-                </h4>
-            }
+            header={look === 'plain'
+                ? <span className="block text-meta font-medium text-[color:var(--text-2)]">{t('event_notes_about')}</span>
+                : (
+                    <h4 className="serif text-base font-semibold m-0">
+                        {fact === 'Birth' ? t('birth_notes_title') : t('death_notes_title')} <NoteCount count={vitalNoteCountFor(fact)} />
+                    </h4>
+                )}
         />
     );
 
@@ -416,7 +422,7 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                     onDelete={canDelete ? () => requestDelete(ev) : undefined}
                     // Where a note is ADDED, including to an event that has none. Not the
                     // Description field, which is this event's own Events."Description".
-                    notesSlot={notesRail(ev)}
+                    notesSlot={notesRail(ev, 'plain')}
                 />
             );
         } else if (item.isIntrinsic && editingVital === item.type) {
@@ -444,9 +450,11 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
                     onRefresh={onMediaChanged}
                     onCancel={() => setEditingVital(null)}
                     onSaved={() => { setEditingVital(null); onChanged(); }}
+                    // The row opens the editor, so Delete lives here (locked person board).
+                    onDelete={canDelete ? () => requestDeleteVital(vital) : undefined}
                     // The only way to create a vital's first note: the disclosure under
                     // the row appears only once a note exists.
-                    notesSlot={itemFact ? vitalNotesRail(itemFact) : undefined}
+                    notesSlot={itemFact ? vitalNotesRail(itemFact, 'plain') : undefined}
                 />
             );
         }
@@ -480,6 +488,9 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
             thumbs: eventMedia.length > 0 ? <EventMediaStrip variant="ledger" media={eventMedia} treeId={activeTreeId} /> : null,
             below,
             actions,
+            // The row itself opens its editor, as on the locked person board.
+            onOpen: override ? undefined : editRow,
+            openLabel: te('edit_event_named', { event: displayTitle }),
             override,
         };
     });

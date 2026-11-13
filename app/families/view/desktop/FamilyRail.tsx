@@ -1,8 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
-import { compareSortableYears, formatYearOrEmpty, sortableYear } from '@/lib/date-utils';
+import { compareSortableYears, formatDateForDisplay, formatYearOrEmpty, sortableYear } from '@/lib/date-utils';
+import { useLanguage } from '@/app/components/LanguageProvider';
+import { useDateQualifierWords } from '@/app/components/date-input/aliases';
+import type { JourneyStop } from '@/app/components/LocationJourneyModal';
 import { livingStatus } from '@/lib/living';
 import { getInitials } from '@/lib/utils/initials';
 import { factPlaceEntry } from '@/lib/places/place-key';
@@ -12,12 +16,14 @@ import { partnerName, partnerShortName } from '../derive';
 import { ChildrenList } from '../sections';
 import { AddChildFinder, PartnerFinder } from './FamilyFinders';
 import type { FamilyWrites } from './familyWrites';
-import { Plus } from '@/lib/icons';
+import { ArrowUpRight, Plus } from '@/lib/icons';
 import type { PartnerFamilies, PartnerPerson } from '../useFamilyDetail';
 
 const LocationMap = dynamic(() => import('@/app/components/LocationMap'), { ssr: false });
+const LocationJourneyModal = dynamic(() => import('@/app/components/LocationJourneyModal'), { ssr: false });
 
-export interface RailPlace { place: string | null | undefined; placeId?: number | null }
+/** A place the family's records name, with what happened there for the map's stops. */
+export interface RailPlace { place: string | null | undefined; placeId?: number | null; title: string; date: string | null | undefined }
 
 /**
  * The desktop family page's rail (#119, locked board B): Open in tree centred on the
@@ -50,6 +56,10 @@ export function FamilyRail({ family, partner1, partner2, partner1Families, partn
   const taken = [partner1?.Id, partner2?.Id, ...childList.map((c) => c.Id)].filter((id): id is number => id != null);
   const startYear = sortableYear(family.MarriageDate);
 
+  const { language } = useLanguage();
+  const dateWords = useDateQualifierWords();
+  const [showMap, setShowMap] = useState(false);
+
   // Where they lived: each named place once, pinned where it has coordinates.
   const seen = new Set<string>();
   const markers = places.flatMap(({ place, placeId }) => {
@@ -58,6 +68,14 @@ export function FamilyRail({ family, partner1, partner2, partner1Families, partn
     const at = factPlaceEntry(placeCoords, place, placeId);
     return at ? [{ lat: at.lat, lng: at.lng, label: place }] : [];
   });
+  // The full map's stops: every geocoded record, oldest first, as the person page's journey.
+  const stops: JourneyStop[] = places
+    .flatMap(({ place, placeId, title, date }) => {
+      const at = place ? factPlaceEntry(placeCoords, place, placeId) : null;
+      return place && at ? [{ date, stop: { lat: at.lat, lng: at.lng, label: place, title, date: date ? formatDateForDisplay(date, language, dateWords) : null } }] : [];
+    })
+    .sort((x, y) => compareSortableYears(x.date, y.date))
+    .map((s) => s.stop);
 
   return (
     <DetailRail look="open" className="rail-family">
@@ -157,8 +175,23 @@ export function FamilyRail({ family, partner1, partner2, partner1Families, partn
       {seen.size > 0 && (
         <section aria-labelledby="rail-lived">
           <SectionHeader level="label" as="h3" headingId="rail-lived" title={t('where_they_lived')} />
-          {markers.length > 0 && <LocationMap markers={markers} variant="mini" height={130} className="rounded-card overflow-hidden" />}
-          <p className="m-0 mt-2 text-sm text-text-secondary">{t('places_n', { count: seen.size })}</p>
+          {stops.length > 0 ? (
+            // The whole block opens the full map of the family's places (board B).
+            <button type="button" onClick={() => setShowMap(true)} aria-label={t('open_places_map')}
+              className="family-places-link block w-full p-0 text-left bg-transparent border-0 cursor-pointer rounded-card focus-ring">
+              {/* The mini map is a picture here: it takes no pointer or keyboard input. */}
+              <span className="block pointer-events-none" inert>
+                <LocationMap markers={markers} variant="mini" height={130} className="rounded-card overflow-hidden" />
+              </span>
+              <span className="flex items-center gap-2 mt-2">
+                <span className="flex-1 text-sm text-text-secondary">{t('places_n', { count: seen.size })}</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-link" aria-hidden="true" />
+              </span>
+            </button>
+          ) : (
+            <p className="m-0 mt-2 text-sm text-text-secondary">{t('places_n', { count: seen.size })}</p>
+          )}
+          {showMap && <LocationJourneyModal stops={stops} onClose={() => setShowMap(false)} />}
         </section>
       )}
     </DetailRail>

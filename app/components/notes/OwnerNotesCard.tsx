@@ -38,7 +38,13 @@ export function OwnerNotesCard({
     showPreferred = true,
     shownElsewhereId = null,
     preferredIsBiography = false,
+    look = 'card',
 }: {
+    /**
+     * `plain`: inside the desktop event panel (locked person board), with no card
+     * chrome and no empty line: the label above it, the notes, and "Add a note".
+     */
+    look?: 'card' | 'plain';
     ownerTable: LinkOwnerTable;
     ownerId: number;
     treeId: number | null;
@@ -517,7 +523,7 @@ export function OwnerNotesCard({
     }
 
     return (
-        <div className="card" ref={cardRef}>
+        <div className={look === 'plain' ? 'owner-notes--plain' : 'card'} ref={cardRef}>
             {/* The card owns NO title. Every mount already labels this surface —
                 a FormSection title, a collapsible toggle, a rail overline, an h3 —
                 so a built-in one would read "Notes" twice. Surfaces that want the
@@ -539,7 +545,7 @@ export function OwnerNotesCard({
                 <div className="muted px-[15px] py-3.5 text-xs">{tc('loading')}</div>
             ) : currentNotes !== null ? (
                 <>
-                    {!hasNotes && visibleLoadError == null && (
+                    {!hasNotes && visibleLoadError == null && look !== 'plain' && (
                         <div className="muted px-[15px] py-3.5 text-sm leading-[1.6]">
                             {shownElsewhereId != null
                                 ? (canEdit ? t('empty_others_edit') : t('empty_others'))
