@@ -13,6 +13,7 @@ import type { OwnerGalleryMedia } from '@/lib/db/schema';
 import type { MediaOwnerFact, MediaOwnerTable } from '@/lib/db/fact-tables';
 import { X } from '@/lib/icons';
 import { mediaFactLabel } from './mediaFactLabel';
+import type { RunChange } from '@/app/people/view/mobile/useChange';
 
 /**
  * A media (photo / document) gallery for any owner record (family, source, …)
@@ -43,7 +44,13 @@ export function OwnerMediaCard({
     onChanged,
     look = 'card',
     onCount,
+    familyPhoto,
 }: {
+    /**
+     * A family's own gallery (#119, ADR 0047): the lightbox offers "Set as family
+     * photo". `run` is the page's change runner, for its Undo toast and reload.
+     */
+    familyPhoto?: { run: RunChange };
     /**
      * `strip`: the v1.1 desktop record page's Media section (#119): one row of six
      * squares with "+N", no card, and a plain "Add media" line under it.
@@ -136,7 +143,20 @@ export function OwnerMediaCard({
     const count = visibleMedia?.length ?? null;
     useEffect(() => { if (count != null) onCount?.(count); }, [count, onCount]);
 
+    const tl = useTranslations('mediaLightbox');
+    const choosePhoto = familyPhoto && ownerTable === 'Families' && !ownerFact ? {
+        isCurrent: (id: number) => visibleMedia?.some((m) => m.Id === id && m.IsFamilyPhoto) ?? false,
+        onSet: async (id: number) => {
+            const client = await getDataClient();
+            if (await familyPhoto.run(() => client.media.setFamilyPhoto(id, ownerId, treeId), { message: tl('family_photo_set') })) await load();
+        },
+        onClear: async (id: number) => {
+            const client = await getDataClient();
+            if (await familyPhoto.run(() => client.media.clearFamilyPhoto(id, ownerId, treeId), { message: tl('family_photo_removed') })) await load();
+        },
+    } : undefined;
     const lightbox = {
+        familyPhoto: choosePhoto,
         context: 'library' as const,
         canEdit,
         canDelete,

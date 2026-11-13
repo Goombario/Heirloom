@@ -282,6 +282,7 @@ export default function FamilyDetailsClient() {
                     ended={ended || null}
                     place={family.MarriagePlace ?? null}
                     about={aboutNote}
+                    photo={details.photo ?? null}
                     treeId={activeTreeId}
                     role={role}
                     run={run}
@@ -399,6 +400,7 @@ export default function FamilyDetailsClient() {
                                     canDelete={canDelete}
                                     relevantPersonIds={relevantPersonIds}
                                     onCount={setMediaCount}
+                                    familyPhoto={{ run }}
                                 />
                             </section>
 

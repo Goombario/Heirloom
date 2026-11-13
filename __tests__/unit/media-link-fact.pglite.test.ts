@@ -107,7 +107,7 @@ describe('MediaLink.OwnerFact', () => {
     await expect(query(
       `UPDATE "MediaLink" SET "IsPrimary" = 1 WHERE "MediaId" = $1`,
       [photo],
-    )).rejects.toThrow(/medialink_primary_people_only/);
+    )).rejects.toThrow(/medialink_primary_record_level/);
   });
 
   it('rejects a fact on the wrong owner table', async () => {
