@@ -14,7 +14,7 @@ import { HeroIdentityEditor } from '@/app/people/view/HeroIdentityEditor';
 import { NamesPanel, type NameVariant } from '@/app/components/person-form/NamesPanel';
 import { RelationshipList } from '@/app/components/person-form/RelationshipList';
 import { RelationshipAddPanel } from '@/app/people/view/RelationshipAddPanel';
-import { FamilyHeroEditor } from '@/app/families/view/FamilyHeroEditor';
+import { FamilyTypePanel } from '@/app/families/view/desktop/FamilyTypePanel';
 import InlineMarriageEditor from '@/app/families/view/InlineMarriageEditor';
 import { ChildrenList } from '@/app/families/view/sections';
 import type { PartnerPerson } from '@/app/families/view/useFamilyDetail';
@@ -172,26 +172,8 @@ export default function A11yHarnessContent() {
             </section>
 
             <section>
-                <h2 className="text-lg font-bold text-text mb-3">FamilyHeroEditor (in .hero-dark)</h2>
-                <div className="hero-dark">
-                    <FamilyHeroEditor
-                        partner1={famPartner1}
-                        partner2={famPartner2}
-                        type="Marriage"
-                        marriageDate="12 JUN 1920"
-                        /* null for the same reason as InlineMarriageEditor below: a saved
-                           place triggers a pin-chain lookup through the data client. */
-                        marriagePlace={null}
-                        endEvent={{ Type: 'DIV', Date: '1931' }}
-                        treeId={1}
-                        saving={false}
-                        /* Same fixture rationale as above — the delete action stays rendered. */
-                        canDelete
-                        onSave={asyncNoop}
-                        onCancel={noop}
-                        onDelete={noop}
-                    />
-                </div>
+                <h2 className="text-lg font-bold text-text mb-3">FamilyTypePanel</h2>
+                <FamilyTypePanel type="Marriage" onSave={async () => true} onCancel={noop} />
             </section>
 
             <section>

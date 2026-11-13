@@ -62,6 +62,8 @@ export interface FamilyDetailsResponse {
     marriageMedia?: Media[];
     /** The children's adoption events (#485), for the timeline. */
     childAdoptions?: GedcomEvent[];
+    /** The family photo (#119); without one the cover shows the split portrait. */
+    photo?: Media | null;
 }
 
 export type CitationRow = Citation;

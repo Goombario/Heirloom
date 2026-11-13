@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseGedcom } from '@/lib/gedcom/parser';
 import { generateGedcom } from '@/lib/gedcom/generator';
-import type { PersonWithRelations } from '@/lib/db/schema';
+import type { FamilyWithRelations, PersonWithRelations } from '@/lib/db/schema';
 
 /**
  * #401 — `_PRIM` must round-trip in BOTH directions.
@@ -109,6 +109,22 @@ describe('generator: canonical media primary pointers', () => {
     });
     expect(ged.match(/^1 _PRIM @I[12]@$/gm)).toEqual(['1 _PRIM @I1@', '1 _PRIM @I2@']);
     expect(ged).not.toMatch(/^1 _PRIM [YN]$/m);
+  });
+
+  it('names a family whose photo it is with `_PRIM @F…@`, never for a marriage photo (#119)', () => {
+    const family = { Id: 7, UserId: 1, Partner1Id: 1, Partner2Id: null, MarriageDate: null, MarriagePlace: null, UpdatedAt: null } as unknown as FamilyWithRelations;
+    const ged = generateGedcom([personWithMedia([])], [family], undefined, {
+      media: [{ Id: 1, Title: null, FilePath: 'wedding.jpg', Format: null }, { Id: 2, Title: null, FilePath: 'cert.jpg', Format: null }],
+      mediaLinks: [
+        { MediaId: 1, OwnerTable: 'People', OwnerId: 1, IsPrimary: 1 },
+        { MediaId: 1, OwnerTable: 'Families', OwnerId: 7, IsPrimary: 1 },
+        { MediaId: 2, OwnerTable: 'Families', OwnerId: 7, OwnerFact: 'Marriage', IsPrimary: 1 },
+      ],
+    });
+    expect(ged).toContain('0 @O1@ OBJE\n1 FILE media/O1-wedding.jpg\n1 _PRIM @I1@\n1 _PRIM @F1@');
+    expect(ged.match(/^1 _PRIM .*$/gm)).toEqual(['1 _PRIM @I1@', '1 _PRIM @F1@']);
+    // Read back, both owners are named on the record.
+    expect(parseGedcom(ged).mediaRecords.find((r) => r.xref === '@O1@')?.primaryPersonXrefs).toEqual(['@I1@', '@F1@']);
   });
 });
 

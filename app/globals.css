@@ -2955,8 +2955,25 @@ a.split-portrait__half:hover .split-portrait__tag { text-decoration: underline; 
 }
 button.split-portrait__half--unknown { cursor: pointer; }
 .split-portrait__add { display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--font-sans); }
+button.split-portrait__half--unknown .split-portrait__add { flex-direction: column; gap: 8px; }
+.split-portrait__disc { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 9999px; border: 1px dashed currentColor; }
 .family-editor { margin-top: 24px; }
 /* Rail person rows: the hover actions float over the row's right end instead of
    reserving their width, so long names fit the 280px rail as on the boards. */
 .rail-block .person-row { position: relative; }
 .rail-block .person-row > .ev-row-actions { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: var(--color-hover-surface); border-radius: var(--radius-btn, 8px); }
+/* The rail's empty partner slot (#119, board "Partial"): a dashed disc, "Partner
+   unknown" in the row's serif, and "Find or add someone" for writers. */
+.rail-unknown { display: flex; width: 100%; align-items: center; gap: 12px; padding: 6px 4px; border: 0; border-radius: var(--radius-btn, 8px); background: transparent; text-align: left; color: inherit; }
+button.rail-unknown { cursor: pointer; }
+button.rail-unknown:hover { background: var(--color-hover-surface); }
+.split-portrait__slot { min-width: 0; height: 100%; }
+.split-portrait__slot > .split-portrait__half { width: 100%; height: 100%; }
+/* The Add partner finder opens over the page from the hatched half, so the family
+   portrait doesn't clip; its halves round the outer corners themselves. */
+.cover--family .cover-portrait { overflow: visible; }
+.cover--family .split-portrait { --sp-r: calc(var(--radius-card) - 4px); background: var(--color-card); }
+.cover--family .split-portrait > .split-portrait__half:first-child,
+.cover--family .split-portrait > :first-child > .split-portrait__half { border-radius: var(--sp-r) 0 0 var(--sp-r); }
+.cover--family .split-portrait > .split-portrait__half:last-child,
+.cover--family .split-portrait > :last-child > .split-portrait__half { border-radius: 0 var(--sp-r) var(--sp-r) 0; }

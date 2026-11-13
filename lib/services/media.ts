@@ -12,6 +12,10 @@ import {
   tagSetPersonPrimary, updateMediaTagRow, MEDIA_TAG_MUTABLE_FIELDS, type MediaTagUpdate,
 } from '@/lib/db/queries/media-tags';
 import {
+  clearFamilyPhotoLinks,
+  getFamilyPhotoLink,
+  lockFamilyForMediaMutation,
+  setFamilyPhotoLink,
   clearPrimaryMediaLinksForPerson,
   getLowestMediaLinkForPerson,
   getPrimaryMediaLinkForPerson,
@@ -24,6 +28,7 @@ import {
   auditCreate,
   auditCanonicalPrimaryChange,
   auditDelete,
+  auditFamilyPhotoChange,
   auditUpdate,
   withAuditIds,
   type Audited,
@@ -125,6 +130,92 @@ export async function clearPrimaryMediaService(
     actingUserId: ctx.currentUserId,
     onlyMediaId: ctx.mediaId,
   });
+}
+
+/**
+ * Use this photo as the family's photo (#119, ADR 0047). Like a portrait it is a
+ * record-level link marked primary, so a photo shown on the family only through its
+ * members' tags gains a link to the family first.
+ */
+export async function setFamilyPhotoService(
+  ctx: Ctx & { mediaId: number; familyId: number },
+): Promise<Audited> {
+  const scope = await resolveOwner(ctx);
+  if (scope.permission === 'view') {
+    throw new AccessError('You only have view permission for this tree');
+  }
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    if (!await lockFamilyForMediaMutation(ctx.familyId, scope.treeId, client)) {
+      throw new NotFoundError('Family not found');
+    }
+    const selected = await getMediaById(ctx.mediaId, scope.treeId, client);
+    if (!selected) throw new NotFoundError('Media not found');
+    if (isPdfMedia(selected)) throw new ValidationError('A document cannot be a family photo');
+    const oldMediaId = await getFamilyPhotoLink(ctx.familyId, scope.treeId, client);
+    await upsertMediaLink({ mediaId: ctx.mediaId, ownerTable: 'Families', ownerId: ctx.familyId }, client);
+    await clearFamilyPhotoLinks(ctx.familyId, client);
+    await setFamilyPhotoLink(ctx.mediaId, ctx.familyId, client);
+    const auditId = await auditFamilyPhotoChange({
+      familyId: ctx.familyId,
+      oldMediaId,
+      newMediaId: ctx.mediaId,
+      treeOwnerId: selected.UserId,
+      userId: ctx.currentUserId,
+      treeId: scope.treeId,
+      exec: client,
+    });
+    await client.query('COMMIT');
+    return withAuditIds({}, [auditId]);
+  } catch (error) {
+    await safeRollback(client);
+    if (isUniqueViolation(error)) throw new PrimaryMediaConflictError();
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/** Stop using this photo as the family's photo; it stays linked to the family. */
+export async function clearFamilyPhotoService(
+  ctx: Ctx & { mediaId: number; familyId: number },
+): Promise<Audited> {
+  const scope = await resolveOwner(ctx);
+  if (scope.permission === 'view') {
+    throw new AccessError('You only have view permission for this tree');
+  }
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    if (!await lockFamilyForMediaMutation(ctx.familyId, scope.treeId, client)) {
+      throw new NotFoundError('Family not found');
+    }
+    const oldMediaId = await getFamilyPhotoLink(ctx.familyId, scope.treeId, client);
+    // A stale request (another photo was chosen since) changes nothing.
+    if (oldMediaId !== ctx.mediaId) {
+      await client.query('COMMIT');
+      return withAuditIds({}, []);
+    }
+    const oldMedia = await getMediaById(oldMediaId, scope.treeId, client);
+    await clearFamilyPhotoLinks(ctx.familyId, client);
+    const auditId = oldMedia ? await auditFamilyPhotoChange({
+      familyId: ctx.familyId,
+      oldMediaId,
+      newMediaId: null,
+      treeOwnerId: oldMedia.UserId,
+      userId: ctx.currentUserId,
+      treeId: scope.treeId,
+      exec: client,
+    }) : null;
+    await client.query('COMMIT');
+    return withAuditIds({}, [auditId]);
+  } catch (error) {
+    await safeRollback(client);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /** Orchestrate canonical creation on a caller-owned transaction executor. */

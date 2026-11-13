@@ -22,6 +22,7 @@ import { partnerName, partnerShortName } from '../derive';
 import { SLOT_COLUMN, childLink, coupleName, endingOf, partnersOf, suggestChildren, type PhoneFamily, type Slot } from './model';
 import { ftypeKey, useChildLinkText, type FamilyRole, type OtherPartnerships } from './panes';
 import { ChipGroup, Face, Group } from './parts';
+import { idOf, pickedName } from '../pickedPeople';
 
 /*
  * The family page's people sheets on the phone (#1062): the pencil menu, Change
@@ -95,23 +96,6 @@ function firstStep(flow: PeopleFlow): Step {
         case 'children': return { step: 'children' };
         case 'delete': return { step: 'delete', from: null };
     }
-}
-
-/** The name a picked person goes by in the confirm step. */
-function pickedName(p: PickedPerson, unknown: string): string {
-    return p.kind === 'existing'
-        ? displayFullName(p.person) || unknown
-        : [p.draft.firstName, p.draft.lastName].filter(Boolean).join(' ') || unknown;
-}
-
-/** Create a picked new person, or return the existing one's id. */
-async function idOf(p: PickedPerson, treeId: number | null, auditIds: number[]): Promise<number> {
-    if (p.kind === 'existing') return p.person.Id;
-    const client = await getDataClient();
-    const d = p.draft;
-    const created = await client.people.create({ FirstName: d.firstName || null, LastName: d.lastName || null, Sex: d.sex, BirthDate: d.birthDate }, { treeId });
-    auditIds.push(...created.auditIds);
-    return created.Id;
 }
 
 const ids = (r: { auditId: number | null }) => (r.auditId != null ? [r.auditId] : []);

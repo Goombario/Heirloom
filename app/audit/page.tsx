@@ -38,7 +38,7 @@ function isCanonicalMediaSummary(e: AuditLogEntryWithUser): boolean {
     const summary = (e.Changes as { summary?: { kind?: unknown } } | null)?.summary;
     return e.EntityType === 'media'
         && e.Action === 'update'
-        && (summary?.kind === 'canonical_primary' || summary?.kind === 'canonical_ownership');
+        && (summary?.kind === 'canonical_primary' || summary?.kind === 'canonical_ownership' || summary?.kind === 'family_photo');
 }
 
 /**

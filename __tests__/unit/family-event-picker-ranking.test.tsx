@@ -94,7 +94,6 @@ vi.mock('@/app/families/view/FamilySummaryView', () => ({ FamilySummaryView: () 
 vi.mock('@/app/families/view/desktop/FamilyCover', () => ({ FamilyCover: () => <div /> }));
 vi.mock('@/app/families/view/desktop/FamilyRail', () => ({ FamilyRail: () => <div /> }));
 vi.mock('@/app/people/view/desktop/SourcesSection', () => ({ SourcesSection: () => <div /> }));
-vi.mock('@/app/families/view/FamilyHeroEditor', () => ({ FamilyHeroEditor: () => <div /> }));
 vi.mock('@/app/families/view/sections', () => ({
     // The Add event row and its panel are the timeline's footer (#760).
     FamilyTimeline: ({ footer }: { footer?: React.ReactNode }) => <div>{footer}</div>,

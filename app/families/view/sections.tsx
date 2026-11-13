@@ -34,6 +34,7 @@ import { partnerName, partnerShortName, yearOnly, calcAgeAtDeath, hasRecordedDea
 import { prefetchFamily } from './familyCache';
 import { prefetchPerson } from '@/app/people/view/personCache';
 import type { PartnerPerson, CitationRow, PartnerFamilies } from './useFamilyDetail';
+import type { RunChange } from '@/app/people/view/mobile/useChange';
 import type { CitationMap } from './useFamilyDetail';
 import { chipCitations, type SourceNumbers } from '@/app/components/citations/factDescriptors';
 import { FACT_TABLES, type FactTableValue } from '@/lib/db/fact-tables';
@@ -54,7 +55,7 @@ interface TimelineFamily {
 }
 
 export function FamilyTimeline({
-    family, childList, partners = [null, null], citationMap, sourceNumbers, canEdit, canDelete, isOpen, toggle, earlierPartner, onCitationClick, onChanged, relevantPersonIds, footer, marks,
+    family, childList, partners = [null, null], citationMap, sourceNumbers, canEdit, canDelete, isOpen, toggle, earlierPartner, onCitationClick, onChanged, relevantPersonIds, footer, marks, run, onRecordEnd,
 }: {
     family: TimelineFamily;
     childList: PartnerPerson[];
@@ -82,12 +83,18 @@ export function FamilyTimeline({
      * rows never get one. The band's pill covers the rest.
      */
     marks?: DataCheckMarks;
+    /** Deletes act at once with Undo through this (the v1.1 desktop page); without it, they ask first. */
+    run?: RunChange;
+    /** "Record a divorce or separation" on the row worked out from a death (#119, G7). */
+    onRecordEnd?: () => void;
 }) {
     const t = useTranslations('families');
     const tPerson = useTranslations('personDetail');
     const tDesk = useTranslations('personDesktop');
     const tc = useTranslations('common');
     const te = useTranslations('eventEdit');
+    const tk = useTranslations('familyPhone');
+    const tm = useTranslations('mobileEvents');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
     const { activeTreeId } = useTree();
@@ -102,6 +109,7 @@ export function FamilyTimeline({
     const dateColumn = useLedgerDate(language);
 
     // The date as the row shows it, not the stored GEDCOM form (#901).
+    const eventWhen = (ev: GedcomEvent) => [ev.Date && formatDateForDisplay(ev.Date, language, dateWords), ev.Place?.split(',')[0]?.trim()].filter(Boolean).join(' · ') || undefined;
     const eventLabel = (ev: GedcomEvent) => [familyEventLabel(ev.Type, te), ev.Date && formatDateForDisplay(ev.Date, language, dateWords), ev.Place].filter(Boolean).join(' · ');
     // What to call the union itself, per type: "marriage" for a Marriage, but
     // "common-law partnership" for a Common-law family.
@@ -121,6 +129,15 @@ export function FamilyTimeline({
             </>
         );
     };
+
+    function requestDelete(ev: GedcomEvent) {
+        if (!run) { setConfirmDelete(ev); return; }
+        setEditingId((cur) => (cur === ev.Id ? null : cur));
+        void run(async () => {
+            const client = await getDataClient();
+            return client.events.remove(ev.Id, activeTreeId);
+        }, { message: tm('deleted', { type: familyEventLabel(ev.Type, te) }), detail: eventWhen(ev) });
+    }
 
     // The start row is the family fact; an imported `1 MARR` / `2 SOUR` cites the
     // marriage itself (#962), so its chips sit beside the family's, and the empty
@@ -232,7 +249,7 @@ export function FamilyTimeline({
                     {notesOpen && <div className="mt-2" id={notesRegionId}>{notesRail(ev)}</div>}
                 </>
             ) : null,
-            actions: canEdit ? <EventRowActions label={label} onEdit={() => { rememberEventOpener(); setEditingId(ev.Id); }} onDelete={canDelete ? () => setConfirmDelete(ev) : undefined} /> : null,
+            actions: canEdit ? <EventRowActions label={label} onEdit={() => { rememberEventOpener(); setEditingId(ev.Id); }} onDelete={canDelete ? () => requestDelete(ev) : undefined} /> : null,
             override: editingId === ev.Id ? (
                 <InlineEventEditor
                     target={{ kind: 'family', familyId: family.Id }}
@@ -241,7 +258,7 @@ export function FamilyTimeline({
                     onCancel={() => setEditingId(null)}
                     onRefresh={onChanged}
                     onSaved={() => { setEditingId(null); onChanged(); }}
-                    onDelete={canDelete ? () => setConfirmDelete(ev) : undefined}
+                    onDelete={canDelete ? () => requestDelete(ev) : undefined}
                     notesSlot={notesRail(ev)}
                 />
             ) : null,
@@ -319,10 +336,17 @@ export function FamilyTimeline({
             place: earlierPartner.DeathPlace,
             placeId: earlierPartner.DeathPlaceId,
             // "Worked out from Everett's death. 43 years together."
-            lines: [
-                t('ended_derived', { name: firstName(earlierPartner) }),
-                startYear != null && endYear != null && endYear > startYear ? `${t('years_together', { count: endYear - startYear })}.` : null,
-            ].filter(Boolean).join(' '),
+            lines: (
+                <>
+                    {[
+                        t('ended_derived', { name: firstName(earlierPartner) }),
+                        startYear != null && endYear != null && endYear > startYear ? `${t('years_together', { count: endYear - startYear })}.` : null,
+                    ].filter(Boolean).join(' ')}
+                    {canEdit && onRecordEnd && (
+                        <span className="block mt-1"><ActionLink onClick={onRecordEnd}>{tk('record_end')}</ActionLink></span>
+                    )}
+                </>
+            ),
         });
     }
 
@@ -374,7 +398,7 @@ export function FamilyTimeline({
 }
 
 export function ChildrenList({
-    childList, partner1 = null, partner2 = null, treeId, familyId, canEdit, canDelete, onChanged, variant = 'card',
+    childList, partner1 = null, partner2 = null, treeId, familyId, canEdit, canDelete, onChanged, variant = 'card', addSlot,
 }: {
     /**
      * `rail`: the v1.1 desktop family page's CHILDREN (#119): serif person rows with
@@ -393,6 +417,8 @@ export function ChildrenList({
     /** Remove and Move…: the delete rung (owner/edit), as the services require (#848). */
     canDelete: boolean;
     onChanged: () => void;
+    /** The rail's own Add child (the finder), in place of the search panel. */
+    addSlot?: React.ReactNode;
 }) {
     const t = useTranslations('families');
     const tf = useTranslations('editFamily');
@@ -612,7 +638,8 @@ export function ChildrenList({
                     );
                 })
             )}
-            {canEdit && (adding ? (
+            {canEdit && addSlot}
+            {canEdit && !addSlot && (adding ? (
                 <div className={cx('inline-panel flex flex-col gap-3', rail ? 'mt-2' : 'm-3')} role="group" aria-label={tf('add_child')} data-testid="add-child-picker" onKeyDown={escapeToCancel(() => setAdding(false))}>
                     <PersonPicker ref={addPickerRef} value={null} onChange={(pp) => pp && addChild(pp.Id)} showSex showDates excludeIds={childList.map((c) => c.Id)} treeId={activeTreeId} placeholder={tf('search_child_placeholder')} inline />
                     <div className="row gap-2">

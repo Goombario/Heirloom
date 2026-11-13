@@ -138,6 +138,24 @@ export class HttpMediaClient implements MediaClient {
     return auditIdsFrom(res);
   }
 
+  async setFamilyPhoto(mediaId: number, familyId: number, treeId?: number | null): Promise<Audited> {
+    const res = await fetch(`/api/media/${mediaId}/family-photo${treeQuery(treeId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ familyId }),
+    });
+    if (!res.ok) await throwForStatus(res);
+    return auditIdsFrom(res);
+  }
+
+  async clearFamilyPhoto(mediaId: number, familyId: number, treeId?: number | null): Promise<Audited> {
+    const qs = new URLSearchParams({ familyId: String(familyId) });
+    if (treeId != null) qs.set('treeId', String(treeId));
+    const res = await fetch(`/api/media/${mediaId}/family-photo?${qs.toString()}`, { method: 'DELETE' });
+    if (!res.ok) await throwForStatus(res);
+    return auditIdsFrom(res);
+  }
+
   async listTags(mediaId: number, treeId?: number | null): Promise<MediaTagWithPerson[]> {
     const res = await fetch(`/api/media/${mediaId}/tags${treeQuery(treeId)}`);
     if (!res.ok) await throwForStatus(res);
