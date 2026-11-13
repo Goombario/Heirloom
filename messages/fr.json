@@ -3063,6 +3063,7 @@
     "orientation_focus_na": "L'horizontal n'est pas disponible en vue focalisée.",
     "depth": "Profondeur",
     "show_ages": "Afficher les âges",
+    "show_living_status": "Afficher le statut vivant ou décédé",
     "all_gens": "toutes gén.",
     "depth_gens": "{count, plural, one {# gén.} other {# gén.}}",
     "export_failed": "Échec de l'export. Veuillez réessayer.",

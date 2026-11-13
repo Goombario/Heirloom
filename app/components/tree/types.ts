@@ -140,6 +140,8 @@ export interface FlowNodeData {
   onPersonClick?: (id: number) => void;
   onPersonDoubleClick?: (id: number) => void;
   showAgeIndicator?: boolean;
+  /** The living-status mark on the card (#68); hidden only when false. */
+  showStatusMark?: boolean;
   /** DEBUG (horizontal bar review): zoom level below which the bar switches to
    *  zoomed-out mode (name-only, scaled). Default 0.6. */
   barZoomThreshold?: number;

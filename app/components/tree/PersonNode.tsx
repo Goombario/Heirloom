@@ -113,7 +113,7 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
               <span className="tree-card-age">{shownAge}</span>
             </div>
           )}
-          <StatusMark status={status} size="tree" corner className="status-tree" label={statusLabel} />
+          {data.showStatusMark !== false && <StatusMark status={status} size="tree" corner className="status-tree" label={statusLabel} />}
         </div>
 
         {/* Info Strip */}

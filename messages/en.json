@@ -3063,6 +3063,7 @@
     "orientation_focus_na": "Horizontal isn't available in focus view.",
     "depth": "Depth",
     "show_ages": "Show ages",
+    "show_living_status": "Show living status",
     "all_gens": "all gens",
     "depth_gens": "{count, plural, one {# gen} other {# gens}}",
     "export_failed": "Export failed. Please try again.",
