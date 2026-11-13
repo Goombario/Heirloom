@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
-import { parseIdParam, parseOptionalIdParam } from '@/lib/utils/parse-id';
+import { parseIdParam } from '@/lib/utils/parse-id';
 import { handleApiError } from '@/lib/api/handle-error';
 import { listAuditService } from '@/lib/services/audit';
 
@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const requestedTreeId = parseIdParam(searchParams.get('treeId'));
     const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
-    const page = parseOptionalIdParam(searchParams.get('page'), 'page') ?? undefined;
-    const pageSize = parseOptionalIdParam(searchParams.get('pageSize'), 'pageSize') ?? undefined;
+    // The service checks these are whole numbers and clamps them into range.
+    const page = searchParams.get('page') ? Number(searchParams.get('page')) : undefined;
+    const pageSize = searchParams.get('pageSize') ? Number(searchParams.get('pageSize')) : undefined;
     const entityType = searchParams.get('entityType') || undefined;
     const action = searchParams.get('action') || undefined;
     const who = parseIdParam(searchParams.get('who')) ?? undefined;

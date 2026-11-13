@@ -1,7 +1,7 @@
 import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
-import { parseIdParam } from '@/lib/utils/parse-id';
+import { parseIdParam, parseBodyId } from '@/lib/utils/parse-id';
 import { handleApiError } from '@/lib/api/handle-error';
 import { linkMediaService } from '@/lib/services/cases';
 
@@ -22,9 +22,8 @@ export async function POST(
         const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
 
         const body = await readJsonObject(request);
-        const mediaIds: number[] = Array.isArray(body.mediaIds)
-            ? body.mediaIds.map((mid: unknown) => Number(mid)).filter((n: number) => !isNaN(n))
-            : [];
+        if (!Array.isArray(body.mediaIds)) return NextResponse.json({ error: 'mediaIds must be a list' }, { status: 400 });
+        const mediaIds = body.mediaIds.map((mid: unknown) => parseBodyId(mid, 'mediaIds')).filter((n: number | null | undefined): n is number => typeof n === 'number');
 
         const result = await linkMediaService({ id: caseId, mediaIds, requestedTreeId, requestedOwnerId, currentUserId: user.id });
         return NextResponse.json(result, { status: 201 });
