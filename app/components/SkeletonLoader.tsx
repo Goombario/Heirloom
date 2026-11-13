@@ -65,14 +65,14 @@ export function CoverSkeleton({ portrait = 'single', className }: { portrait?: '
             <div className="hero-dark cover-band cover-band--cover">
                 <div className="cover-band__text flex flex-col gap-3">
                     {portrait === 'split' && <Skeleton className="h-3 w-24" />}
-                    <Skeleton className="h-9 w-[45%] max-w-[420px]" />
-                    <Skeleton className="h-3.5 w-[30%] max-w-[300px]" />
+                    <Skeleton className="h-10 w-[380px] max-w-full" />
+                    <Skeleton className="h-3.5 w-[280px] max-w-full" />
                 </div>
             </div>
             <div className="cover-below">
                 <div className="cover-portrait">
                     {portrait === 'split' ? (
-                        <div className="flex gap-1" data-testid="cover-skeleton-portrait">
+                        <div className="flex gap-1 bg-[color:var(--color-card)]" data-testid="cover-skeleton-portrait">
                             <Skeleton className="flex-1 h-full rounded-card" />
                             <Skeleton className="flex-1 h-full rounded-card" />
                         </div>
@@ -121,7 +121,7 @@ export function DetailBodySkeleton({ index = true, divided = true, className }: 
                     <Skeleton className="h-4 w-[50%]" />
                     {Array.from({ length: 3 }).map((_, i) => (
                         <div key={i} className="flex items-center gap-2.5">
-                            <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                            <Skeleton className="w-8 h-8 skeleton--round shrink-0" />
                             <Skeleton className="h-3 flex-1" />
                         </div>
                     ))}
@@ -156,7 +156,7 @@ export function WorkspaceSkeleton() {
                     <div className="hero-dark cover-band cover-band--short">
                         <div className="cover-band__text flex flex-col gap-2.5">
                             <Skeleton className="h-3 w-24" />
-                            <Skeleton className="h-8 w-[40%] max-w-[420px]" />
+                            <Skeleton className="h-8 w-[380px] max-w-full" />
                         </div>
                     </div>
                 </div>

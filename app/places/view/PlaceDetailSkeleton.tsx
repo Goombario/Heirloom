@@ -25,8 +25,8 @@ export default function PlaceDetailSkeleton() {
         <div className="hero-dark place-cover__foot">
           <div className="min-w-0 flex-1 grid gap-2.5">
             <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-8 w-[40%] max-w-[380px]" />
-            <Skeleton className="h-3 w-[28%] max-w-[260px]" />
+            <Skeleton className="h-8 w-[340px] max-w-full" />
+            <Skeleton className="h-3 w-[240px] max-w-full" />
           </div>
         </div>
       </div>
