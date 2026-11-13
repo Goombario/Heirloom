@@ -323,7 +323,7 @@ export async function getPlaceDetailService(
 
   // Jurisdiction hierarchy (only when the place is a gazetteer row with an Id).
   const parents = ancestors.map((a) => ({ id: a.Id, name: a.Name }));
-  const children = childRows.map((c) => ({ id: c.Id, name: c.Name }));
+  const children = childRows.map((c) => ({ id: c.Id, name: c.Name, records: c.RecordCount }));
 
   const eventCounts = (eventsResult.rows as { Type: string; count: number | string }[])
     .map((r) => ({ type: r.Type, count: Number(r.count) }));

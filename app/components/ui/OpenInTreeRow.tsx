@@ -8,9 +8,9 @@ import { cx } from './cx';
 const TILE_SIZE = { 32: 'w-8 h-8', 36: 'w-9 h-9', 40: 'w-10 h-10' } as const;
 
 /**
- * An outlined icon tile (C8 on #55): a 1px muted edge and a secondary-text icon on
- * the card fill, both above 3:1, replacing the grey `--surface-2` tile that failed
- * contrast. Open in tree, Home's Quick add and the Tools menu use it.
+ * An icon tile (C8 on #55): a filled `--color-border` square with an ink icon, so
+ * the icon itself clears contrast (the old grey tile with a grey icon did not).
+ * Open in tree, Home's Quick add and the Tools menu use it.
  */
 export function IconTile({ children, size = 36, className }: { children: React.ReactNode; size?: 32 | 36 | 40; className?: string }) {
   return (
@@ -56,7 +56,7 @@ export function OpenInTreeRow({ personId, firstName, className }: {
 }
 
 /**
- * A quick-create tile (#53): an outlined `IconTile` over a short label, the whole
+ * A quick-create tile (#53): an `IconTile` over a short label, the whole
  * tile one link. Home's Quick add rail (New person, New family, New case) uses it.
  */
 export function TileLink({ href, icon, label, className }: { href: string; icon: React.ReactNode; label: string; className?: string }) {

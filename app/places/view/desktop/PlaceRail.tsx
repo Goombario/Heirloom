@@ -119,6 +119,9 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
                                 >
                                     <MapPin size={14} className="text-text-muted shrink-0" aria-hidden="true" />
                                     <span className="serif min-w-0 truncate">{shortName(c.name)}</span>
+                                    {c.records != null && c.records > 0 && (
+                                        <span className="ml-auto pl-2 font-mono text-meta text-text-muted tabular-nums">{c.records}<span className="sr-only"> {t('stat_records', { count: c.records })}</span></span>
+                                    )}
                                 </Link>
                             </li>
                         ))}
@@ -137,19 +140,9 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
                 <section aria-labelledby="place-details-title">
                     <SectionHeader level="label" as="h3" headingId="place-details-title" title={t('details')} />
                     <dl className="m-0 grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-                        {detail.displayName && (
-                            <>
-                                <dt className="text-text-muted">{t('on_map_as')}</dt>
-                                <dd className="m-0 text-text break-words">{detail.displayName}</dd>
-                            </>
-                        )}
                         {/* "Place name", never "Canonical" or "Display name" (ADR 0017). */}
                         <dt className="text-text-muted">{tp('place_name')}</dt>
                         <dd className="m-0 text-text break-words">{placeName}</dd>
-                        <dt className="text-text-muted">{tp('coordinates')}</dt>
-                        <dd className="m-0 tabular-nums text-text-secondary">
-                            {pinned ? `${detail.latitude!.toFixed(4)}, ${detail.longitude!.toFixed(4)}` : tp('not_geocoded_value')}
-                        </dd>
                         {detail.id != null && (names.length > 0 || canEdit) && (
                             <>
                                 <dt className="text-text-muted">{tp('other_names')}</dt>
@@ -170,6 +163,16 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
                                 </dd>
                             </>
                         )}
+                        {detail.displayName && (
+                            <>
+                                <dt className="text-text-muted">{t('on_map_as')}</dt>
+                                <dd className="m-0 text-text break-words">{detail.displayName}</dd>
+                            </>
+                        )}
+                        <dt className="text-text-muted">{tp('coordinates')}</dt>
+                        <dd className="m-0 font-mono text-meta tabular-nums text-text-secondary">
+                            {pinned ? `${detail.latitude!.toFixed(4)}, ${detail.longitude!.toFixed(4)}` : tp('not_geocoded_value')}
+                        </dd>
                     </dl>
                     {canEdit && <div className="mt-4">{fixMenu}</div>}
                 </section>

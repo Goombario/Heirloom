@@ -1943,7 +1943,9 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
 .family-record-row { background: var(--color-family-row); }
 .family-record-row:hover { background: var(--color-family-row-hover); }
 
-.icon-tile { background: var(--color-card); border: 1px solid var(--color-text-muted); color: var(--color-text-secondary); }
+/* Filled tile, ink icon (fix 13): the icon carries the contrast (11.6:1 light), so
+   the tile edge can stay a soft fill. */
+.icon-tile { background: var(--color-border); color: var(--color-text); }
 
 /* Empty slot (#55): the dashed edge uses the drop-zone token, 3:1+ on card and parchment. */
 .empty-slot, .empty-slot__disc { border-color: var(--color-drop-edge); }
@@ -3108,3 +3110,10 @@ th:hover > span > .data-table__sort-idle, th:focus-visible > span > .data-table_
 .pager__num:hover { background: var(--color-surface-2); }
 .pager__num.is-current { background: var(--color-segment-on); color: var(--color-on-segment); }
 .pager__gap { min-width: 22px; text-align: center; color: var(--text-muted); }
+
+/* Fix 13: the family rail's journey sketch. */
+.journey-sketch { background: var(--color-surface-2); }
+.journey-sketch__line { stroke: var(--color-primary); }
+.journey-sketch__stop { fill: var(--color-card); stroke: var(--color-primary); }
+.journey-sketch__end { fill: var(--color-primary); stroke: var(--color-card); }
+.journey-sketch__label { font: 500 10px var(--font-sans); fill: var(--color-text-secondary); }

@@ -58,7 +58,7 @@ export default function PhotosPanel({
           onClick={() => setTypeFilter(typeFilter === 'documents' ? 'all' : 'documents')}
         />
       </LibraryPanelGroup>
-      <div className="mt-4 px-2">
+      <div className="mt-3 border-t border-border px-2 pt-3">
         <MediaStorageCard {...storage} />
       </div>
     </LibraryPanel>
