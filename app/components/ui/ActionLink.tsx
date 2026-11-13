@@ -1,7 +1,7 @@
 'use client';
 
 import GuardedLink from '@/app/components/GuardedLink';
-import { ArrowUpRight, ChevronDown, ChevronRight } from '@/lib/icons';
+import { ArrowUpRight, ChevronDown, ChevronRight, Plus } from '@/lib/icons';
 import { cx } from './cx';
 
 /**
@@ -17,6 +17,8 @@ interface BaseProps {
   children: React.ReactNode;
   /** Drop the glyph (e.g. an Edit link beside an expander). Defaults to on for every kind except a bare `action` with no href. */
   glyph?: boolean;
+  /** A link row that adds something ("+ Add another name"): a plus before the label. */
+  plus?: boolean;
   className?: string;
   title?: string;
   'aria-label'?: string;
@@ -58,11 +60,12 @@ export function ActionLink({ ref, ...props }: ButtonProps | LinkProps) {
       className={cx('w-3.5 h-3.5 shrink-0 transition-transform', kind === 'expand' && props.expanded && 'rotate-180')}
     />
   ) : null;
+  const lead = props.plus ? <Plus aria-hidden="true" className="w-3.5 h-3.5 shrink-0 mr-1" /> : null;
 
   if (props.href != null) {
     return (
       <GuardedLink href={props.href} onClick={props.onClick} className={cls} title={title} aria-label={props['aria-label']}>
-        {children}{glyph}
+        {lead}{children}{glyph}
       </GuardedLink>
     );
   }
@@ -78,7 +81,7 @@ export function ActionLink({ ref, ...props }: ButtonProps | LinkProps) {
       aria-expanded={kind === 'expand' ? Boolean(props.expanded) : props['aria-expanded']}
       aria-controls={props.controls ?? props['aria-controls']}
     >
-      {children}{glyph}
+      {lead}{children}{glyph}
     </button>
   );
 }

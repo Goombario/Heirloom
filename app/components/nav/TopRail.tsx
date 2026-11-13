@@ -30,7 +30,7 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
 
   return (
     <nav aria-label={t('main_navigation')} className={`app-nav text-white sticky top-0 z-40 transition-shadow ${scrolled ? 'shadow-[var(--shadow-nav-scrolled)]' : 'shadow-[var(--shadow-nav)]'}`} style={{ background: 'var(--color-nav-bg)' }}>
-      <div className="container mx-auto px-4">
+      <div className="mx-auto w-full max-w-[1240px] px-4 md:px-[28px]">
         <div className="flex items-center justify-between gap-4 h-14">
           <div className="flex items-center min-w-0">
             {/* Mobile menu: opens the left slide-over drawer (desktop uses DesktopNav) */}

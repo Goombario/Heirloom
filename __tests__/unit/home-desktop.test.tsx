@@ -85,7 +85,8 @@ describe('DesktopHome (#53)', () => {
 
   it('shows each place with its country and the rail foot line', () => {
     wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit treeId={1} />);
-    expect(screen.getByRole('link', { name: /Duluth · USA/ })).toHaveTextContent('12 records');
+    // The count shows as a number; its accessible name says what it counts.
+    expect(screen.getByRole('link', { name: /Duluth USA 12 records/ })).toHaveTextContent('12');
     expect(screen.getByText(/30 places in 4 countries/)).toBeInTheDocument();
   });
 });

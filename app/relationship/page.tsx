@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { ActionLink, Button, Card, CoverBand, IconButton, InlineDataError, Input, PageShell, cx } from '@/app/components/ui';
-import { ArrowLeftRight, Link2Off, LinkIcon, Search, UserRound, X } from '@/lib/icons';
+import { Button, Card, CoverBand, IconButton, InlineDataError, PageShell, cx } from '@/app/components/ui';
+import PersonAvatar from '@/app/components/PersonAvatar';
+import { ArrowLeftRight, Search, X } from '@/lib/icons';
+import { formatLifespan, formatYearOrEmpty } from '@/lib/date-utils';
+import { getInitials } from '@/lib/utils/initials';
 import { getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { errorToastKey } from '@/lib/utils/data-error';
@@ -26,6 +29,10 @@ interface Person {
     Sex?: string | null;
     BirthDate?: string | null;
     DeathDate?: string | null;
+    PrimaryMediaId?: number;
+    FocalX?: number;
+    FocalY?: number;
+    FocalRadius?: number | null;
 }
 
 interface RelationshipResult {
@@ -191,13 +198,13 @@ export default function RelationshipPage() {
             <div className="mb-4">
                 <CoverBand variant="short" eyebrow={tNav('tools')} title={t('title')} meta={t('subtitle')} />
             </div>
-            <div className="grid gap-4 max-w-4xl">
-                {/* One panel: the two people, Swap between them, then Find relationship. */}
-                <Card pad={false} className="p-5">
+            <div className="grid gap-5">
+                {/* One row: the two people, Swap between them, then Find relationship (locked list-pages board). */}
+                <Card pad={false} className="p-4">
                     {currentPeopleError && (
                         <InlineDataError className="mb-4" message={currentPeopleError} retryLabel={tCommon('retry')} onRetry={loadPeople} />
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-3">
                         <PersonSlot
                             label={t('first_person')}
                             selected={selectedPerson1}
@@ -207,9 +214,11 @@ export default function RelationshipPage() {
                             onPick={(id) => { setPerson1(id); setSearch1(''); }}
                             onClear={() => { setPerson1(null); setSearch1(''); }}
                             getFullName={getFullName}
+                            treeId={activeTreeId}
                         />
-                        <Button
-                            variant="ghost"
+                        <IconButton
+                            label={t('swap_title')}
+                            title={t('swap_title')}
                             onClick={() => {
                                 const [p1, p2] = [person1, person2];
                                 setPerson1(p2); setPerson2(p1);
@@ -218,11 +227,9 @@ export default function RelationshipPage() {
                                 setResult(null);
                             }}
                             disabled={!person1 && !person2}
-                            icon={<ArrowLeftRight className="w-4 h-4" aria-hidden="true" />}
-                            title={t('swap_title')}
-                        >
-                            {t('swap')}
-                        </Button>
+                            icon={<ArrowLeftRight className="w-4 h-4" />}
+                            className="w-9 h-9 inline-flex items-center justify-center rounded-[8px] border border-border bg-card justify-self-center"
+                        />
                         <PersonSlot
                             label={t('second_person')}
                             selected={selectedPerson2}
@@ -232,9 +239,8 @@ export default function RelationshipPage() {
                             onPick={(id) => { setPerson2(id); setSearch2(''); }}
                             onClear={() => { setPerson2(null); setSearch2(''); }}
                             getFullName={getFullName}
+                            treeId={activeTreeId}
                         />
-                    </div>
-                    <div className="mt-4 flex justify-end">
                         <Button variant="primary" onClick={calculateRelationship} disabled={!person1 || !person2 || loading}>
                             {loading ? t('calculating') : t('find_relationship')}
                         </Button>
@@ -246,43 +252,52 @@ export default function RelationshipPage() {
                 )}
 
                 {currentResult && (
-                    <Card pad={false} className="p-5 grid gap-4">
-                        <div className="flex items-start gap-3">
-                            <ResultIcon degree={currentResult.degree} />
-                            <div className="grid gap-0.5">
-                                <h2 role="status" className="m-0 serif text-2xl font-semibold leading-tight text-text">{currentResult.relationship}</h2>
-                                {currentResult.degree > 0 && <p className="m-0 text-sm text-text-muted">{t('steps_apart', { count: currentResult.degree })}</p>}
-                            </div>
+                    <Card pad={false} className="p-5">
+                        <p className="eyebrow m-0">{t('result')}</p>
+                        <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1 mt-1 mb-[18px]">
+                            <h2 role="status" className="m-0 serif text-2xl font-semibold leading-tight text-text">{currentResult.relationship}</h2>
+                            {currentResult.degree > 0 && <span className="font-mono text-meta text-text-muted">{t('steps_apart', { count: currentResult.degree })}</span>}
                         </div>
 
-                        {/* The path, left to right, joined by "child of" / "parent of"; both ends stand out. */}
+                        {/* The path, left to right: each person over who they are on it, joined by
+                            "child of" / "parent of" on a hairline; both ends stand out. */}
                         {path.length > 0 && (
-                            <div className="grid gap-2">
-                                <h3 className="eyebrow m-0">{t('path_heading')}</h3>
-                                <ol className="list-none m-0 p-0 flex flex-wrap items-center gap-x-2 gap-y-2">
-                                    {path.map((step, idx) => {
-                                        const end = idx === 0 || idx === path.length - 1;
-                                        return (
-                                            <li key={step.id} className="flex items-center gap-2">
-                                                {idx > 0 && <span className="text-meta text-text-muted">{link(step.relationship)}</span>}
-                                                <Link
-                                                    href={`/people/view?id=${step.id}`}
-                                                    className={cx('inline-flex items-center rounded-btn px-2.5 py-1.5 text-sm no-underline transition-colors focus-ring',
-                                                        end ? 'bg-segment-on text-on-segment font-semibold' : idx === peak ? 'border border-border bg-card font-semibold text-text hover:bg-hover-surface' : 'bg-surface-2 text-text hover:bg-hover-surface')}
-                                                >
-                                                    {step.name}
-                                                </Link>
-                                            </li>
-                                        );
-                                    })}
-                                </ol>
-                            </div>
+                            <ol aria-label={t('path_heading')} className="list-none m-0 p-0 pb-1 flex items-stretch overflow-x-auto">
+                                {path.map((step, idx) => {
+                                    const end = idx === 0 || idx === path.length - 1;
+                                    const who = currentPeople.find((p) => p.Id === step.id);
+                                    const sub = idx === 0 ? t('node_first')
+                                        : idx === path.length - 1 ? t('node_second')
+                                        : idx === peak ? t('node_shared_ancestor')
+                                        : formatLifespan({ birth: formatYearOrEmpty(who?.BirthDate), death: formatYearOrEmpty(who?.DeathDate) });
+                                    return (
+                                        <li key={step.id} className="flex items-stretch">
+                                            {idx > 0 && (
+                                                <span aria-hidden="true" className="grid content-center justify-items-center gap-1 min-w-16 text-xs text-text-muted">
+                                                    {link(step.relationship)}
+                                                    <i className="block w-full h-px bg-border" />
+                                                </span>
+                                            )}
+                                            {idx > 0 && <span className="sr-only">{link(step.relationship)}</span>}
+                                            <Link href={`/people/view?id=${step.id}`}
+                                                className={cx('grid justify-items-center content-start gap-1.5 text-center min-w-[132px] px-2 py-3 rounded-[10px] no-underline focus-ring hover:bg-hover-surface',
+                                                    end && 'bg-card-alt shadow-[inset_0_0_0_1px_var(--color-border)]')}>
+                                                <PersonAvatar as="span" size={32} treeId={activeTreeId} name={step.name} sex={who?.Sex ?? null}
+                                                    mediaId={who?.PrimaryMediaId} focalX={who?.FocalX} focalY={who?.FocalY} focalRadius={who?.FocalRadius}
+                                                    initials={who ? getInitials(who.FirstName, who.LastName) : undefined} />
+                                                <span className="serif text-base font-semibold leading-tight text-text">{step.name}</span>
+                                                {sub && <span className="text-xs text-text-muted">{sub}</span>}
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
                         )}
 
                         {ancestor && (
-                            <p className="m-0 flex flex-wrap items-baseline gap-x-2 text-sm text-text-secondary">
+                            <p className="m-0 mt-3.5 flex flex-wrap items-baseline gap-x-1.5 text-sm text-text-secondary">
                                 <span>{t('shared_ancestor', { name: ancestor.name })}</span>
-                                <ActionLink kind="leave" href={`/tree?rootId=${ancestor.id}`}>{t('show_in_tree')}</ActionLink>
+                                <Link href={`/tree?rootId=${ancestor.id}`} className="text-link underline">{t('show_in_tree')}</Link>
                             </p>
                         )}
                     </Card>
@@ -294,14 +309,12 @@ export default function RelationshipPage() {
     );
 }
 
-/** The degree's glyph: 0 is the same person, -1 is no path found, otherwise a link. */
-function ResultIcon({ degree }: { degree: number }) {
-    const Icon = degree === 0 ? UserRound : degree === -1 ? Link2Off : LinkIcon;
-    return <Icon className="w-7 h-7 mt-0.5 shrink-0 text-text-muted" aria-hidden="true" />;
-}
-
-/** One side of the calculator: the chosen person, or a search field with its matches. */
-function PersonSlot({ label, selected, search, onSearch, matches, onPick, onClear, getFullName }: {
+/**
+ * One side of the calculator, a picker box: the chosen person (avatar, the
+ * small uppercase label, the serif name and years, ×), or the label over a
+ * search field with its matches below.
+ */
+function PersonSlot({ label, selected, search, onSearch, matches, onPick, onClear, getFullName, treeId }: {
     label: string;
     selected: Person | undefined;
     search: string;
@@ -310,51 +323,50 @@ function PersonSlot({ label, selected, search, onSearch, matches, onPick, onClea
     onPick: (id: number) => void;
     onClear: () => void;
     getFullName: (person: Person) => string;
+    treeId: number | null;
 }) {
     const t = useTranslations('relationship');
     const tCommon = useTranslations('common');
     const inputId = useId();
+    const box = 'flex items-center gap-3 min-h-[62px] px-3.5 py-2.5 rounded-[10px] border border-border bg-card min-w-0';
+    if (selected) {
+        const name = getFullName(selected);
+        const years = formatLifespan({ birth: formatYearOrEmpty(selected.BirthDate), death: formatYearOrEmpty(selected.DeathDate) });
+        return (
+            <div className={box}>
+                <PersonAvatar as="span" size={32} treeId={treeId} name={name} sex={selected.Sex ?? null}
+                    mediaId={selected.PrimaryMediaId} focalX={selected.FocalX} focalY={selected.FocalY} focalRadius={selected.FocalRadius}
+                    initials={getInitials(selected.FirstName, selected.LastName)} />
+                <span className="flex-1 min-w-0">
+                    <span className="block text-xs font-semibold uppercase tracking-[0.07em] text-text-muted">{label}</span>
+                    <span className="block truncate">
+                        <span className="serif text-md font-semibold text-text">{name}</span>
+                        {years && <span className="date-mono text-meta ml-1.5">{years}</span>}
+                    </span>
+                </span>
+                <IconButton size="sm" label={t('clear_person', { name })} icon={<X className="w-4 h-4" />} onClick={onClear} />
+            </div>
+        );
+    }
     return (
-        <div>
-            <label htmlFor={selected ? undefined : inputId} className="block text-sm font-medium text-text-secondary mb-2">
-                {label}
-            </label>
-            {selected ? (
-                <div className="flex items-center gap-2 min-h-9 pl-3 pr-1 py-1 bg-surface-2 border border-border rounded-lg">
-                    <UserRound className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
-                    <span className="font-medium text-text truncate">{getFullName(selected)}</span>
-                    <IconButton
-                        className="ml-auto"
-                        size="sm"
-                        label={t('clear_person', { name: getFullName(selected) })}
-                        icon={<X className="w-4 h-4" />}
-                        onClick={onClear}
-                    />
-                </div>
-            ) : (
-                <div>
-                    <Input
-                        id={inputId}
-                        type="search"
-                        value={search}
-                        onChange={(e) => onSearch(e.target.value)}
-                        placeholder={tCommon('search_for_person')}
-                        icon={<Search className="w-4 h-4" />}
-                    />
-                    {search && (
-                        <div className="mt-1 bg-card border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                            {matches.map(p => (
-                                <button
-                                    type="button"
-                                    key={p.Id}
-                                    onClick={() => onPick(p.Id)}
-                                    className="w-full px-3 py-2 text-left text-text hover:bg-hover-surface cursor-pointer focus-ring"
-                                >
-                                    {getFullName(p)}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+        <div className="relative min-w-0">
+            <div className={cx(box, 'focus-ring-within')}>
+                <Search className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />
+                <span className="flex-1 min-w-0">
+                    <label htmlFor={inputId} className="block text-xs font-semibold uppercase tracking-[0.07em] text-text-muted">{label}</label>
+                    <input id={inputId} type="search" value={search} onChange={(e) => onSearch(e.target.value)}
+                        placeholder={tCommon('search_for_person')} autoComplete="off"
+                        className="input-nozoom w-full bg-transparent border-0 p-0 text-base text-text placeholder:text-text-muted focus:outline-none" />
+                </span>
+            </div>
+            {search && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {matches.map(p => (
+                        <button type="button" key={p.Id} onClick={() => onPick(p.Id)}
+                            className="w-full px-3 py-2 text-left text-text hover:bg-hover-surface cursor-pointer focus-ring-inset">
+                            {getFullName(p)}
+                        </button>
+                    ))}
                 </div>
             )}
         </div>

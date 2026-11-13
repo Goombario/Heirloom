@@ -140,24 +140,19 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
             : t('closed_on', { date: closedOn });
 
     return (
-        <PageShell variant="workspace" className="pb-10">
-            {/* Wider than a record column: three columns sit side by side. */}
-            <div className="mx-auto w-full max-w-[1400px] px-4 md:px-7 py-6">
-            <div className="mb-5">
+        <PageShell variant="workspace" className="research-ws flex flex-col" style={{ height: 'calc(100dvh - var(--nav-h))' }}>
+            {/* The board's workspace bar: full width, the status and opening date inline
+                beside the actions, then three full-height panes split by hairlines. */}
+            <div className="research-ws__band">
                 <CoverBand
                     variant="short"
                     eyebrow={t('eyebrow')}
                     title={caseData.Title || tCases('untitled')}
                     titleSize="record"
-                    meta={(
-                        <>
-                            <span>{statusLine}</span>
-                            {' · '}
-                            <span>{t('opened_on', { date: format.dateTime(new Date(caseData.CreatedAt), { dateStyle: 'medium' }) })}</span>
-                        </>
-                    )}
                     actions={(
                         <>
+                            <span className="research-ws__status" data-status={caseData.Status}>{statusLine}</span>
+                            <span className="research-ws__opened">{t('opened_on', { date: format.dateTime(new Date(caseData.CreatedAt), { dateStyle: 'medium' }) })}</span>
                             {canEdit && !closed && (
                                 <Button icon={<CheckCircle2 className="w-4 h-4" aria-hidden="true" />} onClick={() => ws.open({ kind: 'close' })}>{t('answer_and_close')}</Button>
                             )}
@@ -168,7 +163,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
             </div>
 
             {(ws.error || cd.saveError) && (
-                <Banner tone="error" className="mb-4">
+                <Banner tone="error" className="mx-4 my-3">
                     <span className="flex items-start gap-3">
                         <span className="flex-1">{ws.error ?? cd.saveError}</span>
                         <button type="button" aria-label={t('dismiss')} onClick={() => { ws.setError(null); cd.setSaveError(null); }}
@@ -179,7 +174,8 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                 </Banner>
             )}
 
-            <div className="grid gap-6 items-start grid-cols-[248px_minmax(0,1fr)_minmax(320px,380px)]">
+            <div className="research-ws__panes">
+                <div className="research-ws__rail">
                 <LeadsRail
                     caseData={caseData}
                     treeId={activeTreeId}
@@ -196,8 +192,10 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     onCite={() => cd.setShowAttachSource(true)}
                     onOpenCitation={cd.openCaseCitation}
                 />
+                </div>
 
-                <section aria-label={t('main_label')} className="min-w-0 rounded-panel bg-card border border-border p-6">
+                <section aria-label={t('main_label')} className="research-ws__main">
+                    <div className="research-ws__inner">
                     {!ws.workspace ? (
                         <p className="m-0 text-sm text-text-muted" role="status">{t('loading')}</p>
                     ) : ws.view?.kind === 'close' ? (
@@ -268,9 +266,10 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     ) : (
                         <p className="m-0 text-sm text-text-muted">{t('no_leads')}</p>
                     )}
+                    </div>
                 </section>
 
-                <aside aria-label={t('side_label')} className="min-w-0">
+                <aside aria-label={t('side_label')} className="research-ws__side">
                     <ResearchSide
                         recordLabel={sideLabel}
                         tab={tab}
@@ -387,7 +386,6 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
                     onDeleted={() => { setLightbox(null); void cd.fetchCase(); }}
                 />
             )}
-            </div>
         </PageShell>
     );
 }

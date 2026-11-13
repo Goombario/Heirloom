@@ -64,7 +64,7 @@ export function LeadTimeline({ lead, findings, facts }: { lead: CaseLead; findin
 
     return (
         <section aria-labelledby={`${id}-title`} className="grid gap-2.5">
-            <SectionHeader level="section" headingId={`${id}-title`} title={t('timeline')} />
+            <SectionHeader level="label" headingId={`${id}-title`} title={t('timeline')} />
             <div className={cx('rounded-card', 'grid gap-2 border border-border bg-card px-5 pt-6 pb-3')} aria-hidden="true">
                 <div className="relative h-4">
                     <div className="absolute inset-x-0 top-1/2 h-px bg-border" />

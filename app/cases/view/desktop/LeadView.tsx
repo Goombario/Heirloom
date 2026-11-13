@@ -143,7 +143,7 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
 
             {waiting.length > 0 && (
                 <section aria-labelledby="waiting-title" className="grid gap-2">
-                    <SectionHeader level="section" headingId="waiting-title" title={t('waiting_on')} />
+                    <SectionHeader level="label" headingId="waiting-title" title={t('waiting_on')} />
                     {waiting.map((r) => (
                         <div key={r.Id} className={cx('rounded-card', 'flex flex-wrap items-center gap-3 border border-warning-border bg-warning-bg px-4 py-3')}>
                             <div className="grid min-w-0 flex-1">
@@ -168,7 +168,7 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
             )}
 
             <section aria-labelledby="findings-title" className="grid gap-2.5">
-                <SectionHeader level="section" headingId="findings-title" title={t('findings')} count={records.length + nothing.length} />
+                <SectionHeader level="label" headingId="findings-title" title={t('findings')} count={records.length + nothing.length} />
                 {records.length + nothing.length === 0 ? (
                     <p className="m-0 text-sm text-text-muted">{t('no_findings')}</p>
                 ) : (
@@ -203,7 +203,7 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
 
             {(media.length > 0 || (canEdit && !settled && onAddMedia)) && (
                 <section aria-labelledby="lead-media-title" className="grid gap-2.5">
-                    <SectionHeader level="section" headingId="lead-media-title" title={t('media')} count={media.length}
+                    <SectionHeader level="label" headingId="lead-media-title" title={t('media')} count={media.length}
                         action={canEdit && !settled && onAddMedia && (
                             <Button variant="ghost" size="sm" icon={<Plus className="w-3.5 h-3.5" aria-hidden="true" />} onClick={onAddMedia} disabled={busy}>
                                 {t('add_media')}

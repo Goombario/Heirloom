@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { Button, Card, CoverBand, IconTile, PageShell, SectionHeader, cx } from '@/app/components/ui';
-import { ChevronRight, CircleHelp, Download, GitMerge, LayoutGrid, Loader2, Lock, RotateCcw, Share2 } from '@/lib/icons';
+import { CircleHelp, Download, GitMerge, LayoutGrid, Loader2, Lock, RotateCcw, Share2 } from '@/lib/icons';
 import MediaImportRecovery from '../MediaImportRecovery';
 import MediaExportPreflightDialog from '../MediaExportPreflightDialog';
 import type { ImportViewProps, Job } from './DesktopImportExport';
@@ -51,49 +51,58 @@ export function ImportHub({ p, recoveryRef, canImport, canReplace, onJob }: {
             </div>
 
             <div className={cx('grid gap-4 items-start', canReplace && !empty ? 'lg:grid-cols-3' : 'lg:grid-cols-2')}>
-                <Panel title={t('back_up')} line={empty ? t('nothing_to_back_up') : t('back_up_line')} muted={empty}>
-                    <div className="grid gap-1.5 justify-items-start">
-                        <Button
-                            variant={empty ? 'outline' : 'primary'}
-                            disabled={empty || p.exportBusy}
-                            aria-busy={p.exportBusy}
-                            onClick={() => { void backUp(); }}
-                            icon={p.exportBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Download className="w-4 h-4" aria-hidden="true" />}
-                        >
-                            {p.exportBusy ? t('preparing') : tm('download_backup')}
-                        </Button>
-                        <span className="text-meta text-text-muted" aria-live="polite">
-                            {p.exportBusy && (counts?.media ?? 0) > 0
-                                ? t('zipping', { count: counts!.media })
-                                : lastBackup != null && !empty
-                                    ? t('last_backup', { date: format.dateTime(lastBackup, { dateStyle: 'medium' }) })
-                                    : empty ? null : t('no_backup_here')}
-                        </span>
+                <Panel title={t('back_up')} line={t('back_up_line')} muted={empty}>
+                    <div>
+                        <OptRow
+                            icon={<Download className="w-[18px] h-[18px]" />}
+                            label={tm('download_backup')}
+                            sub={<span aria-live="polite">
+                                {p.exportBusy && (counts?.media ?? 0) > 0
+                                    ? t('zipping', { count: counts!.media })
+                                    : lastBackup != null && !empty
+                                        ? t('last_backup', { date: format.dateTime(lastBackup, { dateStyle: 'medium' }) })
+                                        : empty ? t('nothing_to_back_up') : t('no_backup_here')}
+                            </span>}
+                            action={(
+                                <Button
+                                    size="sm"
+                                    variant="primary"
+                                    disabled={empty || p.exportBusy}
+                                    aria-busy={p.exportBusy}
+                                    onClick={() => { void backUp(); }}
+                                    icon={p.exportBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : undefined}
+                                >
+                                    {p.exportBusy ? t('preparing') : t('action_download')}
+                                </Button>
+                            )}
+                        />
+                        <OptRow
+                            icon={<Share2 className="w-[18px] h-[18px]" />}
+                            label={t('export_gedcom')}
+                            sub={t('export_gedcom_sub')}
+                            action={<Button size="sm" variant="outline" disabled={empty || p.exportBusy} onClick={() => { void p.onExport(false); }}>{t('action_export')}</Button>}
+                        />
                     </div>
-                    <JobRow
-                        icon={<Share2 className="w-[18px] h-[18px]" />}
-                        label={t('export_gedcom')}
-                        sub={t('export_gedcom_sub')}
-                        disabled={empty || p.exportBusy}
-                        onClick={() => { void p.onExport(false); }}
-                        end={<Download className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />}
-                    />
                     {p.exportError && <p role="alert" className="m-0 text-sm text-error">{p.exportError}</p>}
                 </Panel>
 
                 <Panel title={tm('bring_in')} line={canImport ? t('bring_in_line') : t('needs_edit')} muted={!canImport}>
-                    {canImport ? (
-                        <>
-                            {empty && (
-                                <Button onClick={() => onJob('add')} icon={<GitMerge className="w-4 h-4" aria-hidden="true" />} className="justify-self-start">
-                                    {tm('add_from_file')}
-                                </Button>
-                            )}
-                            {!empty && <JobRow icon={<GitMerge className="w-[18px] h-[18px]" />} label={tm('add_from_file')} sub={t('add_file_sub')} onClick={() => onJob('add')} />}
-                            <JobRow icon={<LayoutGrid className="w-[18px] h-[18px]" />} label={tm('add_from_spreadsheet')} sub={t('add_sheet_sub')} onClick={() => onJob('spreadsheet')} />
-                        </>
-                    ) : (
-                        <p className="m-0 flex items-center gap-2 text-sm text-text-muted">
+                    <div>
+                        <OptRow
+                            icon={<GitMerge className="w-[18px] h-[18px]" />}
+                            label={tm('add_from_file')}
+                            sub={t('add_file_sub')}
+                            action={canImport && <Button size="sm" variant={empty ? 'primary' : 'outline'} onClick={() => onJob('add')}>{t('action_choose')}</Button>}
+                        />
+                        <OptRow
+                            icon={<LayoutGrid className="w-[18px] h-[18px]" />}
+                            label={tm('add_from_spreadsheet')}
+                            sub={t('add_sheet_sub')}
+                            action={canImport && <Button size="sm" variant="outline" onClick={() => onJob('spreadsheet')}>{t('action_start')}</Button>}
+                        />
+                    </div>
+                    {!canImport && (
+                        <p className="m-0 flex items-center gap-2 text-meta text-text-muted">
                             <Lock className="w-4 h-4 shrink-0" aria-hidden="true" />{t('needs_edit_line')}
                         </p>
                     )}
@@ -101,7 +110,12 @@ export function ImportHub({ p, recoveryRef, canImport, canReplace, onJob }: {
 
                 {canReplace && !empty && (
                     <Panel title={tm('start_again')} line={countsLine ? t('start_again_line', { counts: countsLine }) : t('start_again_line_plain')}>
-                        <JobRow danger icon={<RotateCcw className="w-[18px] h-[18px]" />} label={tm('restore')} sub={t('restore_sub')} onClick={() => onJob('restore')} />
+                        <OptRow
+                            icon={<RotateCcw className="w-[18px] h-[18px]" />}
+                            label={tm('restore')}
+                            sub={t('restore_sub')}
+                            action={<Button size="sm" variant="outline" className="text-error!" onClick={() => onJob('restore')}>{t('action_restore')}</Button>}
+                        />
                     </Panel>
                 )}
             </div>
@@ -111,7 +125,7 @@ export function ImportHub({ p, recoveryRef, canImport, canReplace, onJob }: {
                     <CircleHelp className="w-[18px] h-[18px] text-text-muted shrink-0" aria-hidden="true" />
                     <span className="text-sm font-semibold text-text">{tm('about_files')}</span>
                     <span className="text-sm text-text-muted flex-1 min-w-0">{t('help_line')}</span>
-                    <Button variant="ghost" size="sm" aria-expanded={helpOpen} aria-controls="import-help" onClick={() => setHelpOpen((v) => !v)}>
+                    <Button variant="outline" size="sm" aria-expanded={helpOpen} aria-controls="import-help" onClick={() => setHelpOpen((v) => !v)}>
                         {helpOpen ? t('read_less') : t('read_more')}
                     </Button>
                 </div>
@@ -150,30 +164,26 @@ function Panel({ title, line, muted = false, children }: { title: string; line: 
     );
 }
 
-/** A job: an outlined icon tile, the label and what it takes, and a chevron. */
-function JobRow({ icon, label, sub, onClick, disabled = false, danger = false, end }: {
+/**
+ * One thing the panel does (locked board): a soft icon tile, the label and what it
+ * takes, and its own button at the right. Rows are split by a hairline.
+ */
+function OptRow({ icon, label, sub, action }: {
     icon: React.ReactNode;
     label: string;
-    sub: string;
-    onClick: () => void;
-    disabled?: boolean;
-    danger?: boolean;
-    /** The trailing mark: a chevron for a job page, or what an action does. */
-    end?: React.ReactNode;
+    sub: React.ReactNode;
+    action?: React.ReactNode;
 }) {
+    const labelId = useId();
+    // The group names the row, so a screen reader hears "Download backup" with its short "Download".
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            disabled={disabled}
-            className={cx('rounded-card', 'flex w-full items-center gap-3 border border-border bg-card px-3 py-2.5 text-left cursor-pointer enabled:hover:bg-hover-surface focus-ring disabled:opacity-50 disabled:cursor-not-allowed')}
-        >
+        <div role="group" aria-labelledby={labelId} className="flex items-center gap-3 py-3 border-t border-border-light first:border-t-0 first:pt-1 last:pb-0">
             <IconTile>{icon}</IconTile>
             <span className="grid min-w-0 flex-1">
-                <span className={cx('text-sm font-semibold', danger ? 'text-error' : 'text-text')}>{label}</span>
-                <span className="text-meta text-text-muted">{sub}</span>
+                <span id={labelId} className="text-sm font-semibold text-text">{label}</span>
+                <span className="text-meta text-text-muted leading-snug">{sub}</span>
             </span>
-            {end ?? <ChevronRight className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />}
-        </button>
+            {action && <span className="shrink-0">{action}</span>}
+        </div>
     );
 }

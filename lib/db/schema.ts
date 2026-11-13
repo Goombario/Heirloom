@@ -466,6 +466,8 @@ export interface OwnerGalleryMedia extends Media {
     IsInferred: boolean;
     /** The facts of this record the photo is linked to, shown as its label (ADR 0030). */
     OwnerFacts?: MediaOwnerFact[];
+    /** A family gallery only: this photo is the family photo (#119, ADR 0047). */
+    IsFamilyPhoto?: boolean;
 }
 
 /**

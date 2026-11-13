@@ -147,6 +147,8 @@
     "back_to_cases": "Назад к исследованиям",
     "back_to_library": "Назад в библиотеку",
     "back_to_places": "Назад к местам",
+    "time_today_at": "Сегодня {time}",
+    "time_yesterday_at": "Вчера {time}",
     "time_just_now": "только что",
     "time_minutes_ago": "{count} мин назад",
     "time_hours_ago": "{count} ч назад",
@@ -311,7 +313,12 @@
     "portrait_of": "Фото профиля: {name}",
     "delete_body_phone": "{count, plural, =0 {Фото будет удалено. На нём никто не отмечен.} one {Фото и его отметка будут удалены ({names}). Человек останется в древе.} few {Фото и его # отметки будут удалены ({names}). Люди останутся в древе.} many {Фото и его # отметок будут удалены ({names}). Люди останутся в древе.} other {Фото и его # отметки будут удалены ({names}). Люди останутся в древе.}}",
     "delete_photo_action": "Удалить фото",
-    "photo_deleted": "Фото удалено"
+    "photo_deleted": "Фото удалено",
+    "set_family_photo": "Сделать фото семьи",
+    "current_family_photo": "Фото семьи",
+    "stop_family_photo": "Больше не использовать как фото семьи",
+    "family_photo_set": "Фото семьи выбрано",
+    "family_photo_removed": "Фото семьи убрано"
   },
   "faceTags": {
     "tag_people": "Отметить людей",
@@ -859,7 +866,34 @@
     "list_annulled": "Аннулирован",
     "list_no_children": "Нет детей",
     "list_children_died_young": "{children}, из них {count} умерли в детстве",
-    "new_family": "Новая семья"
+    "new_family": "Новая семья",
+    "ledger_partner_age": "{name}, {age}",
+    "ledger_birth_of": "Рождение: {name}",
+    "years_together": "{count, plural, one {# год вместе} few {# года вместе} many {# лет вместе} other {# года вместе}}",
+    "cover_title_shared": "{a} и {b} {last}",
+    "about_heading": "Об этой семье",
+    "about_add": "Добавить заметку об этой семье",
+    "about_hint": "Несколько фраз об этой семье. Они появятся здесь, рядом с портретом.",
+    "about_edit": "Изменить заметку",
+    "about_remove": "Удалить заметку",
+    "about_placeholder": "Что стоит знать об этой семье?",
+    "about_saved": "Заметка сохранена",
+    "about_removed": "Заметка удалена",
+    "rail_partners": "Супруги",
+    "rail_partner_unknown": "Супруг(а) неизвестен(на)",
+    "age_at_marriage": "{age} при браке",
+    "children_n": "{count, plural, one {# ребёнок} few {# ребёнка} many {# детей} other {# ребёнка}}",
+    "no_children_short": "без детей",
+    "where_they_lived": "Где они жили",
+    "places_n": "{count, plural, one {# место} few {# места} many {# мест} other {# места}}",
+    "life_together": "Совместная жизнь",
+    "section_media": "Медиа",
+    "section_notes": "Заметки",
+    "section_sources": "Источники",
+    "ended_derived": "Определено по дате смерти: {name}.",
+    "find_or_add": "Найти или добавить человека",
+    "type_saved": "Тип семьи сохранён",
+    "family_photo_alt": "Фото семьи: {family}"
   },
   "geocodingPrompt": {
     "title": "Искать места в интернете?",
@@ -1709,7 +1743,7 @@
   },
   "audit": {
     "title": "Журнал аудита",
-    "subtitle": "Отслеживайте все изменения данных вашего дерева",
+    "subtitle": "Каждое изменение в этом дереве, его автор и способ его отменить",
     "filter_all": "Все типы",
     "filter_person": "Человек",
     "filter_family": "Семья",
@@ -1742,7 +1776,7 @@
     "col_action": "Действие",
     "col_type": "Тип",
     "col_record": "Запись",
-    "col_changes": "Изменения",
+    "col_changes": "Изменение",
     "col_revert": "Отмена",
     "action_created": "Создано",
     "action_updated": "Обновлено",
@@ -1813,8 +1847,8 @@
     "details_updated": "Обновлены служебные данные",
     "unknown_user": "Неизвестный пользователь",
     "filter_label": "Фильтр",
-    "filter_date": "Дата",
-    "filter_record_placeholder": "Фильтр по записи…",
+    "filter_date": "Когда",
+    "filter_record_placeholder": "Поиск записей",
     "action_all": "Все действия",
     "who_everyone": "Все",
     "date_any": "Любая дата",
@@ -1894,7 +1928,10 @@
     "summary_names_added": "добавлено: {names}",
     "summary_names_changed": "изменено: {names}",
     "summary_names_removed": "удалено: {names}",
-    "revert_n": "Отменить {count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}"
+    "revert_n": "Отменить {count, plural, one {# изменение} few {# изменения} many {# изменений} other {# изменения}}",
+    "summary_family_photo_set": "Выбрано фото семьи",
+    "summary_family_photo_removed": "Фото семьи убрано",
+    "rec_family_photo": "Фото семьи — <r>{record}</r>"
   },
   "cases": {
     "research_journal": "Журнал исследования",
@@ -2462,7 +2499,12 @@
     "col_why": "Причина",
     "help_rowid_title": "Столбец RowID",
     "help_dropdowns_title": "Столбцы со списками",
-    "help_duplicates_title": "Как находятся дубликаты"
+    "help_duplicates_title": "Как находятся дубликаты",
+    "action_download": "Скачать",
+    "action_export": "Экспорт",
+    "action_choose": "Выбрать файл",
+    "action_start": "Начать",
+    "action_restore": "Восстановить"
   },
   "spreadsheetImport": {
     "title": "Импорт из шаблона",
@@ -3103,7 +3145,6 @@
     "unnamed": "(Без имени)",
     "col_type": "Тип",
     "col_name": "Имя",
-    "col_dates": "Период использования",
     "vtype_given": "Личное имя",
     "vtype_nickname": "Прозвище",
     "vtype_maiden": "Девичья фамилия",
@@ -3116,9 +3157,6 @@
     "unset_primary": "Основное имя",
     "variant_remove_title": "Удалить это имя?",
     "variant_remove_body": "Удалить «{name}» из имён и вариантов этого человека?",
-    "dates_birth_death": "рождение – смерть",
-    "dates_birth_present": "рождение – настоящее время",
-    "throughout_life": "на протяжении жизни",
     "variant_used_from": "Используется с",
     "variant_used_to": "Используется до",
     "dates_from": "с {date}",
@@ -3286,7 +3324,7 @@
   },
   "relationship": {
     "title": "Калькулятор родства",
-    "subtitle": "Узнайте, как два человека связаны в вашем семейном древе",
+    "subtitle": "Выберите двух людей, чтобы увидеть, как они связаны",
     "first_person": "Первый человек",
     "second_person": "Второй человек",
     "swap": "Поменять местами",
@@ -3299,8 +3337,12 @@
     "path_child_of": "ребёнок",
     "path_parent_of": "родитель",
     "path_partner_of": "партнёр",
-    "shared_ancestor": "Общий предок: {name}",
-    "show_in_tree": "Показать в дереве"
+    "shared_ancestor": "Их общий предок: {name}.",
+    "show_in_tree": "Показать в дереве",
+    "result": "Результат",
+    "node_first": "первый человек",
+    "node_second": "второй человек",
+    "node_shared_ancestor": "общий предок"
   },
   "lifespan": {
     "born": "р. <d>{date}</d>",
@@ -3312,7 +3354,7 @@
   },
   "dataChecks": {
     "title": "Проверка дат",
-    "subtitle": "Даты в вашем древе, которые противоречат друг другу или выглядят необычно.",
+    "subtitle": "Даты в этом дереве, которые противоречат друг другу или выглядят необычно",
     "filter_label": "Показать",
     "all_checks": "Все проверки",
     "group_impossible": "Невозможно",
@@ -4958,7 +5000,10 @@
     "finder_none": "В этом древе нет совпадений с «{query}»",
     "finder_add_n": "Добавить {count, plural, one {# человека} few {# человек} many {# человек} other {# человека}}",
     "finder_cancel": "Отмена",
-    "range_of": "{from}–{to} из {total}"
+    "range_of": "{from}–{to} из {total}",
+    "more_events": "{count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
+    "show_more_events": "Показать {count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
+    "show_fewer": "Показать меньше"
   },
   "personDesktop": {
     "this_person": "этот человек",
@@ -5053,10 +5098,24 @@
     "note_saved": "Заметка сохранена",
     "note_added": "Заметка добавлена",
     "note_deleted": "Заметка удалена",
-    "note_now_biography": "Заметка теперь биография"
+    "note_now_biography": "Заметка теперь биография",
+    "lifeline_places": "{from} — {to}",
+    "age_n": "возраст {age}",
+    "notes_n": "{count, plural, one {# заметка} few {# заметки} many {# заметок} other {# заметки}}",
+    "hide_notes": "Скрыть заметки",
+    "no_events": "Событий пока нет.",
+    "no_events_editor": "Событий пока нет. Начните с рождения или любого известного события.",
+    "media_on_timeline": "{count} также в хронологии",
+    "bio_hint": "Несколько предложений о том, кем был(а) {name}. Они видны здесь, рядом с портретом.",
+    "partners_children_heading": "{count, plural, one {Супруг(а) и дети} few {Супруги и дети} many {Супруги и дети} other {Супруги и дети}}",
+    "partners_heading": "{count, plural, one {Супруг(а)} few {Супруги} many {Супруги} other {Супруги}}",
+    "married_year": "бр. {year}",
+    "n_of_total": "{n} из {m}",
+    "name_on_record": "Имя по документам",
+    "name_shown": "показано"
   },
   "addPersonDialog": {
-    "title": "Добавить человека",
+    "title": "Новый человек",
     "save_open": "Сохранить и открыть",
     "save_another": "Сохранить и добавить ещё",
     "cite": "Указать источник",
@@ -5073,7 +5132,8 @@
     "find_parents_hint": "Семья, в которой {name} родился(-ась) или был(а) усыновлён(а)",
     "find_partner": "Найти супруга",
     "find_partner_hint": "Супруг или партнёр: {name}",
-    "more_on_page": "Детей, заметки и причину смерти можно добавить на странице человека после сохранения."
+    "more_on_page": "Детей, заметки и причину смерти можно добавить на странице человека после сохранения.",
+    "cite_short": "Источник"
   },
   "newFamilyDialog": {
     "save_open": "Сохранить и открыть",

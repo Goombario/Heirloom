@@ -37,14 +37,15 @@ export function ResearchSide({ recordLabel, record, journal, tab, onTab, onClose
 
     return (
         <div className="grid gap-3">
-            <div className="flex items-center gap-2">
-                <div role="tablist" aria-label={t('side_label')} className="flex flex-1 gap-1 rounded-btn bg-surface-2 p-1" onKeyDown={onKey}>
+            {/* Underlined tabs across the pane's top, as on the board (KsNav). */}
+            <div className="flex items-center gap-2 -mx-7 px-7 -mt-4 border-b border-border">
+                <div role="tablist" aria-label={t('side_label')} className="flex flex-1 gap-5" onKeyDown={onKey}>
                     {tabs.map(([key, label]) => (
                         <button key={key} ref={(el) => { refs.current[key] = el; }} type="button" role="tab" id={`${id}-${key}`}
                             aria-selected={current === key} aria-controls={`${id}-${key}-panel`} tabIndex={current === key ? 0 : -1}
                             onClick={() => onTab(key)}
-                            className={cx('flex-1 h-8 rounded-[6px] border-0 px-3 text-sm cursor-pointer focus-ring',
-                                current === key ? 'bg-card text-text font-semibold shadow-sm' : 'bg-transparent text-text-secondary hover:text-text')}>
+                            className={cx('h-11 -mb-px border-0 border-b-2 border-solid bg-transparent px-0 text-sm cursor-pointer focus-ring',
+                                current === key ? 'border-text text-text font-semibold' : 'border-transparent text-text-secondary hover:text-text')}>
                             {label}
                         </button>
                     ))}
@@ -52,7 +53,7 @@ export function ResearchSide({ recordLabel, record, journal, tab, onTab, onClose
                 <IconButton label={t('close_record', { label: recordLabel })} onClick={onCloseRecord} size="sm" icon={<X className="w-4 h-4" aria-hidden="true" />} />
             </div>
             <div role="tabpanel" id={`${id}-record-panel`} aria-labelledby={`${id}-record`} hidden={current !== 'record'}
-                className={cx('rounded-panel', 'bg-card border border-border p-5')}>
+                className="pt-2">
                 {record}
             </div>
             <div role="tabpanel" id={`${id}-journal-panel`} aria-labelledby={`${id}-journal`} hidden={current !== 'journal'}>

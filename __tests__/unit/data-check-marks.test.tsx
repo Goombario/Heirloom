@@ -83,8 +83,8 @@ function listFor(filter: DataChecksFilter): DataChecksResult {
 }
 
 const wrap = (node: React.ReactNode) => <NextIntlClientProvider locale="en" messages={en}>{node}</NextIntlClientProvider>;
-const rowOf = (el: HTMLElement) => el.closest('.tl-med-ev') as HTMLElement;
-const flaggedRows = (container: HTMLElement) => Array.from(container.querySelectorAll('.tl-med-ev.is-flagged'));
+const rowOf = (el: HTMLElement) => el.closest('.tl-med-ev, .ledger__ev') as HTMLElement;
+const flaggedRows = (container: HTMLElement) => Array.from(container.querySelectorAll('.tl-med-ev.is-flagged, .ledger__ev.is-flagged'));
 
 const maryEllen = {
     Id: 1, UserId: 1, TreeId: 99, FirstName: 'Mary Ellen', LastName: 'Byrne',
@@ -97,7 +97,7 @@ function PersonPage({ canEdit = true }: { canEdit?: boolean }) {
     return (
         <LifeEventsPanel person={maryEllen} marks={marks} language="en" renderCitePin={() => null}
             tTypes={((k: string) => ({ BIRT: 'Birth', DEAT: 'Death', BAPM: 'Baptism' }[k] ?? k)) as never}
-            placeCoords={{}} canEdit={canEdit} canDelete={canEdit} onChanged={() => {}} personNotes={[]} />
+            canEdit={canEdit} canDelete={canEdit} onChanged={() => {}} personNotes={[]} />
     );
 }
 
@@ -114,7 +114,7 @@ function FamilyPage({ familyId = 10, events, earlierPartnerId }: { familyId?: nu
             <FamilyTimeline
                 family={{ Id: familyId, MarriageDate: family.MarriageDate, MarriagePlace: null, Type: 'Marriage', events }}
                 childList={family.childIds.map(person)} citationMap={{}} sourceNumbers={new Map()}
-                canEdit canDelete placeCoords={{}} isOpen={() => false} toggle={() => {}}
+                canEdit canDelete  isOpen={() => false} toggle={() => {}}
                 earlierPartner={earlierPartnerId ? person(earlierPartnerId) : null}
                 onCitationClick={() => {}} onChanged={() => {}} marks={marks} />
         </>
@@ -224,7 +224,7 @@ describe('Data checks marks (#833)', () => {
         expect(within(rowOf(mark)).getByText('DIV')).toBeInTheDocument();
         expect(flaggedRows(container)).toHaveLength(1);
         expect(rowOf(screen.getByText(/Bridget/))).not.toHaveClass('is-flagged');
-        expect(rowOf(screen.getByText('Started'))).not.toHaveClass('is-flagged');
+        expect(rowOf(screen.getByText('Marriage'))).not.toHaveClass('is-flagged');
 
         const count = listFor({ familyId: 10 }).problems.length;
         expect(count).toBeGreaterThan(1);

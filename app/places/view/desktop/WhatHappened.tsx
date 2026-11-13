@@ -164,6 +164,7 @@ export function WhatHappened({ links, placeId, treeId, canEdit, deletable, onSel
     return (
         <section aria-labelledby="place-events-title">
             <SectionHeader
+                level="label"
                 headingId="place-events-title"
                 title={t('what_happened')}
                 count={records.length}

@@ -46,7 +46,9 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
     return () => document.removeEventListener('keydown', onKey, true);
   }, []);
   return (
-    <div className={cx('list-toolbar flex flex-wrap items-center gap-x-3 gap-y-2.5', className)}>
+    // From 720px the main button keeps its place at the right; the chips wrap
+    // among themselves instead of pushing it onto a line of its own.
+    <div className={cx('list-toolbar flex flex-wrap min-[720px]:flex-nowrap items-center gap-x-3 gap-y-2.5', className)}>
       <Input
         ref={inputRef}
         type="search"
@@ -57,10 +59,10 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
         aria-label={searchLabel}
         aria-keyshortcuts="/"
         icon={<Search className="w-4 h-4" aria-hidden="true" />}
-        wrapClassName="w-full min-[720px]:w-[260px]"
+        wrapClassName="w-full min-[720px]:w-[230px] shrink-0"
       />
-      {filters && <div className="flex flex-wrap items-center gap-2">{filters}</div>}
-      {action && <div className="ml-auto flex items-center gap-2">{action}</div>}
+      {filters && <div className="flex flex-wrap items-center gap-1.5 min-w-0 min-[720px]:flex-1">{filters}</div>}
+      {action && <div className="ml-auto flex items-center gap-2 shrink-0 self-start">{action}</div>}
     </div>
   );
 }
@@ -68,9 +70,12 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
 /**
  * The white panel that holds a list page's `DataTable`, with the pager in its
  * footer: "1–25 of 412" and ‹ ›. The footer hides when everything fits on one page.
+ * `header` is a bar across the panel's top, above the table (the audit log's
+ * "2 selected · Revert 2 changes · Clear").
  */
-export function TablePanel({ children, page, pageSize, total, onPage, className }: {
+export function TablePanel({ children, header, page, pageSize, total, onPage, className }: {
   children: React.ReactNode;
+  header?: React.ReactNode;
   /** 1-based. */
   page: number;
   pageSize: number;
@@ -85,6 +90,7 @@ export function TablePanel({ children, page, pageSize, total, onPage, className 
   const to = Math.min(total, page * pageSize);
   return (
     <Card pad={false} className={cx('table-panel overflow-hidden', className)}>
+      {header && <div className="border-b border-border-light bg-card-alt px-3.5 py-2">{header}</div>}
       <div className="overflow-x-auto">{children}</div>
       {pages > 1 && (
         <div className="flex items-center justify-end gap-2 border-t border-border-light px-4 py-2">

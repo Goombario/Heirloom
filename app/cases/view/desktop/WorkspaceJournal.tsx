@@ -83,7 +83,7 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
     };
 
     return (
-        <section aria-labelledby="journal-title" className={cx('rounded-panel', 'grid gap-4 bg-card border border-border p-5')}>
+        <section aria-labelledby="journal-title" className="grid gap-4 pt-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 id="journal-title" className="m-0 serif text-md font-semibold text-text">{t('journal')}</h2>
                 <label className="flex items-center gap-2 text-meta text-text-muted">

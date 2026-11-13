@@ -40,6 +40,9 @@ import type {
 import {
   upsertMediaLink,
   clearPrimaryMediaLinksForPerson,
+  clearFamilyPhotoLinks,
+  lockFamilyForMediaMutation,
+  setFamilyPhotoLink,
   setPrimaryMediaLink,
   lockPeopleForMediaMutation,
 } from '@/lib/db/queries/media-links';
@@ -378,6 +381,12 @@ async function linkImportedMedia(
     await lockPeopleForMediaMutation([ownerId], treeId, client);
     await clearPrimaryMediaLinksForPerson(ownerId, client);
     await setPrimaryMediaLink(mediaId, ownerId, client);
+  }
+  // A family photo (#119, ADR 0047): the last `_PRIM @F…@` naming the family wins.
+  if (ownerTable === 'Families' && primary === 1 && ownerFact === null) {
+    await lockFamilyForMediaMutation(ownerId, treeId, client);
+    await clearFamilyPhotoLinks(ownerId, client);
+    await setFamilyPhotoLink(mediaId, ownerId, client);
   }
 }
 
@@ -2161,8 +2170,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
     for (const record of mediaRecords) {
       const mediaId = mediaContext.mediaXrefToId.get(record.xref);
       if (mediaId === undefined) continue;
-      for (const personXref of record.primaryPersonXrefs) {
-        const personId = personIdMap.get(personXref);
+      for (const ownerXref of record.primaryPersonXrefs) {
+        const personId = personIdMap.get(ownerXref);
         if (personId !== undefined) await linkImportedMedia(client, scope.treeId, mediaId, 'People', personId, 1);
       }
     } // Primary owner links are idempotent through MediaLink uniqueness.
@@ -2344,6 +2353,17 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         );
 
         skippedCount += await insertChildLinks(client, familyId, family, personIdMap);
+      }
+    }
+
+    // A top-level `_PRIM @F...@` is the family photo (#119, ADR 0047). It resolves
+    // here, once every family xref has its id, as `_PRIM @I...@` does after people.
+    for (const record of mediaRecords) {
+      const mediaId = mediaContext.mediaXrefToId.get(record.xref);
+      if (mediaId === undefined) continue;
+      for (const ownerXref of record.primaryPersonXrefs) {
+        const familyId = familyIdMap.get(ownerXref);
+        if (familyId !== undefined) await linkImportedMedia(client, scope.treeId, mediaId, 'Families', familyId, 1);
       }
     }
 

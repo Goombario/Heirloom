@@ -96,7 +96,7 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, tr
             variant="cover"
             eyebrow={firstRun ? t('mobile_new_tree') : t('mobile_your_tree')}
             title={firstRun ? t('welcome_first_run') : treeName}
-            titleSize="page"
+            titleSize="hero"
             meta={firstRun ? undefined : ready && stats ? (
                 t.rich(span?.first != null && span.last != null ? 'desk_counts_span' : 'desk_counts', {
                     people: stats.people,
@@ -136,16 +136,14 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, tr
     );
 
     return (
-        <div className="desktop-home grid gap-6">
+        <div className="desktop-home grid">
             {band}
             {phase === 'loading' && <PickUpSkeleton />}
             {ready && resumed && <PickUp person={resumed} treeId={treeId} viewer={!canEdit} />}
-            <div className="border-t border-border pt-8">
-                <DetailBody rail={rail}>
-                    <RecentlyEdited people={data?.recentPeople ?? []} treeId={treeId} canEdit={canEdit} loading={phase === 'loading'} />
-                    <Research cases={data?.openCases ?? []} loading={phase === 'loading'} />
-                </DetailBody>
-            </div>
+            <DetailBody divided rail={rail}>
+                <RecentlyEdited people={data?.recentPeople ?? []} treeId={treeId} canEdit={canEdit} loading={phase === 'loading'} />
+                <Research cases={data?.openCases ?? []} loading={phase === 'loading'} />
+            </DetailBody>
         </div>
     );
 }
@@ -176,7 +174,7 @@ function PickUp({ person, treeId, viewer }: { person: ResumedPerson; treeId: num
     const { steps, total } = person.nextSteps;
     const showSteps = !viewer && steps.length > 0;
     return (
-        <section aria-labelledby="home-pickup" className={cx('pick-up grid overflow-hidden rounded-panel border border-border bg-card shadow-card', showSteps && 'min-[1100px]:grid-cols-[minmax(0,1fr)_340px]')}>
+        <section aria-labelledby="home-pickup" className={cx('pick-up mb-7 grid overflow-hidden rounded-panel border border-border bg-card shadow-card', showSteps && 'min-[1100px]:grid-cols-[minmax(0,1fr)_340px]')}>
             <div className="flex flex-wrap items-start gap-6 p-6">
                 {/* The portrait repeats the name link, so it leaves the tab order. */}
                 <GuardedLink href={href} tabIndex={-1} aria-hidden="true" className="shrink-0 rounded-card">
@@ -190,27 +188,27 @@ function PickUp({ person, treeId, viewer }: { person: ResumedPerson; treeId: num
                         </GuardedLink>
                     </h2>
                     {(person.BirthDate || person.DeathDate) && (
-                        <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} className="text-sm" />
+                        <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} tone="evidence" className="text-sm" />
                     )}
                     <span className="text-sm text-text-secondary">{changeLine(person.lastChange)}</span>
                     <OpenInTreeRow personId={person.Id} firstName={first} className="mt-3 max-w-[360px]" />
                 </div>
             </div>
             {showSteps && (
-                <div className="next-steps grid content-start gap-1 bg-surface-2 p-5">
+                <div className="next-steps grid content-start gap-1 border-l border-border-light bg-card-alt p-5">
                     <div className="flex items-baseline justify-between gap-3 pb-1">
                         <h3 className="m-0 eyebrow">{t('next_for', { name: first })}</h3>
                         <span className="font-mono text-meta text-text-muted">{t('steps_open', { count: total })}</span>
                     </div>
-                    <ul className="m-0 grid list-none gap-1 p-0">
+                    <ul className="m-0 grid list-none p-0">
                         {steps.map((step, i) => {
                             const { title, reason } = stepText(step);
                             return (
                                 <li key={i}>
                                     <GuardedLink href={stepHref(person.Id, step)}
-                                        className="flex items-start gap-2 rounded-btn bg-card px-3 py-2.5 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
+                                        className="flex items-start gap-2 border-t border-border-light px-1 py-3 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
                                         <span className="grid min-w-0 flex-1 gap-0.5">
-                                            <span className="text-sm font-semibold">{title}</span>
+                                            <span className="text-sm font-medium">{title}</span>
                                             <span className="text-meta text-text-muted">{reason}</span>
                                         </span>
                                         <ArrowUpRight className="mt-0.5 w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />
@@ -227,7 +225,7 @@ function PickUp({ person, treeId, viewer }: { person: ResumedPerson; treeId: num
 
 function PickUpSkeleton() {
     return (
-        <div aria-busy="true" className="flex gap-6 rounded-panel border border-border bg-card p-6">
+        <div aria-busy="true" className="mb-7 flex gap-6 rounded-panel border border-border bg-card p-6">
             <span className="skeleton w-[240px] h-[180px] rounded-card shrink-0" aria-hidden="true" />
             <span className="grid flex-1 content-start gap-2.5">
                 <span className="skeleton h-3 w-[30%] rounded-[4px]" aria-hidden="true" />
@@ -244,7 +242,7 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
     if (!loading && people.length === 0) return null;
     return (
         <section aria-labelledby="home-recent" className="mb-10">
-            <SectionHeader headingId="home-recent" title={canEdit ? t('mobile_recently_edited') : t('mobile_recently_updated')}
+            <SectionHeader level="label" headingId="home-recent" title={canEdit ? t('mobile_recently_edited') : t('mobile_recently_updated')}
                 action={<ActionLink href="/audit">{t('mobile_full_history')}</ActionLink>} />
             {loading ? <RowsSkeleton rows={4} /> : (
                 <ul className="m-0 grid list-none gap-x-6 p-0 min-[1100px]:grid-cols-2">
@@ -254,7 +252,7 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
                         return (
                             <li key={p.Id}>
                                 <GuardedLink href={`/people/view?id=${p.Id}`}
-                                    className="flex items-center gap-3 rounded-btn px-2 py-2.5 -mx-2 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
+                                    className="flex items-center gap-3 border-t border-border-light px-2 py-3 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
                                     <PersonAvatar as="span" size={36} mediaId={p.PrimaryMediaId} treeId={treeId} name={name} sex={p.Sex}
                                         initials={getInitials(p.FirstName, p.LastName)} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius} />
                                     <span className="grid min-w-0 flex-1">
@@ -277,16 +275,16 @@ function Research({ cases, loading }: { cases: OpenCase[]; loading: boolean }) {
     const { activityTime } = useTimestamp();
     return (
         <section aria-labelledby="home-research">
-            <SectionHeader headingId="home-research" title={t('mobile_research')} action={<ActionLink href="/cases">{t('all_cases')}</ActionLink>} />
+            <SectionHeader level="label" headingId="home-research" title={t('mobile_research')} action={<ActionLink href="/cases">{t('all_cases')}</ActionLink>} />
             {loading ? <RowsSkeleton rows={2} /> : cases.length === 0 ? (
                 <p className="m-0 text-sm text-text-muted">{t('no_cases_in_progress')}</p>
             ) : (
-                <ul className="m-0 grid list-none gap-2 p-0">
+                <ul className="m-0 grid list-none p-0">
                     {cases.map((c) => (
                         <li key={c.Id}>
                             <GuardedLink href={`/cases/view?id=${c.Id}`}
-                                className="grid gap-1.5 rounded-btn px-2 py-3 -mx-2 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
-                                <span className="text-base font-semibold">{c.Title}</span>
+                                className="grid gap-1.5 border-t border-border-light px-2 py-3.5 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
+                                <span className="serif text-md font-semibold">{c.Title}</span>
                                 {c.LastComment ? (
                                     <span className="flex items-start gap-2.5">
                                         <span aria-hidden="true" className="avatar-neutral grid place-items-center w-6 h-6 shrink-0 rounded-full text-xs font-semibold text-[color:var(--color-on-media)]">
@@ -320,7 +318,7 @@ function QuickAdd() {
     ];
     return (
         <section aria-labelledby="home-quick-add">
-            <SectionHeader level="rail" rule={false} headingId="home-quick-add" title={t('quick_add')} />
+            <SectionHeader level="label" as="h3" headingId="home-quick-add" title={t('quick_add')} />
             <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0">
                 {tiles.map((tile) => (
                     <li key={tile.href} className="grid"><TileLink href={tile.href} icon={tile.icon} label={tile.label} /></li>
@@ -340,12 +338,12 @@ function NeedsAttention({ canEdit, datesToCheck, duplicates, cases, ready }: { c
     ].filter(Boolean) as Array<{ href: string; label: string; count: number }>;
     return (
         <section aria-labelledby="home-attention">
-            <SectionHeader level="rail" rule={false} headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
+            <SectionHeader level="label" as="h3" headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
             <ul className="m-0 grid list-none p-0">
                 {rows.map((r) => (
                     <li key={r.href}>
                         <GuardedLink href={r.href}
-                            className="flex items-center gap-2 rounded-btn px-2 py-2 -mx-2 text-sm text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
+                            className="flex items-center gap-2 border-t border-border-light px-2 py-3 text-sm text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
                             <span className="min-w-0 flex-1">{r.label}</span>
                             <span className="font-mono text-sm font-medium text-text-muted">{ready ? r.count.toLocaleString() : '–'}</span>
                             <ArrowUpRight className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />
@@ -363,8 +361,8 @@ function WhereTheyLived({ data }: { data: DashboardData }) {
     const { places, countries } = data.placeTotals;
     return (
         <section aria-labelledby="home-places">
-            <SectionHeader level="rail" rule={false} headingId="home-places" title={t('where_they_lived')} action={<ActionLink href="/places">{t('all_places')}</ActionLink>} />
-            <ul className="m-0 grid list-none gap-1 p-0">
+            <SectionHeader level="label" as="h3" headingId="home-places" title={t('where_they_lived')} action={<ActionLink href="/places">{t('all_places')}</ActionLink>} />
+            <ul className="m-0 grid list-none gap-1.5 p-0">
                 {data.places.map((p) => {
                     const count = Number(p.person_count);
                     return (
@@ -374,12 +372,12 @@ function WhereTheyLived({ data }: { data: DashboardData }) {
                                 <span className="flex items-baseline gap-2">
                                     <span className="min-w-0 flex-1 truncate text-sm" title={p.place_name}>
                                         {p.place_name.split(',')[0]}
-                                        {p.country && p.country !== p.place_name.split(',')[0] && <span className="text-text-muted"> · {p.country}</span>}
+                                        {p.country && p.country !== p.place_name.split(',')[0] && <>{' '}<span className="ml-1 text-meta text-text-muted">{p.country}</span></>}
                                     </span>
-                                    <span className="font-mono text-meta text-text-muted">{t('records_count', { count })}</span>
+                                    <span className="font-mono text-meta text-text-secondary" aria-label={t('records_count', { count })}>{count.toLocaleString()}</span>
                                 </span>
-                                <span aria-hidden="true" className="h-1 rounded-full bg-border-light">
-                                    <span className="block h-full rounded-full bg-text-muted" style={{ width: `${Math.max(4, (count / max) * 100)}%` }} />
+                                <span aria-hidden="true" className="h-[3px] rounded-full bg-border-light">
+                                    <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(4, (count / max) * 100)}%` }} />
                                 </span>
                             </GuardedLink>
                         </li>

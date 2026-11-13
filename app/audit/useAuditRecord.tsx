@@ -80,6 +80,9 @@ export function useAuditRecord(records: Records = EMPTY_AUDIT_RECORDS) {
             case 'profilePicture':
                 key = 'rec_profile_picture';
                 break;
+            case 'familyPhoto':
+                key = 'rec_family_photo';
+                break;
             case 'child':
                 key = item.name ? 'rec_child' : 'rec_child_unnamed';
                 child = ref('person', item.name, item.live, item.id == null ? null : recordHref({ kind: 'person', id: item.id, name: item.name, live: item.live, item: null }));
@@ -190,6 +193,9 @@ export function useAuditDescription() {
         }
         if (changes.summary?.kind === 'canonical_primary') {
             return t(changes.fields?.CanonicalPrimaryMediaId?.new == null ? 'summary_profile_removed' : 'summary_profile_set');
+        }
+        if (changes.summary?.kind === 'family_photo') {
+            return t(changes.fields?.FamilyPhotoMediaId?.new == null ? 'summary_family_photo_removed' : 'summary_family_photo_set');
         }
         return null;
     }, [t]);

@@ -70,16 +70,20 @@ describe('MediaLink owner-specific primary state', () => {
     expectTypeOf(unlinkMedia).parameter(1).toEqualTypeOf<MediaOwnerTable>();
   });
 
-  it('allows primary state only for People links and only as zero or one', async () => {
+  it('allows primary state only for People and Families links (the family photo, v71) and only as zero or one', async () => {
     const db = await bootPrimaryFixture();
 
     await db.query(
       `INSERT INTO "MediaLink" ("MediaId", "OwnerTable", "OwnerId", "IsPrimary") VALUES ($1, $2, $3, $4)`,
       [10, 'People', 5, 1],
     );
-    await expect(db.query(
+    await db.query(
       `INSERT INTO "MediaLink" ("MediaId", "OwnerTable", "OwnerId", "IsPrimary") VALUES ($1, $2, $3, $4)`,
       [11, 'Families', 2, 1],
+    );
+    await expect(db.query(
+      `INSERT INTO "MediaLink" ("MediaId", "OwnerTable", "OwnerId", "IsPrimary") VALUES ($1, $2, $3, $4)`,
+      [11, 'Sources', 3, 1],
     )).rejects.toThrow();
     await expect(db.query(
       `INSERT INTO "MediaLink" ("MediaId", "OwnerTable", "OwnerId", "IsPrimary") VALUES ($1, $2, $3, $4)`,

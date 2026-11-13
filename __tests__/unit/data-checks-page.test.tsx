@@ -92,15 +92,11 @@ describe('Data checks page (#831)', () => {
         h.updatePerson.mockResolvedValue({});
     });
 
-    it('groups the list by check, impossible first, and shows the first entry', async () => {
+    it('groups the list by kind, impossible first, and shows the first entry', async () => {
         renderPage();
         const nav = await screen.findByRole('navigation', { name: 'Entries' });
         const headings = within(nav).getAllByRole('heading').map((el) => el.textContent);
-        expect(headings).toEqual([
-            "Child born after the mother's death1",
-            "Partnership after a partner's death1",
-            'Mother over 551',
-        ]);
+        expect(headings).toEqual(['Impossible2', 'Unlikely1']);
         expect(within(nav).getByRole('link', { name: /A child born after her death/ })).toHaveAttribute(
             'href', '/data-checks?entry=child_born_after_mother_death%3A1',
         );
@@ -113,7 +109,7 @@ describe('Data checks page (#831)', () => {
         const detail = await screen.findByTestId('data-check-detail');
         const rows = within(detail).getAllByRole('listitem').filter((li) => li.closest('ol'));
         expect(rows.map((r) => r.textContent)).toEqual([
-            'Jan 27, 1814Mary Ellen died (Date to check)Edit date',
+            'Jan 27, 1814Mary Ellen diedDate to checkEdit date',
             'Mar 3, 1843Bridget born',
         ]);
         // Impossible checks can only be fixed.

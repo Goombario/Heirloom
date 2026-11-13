@@ -6,7 +6,7 @@ import MediaLightbox, { type MediaLightboxProps } from '@/app/components/lightbo
 import MediaGalleryGrid, { type MediaGalleryItem } from './MediaGalleryGrid';
 
 interface MediaGalleryLightbox<T extends MediaGalleryItem = MediaGalleryItem>
-    extends Pick<MediaLightboxProps, 'context' | 'canEdit' | 'canDelete' | 'canRemoveFromContext' | 'galleryPersonId' | 'onPrimaryChanged' | 'onTagsChanged' | 'onDeleted' | 'removeActionLabel'> {
+    extends Pick<MediaLightboxProps, 'context' | 'canEdit' | 'canDelete' | 'canRemoveFromContext' | 'galleryPersonId' | 'onPrimaryChanged' | 'onTagsChanged' | 'onDeleted' | 'removeActionLabel' | 'familyPhoto'> {
     /** Context-specific unlink callback. MediaGallery only passes it for the active item when allowed. */
     onRemoveFromContext?: (mediaId: number) => Promise<void> | void;
     canRemoveItem?: (item: T) => boolean;
@@ -20,11 +20,13 @@ export interface MediaGalleryProps<T extends MediaGalleryItem = MediaGalleryItem
     renderBadge?: (item: T) => ReactNode;
     renderAction?: (item: T) => ReactNode;
     getAlt?: (item: T) => string;
+    /** One row of this many squares (the v1.1 person page): see `MediaGalleryGrid`. */
+    strip?: number;
 }
 
 /** Shared wrapping gallery with lightbox selection pinned to a media id. */
 export function MediaGallery<T extends MediaGalleryItem>({
-    items, treeId, lightbox, renderBadge, renderAction, getAlt,
+    items, treeId, lightbox, renderBadge, renderAction, getAlt, strip,
 }: MediaGalleryProps<T>) {
     const [lightboxId, setLightboxId] = useState<number | null>(null);
     const lightboxIndex = lightboxId == null ? -1 : items.findIndex((item) => item.Id === lightboxId);
@@ -50,6 +52,7 @@ export function MediaGallery<T extends MediaGalleryItem>({
                 renderBadge={renderBadge}
                 renderAction={renderAction}
                 getAlt={getAlt}
+                strip={strip}
             />
             {activeItem && (
                 <MediaLightbox
@@ -73,6 +76,7 @@ export function MediaGallery<T extends MediaGalleryItem>({
                     }
                     removeActionLabel={lightbox.removeActionLabel}
                     showDeleteAction={lightbox.showDeleteAction ? lightbox.showDeleteAction(activeItem) : true}
+                    familyPhoto={lightbox.familyPhoto}
                 />
             )}
         </>

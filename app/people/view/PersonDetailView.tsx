@@ -24,7 +24,7 @@ import { useLanguage } from '@/app/components/LanguageProvider';
 import LocationJourneyModal, { type JourneyStop } from '@/app/components/LocationJourneyModal';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
 import { NamesPanel } from '@/app/components/person-form/NamesPanel';
-import { ActionLink, AddRow, DetailBody, PageShell, InlineDataError, SectionHeader, StatusMark } from '@/app/components/ui';
+import { AddRow, DetailBody, PageShell, InlineDataError, SectionHeader, StatusMark } from '@/app/components/ui';
 import { canAddVitalEvent, compareTimelineItems, countDescendants, countSourcedFacts, countTotalFacts, fullName, hasDeathFact } from './derive';
 import { livingStatus } from '@/lib/living';
 import { usePersonDetail } from './usePersonDetail';
@@ -56,6 +56,7 @@ export default function PersonDetailsClient() {
     const tTypes = useTranslations('eventTypes');
     const tNotes = useTranslations('notes');
     const tDesk = useTranslations('personDesktop');
+    const tChecks = useTranslations('dataChecks');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
     const d = usePersonDetail();
@@ -379,6 +380,9 @@ export default function PersonDetailsClient() {
     );
 
     const lifeEventsCount = ownTimelineFacts(person).length;
+    // "11 also on the timeline": media that a Birth, Death or event row shows too.
+    const onEvents = new Set((person.events ?? []).flatMap((e) => (e.media ?? []).map((m) => m.Id)));
+    const timelineMediaCount = media.filter((m) => onEvents.has(m.Id) || (m.OwnerFacts?.length ?? 0) > 0).length;
     const toVital = (which: 'birth' | 'death') => {
         setEditOpen(false);
         // After the dialog has closed and handed focus back, go to the row.
@@ -408,7 +412,6 @@ export default function PersonDetailsClient() {
                     media={media}
                     treeId={activeTreeId}
                     role={role}
-                    datesToCheck={marks.open.length}
                     biography={primaryNote}
                     bioRequest={bioRequest}
                     run={run}
@@ -421,6 +424,7 @@ export default function PersonDetailsClient() {
                 />
 
                 <DetailBody
+                    divided
                     index={[
                         { id: 'life-events', label: t('life_events') },
                         { id: 'media', label: tDesk('media') },
@@ -444,13 +448,19 @@ export default function PersonDetailsClient() {
                 >
                     <section ref={lifeEventsRef} id="life-events" aria-labelledby="life-events-title">
                         <SectionHeader
+                            level="label"
                             headingId="life-events-title"
                             title={t('life_events')}
                             count={lifeEventsCount}
                             // Relatives' rows aren't counted here or in "N of N sourced" (#49).
-                            action={lifeEventsCount > 0 && (
-                                <span className="text-meta text-text-muted tabular-nums">
-                                    {tDesk('sourced_of', { sourced: countSourcedFacts(person, citationMap), total: countTotalFacts(person) })}
+                            action={(marks.open.length > 0 || lifeEventsCount > 0) && (
+                                <span className="inline-flex items-center gap-3">
+                                    {marks.open.length > 0 && <span className="ledger-flag">{tChecks('flag_count', { count: marks.open.length })}</span>}
+                                    {lifeEventsCount > 0 && (
+                                        <span className="tabular-nums">
+                                            {tDesk('sourced_of', { sourced: countSourcedFacts(person, citationMap), total: countTotalFacts(person) })}
+                                        </span>
+                                    )}
                                 </span>
                             )}
                         />
@@ -468,7 +478,6 @@ export default function PersonDetailsClient() {
                             language={language}
                             renderCitePin={renderNumberedCitePin}
                             tTypes={tTypes}
-                            placeCoords={placeCoords}
                             canEdit={canEdit}
                             canDelete={canDelete}
                             onChanged={() => { fetchPerson(); fetchCitations(); }}
@@ -496,23 +505,25 @@ export default function PersonDetailsClient() {
                                     />
                                 </div>
                             ) : (
-                                <AddRow ref={addEventRef} label={t('add_event')} onClick={() => setShowInlineEvent(true)} className="rounded-b-card" />
+                                <AddRow ref={addEventRef} label={t('add_event')} onClick={() => setShowInlineEvent(true)} />
                             ))}
                         />
                     </section>
 
+                    {(canEdit || media.length > 0 || mediaError) && (
                     <section id="media" aria-labelledby="media-title">
                         <SectionHeader
+                            level="label"
                             headingId="media-title"
                             title={tDesk('media')}
                             count={media.length}
-                            action={canEdit && <ActionLink onClick={() => setShowUpload(true)}>{tDesk('add_media')}</ActionLink>}
+                            action={timelineMediaCount > 0 && tDesk('media_on_timeline', { count: timelineMediaCount })}
                         />
                         {mediaError && (
                             <InlineDataError message={mediaError} retryLabel={tc('retry')} onRetry={fetchMedia} className="mb-3" />
                         )}
                         {mediaError && media.length === 0 ? null : mediaLoading && media.length === 0 ? (
-                            <div className="card card-pad" aria-busy="true"><Skeleton className="h-28 w-full" /></div>
+                            <Skeleton className="h-24 w-full" />
                         ) : (
                             <PersonGalleryCard
                                 media={media}
@@ -521,13 +532,14 @@ export default function PersonDetailsClient() {
                                 canEdit={canEdit}
                                 canDelete={canDelete}
                                 onPrimaryChanged={fetchMedia}
-                                onAddPhoto={() => setShowUpload(true)}
                             />
                         )}
+                        {canEdit && <div className="ledger-foot mt-3.5"><AddRow label={tDesk('add_media')} onClick={() => setShowUpload(true)} /></div>}
                     </section>
+                    )}
 
                     <section id="names" aria-labelledby="names-title">
-                        <SectionHeader headingId="names-title" title={tDesk('names')} />
+                        <SectionHeader level="label" headingId="names-title" title={tDesk('names')} />
                         {variantsError && (
                             <InlineDataError message={variantsError} retryLabel={tc('retry')} onRetry={refreshVariants} className="mb-3" />
                         )}

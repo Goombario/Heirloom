@@ -5,7 +5,7 @@
  */
 
 import { DATA_CHECK_RULES, DIED_YOUNG_MAX_AGE, FATHER_DEATH_MONTHS, ruleThreshold, type DataCheckFact, type DataCheckKind, type DataCheckRuleId } from '@/lib/data-checks/rules';
-import { dateInterval } from '@/lib/date-intervals';
+import { civilFromDays, dateInterval } from '@/lib/date-intervals';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
 import { displayFullName } from '@/lib/utils/names';
 import { foldForSearch } from '@/lib/utils/search-fold';
@@ -96,6 +96,42 @@ export function pageGroups(entries: DataCheckEntry[], page: number): EntryGroup[
         else groups.push({ rule: p.rule, total: totals.get(p.rule)!, entries: [p] });
     }
     return groups;
+}
+
+export interface KindGroup {
+    kind: DataCheckKind;
+    /** Entries of this kind in the whole filtered list, not just this page. */
+    total: number;
+    entries: DataCheckEntry[];
+}
+
+/**
+ * One page of the desktop list, grouped by kind: Impossible, Unlikely, Can't be
+ * checked (locked list-pages board). The list is in rule order, impossible first,
+ * so each kind is one run; the rule is each row's own sub-line.
+ */
+export function pageKindGroups(entries: DataCheckEntry[], page: number): KindGroup[] {
+    const totals = new Map<DataCheckKind, number>();
+    for (const p of entries) totals.set(p.kind, (totals.get(p.kind) ?? 0) + 1);
+    const groups: KindGroup[] = [];
+    for (const p of entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)) {
+        const last = groups[groups.length - 1];
+        if (last?.kind === p.kind) last.entries.push(p);
+        else groups.push({ kind: p.kind, total: totals.get(p.kind)!, entries: [p] });
+    }
+    return groups;
+}
+
+/** The year a list row shows: the date to check's, else the first date's; null when none reads as a date. */
+export function entryYear(p: DataCheckEntry): number | null {
+    const rows = timelineRows(p);
+    const fact = (rows.find((r) => r.toFix) ?? rows[0])?.fact;
+    const range = fact ? dateInterval(fact.date) : null;
+    if (!range) return null;
+    const { earliest: e, latest: l } = range;
+    // "ABT 1850" spans years either side, so its middle; "BEF"/"AFT" have one open end.
+    const day = Number.isFinite(e) && Number.isFinite(l) ? Math.round((e + l) / 2) : Number.isFinite(e) ? e : Number.isFinite(l) ? l : null;
+    return day == null ? null : civilFromDays(day).y;
 }
 
 export function pageCount(entries: DataCheckEntry[]): number {

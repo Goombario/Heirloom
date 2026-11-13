@@ -38,7 +38,7 @@ function isCanonicalMediaSummary(e: AuditLogEntryWithUser): boolean {
     const summary = (e.Changes as { summary?: { kind?: unknown } } | null)?.summary;
     return e.EntityType === 'media'
         && e.Action === 'update'
-        && (summary?.kind === 'canonical_primary' || summary?.kind === 'canonical_ownership');
+        && (summary?.kind === 'canonical_primary' || summary?.kind === 'canonical_ownership' || summary?.kind === 'family_photo');
 }
 
 /**
@@ -133,7 +133,7 @@ export default function AuditPage() {
         }
         return rows;
     };
-    const { timestamp } = useTimestamp();
+    const { timestamp, dayTime } = useTimestamp();
 
     const summaryLabels = useMemo(() => ({
         photoAdded: t('summary_photo_added'),
@@ -278,13 +278,6 @@ export default function AuditPage() {
         }
     };
 
-    // Date and time as separate parts: one `toLocaleString` line made the column
-    // the widest thing in the table and pushed Record/Changes into a squeeze.
-    const formatDateParts = (dateStr: string) => ({
-        date: timestamp(dateStr, 'date'),
-        time: timestamp(dateStr, 'time'),
-    });
-
     const getActionBadge = (action: string) => {
         switch (action) {
             case 'create': return <Badge tone="green">{t('action_created')}</Badge>;
@@ -299,18 +292,18 @@ export default function AuditPage() {
 
     const renderChanges = (entry: AuditLogEntryWithUser) => {
         const description = describe(entry);
-        if (description) return <div className="text-xs italic" style={{ color: 'var(--text-2)' }}>{description}</div>;
+        if (description) return <div className="text-meta text-text">{description}</div>;
         if (entry.Action === 'update') {
             const changes = entry.Changes as AuditFieldChanges;
             const rows = readableFields(entry.EntityType, Object.keys(changes.fields ?? {}));
             if (rows.length === 0) {
-                return <div className="text-xs italic" style={{ color: 'var(--text-2)' }}>{t('details_updated')}</div>;
+                return <div className="text-meta text-text">{t('details_updated')}</div>;
             }
             return (
                 <div className="space-y-1">
                     {rows.map(({ field, spec }) => (
-                        <div key={field} className="text-xs" style={{ color: 'var(--text)' }}>
-                            <span className="font-medium" style={{ color: 'var(--text-2)' }}>{fieldFormat.label(spec)}</span>
+                        <div key={field} className="text-meta text-text">
+                            <span className="font-semibold">{fieldFormat.label(spec)}</span>
                             {spec.kind === 'opaque' ? (
                                 <>
                                     <span style={{ color: 'var(--text-muted)' }}> · </span>
@@ -322,7 +315,7 @@ export default function AuditPage() {
                                     {/* "Birth date 1846 → 14 Mar 1846": the old value struck, the new one plain (#59). */}
                                     <span className="line-through text-text-muted">{fieldFormat.value(spec, changes.fields[field].old)}</span>
                                     <span style={{ color: 'var(--text-muted)' }}> → </span>
-                                    <span className="font-medium text-text">{fieldFormat.value(spec, changes.fields[field].new)}</span>
+                                    <span className="text-text">{fieldFormat.value(spec, changes.fields[field].new)}</span>
                                 </>
                             )}
                         </div>
@@ -337,8 +330,8 @@ export default function AuditPage() {
             .filter(({ spec }) => spec.kind !== 'opaque')
             .filter(({ field }) => snapshot[field] != null && snapshot[field] !== '');
         return (
-            <div className="text-xs" style={{ color: 'var(--text)' }}>
-                {summary && <div className={`italic ${displayFields.length ? 'mb-1' : 'mb-0'}`} style={{ color: 'var(--text-2)' }}>{summary}</div>}
+            <div className="text-meta text-text">
+                {summary && <div className={displayFields.length ? 'mb-1' : 'mb-0'}>{summary}</div>}
                 {displayFields.length > 0 && (
                     <details>
                         <summary className="cursor-pointer" style={{ color: 'var(--text-muted)' }}>
@@ -365,15 +358,11 @@ export default function AuditPage() {
             header: t('col_when'),
             sortable: true,
             className: 'whitespace-nowrap',
-            render: (e) => {
-                const { date, time } = formatDateParts(e.CreatedAt);
-                return (
-                    <div className="text-meta tabular-nums leading-[1.35]">
-                        <div style={{ color: 'var(--text)' }}>{date}</div>
-                        <div style={{ color: 'var(--text-muted)' }}>{time}</div>
-                    </div>
-                );
-            },
+            // One mono line, "Today 14:02" (locked list-pages board). Timestamps are
+            // record metadata, so muted ink, never the amber date colour.
+            render: (e) => (
+                <span className="font-mono text-meta tabular-nums text-text-muted" title={timestamp(e.CreatedAt)}>{dayTime(e.CreatedAt)}</span>
+            ),
         },
         ...(showWho ? [{
             key: 'who',
@@ -409,7 +398,7 @@ export default function AuditPage() {
             header: t('col_record'),
             sortable: true,
             render: (e) => (
-                <div className="min-w-0 text-sm leading-[1.45]" style={{ color: 'var(--text-2)' }}>{getEntityLink(e)}</div>
+                <div className="min-w-0 serif text-base font-semibold leading-[1.35] text-text">{getEntityLink(e)}</div>
             ),
         },
         {
@@ -429,9 +418,7 @@ export default function AuditPage() {
                     type="button"
                     onClick={() => setConfirmRevert([e.Id])}
                     disabled={reverting}
-                    className="audit-revert inline-flex items-center gap-1 text-xs py-1 px-[9px] rounded-[8px] border border-[color:var(--border)] cursor-pointer"
-                    aria-label={t('revert')}
-                    style={{ background: 'var(--card)', color: 'var(--text-muted)' }}
+                    className="focus-ring inline-flex items-center gap-1 text-meta font-medium py-1 px-2.5 rounded-[8px] border border-border bg-card text-text hover:bg-hover-surface cursor-pointer whitespace-nowrap"
                 >
                     <RotateCcw size={12} aria-hidden />{t('revert')}
                 </button>
@@ -519,19 +506,6 @@ export default function AuditPage() {
                     />
                 </div>
 
-                {/* Bulk revert */}
-                {canEdit && currentSelectedIds.size > 0 && (
-                    // "2 selected · Revert 2 changes · Clear" (#59).
-                    <Card role="status" pad={false} className="flex items-center gap-3 py-2 px-3.5 mb-3">
-                        <span className="text-sm font-semibold text-text tabular-nums">{t('selected_count', { count: currentSelectedIds.size })}</span>
-                        <Button variant="outline" size="sm" onClick={() => setConfirmRevert(Array.from(currentSelectedIds))} disabled={reverting}
-                            icon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}>
-                            {reverting ? t('reverting') : t('revert_n', { count: currentSelectedIds.size })}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>{t('clear')}</Button>
-                    </Card>
-                )}
-
                 <ConfirmDialog
                     open={confirmRevert != null}
                     variant="calm"
@@ -559,7 +533,18 @@ export default function AuditPage() {
                 ) : (
                     <>
                         {/* Desktop table */}
-                        <TablePanel page={page} pageSize={pageSize} total={currentTotal} onPage={(n) => { setPage(n); setSelectedIds(new Set()); }}>
+                        <TablePanel page={page} pageSize={pageSize} total={currentTotal} onPage={(n) => { setPage(n); setSelectedIds(new Set()); }}
+                            header={canEdit && currentSelectedIds.size > 0 ? (
+                                // "2 selected · Revert 2 changes · Clear", across the panel's top (locked board).
+                                <div role="status" className="flex items-center gap-3">
+                                    <span className="text-sm font-semibold text-text tabular-nums">{t('selected_count', { count: currentSelectedIds.size })}</span>
+                                    <Button variant="primary" size="sm" onClick={() => setConfirmRevert(Array.from(currentSelectedIds))} disabled={reverting}
+                                        icon={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}>
+                                        {reverting ? t('reverting') : t('revert_n', { count: currentSelectedIds.size })}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>{t('clear')}</Button>
+                                </div>
+                            ) : undefined}>
                             <DataTable
                                 columns={columns}
                                 rows={currentEntries}

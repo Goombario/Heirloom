@@ -4,24 +4,22 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { livingStatus } from '@/lib/living';
-import { ArrowLeftRight, MapPin, StickyNote } from '@/lib/icons';
+import { ArrowLeftRight } from '@/lib/icons';
 import { formatDateForDisplay, sortableYear, compareSortableYears } from '@/lib/date-utils';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { getInitials } from '@/lib/utils/initials';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import Cite from '@/app/components/Cite';
-import LocationMap from '@/app/components/LocationMap';
-import { AddRow, Badge, Button, EditorActions, Lifespan, RowAction, RowActions, Select } from '@/app/components/ui';
+import { ActionLink, AddRow, Badge, Button, EditorActions, LedgerTimeline, Lifespan, PersonRow, RowAction, RowActions, Select, cx, type LedgerItem } from '@/app/components/ui';
+import { ledgerPlaces, useLedgerDate } from '@/app/components/ledgerCells';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { escapeToCancel, useEditorFocusReturn } from '@/app/hooks/useEditorFocusReturn';
 import PersonPicker, { type PersonPickerHandle } from '@/app/components/PersonPicker';
 import { MoveChildPanel } from './MoveChildPanel';
 import { useUndoRemoval } from '@/app/hooks/useUndoRemoval';
 import { CHILD_RELATIONSHIP_TYPE_VALUES, isChildRelationshipType, type ChildRelationships } from '@/lib/child-relationship';
-import { Timeline, TimelineWhenWhere, type TimelineItem } from '@/app/components/Timeline';
 import { useTimelineMarks, type DataCheckMarks } from '@/app/components/data-checks/marks';
-import { eventGlyph } from '@/app/components/eventGlyph';
 import { EventRowActions } from '@/app/components/EventRowActions';
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 import InlineMarriageEditor from './InlineMarriageEditor';
@@ -36,60 +34,11 @@ import { partnerName, partnerShortName, yearOnly, calcAgeAtDeath, hasRecordedDea
 import { prefetchFamily } from './familyCache';
 import { prefetchPerson } from '@/app/people/view/personCache';
 import type { PartnerPerson, CitationRow, PartnerFamilies } from './useFamilyDetail';
+import type { RunChange } from '@/app/people/view/mobile/useChange';
 import type { CitationMap } from './useFamilyDetail';
 import { chipCitations, type SourceNumbers } from '@/app/components/citations/factDescriptors';
 import { FACT_TABLES, type FactTableValue } from '@/lib/db/fact-tables';
 import { OwnerNotesCard, NoteCount } from '@/app/components/notes/OwnerNotesCard';
-import { factPlaceEntry } from '@/lib/places/place-key';
-
-// No "Partner role: Spouse" line: both partners' role comes from the family type, which
-// the hero subtitle already names, so it could only ever repeat (#768, DV-3).
-export function PartnerCard({ partner, treeId }: { partner: PartnerPerson | null; treeId: number | null }) {
-    const t = useTranslations('families');
-    const tCommon = useTranslations('common');
-    if (!partner) {
-        return (
-            <div className="card card-pad row gap-3.5 p-4 items-center justify-center min-h-24">
-                <span className="muted text-sm italic">{t('unknown_partner')}</span>
-            </div>
-        );
-    }
-    return (
-        <Link
-            href={`/people/view?id=${partner.Id}`}
-            className="card card-pad row gap-3.5 p-4 no-underline items-center"
-            style={{ color: 'inherit' }}
-            onMouseEnter={() => prefetchPerson(partner.Id, treeId)}
-            onFocus={() => prefetchPerson(partner.Id, treeId)}
-        >
-            <PersonAvatar
-                mediaId={partner.PrimaryMediaId}
-                treeId={treeId}
-                name={partnerName(partner) || tCommon('unknown')}
-                initials={getInitials(partner.FirstName, partner.LastName)}
-                sex={partner.Sex}
-                size={64}
-                focalX={partner.FocalX}
-                focalY={partner.FocalY}
-                focalRadius={partner.FocalRadius}
-            />
-            <div className="flex-1 min-w-0">
-                <div className="serif font-semibold leading-[1.2]" style={{ fontSize: 'var(--text-lg)', color: 'var(--color-text)' }}>
-                    {partnerName(partner) || tCommon('unknown')}
-                </div>
-                {/* A hero, so the full lifespan (#766). */}
-                <Lifespan
-                    variant="full"
-                    birth={partner.BirthDate}
-                    death={partner.DeathDate}
-                    birthPlace={partner.BirthPlace}
-                    deathPlace={partner.DeathPlace}
-                    className="muted text-meta mt-0.5 block"
-                />
-            </div>
-        </Link>
-    );
-}
 
 interface TimelineFamily {
     Id: number;
@@ -106,17 +55,18 @@ interface TimelineFamily {
 }
 
 export function FamilyTimeline({
-    family, childList, citationMap, sourceNumbers, canEdit, canDelete, placeCoords, isOpen, toggle, earlierPartner, onCitationClick, onChanged, relevantPersonIds, footer, marks,
+    family, childList, partners = [null, null], citationMap, sourceNumbers, canEdit, canDelete, isOpen, toggle, earlierPartner, onCitationClick, onChanged, relevantPersonIds, footer, marks, run, onRecordEnd,
 }: {
     family: TimelineFamily;
     childList: PartnerPerson[];
+    /** The family's partners, for the marriage row's "Everett 28, Agnes 24". */
+    partners?: [PartnerPerson | null | undefined, PartnerPerson | null | undefined];
     citationMap: CitationMap;
     /** Page-local footnote numbers shared with Sources cited (#754). */
     sourceNumbers: SourceNumbers;
     canEdit: boolean;
     /** Permit destructive note deletion (owner/edit); contributors may edit notes. */
     canDelete: boolean;
-    placeCoords: Record<string, { lat: number; lng: number }>;
     isOpen: (k: string) => boolean;
     toggle: (k: string) => void;
     earlierPartner: PartnerPerson | null;
@@ -125,22 +75,26 @@ export function FamilyTimeline({
     onChanged: () => void;
     /** Already-loaded family members for event-media picker suggestions. */
     relevantPersonIds?: readonly number[];
-    /**
-     * The list's last row (#760): the trailing "Add event" row, or the inline panel
-     * it opened. Rendered inside the card under a hairline.
-     */
+    /** Under the list: the "Add event" row, or the inline panel it opened. */
     footer?: React.ReactNode;
     /**
      * The family's dates to check (#833). Only the start and the family's own
      * events can carry a mark: a partner's death isn't a row here, and derived
-     * rows never get one. The hero flag covers the rest.
+     * rows never get one. The band's pill covers the rest.
      */
     marks?: DataCheckMarks;
+    /** Deletes act at once with Undo through this (the v1.1 desktop page); without it, they ask first. */
+    run?: RunChange;
+    /** "Record a divorce or separation" on the row worked out from a death (#119, G7). */
+    onRecordEnd?: () => void;
 }) {
     const t = useTranslations('families');
     const tPerson = useTranslations('personDetail');
+    const tDesk = useTranslations('personDesktop');
     const tc = useTranslations('common');
     const te = useTranslations('eventEdit');
+    const tk = useTranslations('familyPhone');
+    const tm = useTranslations('mobileEvents');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
     const { activeTreeId } = useTree();
@@ -152,39 +106,15 @@ export function FamilyTimeline({
     const rememberEventOpener = useEditorFocusReturn(editingId !== null || editingMarriage, eventsRef);
     const markRow = useTimelineMarks(marks);
     const [noteCounts, setNoteCounts] = useState<Record<number, number>>({});
+    const dateColumn = useLedgerDate(language);
 
-    const glyphIcon = (type: string) => {
-        const { Icon } = eventGlyph(type);
-        return <Icon size={15} strokeWidth={2} aria-hidden="true" />;
-    };
-    // A place → optional "show map" toggle + mini map, as a timeline `extra`.
-    const mapExtra = (place: string | null | undefined, placeId: number | null | undefined, key: string) => {
-        const at = factPlaceEntry(placeCoords, place, placeId);
-        if (!place || !at) return null;
-        const open = isOpen(key);
-        return (
-            <>
-                <button type="button" onClick={() => toggle(key)}
-                    className="inline-flex items-center gap-1 p-0 text-meta text-link hover:underline rounded-lg transition-colors bg-transparent border-0 cursor-pointer"
-                    aria-expanded={open}>
-                    <MapPin width="11" height="11" aria-hidden="true" />
-                    {open ? tc('hide_map') : tc('show_map')}
-                </button>
-                {open && (
-                    <div className="mt-2">
-                        <LocationMap markers={[{ lat: at.lat, lng: at.lng, label: place }]} variant="mini" />
-                    </div>
-                )}
-            </>
-        );
-    };
     // The date as the row shows it, not the stored GEDCOM form (#901).
+    const eventWhen = (ev: GedcomEvent) => [ev.Date && formatDateForDisplay(ev.Date, language, dateWords), ev.Place?.split(',')[0]?.trim()].filter(Boolean).join(' · ') || undefined;
     const eventLabel = (ev: GedcomEvent) => [familyEventLabel(ev.Type, te), ev.Date && formatDateForDisplay(ev.Date, language, dateWords), ev.Place].filter(Boolean).join(' · ');
-    // What to call the union itself, per type — "marriage" for a Marriage, but
-    // "common-law partnership" for a Common-law family, which previously read
-    // "Started · marriage" regardless. Used by the start row, its edit action,
-    // the citation fact label, and the start editor's caption.
+    // What to call the union itself, per type: "marriage" for a Marriage, but
+    // "common-law partnership" for a Common-law family.
     const kindLabel = t(partnershipKindKey(family.Type));
+    const kindTitle = kindLabel.charAt(0).toLocaleUpperCase(language) + kindLabel.slice(1);
     // A fact's numbered chips, plus an editor's hover "+" for another source
     // (#900), or its "+" pin when nothing cites it yet.
     const citePins = (factTable: FactTableValue, factId: number, label: string, more = true) => {
@@ -199,6 +129,15 @@ export function FamilyTimeline({
             </>
         );
     };
+
+    function requestDelete(ev: GedcomEvent) {
+        if (!run) { setConfirmDelete(ev); return; }
+        setEditingId((cur) => (cur === ev.Id ? null : cur));
+        void run(async () => {
+            const client = await getDataClient();
+            return client.events.remove(ev.Id, activeTreeId);
+        }, { message: tm('deleted', { type: familyEventLabel(ev.Type, te) }), detail: eventWhen(ev) });
+    }
 
     // The start row is the family fact; an imported `1 MARR` / `2 SOUR` cites the
     // marriage itself (#962), so its chips sit beside the family's, and the empty
@@ -235,30 +174,35 @@ export function FamilyTimeline({
         />
     );
 
-    type Row = TimelineItem & { sortKey: number | null };
+    const firstName = (p: PartnerPerson | null | undefined) => (partnerName(p ?? null) || tc('unknown')).split(' ')[0];
+    // "Everett 28, Agnes 24": each partner's age at the start, where both years are known.
+    const startYear = sortableYear(family.MarriageDate);
+    const agesAtStart = startYear == null ? '' : partners
+        .flatMap((p) => {
+            const born = p ? sortableYear(p.BirthDate) : null;
+            return p && born != null && startYear > born ? [t('ledger_partner_age', { name: firstName(p), age: startYear - born })] : [];
+        })
+        .join(', ');
+
+    type Row = Omit<LedgerItem, 'place'> & { sortKey: number | null; place?: string | null; placeId?: number | null };
     const rows: Row[] = [];
 
-    // 1. Marriage — the "start" anchor, edited in place via InlineMarriageEditor
+    // 1. Marriage: the "start" anchor, edited in place via InlineMarriageEditor
     // (writes to the Families columns, not an Events row).
     rows.push({
         ...(editingMarriage ? {} : markRow(`${FACT_TABLES.FAMILIES}:${family.Id}`,
             canEdit ? () => { rememberEventOpener(); setEditingMarriage(true); } : undefined)),
         key: 'marriage',
-        sortKey: sortableYear(family.MarriageDate),
-        icon: glyphIcon('MARR'),
-        title: <>{t('started')} <span className="muted font-normal">· {kindLabel}</span></>,
-        meta: (
-            <>
-                <TimelineWhenWhere date={family.MarriageDate ? <span className="date-mono text-sm">{formatDateForDisplay(family.MarriageDate, language, dateWords)}</span> : <span className="muted">{t('date_unknown')}</span>} place={family.MarriagePlace} />
-            </>
-        ),
+        anchor: 'marriage',
+        sortKey: startYear,
+        ...dateColumn(family.MarriageDate),
+        vital: true,
+        title: kindTitle,
         citations: marriagePins,
-        extra: (family.marriageMedia?.length ?? 0) > 0 ? (
-            <>
-                <EventMediaStrip media={family.marriageMedia ?? []} treeId={activeTreeId} />
-                {mapExtra(family.MarriagePlace, family.MarriagePlaceId, 'marriage')}
-            </>
-        ) : mapExtra(family.MarriagePlace, family.MarriagePlaceId, 'marriage'),
+        place: family.MarriagePlace,
+        placeId: family.MarriagePlaceId,
+        lines: agesAtStart || null,
+        thumbs: (family.marriageMedia?.length ?? 0) > 0 ? <EventMediaStrip variant="ledger" media={family.marriageMedia ?? []} treeId={activeTreeId} /> : null,
         actions: canEdit ? <EventRowActions label={kindLabel} onEdit={() => { rememberEventOpener(); setEditingMarriage(true); }} /> : null,
         override: editingMarriage ? (
             <InlineMarriageEditor
@@ -277,51 +221,35 @@ export function FamilyTimeline({
         ) : null,
     });
 
-    // 2. Family events (divorce/annulment/engagement/…) — custom → edit-in-place + delete.
+    // 2. Family events (divorce, engagement, census …): edit in place and delete.
     for (const ev of family.events ?? []) {
         const label = familyEventLabel(ev.Type, te);
         const notesKey = `notes-fevent-${ev.Id}`;
         const notesOpen = isOpen(notesKey);
         const notesRegionId = `family-event-notes-${ev.Id}`;
         const noteTotal = noteCountFor(ev);
-        const notesControl = noteTotal > 0 || notesOpen ? (
-            <div className="mt-1">
-                <button
-                    type="button"
-                    onClick={() => toggle(notesKey)}
-                    className="inline-flex items-center gap-1 p-0 text-meta text-link hover:underline rounded-lg transition-colors bg-transparent border-0 cursor-pointer"
-                    aria-expanded={notesOpen}
-                    aria-controls={notesRegionId}
-                >
-                    <StickyNote width="11" height="11" aria-hidden="true" />
-                    {notesOpen ? tPerson('event_notes_hide', { count: noteTotal }) : tPerson('event_notes_show', { count: noteTotal })}
-                </button>
-                {notesOpen && <div className="mt-2" id={notesRegionId}>{notesRail(ev)}</div>}
-            </div>
-        ) : null;
         rows.push({
             ...(editingId === ev.Id ? {} : markRow(`${FACT_TABLES.EVENTS}:${ev.Id}`,
                 canEdit ? () => { rememberEventOpener(); setEditingId(ev.Id); } : undefined)),
             key: `fevent-${ev.Id}`,
+            anchor: `event-${ev.Id}`,
             sortKey: sortableYear(ev.Date),
-            icon: glyphIcon(ev.Type),
-            dim: eventGlyph(ev.Type).dim,
+            ...dateColumn(ev.Date),
             title: label,
-            meta: (
-                <>
-                    <TimelineWhenWhere date={ev.Date ? <span className="date-mono text-sm">{formatDateForDisplay(ev.Date, language, dateWords)}</span> : <span className="muted">{t('date_unknown')}</span>} place={ev.Place} />
-                </>
-            ),
             citations: citePins(FACT_TABLES.EVENTS, ev.Id, label),
-            note: ev.Description,
-            extra: (
+            place: ev.Place,
+            placeId: ev.PlaceId,
+            lines: ev.Description,
+            thumbs: (ev.media?.length ?? 0) > 0 ? <EventMediaStrip variant="ledger" media={ev.media ?? []} treeId={activeTreeId} /> : null,
+            below: noteTotal > 0 || notesOpen ? (
                 <>
-                    <EventMediaStrip media={ev.media ?? []} treeId={activeTreeId} />
-                    {mapExtra(ev.Place, ev.PlaceId, `fevent-${ev.Id}`)}
-                    {notesControl}
+                    <ActionLink kind="expand" expanded={notesOpen} controls={notesRegionId} onClick={() => toggle(notesKey)}>
+                        {notesOpen ? tDesk('hide_notes') : tDesk('notes_n', { count: noteTotal })}
+                    </ActionLink>
+                    {notesOpen && <div className="mt-2" id={notesRegionId}>{notesRail(ev)}</div>}
                 </>
-            ),
-            actions: canEdit ? <EventRowActions label={label} onEdit={() => { rememberEventOpener(); setEditingId(ev.Id); }} onDelete={canDelete ? () => setConfirmDelete(ev) : undefined} /> : null,
+            ) : null,
+            actions: canEdit ? <EventRowActions label={label} onEdit={() => { rememberEventOpener(); setEditingId(ev.Id); }} onDelete={canDelete ? () => requestDelete(ev) : undefined} /> : null,
             override: editingId === ev.Id ? (
                 <InlineEventEditor
                     target={{ kind: 'family', familyId: family.Id }}
@@ -330,51 +258,46 @@ export function FamilyTimeline({
                     onCancel={() => setEditingId(null)}
                     onRefresh={onChanged}
                     onSaved={() => { setEditingId(null); onChanged(); }}
-                    onDelete={canDelete ? () => setConfirmDelete(ev) : undefined}
+                    onDelete={canDelete ? () => requestDelete(ev) : undefined}
                     notesSlot={notesRail(ev)}
                 />
             ) : null,
         });
     }
 
-    // 3. Children's births (derived context: edit on the child's page, but cite
-    // here, so one census can be cited on a household from its family (#799)).
+    // 3. Children's births: read-only here, each opening the child (↗), but cited
+    // here so one census can be cited on a household from its family (#799).
     for (const child of childList) {
-        const firstName = (partnerName(child) || tc('unknown')).split(' ')[0];
+        const name = firstName(child);
+        const label = `${t('birth_label')} · ${name}`;
         rows.push({
             key: `birth-${child.Id}`,
             sortKey: sortableYear(child.BirthDate),
-            icon: glyphIcon('BIRT'),
-            title: <>{t('birth_label')} · {firstName} <span className="muted font-normal">({t('child_label')})</span></>,
-            meta: (
-                <>
-                    <TimelineWhenWhere date={child.BirthDate ? <span className="date-mono text-sm">{formatDateForDisplay(child.BirthDate, language, dateWords)}</span> : <span className="muted">{t('date_unknown')}</span>} place={child.BirthPlace} />
-                </>
-            ),
+            ...dateColumn(child.BirthDate),
+            title: t('ledger_birth_of', { name }),
+            href: `/people/view?id=${child.Id}`,
+            place: child.BirthPlace,
+            placeId: child.BirthPlaceId,
             // Only a recorded birth: the child's page shows no birth row to carry an empty one's citation.
-            citations: (child.BirthDate || child.BirthPlace) ? citePins(FACT_TABLES.PERSON_BIRTH, child.Id, `${t('birth_label')} · ${firstName}`) : null,
+            citations: (child.BirthDate || child.BirthPlace) ? citePins(FACT_TABLES.PERSON_BIRTH, child.Id, label) : null,
         });
     }
 
-    // 3a. Children's adoptions: a child's own ADOP event, dated like any other
-    // (#485). Derived context like the births: edited on the child's page.
+    // 3a. Children's adoptions: a child's own ADOP event (#485), edited on its page.
     for (const ev of family.childAdoptions ?? []) {
         const child = childList.find((c) => c.Id === ev.PersonId);
         if (!child) continue;
-        const firstName = (partnerName(child) || tc('unknown')).split(' ')[0];
-        const label = `${familyEventLabel('ADOP', te)} · ${firstName}`;
+        const label = `${familyEventLabel('ADOP', te)} · ${firstName(child)}`;
         rows.push({
             key: `adop-${ev.Id}`,
             sortKey: sortableYear(ev.Date),
-            icon: glyphIcon('ADOP'),
-            title: <>{familyEventLabel('ADOP', te)} · {firstName} <span className="muted font-normal">({t('child_label')})</span></>,
-            meta: (
-                <>
-                    <TimelineWhenWhere date={ev.Date ? <span className="date-mono text-sm">{formatDateForDisplay(ev.Date, language, dateWords)}</span> : <span className="muted">{t('date_unknown')}</span>} place={ev.Place} />
-                </>
-            ),
+            ...dateColumn(ev.Date),
+            title: label,
+            href: `/people/view?id=${child.Id}`,
+            place: ev.Place,
+            placeId: ev.PlaceId,
+            lines: ev.Description,
             citations: citePins(FACT_TABLES.EVENTS, ev.Id, label),
-            note: ev.Description,
         });
     }
 
@@ -382,35 +305,46 @@ export function FamilyTimeline({
     for (const child of childList) {
         if (!hasRecordedDeath(child)) continue;
         const age = calcAgeAtDeath(child.BirthDate, child.DeathDate);
-        const deathLabel = t('death_of', { name: (partnerName(child) || tc('unknown')).split(' ')[0] });
+        const deathLabel = t('death_of', { name: firstName(child) });
         rows.push({
             key: `cdeath-${child.Id}`,
             sortKey: sortableYear(child.DeathDate),
-            icon: glyphIcon('DEAT'),
-            dim: true,
-            title: <>{deathLabel}{age !== null && <> <span className="muted">· {t('age_label', { age })}</span></>}</>,
-            meta: (
-                <>
-                    <TimelineWhenWhere date={child.DeathDate && <span className="date-mono text-sm">{formatDateForDisplay(child.DeathDate, language, dateWords)}</span>} place={child.DeathPlace} />
-                </>
-            ),
+            ...dateColumn(child.DeathDate),
+            title: deathLabel,
+            href: `/people/view?id=${child.Id}`,
+            age: age !== null ? tDesk('age_n', { age }) : null,
+            place: child.DeathPlace,
+            placeId: child.DeathPlaceId,
             citations: citePins(FACT_TABLES.PERSON_DEATH, child.Id, deathLabel),
         });
     }
 
-    // 4. Inferred "ended" from a partner's death — only when no divorce/annulment/separation event exists,
-    //    and never when that death falls before the start (#826: it's a bad date, not an end).
+    // 4. Inferred "ended" from a partner's death, only when no divorce, annulment or
+    // separation event exists, and never when that death falls before the start
+    // (#826: it's a bad date, not an end).
     const hasEndEvent = (family.events ?? []).some(e => ['DIV', 'DIVF', 'ANUL', 'SEPA'].includes(e.Type));
     if (earlierPartner && !hasEndEvent && !derivedEndPrecedesStart(earlierPartner.DeathDate, family.MarriageDate)) {
+        const endYear = sortableYear(earlierPartner.DeathDate);
         rows.push({
             key: 'ended',
-            sortKey: sortableYear(earlierPartner.DeathDate),
-            icon: glyphIcon('DEAT'),
-            dim: true,
-            title: <>{t('partnership_ended')} <span className="muted">· {t('cause_death_of', { name: (partnerName(earlierPartner) || tc('unknown')).split(' ')[0] })}</span></>,
-            meta: (
+            anchor: 'ended',
+            sortKey: endYear,
+            ...dateColumn(earlierPartner.DeathDate),
+            vital: true,
+            title: t('partnership_ended'),
+            href: `/people/view?id=${earlierPartner.Id}`,
+            place: earlierPartner.DeathPlace,
+            placeId: earlierPartner.DeathPlaceId,
+            // "Worked out from Everett's death. 43 years together."
+            lines: (
                 <>
-                    <TimelineWhenWhere date={earlierPartner.DeathDate && <span className="date-mono text-sm">{formatDateForDisplay(earlierPartner.DeathDate, language, dateWords)}</span>} place={earlierPartner.DeathPlace} />
+                    {[
+                        t('ended_derived', { name: firstName(earlierPartner) }),
+                        startYear != null && endYear != null && endYear > startYear ? `${t('years_together', { count: endYear - startYear })}.` : null,
+                    ].filter(Boolean).join(' ')}
+                    {canEdit && onRecordEnd && (
+                        <span className="block mt-1"><ActionLink onClick={onRecordEnd}>{tk('record_end')}</ActionLink></span>
+                    )}
                 </>
             ),
         });
@@ -418,6 +352,11 @@ export function FamilyTimeline({
 
     // Undated rows sink to the end rather than sitting at year zero ahead of every date.
     rows.sort((a, b) => (a.sortKey ?? Infinity) - (b.sortKey ?? Infinity));
+    // Place lines in row order: a place the row before named reads as plain text.
+    const placeLine = ledgerPlaces();
+    const ledger: LedgerItem[] = rows.map(({ sortKey: _sortKey, place, placeId, ...row }) => ({ ...row, place: placeLine(place, placeId) }));
+    // The end of the partnership, and the end events, stay in view below the fold.
+    const keep = rows.filter((r) => r.key === 'ended' || (r.key.startsWith('fevent-') && ['DIV', 'DIVF', 'ANUL', 'SEPA'].includes((family.events ?? []).find((e) => `fevent-${e.Id}` === r.key)?.Type ?? ''))).map((r) => r.key);
 
     async function handleDelete() {
         const ev = confirmDelete;
@@ -434,9 +373,9 @@ export function FamilyTimeline({
     }
 
     return (
-        <div className="card card-pad mb-[18px]" ref={eventsRef} tabIndex={-1}>
-            <Timeline items={rows} />
-            {footer && <div className="-mx-4 -mb-4 mt-3 border-t border-border-light">{footer}</div>}
+        <div ref={eventsRef} tabIndex={-1} className="outline-none">
+            <LedgerTimeline items={ledger} keep={keep} />
+            {footer && <div className="ledger-foot">{footer}</div>}
             {confirmDelete && (
                 <ConfirmDialog
                     open
@@ -459,8 +398,14 @@ export function FamilyTimeline({
 }
 
 export function ChildrenList({
-    childList, partner1 = null, partner2 = null, treeId, familyId, canEdit, canDelete, onChanged,
+    childList, partner1 = null, partner2 = null, treeId, familyId, canEdit, canDelete, onChanged, variant = 'card', addSlot,
 }: {
+    /**
+     * `rail`: the v1.1 desktop family page's CHILDREN (#119): serif person rows with
+     * hover Edit and unlink (at once, with Undo), Move inside the Edit panel, and a
+     * plain "Add child" line. `card` is the older numbered card.
+     */
+    variant?: 'card' | 'rail';
     childList: PartnerPerson[];
     /** The family's partners, for each child's relationship to each (#982). */
     partner1?: PartnerPerson | null;
@@ -472,6 +417,8 @@ export function ChildrenList({
     /** Remove and Move…: the delete rung (owner/edit), as the services require (#848). */
     canDelete: boolean;
     onChanged: () => void;
+    /** The rail's own Add child (the finder), in place of the search panel. */
+    addSlot?: React.ReactNode;
 }) {
     const t = useTranslations('families');
     const tf = useTranslations('editFamily');
@@ -528,25 +475,26 @@ export function ChildrenList({
             setBusy(false);
         }
     }
-    async function doRemove() {
-        if (!confirmRemove) return;
+    async function doRemove(target = confirmRemove) {
+        if (!target) return;
         setBusy(true);
         try {
             const client = await getDataClient();
-            const change = await client.families.removeChild(familyId, confirmRemove.id, activeTreeId);
+            const change = await client.families.removeChild(familyId, target.id, activeTreeId);
             onChanged();
             // The removal is audited; Undo reverts that entry (#788).
-            offerUndo(change, tCommon('toast_child_removed', { name: confirmRemove.name }), onChanged);
+            offerUndo(change, tCommon('toast_child_removed', { name: target.name }), onChanged);
         } catch { /* surfaced by data layer */ } finally {
             setBusy(false);
             setConfirmRemove(null);
         }
     }
 
+    const rail = variant === 'rail';
     return (
-        <div className="card" ref={listRef} tabIndex={-1}>
+        <div className={rail ? 'rail-block' : 'card'} ref={listRef} tabIndex={-1}>
             {childList.length === 0 ? (
-                <div className="muted py-6 px-4 text-center text-sm">{t('no_children_partnership')}</div>
+                <div className={rail ? 'text-sm text-text-muted' : 'muted py-6 px-4 text-center text-sm'}>{t('no_children_partnership')}</div>
             ) : (
                 childList.map((c, i) => {
                     const name = partnerName(c) || tCommon('unknown');
@@ -566,6 +514,72 @@ export function ChildrenList({
                     const border = i < childList.length - 1 || canEdit ? 'border-b border-b-[color:var(--border-light)]' : '';
                     const editing = editingId === c.Id;
                     const moving = movingId === c.Id;
+                    const openEditor = () => { rememberRowOpener(); setEditingId(c.Id); setDraft({ partner1: stored(c.Partner1Relationship), partner2: stored(c.Partner2Relationship) }); setAdding(false); setMovingId(null); };
+                    const openMove = () => { rememberRowOpener(); setMovingId(c.Id); setEditingId(null); setAdding(false); };
+                    const panels = (
+                        <>
+                            {moving && (
+                                <MoveChildPanel
+                                    childName={name}
+                                    familyId={familyId}
+                                    treeId={activeTreeId}
+                                    busy={busy}
+                                    onPick={(to) => doMove({ id: c.Id, name }, to)}
+                                    onCancel={() => setMovingId(null)}
+                                />
+                            )}
+                            {editing && (
+                                <div className={cx('inline-panel flex flex-col gap-3', !rail && 'mx-3 mb-3')} role="group" aria-label={tCommon('edit_named', { name })} onKeyDown={escapeToCancel(() => setEditingId(null))}>
+                                    {/* One relationship per partner when there are two (#982); with
+                                        one partner, the one value covers both slots. */}
+                                    {shownSlots.map((slot) => (
+                                        <Select
+                                            key={slot}
+                                            className="self-start"
+                                            label={bothPartners
+                                                ? tf('relationship_to', { name: partnerShortName(slot === 'partner1' ? partner1 : partner2) || tCommon('unknown') })
+                                                : tf('relationship_type')}
+                                            valueLabel={draft[slot] ? tf(`rel_${draft[slot].toLowerCase()}`) : tf('rel_unrecorded')}
+                                            options={CHILD_RELATIONSHIP_TYPE_VALUES.map((rt) => ({ key: rt, value: rt, label: tf(`rel_${rt.toLowerCase()}`) }))}
+                                            isSelected={(v) => v === draft[slot]}
+                                            onSelect={(v) => setDraft((d) => (bothPartners ? { ...d, [slot]: v } : { partner1: v, partner2: v }))}
+                                        />
+                                    ))}
+                                    {rail && canDelete && <span><ActionLink onClick={openMove}>{t('move_child_title')}</ActionLink></span>}
+                                    <EditorActions
+                                        size="sm"
+                                        onSave={() => draft.partner1 && draft.partner2 && changeType(c.Id, { partner1: draft.partner1, partner2: draft.partner2 })}
+                                        onCancel={() => setEditingId(null)}
+                                        saving={busy}
+                                        saveDisabled={!draft.partner1 || !draft.partner2}
+                                    />
+                                </div>
+                            )}
+                        </>
+                    );
+                    if (rail) {
+                        return (
+                            <div key={c.Id}>
+                                <PersonRow
+                                    href={`/people/view?id=${c.Id}`}
+                                    name={name}
+                                    initials={getInitials(c.FirstName, c.LastName)}
+                                    sex={c.Sex}
+                                    mediaId={c.PrimaryMediaId ?? null}
+                                    focalX={c.FocalX}
+                                    focalY={c.FocalY}
+                                    focalRadius={c.FocalRadius}
+                                    treeId={treeId}
+                                    nameStyle="serif"
+                                    lifespan={c.BirthDate || c.DeathDate ? <Lifespan birth={c.BirthDate} death={c.DeathDate} status={livingStatus(c)} /> : null}
+                                    role={relLabel}
+                                    edit={canEdit && !editing && !moving ? { label: tCommon('edit_named', { name }), onClick: openEditor } : undefined}
+                                    unlink={canDelete && !editing && !moving ? { label: tCommon('remove_named', { name }), onClick: () => doRemove({ id: c.Id, name }) } : undefined}
+                                />
+                                {panels}
+                            </div>
+                        );
+                    }
                     return (
                         <div key={c.Id} className={border}>
                             <div className="row-host row items-center relative">
@@ -599,7 +613,7 @@ export function ChildrenList({
                                     <div className="pr-3 shrink-0">
                                         <RowActions
                                             editLabel={tCommon('edit_named', { name })}
-                                            onEdit={() => { rememberRowOpener(); setEditingId(c.Id); setDraft({ partner1: stored(c.Partner1Relationship), partner2: stored(c.Partner2Relationship) }); setAdding(false); setMovingId(null); }}
+                                            onEdit={openEditor}
                                             deleteText={tf('remove')}
                                             deleteLabel={tCommon('remove_named', { name })}
                                             onDelete={canDelete ? () => setConfirmRemove({ id: c.Id, name }) : undefined}
@@ -611,7 +625,7 @@ export function ChildrenList({
                                                     label={t('move_child')}
                                                     ariaLabel={t('move_child_named', { name })}
                                                     title={t('move_child_title')}
-                                                    onClick={() => { rememberRowOpener(); setMovingId(c.Id); setEditingId(null); setAdding(false); }}
+                                                    onClick={openMove}
                                                     disabled={busy}
                                                 />
                                             )}
@@ -619,55 +633,23 @@ export function ChildrenList({
                                     </div>
                                 )}
                             </div>
-                            {moving && (
-                                <MoveChildPanel
-                                    childName={name}
-                                    familyId={familyId}
-                                    treeId={activeTreeId}
-                                    busy={busy}
-                                    onPick={(to) => doMove({ id: c.Id, name }, to)}
-                                    onCancel={() => setMovingId(null)}
-                                />
-                            )}
-                            {editing && (
-                                <div className="inline-panel mx-3 mb-3 flex flex-col gap-3" role="group" aria-label={tCommon('edit_named', { name })} onKeyDown={escapeToCancel(() => setEditingId(null))}>
-                                    {/* One relationship per partner when there are two (#982); with
-                                        one partner, the one value covers both slots. */}
-                                    {shownSlots.map((slot) => (
-                                        <Select
-                                            key={slot}
-                                            className="self-start"
-                                            label={bothPartners
-                                                ? tf('relationship_to', { name: partnerShortName(slot === 'partner1' ? partner1 : partner2) || tCommon('unknown') })
-                                                : tf('relationship_type')}
-                                            valueLabel={draft[slot] ? tf(`rel_${draft[slot].toLowerCase()}`) : tf('rel_unrecorded')}
-                                            options={CHILD_RELATIONSHIP_TYPE_VALUES.map((rt) => ({ key: rt, value: rt, label: tf(`rel_${rt.toLowerCase()}`) }))}
-                                            isSelected={(v) => v === draft[slot]}
-                                            onSelect={(v) => setDraft((d) => (bothPartners ? { ...d, [slot]: v } : { partner1: v, partner2: v }))}
-                                        />
-                                    ))}
-                                    <EditorActions
-                                        size="sm"
-                                        onSave={() => draft.partner1 && draft.partner2 && changeType(c.Id, { partner1: draft.partner1, partner2: draft.partner2 })}
-                                        onCancel={() => setEditingId(null)}
-                                        saving={busy}
-                                        saveDisabled={!draft.partner1 || !draft.partner2}
-                                    />
-                                </div>
-                            )}
+                            {panels}
                         </div>
                     );
                 })
             )}
-            {canEdit && (adding ? (
-                <div className="inline-panel m-3 flex flex-col gap-3" role="group" aria-label={tf('add_child')} data-testid="add-child-picker" onKeyDown={escapeToCancel(() => setAdding(false))}>
+            {canEdit && addSlot}
+            {canEdit && !addSlot && (adding ? (
+                <div className={cx('inline-panel flex flex-col gap-3', rail ? 'mt-2' : 'm-3')} role="group" aria-label={tf('add_child')} data-testid="add-child-picker" onKeyDown={escapeToCancel(() => setAdding(false))}>
                     <PersonPicker ref={addPickerRef} value={null} onChange={(pp) => pp && addChild(pp.Id)} showSex showDates excludeIds={childList.map((c) => c.Id)} treeId={activeTreeId} placeholder={tf('search_child_placeholder')} inline />
                     <div className="row gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>{tCommon('cancel')}</Button>
                     </div>
                 </div>
             ) : (
-                <AddRow ref={addRef} label={tf('add_child')} onClick={() => { setAdding(true); setEditingId(null); setMovingId(null); }} className="rounded-b-card" />
+                rail
+                    ? <div className="ledger-foot ledger-foot--plain"><AddRow ref={addRef} label={tf('add_child')} onClick={() => { setAdding(true); setEditingId(null); setMovingId(null); }} /></div>
+                    : <AddRow ref={addRef} label={tf('add_child')} onClick={() => { setAdding(true); setEditingId(null); setMovingId(null); }} className="rounded-b-card" />
             ))}
             {confirmRemove && (
                 <ConfirmDialog open variant="calm" tone="danger" title={t('remove_child_q')} body={t('remove_child_q_body', { name: confirmRemove.name })} confirmLabel={tCommon('remove')} cancelLabel={tCommon('cancel')} busy={busy} onConfirm={doRemove} onCancel={() => setConfirmRemove(null)} />

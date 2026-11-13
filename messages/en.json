@@ -147,6 +147,8 @@
     "back_to_cases": "Back to cases",
     "back_to_library": "Back to library",
     "back_to_places": "Back to places",
+    "time_today_at": "Today {time}",
+    "time_yesterday_at": "Yesterday {time}",
     "time_just_now": "just now",
     "time_minutes_ago": "{count}m ago",
     "time_hours_ago": "{count}h ago",
@@ -311,7 +313,12 @@
     "portrait_of": "{name}’s profile picture",
     "delete_body_phone": "{count, plural, =0 {The photo goes. No one is tagged in it.} one {The photo and its face tag go ({names}). The person stays in the tree.} other {The photo and its # face tags go ({names}). The people stay in the tree.}}",
     "delete_photo_action": "Delete photo",
-    "photo_deleted": "Photo deleted"
+    "photo_deleted": "Photo deleted",
+    "set_family_photo": "Set as family photo",
+    "current_family_photo": "Family photo",
+    "stop_family_photo": "Stop using as family photo",
+    "family_photo_set": "Family photo set",
+    "family_photo_removed": "Family photo removed"
   },
   "faceTags": {
     "tag_people": "Tag people",
@@ -859,7 +866,34 @@
     "list_annulled": "Annulled",
     "list_no_children": "No children",
     "list_children_died_young": "{children}, {count} died young",
-    "new_family": "New family"
+    "new_family": "New family",
+    "ledger_partner_age": "{name} {age}",
+    "ledger_birth_of": "Birth of {name}",
+    "years_together": "{count, plural, one {# year together} other {# years together}}",
+    "cover_title_shared": "{a} & {b} {last}",
+    "about_heading": "About this family",
+    "about_add": "Add a note about this family",
+    "about_hint": "A few sentences about this family. It shows here, beside the portrait.",
+    "about_edit": "Edit note",
+    "about_remove": "Remove note",
+    "about_placeholder": "What should someone know about this family?",
+    "about_saved": "Note saved",
+    "about_removed": "Note removed",
+    "rail_partners": "Partners",
+    "rail_partner_unknown": "Partner unknown",
+    "age_at_marriage": "{age} at marriage",
+    "children_n": "{count, plural, one {# child} other {# children}}",
+    "no_children_short": "no children",
+    "where_they_lived": "Where they lived",
+    "places_n": "{count, plural, one {# place} other {# places}}",
+    "life_together": "Life together",
+    "section_media": "Media",
+    "section_notes": "Notes",
+    "section_sources": "Sources",
+    "ended_derived": "Worked out from {name}’s death.",
+    "find_or_add": "Find or add someone",
+    "type_saved": "Family type saved",
+    "family_photo_alt": "Family photo of {family}"
   },
   "geocodingPrompt": {
     "title": "Look up places online?",
@@ -1709,7 +1743,7 @@
   },
   "audit": {
     "title": "Audit log",
-    "subtitle": "Track all changes made to your tree data",
+    "subtitle": "Every change to this tree, who made it, and a way to undo it",
     "filter_all": "All types",
     "filter_person": "Person",
     "filter_family": "Family",
@@ -1742,7 +1776,7 @@
     "col_action": "Action",
     "col_type": "Type",
     "col_record": "Record",
-    "col_changes": "Changes",
+    "col_changes": "Change",
     "col_revert": "Revert",
     "action_created": "Created",
     "action_updated": "Updated",
@@ -1813,8 +1847,8 @@
     "details_updated": "Internal details updated",
     "unknown_user": "Unknown user",
     "filter_label": "Filter",
-    "filter_date": "Date",
-    "filter_record_placeholder": "Filter record…",
+    "filter_date": "When",
+    "filter_record_placeholder": "Search records",
     "action_all": "All actions",
     "who_everyone": "Everyone",
     "date_any": "Any date",
@@ -1894,7 +1928,10 @@
     "summary_names_added": "added {names}",
     "summary_names_changed": "changed {names}",
     "summary_names_removed": "removed {names}",
-    "revert_n": "Revert {count, plural, one {# change} other {# changes}}"
+    "revert_n": "Revert {count, plural, one {# change} other {# changes}}",
+    "summary_family_photo_set": "Set as family photo",
+    "summary_family_photo_removed": "Family photo removed",
+    "rec_family_photo": "Family photo of <r>{record}</r>"
   },
   "cases": {
     "research_journal": "Research journal",
@@ -2462,7 +2499,12 @@
     "col_why": "Why",
     "help_rowid_title": "The row ID column",
     "help_dropdowns_title": "The dropdown columns",
-    "help_duplicates_title": "How duplicates are found"
+    "help_duplicates_title": "How duplicates are found",
+    "action_download": "Download",
+    "action_export": "Export",
+    "action_choose": "Choose file",
+    "action_start": "Start",
+    "action_restore": "Restore"
   },
   "spreadsheetImport": {
     "title": "Import using template",
@@ -3103,7 +3145,6 @@
     "unnamed": "(Unnamed)",
     "col_type": "Type",
     "col_name": "Name",
-    "col_dates": "Dates used",
     "vtype_given": "Given",
     "vtype_nickname": "Nickname",
     "vtype_maiden": "Maiden",
@@ -3116,9 +3157,6 @@
     "unset_primary": "Primary name",
     "variant_remove_title": "Remove this name?",
     "variant_remove_body": "Remove “{name}” from this person's names & aliases?",
-    "dates_birth_death": "birth – death",
-    "dates_birth_present": "birth – present",
-    "throughout_life": "throughout life",
     "variant_used_from": "Used from",
     "variant_used_to": "Used to",
     "dates_from": "from {date}",
@@ -3286,7 +3324,7 @@
   },
   "relationship": {
     "title": "Relationship calculator",
-    "subtitle": "Find out how two people are related in your family tree",
+    "subtitle": "Pick two people to see how they’re connected",
     "first_person": "First person",
     "second_person": "Second person",
     "swap": "Swap",
@@ -3299,8 +3337,12 @@
     "path_child_of": "child of",
     "path_parent_of": "parent of",
     "path_partner_of": "partner of",
-    "shared_ancestor": "Shared ancestor: {name}",
-    "show_in_tree": "Show in the tree"
+    "shared_ancestor": "Their shared ancestor is {name}.",
+    "show_in_tree": "Show in the tree",
+    "result": "Result",
+    "node_first": "first person",
+    "node_second": "second person",
+    "node_shared_ancestor": "shared ancestor"
   },
   "lifespan": {
     "born": "b. <d>{date}</d>",
@@ -3312,7 +3354,7 @@
   },
   "dataChecks": {
     "title": "Data checks",
-    "subtitle": "Dates in your tree that contradict each other, or look unusual.",
+    "subtitle": "Dates in this tree that contradict each other or look unusual",
     "filter_label": "Show",
     "all_checks": "All checks",
     "group_impossible": "Impossible",
@@ -4958,7 +5000,10 @@
     "finder_none": "No one in this tree matches “{query}”",
     "finder_add_n": "Add {count, plural, one {# person} other {# people}}",
     "finder_cancel": "Cancel",
-    "range_of": "{from}–{to} of {total}"
+    "range_of": "{from}–{to} of {total}",
+    "more_events": "{count, plural, one {# more event} other {# more events}}",
+    "show_more_events": "Show {count, plural, one {# more event} other {# more events}}",
+    "show_fewer": "Show fewer"
   },
   "personDesktop": {
     "this_person": "this person",
@@ -5053,10 +5098,24 @@
     "note_saved": "Note saved",
     "note_added": "Note added",
     "note_deleted": "Note deleted",
-    "note_now_biography": "Note is now the biography"
+    "note_now_biography": "Note is now the biography",
+    "lifeline_places": "{from} to {to}",
+    "age_n": "age {age}",
+    "notes_n": "{count, plural, one {# note} other {# notes}}",
+    "hide_notes": "Hide notes",
+    "no_events": "No life events yet.",
+    "no_events_editor": "No life events yet. Start with a birth, or any event you know about.",
+    "media_on_timeline": "{count} also on the timeline",
+    "bio_hint": "A few sentences about who {name} was. It shows here, beside the portrait.",
+    "partners_children_heading": "{count, plural, one {Partner and children} other {Partners and children}}",
+    "partners_heading": "{count, plural, one {Partner} other {Partners}}",
+    "married_year": "m. {year}",
+    "n_of_total": "{n} of {m}",
+    "name_on_record": "Name on record",
+    "name_shown": "shown"
   },
   "addPersonDialog": {
-    "title": "Add a person",
+    "title": "New person",
     "save_open": "Save and open",
     "save_another": "Save and add another",
     "cite": "Cite a source",
@@ -5073,7 +5132,8 @@
     "find_parents_hint": "The family {name} was born or adopted into",
     "find_partner": "Find a partner",
     "find_partner_hint": "A spouse or partner of {name}",
-    "more_on_page": "Children, notes and the cause of death are added on their page after saving."
+    "more_on_page": "Children, notes and the cause of death are added on their page after saving.",
+    "cite_short": "Cite"
   },
   "newFamilyDialog": {
     "save_open": "Save and open",

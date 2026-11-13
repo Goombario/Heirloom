@@ -46,7 +46,7 @@ function renderPanel() {
                 language="en"
                 renderCitePin={() => null}
                 tTypes={((k: string) => ({ PROB: 'Probate', BIRT: 'Birth' } as Record<string, string>)[k] ?? k) as never}
-                placeCoords={{}}
+               
                 canEdit
                 canDelete
                 onChanged={() => {}}

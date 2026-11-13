@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/app/hooks/useTimestamp', () => ({
-  useTimestamp: () => ({ timestamp: (v: string) => String(v), activityTime: (v: string) => String(v) }),
+  useTimestamp: () => ({ timestamp: (v: string) => String(v), activityTime: (v: string) => String(v), dayTime: (v: string) => String(v) }),
 }));
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';

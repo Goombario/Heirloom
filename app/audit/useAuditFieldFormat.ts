@@ -29,7 +29,7 @@ export function useAuditFieldFormat(refs: Refs = EMPTY_AUDIT_REFS) {
     const label = useCallback((s: AuditFieldSpec) => t(`field_${s.label}`), [t]);
 
     const value = useCallback((s: AuditFieldSpec, raw: unknown): string => {
-        if (raw == null || raw === '') return `(${tCommon('empty_value')})`;
+        if (raw == null || raw === '') return tCommon('empty_value');
         const text = Array.isArray(raw) ? raw.join(', ') : String(raw);
         switch (s.kind) {
             case 'date':

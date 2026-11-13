@@ -156,6 +156,19 @@ export async function getPrimaryMediaForPerson(personId: number, treeId: number)
     return (result.rows[0] as Media) || null;
 }
 
+/** The family photo (#119, ADR 0047), tree-scoped, with the photo's own focal point. */
+export async function getFamilyPhoto(familyId: number, treeId: number): Promise<Media | null> {
+    const result = await query(
+        `SELECT ${publicMediaColumns('m')}
+         FROM "MediaLink" l
+         JOIN "Media" m ON m."Id" = l."MediaId" AND m."TreeId" = $2
+         WHERE l."OwnerTable" = 'Families' AND l."OwnerId" = $1 AND l."OwnerFact" IS NULL AND l."IsPrimary" = 1
+         LIMIT 1`,
+        [familyId, treeId],
+    );
+    return (result.rows[0] as Media) || null;
+}
+
 /**
  * Create a new media item
  */

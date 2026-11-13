@@ -54,22 +54,17 @@ describe('PersonGalleryCard', () => {
     expect(screen.getByRole('button', { name: 'Baptism, Birth' })).toBeInTheDocument();
   });
 
-  it('uses the standard grid at every count, with no strip (#780)', () => {
-    const { unmount } = render(<PersonGalleryCard media={media} personId={7} treeId={1} canEdit canDelete onPrimaryChanged={vi.fn()} />);
-    expect(screen.getByTestId('media-gallery-grid')).toHaveClass('grid', 'grid-cols-[repeat(auto-fill,minmax(104px,1fr))]');
-    unmount();
-    const four = [10, 20, 30, 40].map((Id, i) => ({ ...media[i % 2], Id }));
-    render(<PersonGalleryCard media={four} personId={7} treeId={1} canEdit canDelete onPrimaryChanged={vi.fn()} />);
-    expect(screen.getByTestId('media-gallery-grid')).toHaveClass('grid', 'grid-cols-[repeat(auto-fill,minmax(104px,1fr))]');
+  it('shows one row of six squares, the sixth "+N" when more remain (locked board)', () => {
+    const nine = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((Id, i) => ({ ...media[i % 2], Id, IsPersonPrimary: false, IsTaggedHere: false, IsOwned: true }));
+    render(<PersonGalleryCard media={nine} personId={7} treeId={1} canEdit canDelete onPrimaryChanged={vi.fn()} />);
+    expect(screen.getByTestId('media-gallery-grid')).toHaveClass('media-strip');
+    expect(screen.getAllByRole('button')).toHaveLength(6);
+    expect(screen.getByRole('button', { name: 'more_count' })).toHaveTextContent('+4');
   });
 
-  it('keeps the permission-gated empty upload action', () => {
-    const onAddPhoto = vi.fn();
-    const { rerender } = render(<PersonGalleryCard media={[]} personId={7} treeId={1} canEdit canDelete onPrimaryChanged={vi.fn()} onAddPhoto={onAddPhoto} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Add picture' }));
-    expect(onAddPhoto).toHaveBeenCalledOnce();
-    rerender(<PersonGalleryCard media={[]} personId={7} treeId={1} canEdit={false} canDelete={false} onPrimaryChanged={vi.fn()} onAddPhoto={onAddPhoto} />);
-    expect(screen.queryByRole('button', { name: 'Add picture' })).not.toBeInTheDocument();
+  it('renders nothing when there is no media: the page shows its Add media row', () => {
+    const { container } = render(<PersonGalleryCard media={[]} personId={7} treeId={1} canEdit canDelete onPrimaryChanged={vi.fn()} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('passes primary, tag, and delete refresh callbacks to the lightbox', () => {

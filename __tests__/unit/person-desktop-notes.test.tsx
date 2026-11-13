@@ -46,7 +46,7 @@ describe('desktop person Notes (#49)', () => {
   it('lists every note labelled by what it is about', async () => {
     section();
     await screen.findByText('Listed as a servant.');
-    const labels = screen.getAllByRole('listitem').map((li) => li.querySelector('.eyebrow')?.textContent);
+    const labels = screen.getAllByRole('listitem').map((li) => li.querySelector('.note-list__label')?.textContent);
     expect(labels).toEqual(['Biography', 'About Anna', 'Birth · 1868', 'Census · 1880']);
   });
 
