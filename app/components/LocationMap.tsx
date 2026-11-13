@@ -50,6 +50,16 @@ interface LocationMapProps {
   /** Space kept clear of pins when framing them, in pixels: the place page's cover lays
    *  its name over the map's foot (#56), so the pins frame above it. */
   insets?: { top: number; right: number; bottom: number; left: number };
+  /** Re-frames the pins whenever the map's box changes size, until the reader pans or
+   *  zooms it themselves: the Explore map shares its row with a pane that can be dragged
+   *  wider or narrower, so a view framed for the old width would cut pins off. */
+  refitOnResize?: boolean;
+}
+
+/** Room kept around framed pins. A full map's pin stands 40px tall above its point, so
+ *  the top keeps more than the sides, or the northernmost pin's head is cut off. */
+function fitPadding(variant: 'full' | 'mini') {
+  return variant === 'full' ? { top: 60, right: 40, bottom: 30, left: 40 } : 30;
 }
 
 /** Stable empty default — a fresh `[]` in the parameter list would be a new array every
@@ -174,6 +184,7 @@ export default function LocationMap({
   gestures = false,
   onBackgroundClick,
   insets,
+  refitOnResize = false,
 }: LocationMapProps) {
   const t = useTranslations('common');
   const { resolvedTheme } = useTheme();
@@ -187,6 +198,8 @@ export default function LocationMap({
   markersRef.current = markers;
   // Read once, when the map is built: the cover's insets never change.
   const insetsRef = useRef(insets);
+  const refitRef = useRef(refitOnResize);
+  refitRef.current = refitOnResize;
   const markersKey = markers
     .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}|${m.ghost ? 'g' : ''}`)
     .join(';');
@@ -291,7 +304,7 @@ export default function LocationMap({
           const bounds = new maplibregl.LngLatBounds();
           current.forEach((m) => bounds.extend([m.lng, m.lat]));
           // animate:false — snap to the framed view instead of a long zoom-out fly on load.
-          map.fitBounds(bounds, { padding: 30, maxZoom: 14, animate: false });
+          map.fitBounds(bounds, { padding: fitPadding(variant), maxZoom: 14, animate: false });
         }
         framedKeyRef.current = currentKey;
 
@@ -394,7 +407,7 @@ export default function LocationMap({
       } else if (next.length > 1) {
         const bounds = new maplibregl.LngLatBounds();
         next.forEach((m) => bounds.extend([m.lng, m.lat]));
-        map.fitBounds(bounds, { padding: 30, maxZoom: 14, animate: false });
+        map.fitBounds(bounds, { padding: fitPadding(variant), maxZoom: 14, animate: false });
       }
     } else if (next.length === 1 && !map.getBounds().contains([next[0].lng, next[0].lat])) {
       // Same place, moved right off the screen — typed coordinates can do that, where a
@@ -441,10 +454,40 @@ export default function LocationMap({
   useEffect(() => {
     const el = elRef.current;
     if (!map || !el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => map.resize());
+    // A pan or zoom of the reader's own (it carries an originalEvent; a fit does not)
+    // keeps their view through later resizes, until a drill frames a new set of places.
+    let moved = false;
+    let movedFor = framedKeyRef.current;
+    const onMove = (e: { originalEvent?: unknown }) => {
+      if (!e.originalEvent) return;
+      moved = true;
+      movedFor = framedKeyRef.current;
+    };
+    map.on('movestart', onMove);
+    let frame = 0;
+    const ro = new ResizeObserver(() => {
+      map.resize();
+      if (!refitRef.current) return;
+      if (moved && movedFor === framedKeyRef.current) return;
+      moved = false;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const gl = glRef.current;
+        const pins = markersRef.current.filter((m) => !m.ghost);
+        if (!gl || pins.length === 0) return;
+        if (pins.length === 1) { map.setCenter([pins[0].lng, pins[0].lat]); return; }
+        const bounds = new gl.LngLatBounds();
+        pins.forEach((m) => bounds.extend([m.lng, m.lat]));
+        map.fitBounds(bounds, { padding: fitPadding(variant), maxZoom: 14, animate: false });
+      });
+    });
     ro.observe(el);
-    return () => ro.disconnect();
-  }, [map]);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(frame);
+      map.off('movestart', onMove);
+    };
+  }, [map, variant]);
 
   if (failed) {
     return (

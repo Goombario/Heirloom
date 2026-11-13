@@ -10,7 +10,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FilterChip } from '@/app/components/ui';
 import { ScrollArea } from '@/app/components/ui/ScrollArea';
 import { ArrowDown, ArrowUp, ChevronRight } from '@/lib/icons';
 import { usePrefetchPlaceDetail } from '@/lib/places/prefetch';
@@ -73,9 +72,6 @@ export type ExploreSort = 'records-desc' | 'records-asc' | 'name-asc' | 'name-de
 const SORT_KEY = 'places-explore-sort';
 const SORTS: ExploreSort[] = ['records-desc', 'records-asc', 'name-asc', 'name-desc'];
 
-/** The rail's two "places to fix" filters, the dropped List view's main job (#56). */
-type FixFilter = 'none' | 'inherited';
-
 function sortRows(rows: DrillRowData[], sort: ExploreSort): DrillRowData[] {
   if (sort === 'records-desc') return rows; // the tree's own order: records, then pinned, then name
   const byName = (a: DrillRowData, b: DrillRowData) => label(a.node.name).localeCompare(label(b.node.name));
@@ -117,20 +113,6 @@ export interface ExploreDrillProps {
   onRowHover?: (node: PlaceTreeNode | null) => void;
   /** Clears the bar's filter, from the "no matches" line. */
   onClearSearch?: () => void;
-}
-
-/** How many places in the whole tree are in each "to fix" state. */
-function useFixCounts(roots: PlaceTreeNode[]): Record<FixFilter, number> {
-  const counts = { none: 0, inherited: 0 };
-  const walk = (ns: PlaceTreeNode[]) => {
-    for (const n of ns) {
-      if (n.pinState === 'none') counts.none++;
-      else if (n.pinState === 'inherited') counts.inherited++;
-      walk(n.children);
-    }
-  };
-  walk(roots);
-  return counts;
 }
 
 function SortHead({ label: text, state, active, dir, onClick, align }: {
@@ -184,20 +166,16 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
   const prefetch = usePrefetchPlaceDetail();
   const q = foldForSearch(search.trim());
   const [sort, setSort] = useExploreSort();
-  const [fix, setFix] = useState<FixFilter | null>(null);
   // Search is GLOBAL: a query matches every place in the tree, not only the
   // jurisdiction you happen to be standing in. Matching the current subtree meant
   // a hit two levels up was unreachable without manually navigating there first.
-  // A "places to fix" chip is global the same way: it lists every place in that
-  // state, with its path, so picking one moves the breadcrumb to it.
-  const searching = q.length > 0 || fix != null;
+  const searching = q.length > 0;
   // Search rows carry gazetteer ancestry as their region text (#417); level rows
   // keep the name-derived region, because every row is a child of the jurisdiction
   // the breadcrumb already names.
   const rows = sortRows(searching
-    ? flattenWithAncestry(state.roots).filter((row) => (q.length === 0 || matchesQuery(row, q)) && (fix == null || row.node.pinState === fix))
+    ? flattenWithAncestry(state.roots).filter((row) => matchesQuery(row, q))
     : levelRows(state.children), sort);
-  const fixCounts = useFixCounts(state.roots);
   // The count column widens for 4+ digits, the same width on every row of the level.
   const countWidth = `${Math.max(3, ...rows.map((r) => r.node.rolledCount.toLocaleString().length))}ch`;
 
@@ -289,12 +267,8 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
         )}
       </nav>
 
-      {/* The two "places to fix" chips, then the sortable column heads (#56). */}
-      <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5" role="group" aria-label={t('fix_filters_label')}>
-        <FilterChip label={t('not_on_map_chip')} count={fixCounts.none} active={fix === 'none'} onClick={() => setFix(fix === 'none' ? null : 'none')} />
-        <FilterChip label={t('borrowed_pin_chip')} count={fixCounts.inherited} active={fix === 'inherited'} onClick={() => setFix(fix === 'inherited' ? null : 'inherited')} />
-      </div>
-      <div className="explore-row explore-row--head grid items-center gap-x-2.5 px-3 pt-2 pb-1.5 border-b border-border-light text-xs text-text-muted">
+      {/* The sortable column heads (#56). */}
+      <div className="explore-row explore-row--head grid items-center gap-x-2.5 px-3 pt-2.5 pb-1.5 border-b border-border-light text-xs text-text-muted">
         <span aria-hidden="true" />
         <SortHead label={t('col_place')} state={ariaSort('name')} active={sort.startsWith('name')} dir={sort === 'name-desc' ? 'down' : 'up'} onClick={() => sortBy('name')} />
         <span />
@@ -314,8 +288,8 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
         {rows.length === 0 ? (
           <div className="py-6 text-center">
             <p className="text-xs text-text-muted m-0">{t('no_results')}</p>
-            {(fix != null || (q.length > 0 && onClearSearch)) && (
-              <button type="button" onClick={() => { setFix(null); if (q.length > 0) onClearSearch?.(); }}
+            {q.length > 0 && onClearSearch && (
+              <button type="button" onClick={onClearSearch}
                 className="mt-1.5 text-xs text-link underline bg-transparent border-0 cursor-pointer focus-ring">
                 {t('clear_filter')}
               </button>

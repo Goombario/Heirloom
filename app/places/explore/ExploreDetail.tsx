@@ -28,6 +28,8 @@ import { MapPin, ChevronRight } from '@/lib/icons';
 import { sortableYear } from '@/lib/date-utils';
 import type { PlaceDetail } from '@/lib/data/types';
 import { placeHref } from '@/lib/places/place-key';
+import { PinMark } from '../PinMark';
+import type { PlaceTreeNode } from '@/lib/places/hierarchy';
 
 // The pane is a preview beside the drill, and every entry mounts a PersonAvatar
 // (one media resolution each — an IndexedDB blob read in the static build). A
@@ -51,9 +53,18 @@ export interface ExploreDetailProps {
   treeId: number | null;
   /** Picks a place listed under Places within, in Explore itself. */
   onPickPlace?: (id: number) => void;
+  /** What the pane shows while nothing is picked: the level being browsed. */
+  overview?: ExploreOverview;
 }
 
-export function ExploreDetail({ placeName, placeId, treeId, onPickPlace }: ExploreDetailProps) {
+/** The nothing-picked pane (#56 review): the tree's places at a glance, and where to start. */
+export interface ExploreOverview {
+  records: number;
+  /** The places with the most records, busiest first. */
+  top: PlaceTreeNode[];
+}
+
+export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overview }: ExploreDetailProps) {
   const [allPeople, setAllPeople] = useState<string | null>(null);
   const [allPlaces, setAllPlaces] = useState<string | null>(null);
   const t = useTranslations('places');
@@ -117,13 +128,35 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace }: Explo
   }, [factRows]);
 
   if (!placeName) {
-    // Centred inside the pane — NOT its own card. The pane keeps its width whether or
-    // not something is selected, so choosing a place never moves the map.
+    // The pane stays up with nothing picked (#56 review, 2026-11-13), so the map beside
+    // it never moves: it names the whole tree and offers its busiest places to start from.
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-2 p-10 text-center text-text-muted">
-        <MapPin size={26} aria-hidden="true" className="opacity-60" />
-        <p className="text-sm">{t('explore_select_prompt')}</p>
-        <p className="text-xs opacity-85">{t('explore_drill_hint')}</p>
+      <div className="flex flex-col">
+        <div className="px-5 pt-5 pb-4 border-b border-border-light">
+          <h2 className="serif text-2xl font-semibold text-text leading-tight m-0">{t('explore_all_places')}</h2>
+          {overview && <p className="mt-1.5 mb-0 text-sm text-text-secondary tabular-nums">{t('records_total', { count: overview.records })}</p>}
+          <p className="mt-3 mb-0 flex items-start gap-2 text-sm text-text-muted">
+            <MapPin size={16} aria-hidden="true" className="shrink-0 mt-px" />
+            <span>{t('explore_overview_hint')}</span>
+          </p>
+        </div>
+        {overview && overview.top.length > 0 && (
+          <section className="px-5 py-4">
+            <SectionHeader level="rail" title={t('explore_most_records')} />
+            <div className="flex flex-col">
+              {overview.top.map((p) => (
+                <button key={p.id ?? p.name} type="button" onClick={() => { if (p.id != null) onPickPlace?.(p.id); }}
+                  className="flex items-center gap-2.5 -mx-2 px-2 py-2 min-h-10 rounded-lg text-left bg-transparent border-0 cursor-pointer hover:bg-[color:var(--color-hover-surface)] focus-ring">
+                  <PinMark state={p.pinState} />
+                  <span className="flex-1 min-w-0 serif text-sm font-semibold text-text truncate">{p.name.split(',')[0]?.trim() ?? p.name}</span>
+                  <span className="text-xs text-text-secondary tabular-nums">{p.rolledCount.toLocaleString()}</span>
+                  <ChevronRight size={14} className="text-text-muted shrink-0" aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 mb-0 text-xs text-text-muted">{t('explore_drill_hint')}</p>
+          </section>
+        )}
       </div>
     );
   }
