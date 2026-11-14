@@ -7,7 +7,7 @@ import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
 import { Button, PageShell } from '@/app/components/ui';
-import { DetailSkeleton } from '@/app/components/SkeletonLoader';
+import { WorkspaceSkeleton } from '@/app/components/SkeletonLoader';
 import RecordNotFound from '@/app/components/RecordNotFound';
 import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
@@ -16,6 +16,7 @@ import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useCaseDetail } from './useCaseDetail';
 import { PhoneCaseSkeleton } from './phone/PhoneCaseSkeleton';
 import { PhoneWorkspace } from './phone/PhoneWorkspace';
+import { useJournalCitationPicks } from './useJournalCitationPicks';
 import { ResearchWorkspace } from './desktop/ResearchWorkspace';
 import { StartCase } from './desktop/StartCase';
 
@@ -41,6 +42,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
     } = cd;
 
     const tCite = useTranslations('citeSheet');
+    const citationPicks = useJournalCitationPicks(caseData, cd.showComposerCite, activeTreeId);
     // Footnote numbers for the preview: each source's first appearance in the list.
     const citationNumbers = useMemo(() => {
         const numbers = new Map<number, number>();
@@ -56,7 +58,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
         // dropped a full layout in. Same DetailSkeleton the person and family detail
         // pages use — the shapes (hero, rail, body) match this page's layout.
         // A phone gets its own: the case page there is a band and tabs, not a hero and rail.
-        return isMobile ? <PhoneCaseSkeleton /> : <DetailSkeleton heroTone="light" />;
+        return isMobile ? <PhoneCaseSkeleton /> : <WorkspaceSkeleton />;
     }
 
     if (notFound) return <RecordNotFound record="case" />;
@@ -181,6 +183,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
                     factId={null}
                     factLabel={caseData.Title || t('new_case_label')}
                     onClose={() => cd.setShowComposerCite(false)}
+                    citationPicks={citationPicks}
                     onPending={(pending) => {
                         cd.setPendingCommentCite(pending);
                         cd.setShowComposerCite(false);

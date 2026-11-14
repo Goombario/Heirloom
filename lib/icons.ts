@@ -58,8 +58,6 @@ export {
   Copy,            // Upload tile: this file was picked twice in one batch (#592)
   Pencil,          // Edit / inline edit trigger
   StickyNote,      // Show/hide an event row's attached notes (life-events timeline)
-  Bookmark,        // Make preferred (notes rail row menu)
-  BookmarkX,       // Unset preferred (notes rail row menu)
   Eye,             // Show names/boxes toggle
   EyeOff,          // Hide names/boxes toggle
   Lock,            // Locked / can't untag indicator

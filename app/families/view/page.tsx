@@ -12,7 +12,7 @@ import { DetailSkeleton } from '@/app/components/SkeletonLoader';
 // HTML. The no-blank guarantee comes from `useFamilyDetail`'s cold-load `delay: 0`.
 export default function Page() {
   return (
-    <Suspense fallback={<DetailSkeleton />}>
+    <Suspense fallback={<DetailSkeleton portrait="split" />}>
       <FamilyDetailView />
     </Suspense>
   );

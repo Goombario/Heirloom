@@ -12,6 +12,7 @@ import { getInitials } from '@/lib/utils/initials';
 import { avatarClass } from '@/lib/utils/avatar';
 import type { Note } from '@/lib/data/types';
 import type { NameVariant } from '@/app/components/person-form/NamesPanel';
+import { prefetchPerson } from '../personCache';
 import type { CitationFactDescriptor } from '@/app/components/citations/types';
 import type { CiteSheetsSlot } from '@/app/components/citations/CiteSheets';
 import { groupCitationFactsBySource, type SourceNumbers } from '@/app/components/citations/factDescriptors';
@@ -141,13 +142,14 @@ const town = (place: string | null | undefined) => place?.split(',')[0]?.trim() 
 
 /* ── Person rows ──────────────────────────────────────────────────────────── */
 
-function PersonRow({ person, sub, divided }: { person: Person; sub?: string; divided?: boolean }) {
+function PersonRow({ person, sub, divided, treeId }: { person: Person; sub?: string; divided?: boolean; treeId: number | null }) {
     const t = useTranslations('mobilePerson');
     const name = `${person.FirstName ?? ''} ${person.LastName ?? ''}`.trim() || t('unknown');
     const years = <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} />;
     return (
         <MobileRow
             href={`/people/view?id=${person.Id}`}
+            onIntent={() => prefetchPerson(person.Id, treeId)}
             end="leave"
             divided={divided}
             lead={(
@@ -487,7 +489,7 @@ export function OverviewPane({ c }: { c: PaneContext }) {
             {members.length > 0 && (
                 <Section>
                     <Head title={t('family')} />
-                    {members.slice(0, 3).map((m, i) => <PersonRow key={m.person.Id} person={m.person} sub={memberSub(m)} divided={i > 0} />)}
+                    {members.slice(0, 3).map((m, i) => <PersonRow treeId={c.treeId} key={m.person.Id} person={m.person} sub={memberSub(m)} divided={i > 0} />)}
                     {members.length > 3 && (
                         <MobileRow divided label={t('see_all_family')} sub={t('people_count', { count: members.length })} end="chevron" onClick={() => c.onShowTab('family')} />
                     )}
@@ -674,7 +676,7 @@ export function FamilyPane({ c }: { c: PaneContext }) {
                     <Head title={t('parents')} />
                     {c.family.parentFamilies.map((card) => <PersonFamilyRow key={card.familyId} card={card} c={c} />)}
                     {parents.length > 0
-                        ? parents.map((m, i) => <PersonRow key={m.person.Id} person={m.person} sub={relation(m.relation, m.parentLink)} divided={i > 0} />)
+                        ? parents.map((m, i) => <PersonRow treeId={c.treeId} key={m.person.Id} person={m.person} sub={relation(m.relation, m.parentLink)} divided={i > 0} />)
                         : (
                             <>
                                 <p className="m-0 px-4 pb-1 text-base text-text-muted">{t('no_parents')}</p>
@@ -689,7 +691,7 @@ export function FamilyPane({ c }: { c: PaneContext }) {
                     <Head title={t('partner')} />
                     <PersonFamilyRow card={g.card} c={c} />
                     {g.partner
-                        ? <PersonRow person={g.partner} sub={g.marriageDate ? t('married_short', { date: f.year(g.marriageDate) }) : undefined} />
+                        ? <PersonRow treeId={c.treeId} person={g.partner} sub={g.marriageDate ? t('married_short', { date: f.year(g.marriageDate) }) : undefined} />
                         : <p className="m-0 px-4 pt-2.5 pb-1 text-base text-text-muted">{t('partner_unknown')}</p>}
                     {g.children.length > 0 && (
                         <>
@@ -698,7 +700,7 @@ export function FamilyPane({ c }: { c: PaneContext }) {
                                     ? t('children_with', { count: g.children.length, name: g.partner.FirstName.split(/\s+/)[0] })
                                     : t('children_count', { count: g.children.length })}
                             </p>
-                            {g.children.map((k, i) => <PersonRow key={k.Id} person={k} divided={i > 0} />)}
+                            {g.children.map((k, i) => <PersonRow treeId={c.treeId} key={k.Id} person={k} divided={i > 0} />)}
                         </>
                     )}
                 </Section>
@@ -706,7 +708,7 @@ export function FamilyPane({ c }: { c: PaneContext }) {
             {siblings.length > 0 && (
                 <Section first={parents.length === 0 && partners.length === 0 && !editor && c.descendants === 0}>
                     <Head title={t('siblings')} count={siblings.length} />
-                    {siblings.map((m, i) => <PersonRow key={m.person.Id} person={m.person} divided={i > 0} />)}
+                    {siblings.map((m, i) => <PersonRow treeId={c.treeId} key={m.person.Id} person={m.person} divided={i > 0} />)}
                 </Section>
             )}
         </>

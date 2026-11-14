@@ -5,11 +5,10 @@ import { useTranslations } from 'next-intl';
 import { getDataClient } from '@/lib/data';
 import { errorToastKey } from '@/lib/utils/data-error';
 import { useErrorToast } from '@/app/components/useErrorToast';
-import { AddRow, EditorActions, InlineDataError, RowAction, RowActions, fieldClass } from '@/app/components/ui';
+import { ActionLink, AddRow, EditorActions, InlineDataError, InlinePanel, cx, fieldClass } from '@/app/components/ui';
 // The rail has ONE add affordance — the row at the foot of the card. The mockup's
 // second, header-corner "+" went with the built-in title it sat beside.
 import ConfirmDialog from '@/app/components/ConfirmDialog';
-import { Bookmark, BookmarkX } from '@/lib/icons';
 import type { Note, NoteOwnerFact } from '@/lib/data/types';
 import type { LinkOwnerTable } from '@/lib/db/fact-tables';
 
@@ -19,10 +18,10 @@ import type { LinkOwnerTable } from '@/lib/db/fact-tables';
  *
  * The preferred note sits FIRST under its own label and is otherwise styled
  * exactly like the rest: position and label are the only cue, never colour, so
- * the rail reads the same for a colour-blind user. Each row's actions (#760: shown
- * on hover or focus, always on touch) carry
- * make/unset preferred, edit and delete; delete routes through the project's
- * shared confirm dialog.
+ * the rail reads the same for a colour-blind user. A note row is one button that
+ * opens the note's edit panel (#30, the desktop person page's pattern), which holds
+ * Save, Cancel, Delete and the make/unset preferred choice, so no row buttons take
+ * width from the text. Delete routes through the project's shared confirm dialog.
  */
 export function OwnerNotesCard({
     ownerTable,
@@ -227,7 +226,7 @@ export function OwnerNotesCard({
         if (refocusRow === null) return;
         // Scoped to THIS card: the same shared note can be linked to two owners
         // rendered on one page, so a document-wide lookup could focus the twin.
-        const selector = refocusRow === 'add' ? '[data-note-add]' : `[data-note-row="${refocusRow}"] .ev-act`;
+        const selector = refocusRow === 'add' ? '[data-note-add]' : `[data-note-row="${refocusRow}"] [data-note-open]`;
         cardRef.current?.querySelector<HTMLElement>(selector)?.focus();
         setRefocusRow(null);
     }, [refocusRow]);
@@ -408,10 +407,8 @@ export function OwnerNotesCard({
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
             e.preventDefault();
             saveEdit(id);
-        } else if (e.key === 'Escape') {
-            e.stopPropagation();
-            cancelEdit();
         }
+        // Escape belongs to the InlinePanel, which asks before dropping an edit.
         // Blur is deliberately NOT a save or a cancel — the draft simply stays.
     }
 
@@ -437,86 +434,83 @@ export function OwnerNotesCard({
         </div>
     );
 
+    /** The preferred or biography choice inside a note's edit panel, if this card offers one. */
+    function preferredAction(n: Note): { label: string; makePrimary: boolean } | null {
+        if (!showPreferred) return null;
+        if (preferredIsBiography) return n.IsPrimary === 1 ? null : { label: t('use_as_biography'), makePrimary: true };
+        return { label: n.IsPrimary === 1 ? t('clear_primary') : t('make_primary'), makePrimary: n.IsPrimary !== 1 };
+    }
+
+    /** Save any edited text first, so the choice never drops what was typed. */
+    async function choosePreferred(n: Note, makePrimary: boolean) {
+        if (editDraft.trim() && editDraft.trim() !== n.Text.trim()) await saveEdit(n.Id);
+        else setEditingId(null);
+        await togglePrimary(n.Id, makePrimary);
+    }
+
     function renderRow(n: Note, first: boolean) {
         const editing = editingId === n.Id;
+        const choice = editing ? preferredAction(n) : null;
+        const body = (
+            <>
+                {/* Suppressed on a card scoped to ONE fact: every row would carry the
+                    same label, and the rail's own heading already says which record
+                    these belong to. */}
+                {n.OwnerFact && factScope === undefined && (
+                    <span data-testid="note-scope" className={look === 'plain' ? 'note-list__label' : 'eyebrow mb-0.5 block'}>{scopeLabel(t, n.OwnerFact)}</span>
+                )}
+                <span className="block text-base leading-[1.6] text-text whitespace-pre-wrap break-words">{n.Text}</span>
+            </>
+        );
         return (
             <div
                 key={n.Id}
                 data-testid="note-row"
                 data-note-row={n.Id}
-                className={`relative flex items-start gap-1.5 pl-[15px] pr-2.5 py-2 ${editing ? '' : 'row-host'} ${first ? '' : 'border-t border-border-light'}`}
+                className={cx('relative', first ? '' : 'border-t border-border-light')}
             >
                 {editing ? (
-                    <div className="inline-panel flex-1 min-w-0">
-                        <textarea
-                            value={editDraft}
-                            onChange={(e) => setEditDraft(e.target.value)}
-                            onKeyDown={(e) => handleEditKeyDown(e, n.Id)}
-                            rows={4}
-                            aria-label={tc('edit')}
-                            className={`${fieldClass()} serif leading-relaxed resize-y`}
-                            autoFocus
-                        />
-                        <div className="mt-1">
-                            <EditorActions
-                                size="sm"
-                                onSave={() => saveEdit(n.Id)}
-                                onCancel={cancelEdit}
-                                saving={busy}
-                                saveLabel={tc('save')}
-                                saveDisabled={!editDraft.trim()}
-                                leading={<span className="text-xs text-text-muted">{t('save_hint')}</span>}
+                    <div className="px-[15px] py-2">
+                        {/* The note opens into its edit panel (#30): no row buttons take
+                            width from the text. Delete and the preferred choice live here. */}
+                        <InlinePanel
+                            label={t('edit_for', { excerpt: excerpt(n.Text) })}
+                            onSave={() => saveEdit(n.Id)}
+                            onCancel={cancelEdit}
+                            saving={busy}
+                            saveDisabled={!editDraft.trim()}
+                            dirty={editDraft.trim() !== n.Text.trim()}
+                            onDelete={canDelete ? () => setPendingDelete(n.Id) : undefined}
+                            deleteLabel={tc('delete')}
+                        >
+                            <textarea
+                                value={editDraft}
+                                onChange={(e) => setEditDraft(e.target.value)}
+                                onKeyDown={(e) => handleEditKeyDown(e, n.Id)}
+                                rows={4}
+                                aria-label={tc('edit')}
+                                className={`${fieldClass()} serif leading-relaxed resize-y`}
                             />
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        <div className="flex-1 min-w-0">
-                            {/* Suppressed on a card scoped to ONE fact: every row would
-                                carry the same label, and the rail's own heading already
-                                says which record these belong to. */}
-                            {n.OwnerFact && factScope === undefined && (
-                                <div data-testid="note-scope" className={look === 'plain' ? 'note-list__label' : 'eyebrow mb-0.5'}>{scopeLabel(t, n.OwnerFact)}</div>
+                            {choice && (
+                                <div><ActionLink onClick={() => { if (!busy) void choosePreferred(n, choice.makePrimary); }}>{choice.label}</ActionLink></div>
                             )}
-                            <div className="text-base leading-[1.6] text-text whitespace-pre-wrap break-words">
-                                {n.Text}
-                            </div>
-                        </div>
-                        {canEdit && (
-                            // The excerpt names WHICH note each action is for: a screen
-                            // reader's element list would otherwise read five identical
-                            // "Edit" buttons.
-                            <RowActions
-                                compact
-                                editLabel={t('edit_for', { excerpt: excerpt(n.Text) })}
-                                onEdit={() => startEdit(n)}
-                                deleteLabel={t('delete_for', { excerpt: excerpt(n.Text) })}
-                                onDelete={canDelete ? () => setPendingDelete(n.Id) : undefined}
-                                disabled={busy}
-                            >
-                                {showPreferred && preferredIsBiography && n.IsPrimary !== 1 && (
-                                    <RowAction
-                                        icon={<Bookmark size={13} aria-hidden="true" />}
-                                        label={t('use_as_biography')}
-                                        ariaLabel={t('use_as_biography_for', { excerpt: excerpt(n.Text) })}
-                                        onClick={() => togglePrimary(n.Id, true)}
-                                        disabled={busy}
-                                    />
-                                )}
-                                {showPreferred && !preferredIsBiography && (
-                                    <RowAction
-                                        icon={n.IsPrimary === 1
-                                            ? <BookmarkX size={13} aria-hidden="true" />
-                                            : <Bookmark size={13} aria-hidden="true" />}
-                                        label={n.IsPrimary === 1 ? t('clear_primary') : t('make_primary')}
-                                        ariaLabel={t(n.IsPrimary === 1 ? 'clear_primary_for' : 'make_primary_for', { excerpt: excerpt(n.Text) })}
-                                        onClick={() => togglePrimary(n.Id, n.IsPrimary !== 1)}
-                                        disabled={busy}
-                                    />
-                                )}
-                            </RowActions>
-                        )}
-                    </>
+                        </InlinePanel>
+                    </div>
+                ) : canEdit ? (
+                    // The whole note opens its editor. The excerpt names WHICH note,
+                    // so a screen reader's list of buttons doesn't read "Edit" five times.
+                    <button
+                        type="button"
+                        data-note-open
+                        onClick={() => startEdit(n)}
+                        disabled={busy}
+                        aria-label={t('edit_for', { excerpt: excerpt(n.Text) })}
+                        className="block w-full text-left bg-transparent border-0 pl-[15px] pr-2.5 py-2 font-[inherit] cursor-pointer hover:bg-hover-surface focus-ring-inset disabled:cursor-default"
+                    >
+                        {body}
+                    </button>
+                ) : (
+                    <div className="pl-[15px] pr-2.5 py-2">{body}</div>
                 )}
             </div>
         );

@@ -18,6 +18,8 @@ export interface PersonRowProps extends Omit<IdentityProps, 'as' | 'className'> 
   /** Unlink (remove from this family), editors only. Takes effect at once, with an Undo toast. */
   unlink?: RowCommand;
   className?: string;
+  /** Called when the reader shows intent to open the row (hover, focus, touch), to prefetch its page (#65). */
+  onIntent?: () => void;
 }
 
 /**
@@ -26,13 +28,14 @@ export interface PersonRowProps extends Omit<IdentityProps, 'as' | 'className'> 
  * years, role tag) inside a link, with the hover actions as a sibling of the link,
  * never nested inside it. On the v1.1 pages pass `nameStyle="serif"` (C9).
  */
-export function PersonRow({ href, edit, unlink, className, ...identity }: PersonRowProps) {
+export function PersonRow({ href, edit, unlink, className, onIntent, ...identity }: PersonRowProps) {
   const hasActions = edit != null || unlink != null;
   const body = <PersonIdentity {...identity} as="span" className="flex-1" />;
   return (
     <div className={cx('person-row row-host flex items-center gap-2 rounded-btn transition-colors', href && 'hover:bg-hover-surface', className)}>
       {href ? (
-        <GuardedLink href={href} className="flex flex-1 min-w-0 items-center px-2 py-1.5 text-text no-underline focus-ring rounded-btn">
+        <GuardedLink href={href} className="flex flex-1 min-w-0 items-center px-2 py-1.5 text-text no-underline focus-ring rounded-btn"
+          onMouseEnter={onIntent} onFocus={onIntent} onTouchStart={onIntent}>
           {body}
         </GuardedLink>
       ) : (

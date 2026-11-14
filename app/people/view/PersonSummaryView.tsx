@@ -3,8 +3,8 @@
 import { useTranslations } from 'next-intl';
 import ProfileImage from '@/app/components/ProfileImage';
 import { getInitials } from '@/lib/utils/initials';
-import { CoverBand, DetailBody, Lifespan, PageShell, cx } from '@/app/components/ui';
-import { Skeleton } from '@/app/components/SkeletonLoader';
+import { CoverBand, Lifespan, PageShell, cx } from '@/app/components/ui';
+import { DetailBodySkeleton, Skeleton } from '@/app/components/SkeletonLoader';
 import { displayFullName } from '@/lib/utils/names';
 import type { PersonSummary } from './personCache';
 import { avatarClass } from './derive';
@@ -54,28 +54,8 @@ export function PersonSummaryView({ summary, treeId }: { summary: PersonSummary;
                 lead={<div className="grid gap-2"><Skeleton className="h-4 w-[90%]" /><Skeleton className="h-4 w-[80%]" /><Skeleton className="h-4 w-[60%]" /></div>}
             />
 
-            {/* Body: still loading; the live page's main column and rail. */}
-            <DetailBody sheet rail={(
-                <div className="flex flex-col gap-3">
-                    <Skeleton className="h-14 w-full" />
-                    {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-2.5">
-                            <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                            <Skeleton className="h-3 flex-1" />
-                        </div>
-                    ))}
-                </div>
-            )}>
-                <div className="flex flex-col gap-3.5">
-                    <Skeleton className="h-4" style={{ width: '30%' }} />
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex flex-col gap-1.5">
-                            <Skeleton className="h-[13px]" style={{ width: '35%' }} />
-                            <Skeleton className="h-[11px]" style={{ width: '55%' }} />
-                        </div>
-                    ))}
-                </div>
-            </DetailBody>
+            {/* Body still loading: the live page's indexed body and rail (#63). */}
+            <DetailBodySkeleton />
         </PageShell>
     );
 }

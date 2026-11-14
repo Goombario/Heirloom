@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from '@/app/components/ThemeProvider';
-import { getMapStyleUrl, collapseCompactAttribution, configureMapLibreWorker } from '@/lib/geo/map-style';
+import { getMapStyleUrl, addMapCredit, configureMapLibreWorker } from '@/lib/geo/map-style';
 import { pinSvgHtml } from './map-pin';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -30,6 +30,8 @@ export default function StaticMapPreview({
   fill,
 }: StaticMapPreviewProps) {
   const t = useTranslations('common');
+  const creditOsm = t('map_credit_osm');
+  const creditTiles = t('map_credit_tiles');
   const { resolvedTheme } = useTheme();
   const elRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
@@ -50,7 +52,7 @@ export default function StaticMapPreview({
           center: [lng, lat],
           zoom,
           interactive: false,
-          attributionControl: { compact: true },
+          attributionControl: false,
         });
         map.on('error', () => { if (!cancelled) setFailed(true); });
         // Some basemap styles (OpenFreeMap) reference sprite icons like "circle-11"
@@ -62,7 +64,7 @@ export default function StaticMapPreview({
                 map.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
             }
         });
-        collapseCompactAttribution(map);
+        addMapCredit(map, { osm: creditOsm, tiles: creditTiles });
 
         // Pin tip (bottom-center) anchored on the exact point — native centering
         // replaces the old 3×3 tile-grid translate trick.
@@ -82,7 +84,7 @@ export default function StaticMapPreview({
       map?.remove();
       map = null;
     };
-  }, [lat, lng, zoom, resolvedTheme]);
+  }, [lat, lng, zoom, resolvedTheme, creditOsm, creditTiles]);
 
   const boxStyle: React.CSSProperties = {
     position: 'relative',
@@ -98,8 +100,8 @@ export default function StaticMapPreview({
   // "View journey" is its own button laid over the map, a sibling of the map
   // rather than its parent: MapLibre mounts the credits ⓘ (a button) inside the
   // map, and a button inside a button is invalid and ambiguous to a screen reader
-  // (axe nested-interactive, #740). The credits sit above this overlay, so a click
-  // on them expands the credits and never opens the journey.
+  // (axe nested-interactive, #740). The credit links (#42) sit above this overlay,
+  // so a click on them opens the credit and never the journey.
   const journeyButton = onClick ? (
     <button
       type="button"
@@ -129,7 +131,7 @@ export default function StaticMapPreview({
   return (
     <div title={onClick ? undefined : label} className={className} style={boxStyle}>
       {/* pointerEvents:none so clicks pass through the non-interactive map to the
-          journey button; the credits control re-enables its own pointer events. */}
+          journey button; the credit control re-enables its own pointer events. */}
       <div ref={elRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
       {journeyButton}
     </div>

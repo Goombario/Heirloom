@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { linkMediaForOwnerService, listLinkOwnersForMediaService } from '@/lib/services/media-links';
@@ -57,7 +58,7 @@ export async function POST(
         const requestedTreeId = parseIdParam(searchParams.get('treeId'));
         const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
         if (!isLinkOwnerTable(body.ownerTable)) {
             return NextResponse.json({ error: 'Invalid ownerTable' }, { status: 400 });
         }

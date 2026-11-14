@@ -4,6 +4,8 @@ import React from 'react';
 import { cx } from './cx';
 
 export interface ScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The scroll container itself (a dialog body measures or scrolls it). */
+  ref?: React.Ref<HTMLDivElement>;
   /**
    * Keep the scrollbar rail painted even when the content fits (default). Turn it
    * off only where a container is almost never scrollable and the rail would read

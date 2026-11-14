@@ -47,6 +47,9 @@ export interface TreeDisplayProps {
     /** Ages on the cards, beside the status mark (#271, #736). */
     showAges: boolean;
     onShowAgesChange: (v: boolean) => void;
+    /** The living-status mark on the cards (#68). Off hides only the mark. */
+    showStatus: boolean;
+    onShowStatusChange: (v: boolean) => void;
 }
 
 /**
@@ -57,7 +60,7 @@ export interface TreeDisplayProps {
 export function TreeDisplayControls({
     orientation, onOrientationChange, orientationDisabled,
     barZoomThreshold, onBarZoomThresholdChange,
-    depth, maxDepth, onDepthCommit, showAges, onShowAgesChange,
+    depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
 
@@ -120,27 +123,8 @@ export function TreeDisplayControls({
                 </div>
             )}
 
-            <button
-                type="button"
-                role="switch"
-                aria-checked={showAges}
-                onClick={() => onShowAgesChange(!showAges)}
-                className="flex w-full items-center gap-3 text-left cursor-pointer rounded-[6px] focus-ring"
-            >
-                <span className="flex-1 min-w-0 text-sm font-medium text-text">{t('show_ages')}</span>
-                <span
-                    aria-hidden="true"
-                    className={cx(
-                        'relative shrink-0 w-9 h-[22px] rounded-full transition-colors motion-reduce:transition-none',
-                        showAges ? 'bg-text' : 'bg-border',
-                    )}
-                >
-                    <span className={cx(
-                        'absolute left-[3px] top-[3px] w-4 h-4 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform motion-reduce:transition-none',
-                        showAges ? 'translate-x-[14px] bg-card' : 'bg-white',
-                    )} />
-                </span>
-            </button>
+            <DisplaySwitch label={t('show_ages')} checked={showAges} onChange={onShowAgesChange} />
+            <DisplaySwitch label={t('show_living_status')} checked={showStatus} onChange={onShowStatusChange} />
 
             {/* DEBUG — horizontal-bar review aid. Dev-only; not shipped. Tunes the
                 zoom-out threshold live. */}
@@ -165,5 +149,32 @@ export function TreeDisplayControls({
                 </div>
             )}
         </>
+    );
+}
+
+/** One on/off row in the Display controls. */
+function DisplaySwitch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={() => onChange(!checked)}
+            className="flex w-full items-center gap-3 text-left cursor-pointer rounded-[6px] focus-ring"
+        >
+            <span className="flex-1 min-w-0 text-sm font-medium text-text">{label}</span>
+            <span
+                aria-hidden="true"
+                className={cx(
+                    'relative shrink-0 w-9 h-[22px] rounded-full transition-colors motion-reduce:transition-none',
+                    checked ? 'bg-text' : 'bg-border',
+                )}
+            >
+                <span className={cx(
+                    'absolute left-[3px] top-[3px] w-4 h-4 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform motion-reduce:transition-none',
+                    checked ? 'translate-x-[14px] bg-card' : 'bg-white',
+                )} />
+            </span>
+        </button>
     );
 }

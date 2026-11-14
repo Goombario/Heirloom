@@ -1,6 +1,7 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
-import { parseIdParam } from '@/lib/utils/parse-id';
+import { parseBodyId, parseIdParam } from '@/lib/utils/parse-id';
 import { addChildToFamilyService, updateChildTypeService, removeChildService } from '@/lib/services/families';
 import { parseChildRelationships } from '@/lib/child-relationship';
 import { handleApiError } from '@/lib/api/handle-error';
@@ -15,8 +16,9 @@ export async function POST(
 
         const resolvedParams = await params;
         const familyId = parseIdParam(resolvedParams.id);
-        const body = await request.json();
-        const { childId, relationshipType } = body;
+        const body = await readJsonObject(request);
+        const { relationshipType } = body;
+        const childId = parseBodyId(body.childId, 'childId');
 
         if (!familyId || !childId) {
             return NextResponse.json({ error: 'Family ID and child ID are required' }, { status: 400 });
@@ -56,7 +58,9 @@ export async function PATCH(
 
         const resolvedParams = await params;
         const familyId = parseIdParam(resolvedParams.id);
-        const { childId, relationshipType } = await request.json();
+        const body = await readJsonObject(request);
+        const { relationshipType } = body;
+        const childId = parseBodyId(body.childId, 'childId');
 
         if (!familyId || !childId) {
             return NextResponse.json({ error: 'Family ID and child ID are required' }, { status: 400 });
@@ -94,7 +98,7 @@ export async function DELETE(
 
         const resolvedParams = await params;
         const familyId = parseIdParam(resolvedParams.id);
-        const { childId } = await request.json();
+        const childId = parseBodyId((await readJsonObject(request)).childId, 'childId');
 
         if (!familyId || !childId) {
             return NextResponse.json({ error: 'Family ID and child ID are required' }, { status: 400 });

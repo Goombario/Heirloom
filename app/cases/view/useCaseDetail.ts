@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTree } from '@/app/contexts/TreeContext';
-import type { CaseCitation, CaseComment, CaseWithRelations, PersonResult } from '@/lib/db/schema';
+import type { CaseCitation, CaseComment, CaseWithRelations, Media, PersonResult } from '@/lib/db/schema';
 import type { CitationPreviewTarget } from '@/app/components/citations/types';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
 import { caseCitationAsCitation } from './case-detail-helpers';
@@ -91,6 +91,13 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
     // Journal image attachment
     const [journalFile, setJournalFile] = useState<File | null>(null);
     const [journalFilePreview, setJournalFilePreview] = useState<string | null>(null);
+    // Or media the tree already holds (#34): the case's own, or a linked person's,
+    // attached by id with no upload. Picking one replaces a chosen file, and back.
+    const [journalMedia, setJournalMediaState] = useState<Media | null>(null);
+    const setJournalMedia = useCallback((m: Media | null) => {
+        setJournalMediaState(m);
+        if (m) { setJournalFile(null); setJournalFilePreview(null); }
+    }, []);
 
     // Add media (#1204): upload and the case's people's library in one modal
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -337,7 +344,17 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
         if (!commentBody.trim()) return false;
         setPostingComment(true);
         try {
-            let mediaId: number | null = null;
+            let mediaId: number | null = journalMedia?.Id ?? null;
+            // A linked person's item joins the case's Media section, as an upload does.
+            if (journalMedia && caseData && !caseData.media.some((m) => m.Id === journalMedia.Id)) {
+                try {
+                    await (await getDataClient()).cases.linkMedia(Number(id), { mediaIds: [journalMedia.Id] }, activeTreeId);
+                } catch {
+                    setSaveError(t('image_attach_failed'));
+                    setPostingComment(false);
+                    return false;
+                }
+            }
             if (journalFile) {
                 try {
                     const client = await getDataClient();
@@ -380,6 +397,7 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
             setCommentBody('');
             setJournalFile(null);
             setJournalFilePreview(null);
+            setJournalMediaState(null);
             setPendingCommentCite(null);
             await fetchCase();
             return true;
@@ -532,6 +550,7 @@ export function useCaseDetail(options?: { forceDraft?: boolean }) {
         commentBody, setCommentBody, postingComment,
         pendingCommentCite, setPendingCommentCite, showComposerCite, setShowComposerCite,
         journalFile, setJournalFile, journalFilePreview, setJournalFilePreview,
+        journalMedia, setJournalMedia,
         // media upload / library
         showUploadModal, setShowUploadModal,
         libraryPickerSource,

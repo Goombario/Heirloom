@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { handleDataError, redirectIfUnauthorized, errorToastKey } from '@/lib/utils/data-error';
-import { UnauthorizedError, NotFoundError, AccessError, FileTooLargeError, MediaTagConflictError, StorageLimitError, DatabaseInterruptedError, RateLimitError } from '@/lib/data/errors';
+import { UnauthorizedError, NotFoundError, AccessError, FileTooLargeError, MediaTagConflictError, StorageLimitError, DatabaseInterruptedError, RateLimitError, ServerError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
 import { throwForStatus } from '@/lib/data/http/shared';
 
@@ -59,6 +59,16 @@ describe('throwForStatus', () => {
   function res(status: number, body: unknown) {
     return { status, json: async () => body } as unknown as Response;
   }
+
+  it('throws ServerError carrying the id of a 500 (#8)', async () => {
+    const error = await throwForStatus(res(500, { error: 'Failed to fetch places', errorId: 'a1b2c3d4' }))
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(ServerError);
+    expect((error as ServerError).errorId).toBe('a1b2c3d4');
+    expect(errorToastKey(error)).toBe('error_generic');
+    const plain = await throwForStatus(res(500, { error: 'boom' })).catch((caught: unknown) => caught);
+    expect(plain).not.toBeInstanceOf(ServerError);
+  });
 
   it('throws StorageLimitError on 507 so the quota message can be shown', async () => {
     const error = await throwForStatus(res(507, {
