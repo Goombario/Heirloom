@@ -54,12 +54,14 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const [page, setPage] = useState('');
     const [quay, setQuay] = useState('');
     const [dataText, setDataText] = useState('');
+    // One record link for every ticked fact (#41); a citation's own link is edited on it afterwards.
+    const [url, setUrl] = useState('');
     const [householdOpen, setHouseholdOpen] = useState(source.Type === 'Census');
     const [adding, setAdding] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useUnsavedChangesGuard(people.length > 0 || page !== '' || quay !== '' || dataText !== '');
+    useUnsavedChangesGuard(people.length > 0 || page !== '' || quay !== '' || dataText !== '' || url !== '');
 
     // Opening puts focus in the household search when it shows (a census), else the
     // person picker, rather than leaving it on the page (#861). Not on a phone, where
@@ -160,6 +162,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                 Page: page || null,
                 Quay: quay || null,
                 DataText: dataText || null,
+                Url: url.trim() || null,
                 facts: facts.map(f => ({ FactTable: f.factTable, FactId: f.factId, Page: rowPages[f.key] || null })),
             }, treeId);
             // Nothing is unsaved any more: clear the guard before the view changes.
@@ -167,6 +170,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
             setPage('');
             setQuay('');
             setDataText('');
+            setUrl('');
             onCited(facts.length);
         } catch (err) {
             if (!redirectIfUnauthorized(err)) setError(t('cite_on_failed'));
@@ -351,6 +355,18 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                     onChange={e => setPage(e.target.value)}
                     className={fieldClass('sm')}
                     placeholder={t('ph_page_optional')}
+                    disabled={saving}
+                />
+                <label htmlFor={`${idBase}-link`} className="block text-meta text-text-secondary mt-3 mb-1">{t('field_record_link')}</label>
+                <input
+                    id={`${idBase}-link`}
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    className={fieldClass('sm')}
+                    placeholder={t('ph_record_link')}
                     disabled={saving}
                 />
                 <div id={certaintyId} className="block text-meta text-text-secondary mt-3 mb-1">{t('field_certainty')}</div>

@@ -1954,6 +1954,8 @@
     "rec_family_photo": "Фото семьи — <r>{record}</r>"
   },
   "cases": {
+    "cite_pick_case": "Источники этого дела",
+    "cite_pick_people": "Цитаты у людей из дела",
     "research_journal": "Журнал исследования",
     "composer_placeholder": "Запишите находку — что вы проверили и что это показало?",
     "attach": "Прикрепить",
@@ -3677,6 +3679,14 @@
     "back_to_search": "Назад к поиску"
   },
   "caseResearch": {
+    "attach": "Прикрепить",
+    "attach_upload": "Загрузить файл",
+    "attach_from_case": "Из медиафайлов этого дела",
+    "attach_from_people": "Из медиафайлов людей из дела",
+    "attach_none_case": "У этого дела пока нет медиафайлов.",
+    "attach_none_people": "У людей из дела нет других медиафайлов.",
+    "attach_no_people": "К этому делу не привязаны люди.",
+    "attach_load_failed": "Не удалось загрузить медиафайлы. Попробуйте ещё раз.",
     "eyebrow": "Исследование",
     "main_label": "Открытая зацепка",
     "rail_label": "Страницы дела",

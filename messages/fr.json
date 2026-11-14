@@ -1954,6 +1954,8 @@
     "rec_family_photo": "Photo de famille de <r>{record}</r>"
   },
   "cases": {
+    "cite_pick_case": "Sources de ce dossier",
+    "cite_pick_people": "Cité sur les personnes du dossier",
     "research_journal": "Journal de recherche",
     "composer_placeholder": "Notez une trouvaille — qu'avez-vous vérifié et qu'a-t-elle révélé ?",
     "attach": "Joindre",
@@ -3677,6 +3679,14 @@
     "back_to_search": "Retour à la recherche"
   },
   "caseResearch": {
+    "attach": "Joindre",
+    "attach_upload": "Téléverser un fichier",
+    "attach_from_case": "Depuis les médias de ce dossier",
+    "attach_from_people": "Depuis les médias des personnes du dossier",
+    "attach_none_case": "Ce dossier n'a pas encore de médias.",
+    "attach_none_people": "Les personnes du dossier n'ont pas d'autres médias.",
+    "attach_no_people": "Aucune personne n'est liée à ce dossier.",
+    "attach_load_failed": "Impossible de charger les médias. Réessayez.",
     "eyebrow": "Recherche",
     "main_label": "Piste ouverte",
     "rail_label": "Pages du dossier",

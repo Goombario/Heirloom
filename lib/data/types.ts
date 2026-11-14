@@ -679,14 +679,16 @@ export interface CreateCitationInput {
 }
 
 /**
- * One source cited on many facts in one write (#799). Page, Quay and DataText
- * are shared; a fact's own Page (a household member's line) overrides Page.
+ * One source cited on many facts in one write (#799). Page, Quay, DataText and
+ * Url are shared; a fact's own Page (a household member's line) overrides Page.
  */
 export interface CreateCitationsInput {
   SourceId: number;
   Page?: string | null;
   Quay?: string | null;
   DataText?: string | null;
+  /** The link to the record every created citation gets (ADR 0025, #41). */
+  Url?: string | null;
   facts: { FactTable: FactTableValue; FactId: number; Page?: string | null }[];
 }
 

@@ -85,12 +85,14 @@ describe('Cite on… (#799, EV-7)', () => {
         await user.click(screen.getByRole('button', { name: 'BIRT' }));
         await user.type(screen.getByRole('textbox', { name: 'cite_on_shared_page' }), 'Folio 3');
         await user.click(screen.getByRole('radio', { name: 'certainty_3' }));
+        // One record link for the household (#41).
+        await user.type(screen.getByRole('textbox', { name: 'field_record_link' }), ' https://example.test/census/12 ');
         await user.click(screen.getByRole('button', { name: 'cite_on_submit:5' }));
 
         await waitFor(() => expect(h.createMany).toHaveBeenCalledOnce());
         const [input, treeId] = h.createMany.mock.calls[0];
         expect(treeId).toBe(7);
-        expect(input).toMatchObject({ SourceId: 30, Page: 'Folio 3', Quay: '3' });
+        expect(input).toMatchObject({ SourceId: 30, Page: 'Folio 3', Quay: '3', Url: 'https://example.test/census/12' });
         expect(input.facts.map((f: { FactTable: string; FactId: number }) => `${f.FactTable}:${f.FactId}`)).toEqual([
             'PersonBirth:1', 'Events:50', 'PersonBirth:2', 'PersonBirth:3', 'PersonBirth:4',
         ]);
