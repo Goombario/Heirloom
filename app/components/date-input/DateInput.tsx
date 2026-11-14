@@ -527,7 +527,9 @@ export default function DateInput({ value, onChange, className = fieldClass(), p
     );
 
     return (
-        <div {...draftMark}>
+        // min-w-0: a grid or flex parent would otherwise size this to the boxes'
+        // intrinsic width and push a phone sheet sideways.
+        <div {...draftMark} className="min-w-0">
             {stacked ? (
                 <div className="flex flex-col gap-1.5 w-full">
                     {kindMenu}
