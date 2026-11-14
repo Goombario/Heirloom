@@ -1218,6 +1218,7 @@
     "place": "Place",
     "place_name": "Place name",
     "on_map_as": "On the map as",
+    "kind_of_place": "Kind of place",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "pin": "Pin",

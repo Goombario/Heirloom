@@ -20,8 +20,9 @@ export type CoverMap =
     | { kind: 'borrowed'; markers: MapMarker[]; from: string; draggable: boolean; onDrag?: (lat: number, lng: number) => void }
     | { kind: 'none' };
 
-/** "Part of Uppland › Sweden", as links, its middle folded when it runs deep. */
-function PartOf({ parents }: { parents: NonNullable<PlaceDetail['parents']> }) {
+/** "City · Part of Uppland › Sweden", as links, its middle folded when it runs deep. The
+ *  kind (#45) leads when the place's FORM gives one; with no parents it stands alone. */
+function PartOf({ parents, kind }: { parents: NonNullable<PlaceDetail['parents']>; kind?: string | null }) {
     const t = useTranslations('places');
     const tp = useTranslations('placeDesktop');
     // Nearest first, the way a reader says it: "Uppsala › Uppland › Sweden".
@@ -31,7 +32,9 @@ function PartOf({ parents }: { parents: NonNullable<PlaceDetail['parents']> }) {
     const hidden = folded ? chain.slice(1, -2) : [];
     return (
         <p className="m-0 flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-sm text-[color:var(--color-text-secondary)]">
-            <span>{t('part_of')}</span>
+            {kind && <span data-testid="place-kind">{kind}</span>}
+            {kind && chain.length > 0 && <span aria-hidden="true">·</span>}
+            {chain.length > 0 && <span>{t('part_of')}</span>}
             {shown.map((p, i) => (
                 <span key={p.id} className="inline-flex min-w-0 items-baseline gap-x-1.5">
                     {i > 0 && <span aria-hidden="true">›</span>}
@@ -125,7 +128,9 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
                 title={<span className="line-clamp-3" title={placeName}>{short}</span>}
                 meta={(
                     <span className="grid gap-1">
-                        {parents.length > 0 ? <PartOf parents={parents} /> : <span>{t('not_inside_yet')}</span>}
+                        {parents.length > 0 ? <PartOf parents={parents} kind={detail.kind} /> : (
+                            <span>{detail.kind ? `${detail.kind} · ` : ''}{t('not_inside_yet')}</span>
+                        )}
                         <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
                             <span>{t('not_on_map_yet')}</span>
                             {canEdit && (
@@ -174,7 +179,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
                         <h1 className="title-record m-0 min-w-0 line-clamp-3 text-[color:var(--color-text)] [overflow-wrap:anywhere]" title={placeName}>{short}</h1>
                         {actions && <div className="shrink-0 pt-1">{actions}</div>}
                     </div>
-                    {parents.length > 0 && <PartOf parents={parents} />}
+                    {(parents.length > 0 || detail.kind) && <PartOf parents={parents} kind={detail.kind} />}
                     {otherNames.length > 0 && (
                         <p className="m-0 text-sm text-[color:var(--color-text-secondary)]">{t('also_recorded_as', { names: otherNames.join(', ') })}</p>
                     )}

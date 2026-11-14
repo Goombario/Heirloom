@@ -1218,6 +1218,7 @@
     "place": "Lieu",
     "place_name": "Nom du lieu",
     "on_map_as": "Sur la carte",
+    "kind_of_place": "Type de lieu",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "pin": "Épingle",

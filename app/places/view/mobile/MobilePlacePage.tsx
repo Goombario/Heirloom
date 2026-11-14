@@ -208,6 +208,7 @@ export function MobilePlacePage({ detail, placeName, treeId, role, onChanged, st
                     <h1 className="m-0 serif font-semibold text-white mp-hero-name text-balance">{name}</h1>
                     <OtherNamesSubtitle names={detail.otherNames} className="text-md text-white/80" />
                     <p className="m-0 text-sm text-white/80">
+                        {detail.kind && <>{detail.kind} · </>}
                         {parents.length === 0 ? t('top_level_place') : (
                             <>
                                 {tp('part_of')}{' '}
@@ -337,6 +338,7 @@ export function MobilePlacePage({ detail, placeName, treeId, role, onChanged, st
                         <Section first>
                             <Head title={t('place')} />
                             <QuietRow label={tp('place_name')}>{placeName}</QuietRow>
+                            {detail.kind && <QuietRow label={t('kind_of_place')}>{detail.kind}</QuietRow>}
                             {detail.displayName && <QuietRow label={t('on_map_as')}>{detail.displayName}</QuietRow>}
                             {own ? (
                                 <>

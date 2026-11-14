@@ -1,9 +1,10 @@
 import { query, getClient } from '@/lib/db/connection';
+import { kindFromOwnForm, placeKindFromForms } from '@/lib/places/place-kind';
 import { safeRollback } from '@/lib/db/rollback';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import { primaryPhotoJoin } from '@/lib/db/queries/media-tags';
 import {
-  getChildPlaces, getGeocodedPlaceDescendants, getNearestPlaceAncestorWithCoords, getPlaceAncestors, getPlaceFactLinks, movePlaceRecords, renamePlace, deleteUnusedPlace, placeUses,
+  getChildPlaces, getPlaceForms, getGeocodedPlaceDescendants, getNearestPlaceAncestorWithCoords, getPlaceAncestors, getPlaceFactLinks, movePlaceRecords, renamePlace, deleteUnusedPlace, placeUses,
   upsertPlaceCoordinates, upsertPlaceGeocode, upsertPlaceHierarchy, type PlaceEditChange, type PlaceUsage,
 } from '@/lib/db/queries/places';
 import { effectiveFirstName, primaryNickname } from '@/lib/db/queries/people';
@@ -274,7 +275,7 @@ export async function getPlaceDetailService(
     ? getGeocodedPlaceDescendants(geoRow.Id, scope.treeId)
     : Promise.resolve([]);
 
-  const [peopleResult, eventsResult, familiesResult, ancestors, childRows, factLinks, inheritedFromRow, descendantRows, nameUse] = await Promise.all([
+  const [peopleResult, eventsResult, familiesResult, ancestors, childRows, factLinks, inheritedFromRow, descendantRows, nameUse, forms] = await Promise.all([
     query(
       `SELECT p."Id", p."FirstName", p."LastName",
               ${effectiveFirstName('p')} AS "EffectiveFirstName",
@@ -318,6 +319,8 @@ export async function getPlaceDetailService(
     inheritedFromPromise,
     descendantPinsPromise,
     geoRow ? getPlaceNameUse(geoRow.Id, scope.treeId) : Promise.resolve({ otherNames: [], ownNameRecords: 0 }),
+    // A place with its own FORM needs no descendant's to say what kind it is.
+    geoRow && !kindFromOwnForm(geoRow.Name, geoRow.Form) ? getPlaceForms(placeIds, scope.treeId) : Promise.resolve([]),
   ]);
   const uses = geoRow ? await placeUses({ query }, scope.treeId, geoRow.Id) : null;
 
@@ -346,6 +349,7 @@ export async function getPlaceDetailService(
     osmId: geoRow?.OsmId != null ? Number(geoRow.OsmId) : null,
     id: geoRow?.Id ?? null,
     form: geoRow?.Form ?? null,
+    kind: geoRow ? placeKindFromForms(geoRow.Name, geoRow.Form, forms) : null,
     descendantPins: descendantRows.map((r) => ({ id: r.Id, name: r.Name, lat: r.Latitude, lng: r.Longitude })),
     inheritedFrom: inheritedFromRow && descendantRows.length === 0
       ? { id: inheritedFromRow.Id, name: inheritedFromRow.Name, lat: inheritedFromRow.Latitude, lng: inheritedFromRow.Longitude }

@@ -1257,3 +1257,16 @@ export async function revertPlaceDelete(exec: Exec, treeId: number, snap: PlaceD
     await insertSnapshotRow(exec, 'Places', place, { TreeId: treeId });
     for (const n of snap.names) await insertSnapshotRow(exec, 'PlaceName', n, { TreeId: treeId, PlaceId: id });
 }
+
+/** The names and FORMs of the given places that have a FORM, for a place's kind (#45).
+ *  Shortest name first, so the nearest descendant that names a level answers. */
+export async function getPlaceForms(placeIds: number[], treeId: number): Promise<{ name: string; form: string }[]> {
+    if (placeIds.length === 0) return [];
+    const result = await query(
+        `SELECT "Name" AS name, "Form" AS form FROM "Places"
+          WHERE "TreeId" = $1 AND "Id" = ANY($2) AND "Form" IS NOT NULL AND btrim("Form") <> ''
+          ORDER BY length("Name"), "Id" LIMIT 200`,
+        [treeId, placeIds],
+    );
+    return result.rows as { name: string; form: string }[];
+}
