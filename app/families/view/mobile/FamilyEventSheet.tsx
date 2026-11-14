@@ -315,7 +315,7 @@ function Body({ open, flow, onClose, data, treeId, language, canDelete, facts, s
     const dateField = (
         <div className="grid gap-1.5">
             <label htmlFor={`${ids}-date`} className="text-meta font-medium text-text-secondary">{te('field_date')}</label>
-            <DateInput id={`${ids}-date`} value={draft.date} onChange={(date) => setDraft((d) => ({ ...d, date }))} qualifierChips className={cx(fieldClass(), 'min-h-11')} />
+            <DateInput id={`${ids}-date`} value={draft.date} onChange={(date) => setDraft((d) => ({ ...d, date }))} touch className={cx(fieldClass(), 'min-h-11')} />
         </div>
     );
     const placeField = (

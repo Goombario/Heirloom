@@ -173,7 +173,7 @@ function AddPersonBody({ open, onClose, treeId }: { open: boolean; onClose: () =
                 {/* ── Born, status, died ── */}
                 <Group title={t('group_born')} end={citeLink(FACT_TABLES.PERSON_BIRTH, t('group_born'))}>
                     <Field id={`${ids}-bdate`} label={t('date')}>
-                        <DateInput id={`${ids}-bdate`} value={form.BirthDate} onChange={(v) => setField('BirthDate', v)} qualifierChips className={FIELD} />
+                        <DateInput id={`${ids}-bdate`} value={form.BirthDate} onChange={(v) => setField('BirthDate', v)} touch className={FIELD} />
                     </Field>
                     <Field id={`${ids}-bplace`} label={t('place')}>
                         <LocationField id={`${ids}-bplace`} value={form.BirthPlace} onChange={(v) => setField('BirthPlace', v)}
@@ -198,7 +198,7 @@ function AddPersonBody({ open, onClose, treeId }: { open: boolean; onClose: () =
                 {form.IsDeceased === '1' && (
                     <Group title={t('group_died')} end={citeLink(FACT_TABLES.PERSON_DEATH, t('group_died'))}>
                         <Field id={`${ids}-ddate`} label={t('date')}>
-                            <DateInput id={`${ids}-ddate`} value={form.DeathDate} onChange={(v) => setField('DeathDate', v)} qualifierChips className={FIELD} />
+                            <DateInput id={`${ids}-ddate`} value={form.DeathDate} onChange={(v) => setField('DeathDate', v)} touch className={FIELD} />
                         </Field>
                         <Field id={`${ids}-dplace`} label={t('place')}>
                             <LocationField id={`${ids}-dplace`} value={form.DeathPlace} onChange={(v) => setField('DeathPlace', v)}
@@ -463,7 +463,7 @@ function FamilyGroup({ fm, treeId, given, ids, onOpen }: {
                                 sub={fm.selectedSpouse!.BirthDate || fm.selectedSpouse!.DeathDate ? <Lifespan birth={fm.selectedSpouse!.BirthDate} death={fm.selectedSpouse!.DeathDate} /> : undefined}
                                 removeLabel={t('remove')} onRemove={removePartner} />}
                         <Field id={`${ids}-mdate`} label={t('married')}>
-                            <DateInput id={`${ids}-mdate`} value={fm.marriageDate} onChange={fm.setMarriageDate} qualifierChips className={FIELD} />
+                            <DateInput id={`${ids}-mdate`} value={fm.marriageDate} onChange={fm.setMarriageDate} touch className={FIELD} />
                         </Field>
                         <Field id={`${ids}-mplace`} label={t('where')}>
                             <LocationField id={`${ids}-mplace`} value={fm.marriagePlace} onChange={fm.setMarriagePlace}

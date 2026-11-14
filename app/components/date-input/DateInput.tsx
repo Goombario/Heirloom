@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { parseUserDateInput, formatDateForInput } from '@/lib/date-utils';
 import {
-    QUALIFIER_OPTIONS,
     DATE_PHRASE_MAX,
     composeDateValue,
     decomposeDateValue,
@@ -17,7 +16,7 @@ import {
     type QualifierAliases,
 } from '@/lib/date-qualifiers';
 import { useLanguage } from '@/app/components/LanguageProvider';
-import { Button, FilterChip, SelectField, fieldClass } from '@/app/components/ui';
+import { Button, SelectField, cx, fieldClass } from '@/app/components/ui';
 import { useQualifierAliases } from './aliases';
 
 interface DateInputProps {
@@ -27,7 +26,7 @@ interface DateInputProps {
     className?: string;
     placeholder?: string;
     id?: string;
-    /** Qualifier above the date instead of beside it, for a narrow sheet (#797, M-2). */
+    /** Kind above the date instead of beside it, for a narrow panel (#797, M-2). */
     stacked?: boolean;
     /**
      * As you type: the value leaving the box now would commit, or null when it
@@ -35,25 +34,37 @@ interface DateInputProps {
      */
     onDraft?: (value: string | null) => void;
     /**
-     * Qualifier chips (About, Before, After, Between) under the box instead of the
-     * select, for the phone's typing sheets (design-system.md → Mobile → Sheets).
-     * Tapping the chosen chip again goes back to an exact date.
+     * The phone's typing sheets (design-system.md → Mobile → Sheets): the same
+     * Kind · date · About row with a wider Kind menu, and a range's second box on
+     * its own row with "and"/"to" under the menu (#64, ADR 0048).
      */
-    qualifierChips?: boolean;
+    touch?: boolean;
 }
 
-/** The chips a phone offers; a stored Estimated, Calculated or From joins them while chosen. */
-const CHIP_QUALIFIERS: DateInputMode[] = ['ABT', 'BEF', 'AFT', 'BET'];
+/**
+ * What kind of date the field holds (ADR 0048). How sure an On date is lives in
+ * the About box, not here: GEDCOM can't qualify a range, so About is offered
+ * only for On.
+ */
+type DateKind = 'ON' | 'BEF' | 'AFT' | 'BET' | 'FROM';
+const DATE_KINDS: DateKind[] = ['ON', 'BEF', 'AFT', 'BET', 'FROM'];
+const KIND_KEY: Record<DateKind, string> = {
+    ON: 'kind_on', BEF: 'kind_bef', AFT: 'kind_aft', BET: 'kind_bet', FROM: 'kind_from',
+};
+
+function kindOf(mode: DateInputMode): DateKind {
+    return mode === 'BEF' || mode === 'AFT' || mode === 'BET' || mode === 'FROM' ? mode : 'ON';
+}
+
+/** About, or an imported Estimated or Calculated, which About keeps as it is (ADR 0048 §4). */
+function isApproximate(mode: DateInputMode): boolean {
+    return mode === 'ABT' || mode === 'EST' || mode === 'CAL';
+}
 
 /** Which modes show a second box. */
 function hasRange(mode: DateInputMode): boolean {
     return mode === 'BET' || mode === 'FROM';
 }
-
-const OPTION_KEY: Record<string, string> = {
-    EXACT: 'opt_exact', ABT: 'opt_abt', EST: 'opt_est', CAL: 'opt_cal',
-    BEF: 'opt_bef', AFT: 'opt_aft', BET: 'opt_bet', FROM: 'opt_from',
-};
 
 /**
  * Swap the width utility in a caller-supplied field class string.
@@ -120,19 +131,19 @@ export function hasUncommittedDate(root: Element | null | undefined): boolean {
 }
 
 /**
- * The date control: a translated qualifier <select> ahead of one or two plain-date
- * boxes (spec §1).
+ * The date control: a Kind menu (On, Before, After, Between, From), one or two
+ * plain-date boxes, and an About checkbox for an On date (spec §1, ADR 0048).
  *
  * The load-bearing simplification is that the inner boxes hold PLAIN dates only
- * and reuse the existing parse/format paths unchanged — the qualifier lives in a
- * translated <option> label, so nobody has to type a GEDCOM token in any language.
+ * and reuse the existing parse/format paths unchanged — the qualifier lives in the
+ * translated Kind menu and About box, so nobody has to type a GEDCOM token in any language.
  * Typed shorthand still works via hoisting (§2a), but that is a convenience: if
  * the alias table for a language were empty, the control would still work.
  *
  * The stored string format does not change; this only produces values date-utils
  * and the GEDCOM generator already handle.
  */
-export default function DateInput({ value, onChange, className = fieldClass(), placeholder, id, stacked = false, onDraft, qualifierChips = false }: DateInputProps) {
+export default function DateInput({ value, onChange, className = fieldClass(), placeholder, id, stacked = false, onDraft, touch = false }: DateInputProps) {
     const t = useTranslations('dateInput');
     const { language } = useLanguage();
     const aliases = useQualifierAliases();
@@ -216,6 +227,17 @@ export default function DateInput({ value, onChange, className = fieldClass(), p
 
     function slashOrder(): 'MDY' | 'DMY' {
         return (localStorage.getItem('dateSlashFormat') ?? 'MDY') as 'MDY' | 'DMY';
+    }
+
+    /** A new kind. Moving to On starts unticked; a range or an open end can't be About. */
+    function handleKindChange(kind: DateKind) {
+        if (kind === kindOf(parts.qualifier)) return;
+        handleQualifierChange(kind === 'ON' ? 'EXACT' : kind);
+    }
+
+    /** Ticking writes About; unticking clears it, an imported Estimated or Calculated too. */
+    function handleAboutChange(checked: boolean) {
+        handleQualifierChange(checked ? 'ABT' : 'EXACT');
     }
 
     function handleQualifierChange(qualifier: DateInputMode) {
@@ -442,65 +464,94 @@ export default function DateInput({ value, onChange, className = fieldClass(), p
         );
     }
 
-    const chips = qualifierChips
-        ? [...CHIP_QUALIFIERS, ...(CHIP_QUALIFIERS.includes(parts.qualifier) || parts.qualifier === 'EXACT' ? [] : [parts.qualifier])]
-        : [];
+    const kind = kindOf(parts.qualifier);
+    const range = hasRange(parts.qualifier);
+    const kindWidth = touch ? 'w-[112px]' : stacked ? 'w-full' : 'w-auto';
+    const kindMenu = (
+        <SelectField<DateKind>
+            aria-label={t('kind_label')}
+            value={kind}
+            onChange={handleKindChange}
+            fieldClassName={className ? withWidth(className, cx(kindWidth, 'shrink-0')) : undefined}
+            width={kindWidth}
+            className="shrink-0"
+            options={DATE_KINDS.map((k) => ({ value: k, label: t(KIND_KEY[k]) }))}
+        />
+    );
+    const boxWidth = 'flex-1 min-w-[7rem]';
+    const firstBox = (
+        <input
+            id={id}
+            type="text"
+            // With an id, the caller's <label for> names the box ("Death date", #798).
+            aria-label={id ? undefined : t('first_label')}
+            ref={firstRef}
+            value={firstText}
+            onChange={(e) => { setPending(null); setFirstText(e.target.value); draftBox('first', e.target.value); }}
+            onFocus={() => { focusedRef.current = true; }}
+            onBlur={() => handleBoxBlur('first')}
+            className={withWidth(className, boxWidth)}
+            placeholder={placeholder || t('placeholder')}
+        />
+    );
+    const connector = (
+        <span className={cx('text-text-muted text-sm', touch ? 'w-[112px] shrink-0 text-right pr-1' : 'px-0.5')}>
+            {parts.qualifier === 'BET' ? t('conn_and') : t('conn_to')}
+        </span>
+    );
+    const secondBox = (
+        <input
+            type="text"
+            aria-label={t('second_label')}
+            ref={secondRef}
+            value={secondText}
+            onChange={(e) => { setPending(null); setSecondText(e.target.value); draftBox('second', e.target.value); }}
+            onFocus={() => { focusedRef.current = true; }}
+            onBlur={() => handleBoxBlur('second')}
+            className={withWidth(className, boxWidth)}
+            placeholder={placeholder || t('placeholder')}
+        />
+    );
+    // About sits at the row's end, like "On 1850, about"; it wraps under the box
+    // when a narrow panel runs out of room (ADR 0048, layout A).
+    const about = kind === 'ON' && (
+        <label className={cx('inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap text-base text-text', touch ? 'min-h-11 pl-1' : 'min-h-9')}>
+            <input
+                type="checkbox"
+                checked={isApproximate(parts.qualifier)}
+                onChange={(e) => handleAboutChange(e.target.checked)}
+                className="w-4 h-4 m-0"
+            />
+            {t('about_label')}
+        </label>
+    );
 
     return (
         <div {...draftMark}>
-            <div className={stacked ? 'flex flex-col gap-1.5 w-full' : 'date-field-row flex flex-wrap items-center gap-1.5 w-full'}>
-                {!qualifierChips && <SelectField<DateInputMode>
-                    aria-label={t('qualifier_label')}
-                    value={parts.qualifier}
-                    onChange={handleQualifierChange}
-                    fieldClassName={className ? withWidth(className, stacked ? 'w-full' : 'w-auto shrink-0') : undefined}
-                    width={stacked ? 'w-full' : 'w-auto'}
-                    className={stacked ? undefined : 'shrink-0'}
-                    options={QUALIFIER_OPTIONS.map((q) => ({ value: q, label: t(OPTION_KEY[q]) }))}
-                />}
-                <input
-                    id={id}
-                    type="text"
-                    // With an id, the caller's <label for> names the box ("Death date", #798).
-                    aria-label={id ? undefined : t('first_label')}
-                    ref={firstRef}
-                    value={firstText}
-                    onChange={(e) => { setPending(null); setFirstText(e.target.value); draftBox('first', e.target.value); }}
-                    onFocus={() => { focusedRef.current = true; }}
-                    onBlur={() => handleBoxBlur('first')}
-                    className={withWidth(className, stacked ? 'w-full' : 'flex-1 min-w-[7rem]')}
-                    placeholder={placeholder || t('placeholder')}
-                />
-                {hasRange(parts.qualifier) && (
-                    <>
-                        <span className="text-text-muted text-sm px-0.5">
-                            {parts.qualifier === 'BET' ? t('conn_and') : t('conn_to')}
-                        </span>
-                        <input
-                            type="text"
-                            aria-label={t('second_label')}
-                            ref={secondRef}
-                            value={secondText}
-                            onChange={(e) => { setPending(null); setSecondText(e.target.value); draftBox('second', e.target.value); }}
-                            onFocus={() => { focusedRef.current = true; }}
-                            onBlur={() => handleBoxBlur('second')}
-                            className={withWidth(className, stacked ? 'w-full' : 'flex-1 min-w-[7rem]')}
-                            placeholder={placeholder || t('placeholder')}
-                        />
-                    </>
-                )}
-            </div>
-            {qualifierChips && (
-                <div role="group" aria-label={t('qualifier_label')} className="flex flex-wrap gap-1.5 mt-2">
-                    {chips.map((q) => (
-                        <FilterChip
-                            key={q}
-                            active={parts.qualifier === q}
-                            label={t(OPTION_KEY[q])}
-                            className="!h-[34px] px-3.5 relative before:absolute before:-inset-[5px] before:content-['']"
-                            onClick={() => handleQualifierChange(parts.qualifier === q ? 'EXACT' : q)}
-                        />
-                    ))}
+            {stacked ? (
+                <div className="flex flex-col gap-1.5 w-full">
+                    {kindMenu}
+                    <div className="flex flex-wrap items-center gap-1.5 w-full">
+                        {firstBox}
+                        {about}
+                        {range && <>{connector}{secondBox}</>}
+                    </div>
+                </div>
+            ) : touch ? (
+                <div className="flex flex-col gap-2 w-full">
+                    <div className="flex items-center gap-2 w-full">
+                        {kindMenu}
+                        {firstBox}
+                        {about}
+                    </div>
+                    {range && <div className="flex items-center gap-2 w-full">{connector}{secondBox}</div>}
+                </div>
+            ) : (
+                <div className="date-field-row flex flex-wrap items-center gap-1.5 w-full">
+                    {kindMenu}
+                    {firstBox}
+                    {about}
+                    {range && <>{connector}{secondBox}</>}
                 </div>
             )}
             {pendingAlert(true)}
