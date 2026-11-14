@@ -24,7 +24,7 @@
  * the timeline's does beside its title, so there is no Source column.
  */
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { PersonWithRelations } from '@/lib/db/schema';
 import type { NameVariantDates } from '@/lib/data/types';
@@ -108,9 +108,17 @@ interface NamesPanelProps {
     onSetPrimary: (id: number | null) => Promise<void>;
     /** Disables the add/star/remove controls while a mutation is in flight. */
     busy?: boolean;
+    /**
+     * The desktop person page puts "Add name" on the section heading (#157): it hides
+     * the trailing row, bumps `addRequest` to open the add panel, and follows
+     * `onAddingChange` to know when the panel is open.
+     */
+    addRow?: boolean;
+    addRequest?: number;
+    onAddingChange?: (adding: boolean) => void;
 }
 
-export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete, onAdd, onRename, onRemove, onSetPrimary, busy = false }: NamesPanelProps) {
+export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete, onAdd, onRename, onRemove, onSetPrimary, busy = false, addRow = true, addRequest = 0, onAddingChange }: NamesPanelProps) {
     const t = useTranslations('personDetail');
     const tDesk = useTranslations('personDesktop');
     const tc = useTranslations('common');
@@ -126,6 +134,18 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
     const [editingDates, setEditingDates] = useState<NameVariantDates>(NO_DATES);
     const [adding, setAdding] = useState(false);
     const addRef = useReturnFocus(adding);
+    // A bump of `addRequest` opens the add panel, as the trailing row would.
+    const [seenRequest, setSeenRequest] = useState(addRequest);
+    if (seenRequest !== addRequest) {
+        setSeenRequest(addRequest);
+        if (canEdit && !adding) {
+            setEditingId(null);
+            setAdding(true);
+        }
+    }
+    const reportAdding = useRef(onAddingChange);
+    useEffect(() => { reportAdding.current = onAddingChange; }, [onAddingChange]);
+    useEffect(() => { reportAdding.current?.(adding); }, [adding]);
 
     const [confirmRemove, setConfirmRemove] = useState<NameVariant | null>(null);
     const [newType, setNewType] = useState<NameVariant['Type']>('Nickname');
@@ -298,7 +318,7 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
                     <DatesUsedFields value={newDates} onChange={setNewDates} />
                     <EditorActions size="sm" onSave={handleAdd} onCancel={cancelAdd} saving={busy} saveLabel={t('add_name')} saveDisabled={!newName.trim()} />
                 </div>
-            ) : (
+            ) : addRow && (
                 <div className="ledger-foot ledger-foot--plain"><AddRow ref={addRef} label={t('add_name')} onClick={() => { cancelEditVariant(); setAdding(true); }} disabled={busy} /></div>
             ))}
             {confirmRemove && (

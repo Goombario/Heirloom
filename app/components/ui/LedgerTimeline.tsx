@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import { useTranslations } from 'next-intl';
 import GuardedLink from '@/app/components/GuardedLink';
 import { ArrowUpRight, ChevronUp } from '@/lib/icons';
@@ -108,10 +108,16 @@ function LedgerReadOnlyPanel({ ro, onClose }: { ro: LedgerReadOnly; onClose: () 
  * for birth and death), then the event with its thumbnails on the right. Long lists
  * fold after the first `head` rows: each run of hidden rows becomes one
  * "… N more events 1920 – 1940" line, and the rows named in `keep` (the death that
- * closes a life, the end of a partnership) stay in view between them.
+ * closes a life, the end of a partnership) stay in view between them. An `add` row
+ * closes the list (#157): a dashed dot on a dashed rule and a dashed-outline "Add an
+ * event" row, after any fold, opening the same editor as the heading's Add event.
  */
-export function LedgerTimeline({ items, head = 5, keep = [], className }: {
+export function LedgerTimeline({ items, head = 5, keep = [], add, addRef, className }: {
   items: LedgerItem[];
+  /** The phantom row that ends the timeline: its label and what it opens. */
+  add?: { label: string; onClick: () => void };
+  /** The phantom row's button, for focus return. */
+  addRef?: Ref<HTMLButtonElement>;
   /** Rows shown before the fold. */
   head?: number;
   /** Keys of rows kept in view below the fold. */
@@ -142,6 +148,15 @@ export function LedgerTimeline({ items, head = 5, keep = [], className }: {
         {parts.map((part) => 'row' in part
           ? <Row key={part.row.key} it={part.row} />
           : <Fold key={`fold-${part.run[0].key}`} run={part.run} onOpen={() => setExpanded(true)} label={t('more_events', { count: part.run.length })} aria={t('show_more_events', { count: part.run.length })} />)}
+        {add && (
+          <li className="ledger__ev ledger__phantom">
+            <span className="ledger__when" aria-hidden="true" />
+            <span className="ledger__rule ledger__rule--dashed" aria-hidden="true"><span className="ledger__dot is-ghost" /></span>
+            <div className="min-w-0">
+              <button ref={addRef} type="button" className="ledger__phantom-btn focus-ring" onClick={add.onClick}>{add.label}</button>
+            </div>
+          </li>
+        )}
       </ol>
       {foldable && expanded && (
         <button type="button" className="ledger__fewer focus-ring" onClick={() => setExpanded(false)}>

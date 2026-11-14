@@ -51,10 +51,13 @@ interface LifeEventsPanelProps {
     /** Reload the gallery after a Birth or Death editor adds or removes a photo. */
     onMediaChanged?: () => void;
     /**
-     * The list's last row (#760): the trailing "Add event" row, or the inline panel
-     * it opened. Rendered inside the card under a hairline.
+     * Under the list: the add-event panel the heading's Add event or the phantom row
+     * opened (#157).
      */
     footer?: React.ReactNode;
+    /** The phantom "Add an event" row that ends the timeline (#157). */
+    addEvent?: { label: string; onClick: () => void };
+    addEventRef?: React.Ref<HTMLButtonElement>;
     /** This person's dates to check (#833): a mark on each row whose date to fix it is. */
     marks?: DataCheckMarks;
     /**
@@ -64,7 +67,7 @@ interface LifeEventsPanelProps {
     run?: RunChange;
 }
 
-export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEdit, canDelete, onChanged, personNotes, personMedia, onMediaChanged, footer, marks, run }: LifeEventsPanelProps) {
+export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEdit, canDelete, onChanged, personNotes, personMedia, onMediaChanged, footer, addEvent, addEventRef, marks, run }: LifeEventsPanelProps) {
     const t = useTranslations('personDetail');
     const tc = useTranslations('common');
     const te = useTranslations('eventEdit');
@@ -592,10 +595,10 @@ export function LifeEventsPanel({ person, language, renderCitePin, tTypes, canEd
 
     return (
         <div ref={panelRef} tabIndex={-1} className="outline-none">
-            {ledger.length > 0
-                ? <LedgerTimeline items={ledger} keep={keep} />
+            {ledger.length > 0 || addEvent
+                ? <LedgerTimeline items={ledger} keep={keep} add={addEvent} addRef={addEventRef} />
                 : <p className="m-0 py-3 text-sm text-text-muted">{canEdit ? tDesk('no_events_editor') : tDesk('no_events')}</p>}
-            {footer && <div className="ledger-foot">{footer}</div>}
+            {footer && <div className="ledger-foot ledger-foot--plain">{footer}</div>}
             {confirmDelete && (
                 <ConfirmDialog
                     open

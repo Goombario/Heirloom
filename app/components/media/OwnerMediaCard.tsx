@@ -46,7 +46,15 @@ export function OwnerMediaCard({
     onCount,
     familyPhoto,
     refreshKey,
+    addRow = true,
+    addRequest = 0,
 }: {
+    /**
+     * A page that puts "Add media" on its section heading (#157, the desktop family
+     * page) hides the strip's Add line and bumps `addRequest` to open the add dialog.
+     */
+    addRow?: boolean;
+    addRequest?: number;
     /**
      * A family's own gallery (#119, ADR 0047): the lightbox offers "Set as family
      * photo". `run` is the page's change runner, for its Undo toast and reload.
@@ -88,6 +96,11 @@ export function OwnerMediaCard({
     const [mediaKey, setMediaKey] = useState(scopeKey);
     const [busy, setBusy] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
+    const [seenAddRequest, setSeenAddRequest] = useState(addRequest);
+    if (seenAddRequest !== addRequest) {
+        setSeenAddRequest(addRequest);
+        if (canEdit) setAddOpen(true);
+    }
     const [loadError, setLoadError] = useState<unknown>(null);
     const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
     const loadGeneration = useRef(0);
@@ -194,7 +207,7 @@ export function OwnerMediaCard({
                     <MediaGallery items={visibleMedia} treeId={treeId} strip={6} lightbox={lightbox}
                         getAlt={(item) => [item.Title ?? t('photo_alt'), ownerFact ? null : mediaFactLabel(t, item.OwnerFacts)].filter(Boolean).join(', ')} />
                 )}
-                {canEdit && (
+                {canEdit && addRow && (
                     <div className={hasMedia ? 'ledger-foot mt-3.5' : 'ledger-foot'}>
                         <AddRow label={t('add_button')} onClick={() => setAddOpen(true)} disabled={busy} />
                     </div>

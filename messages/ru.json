@@ -5128,7 +5128,9 @@
     "ro_close": "Закрыть",
     "edit_on_page": "Изменить на странице: {name}",
     "edit_on_family": "Изменить на странице семьи",
-    "pagination": "Страницы"
+    "pagination": "Страницы",
+    "index_none": "нет",
+    "add_an_event": "Добавить событие"
   },
   "personDesktop": {
     "this_person": "этот человек",
@@ -5237,7 +5239,10 @@
     "married_year": "бр. {year}",
     "n_of_total": "{n} из {m}",
     "name_on_record": "Имя по документам",
-    "name_shown": "показано"
+    "name_shown": "показано",
+    "none_yet": "Пока нет",
+    "sources_none": "Пока нет. Сошлитесь на источник через значок источника у факта.",
+    "name_on_record_lower": "имя по документам"
   },
   "addPersonDialog": {
     "title": "Новый человек",

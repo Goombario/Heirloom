@@ -1876,6 +1876,37 @@ html.dark .explore-card { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 12px r
 }
 .section-index__link:hover { color: var(--color-text); }
 .section-index__link[aria-current] { color: var(--color-text); font-weight: 600; border-left-color: var(--color-text); }
+/* An empty section's entry greys out (#157): "Notes · none". */
+.section-index__link.is-empty { opacity: 0.7; }
+.section-index__link.is-empty[aria-current] { font-weight: 500; }
+.section-index__none { font-size: var(--text-meta); font-weight: 400; }
+/* #157: the person and family pages rule their main column. A full-width hairline
+   between sections, 24px above and below, in place of the 40px gap. An empty
+   section is one line; consecutive empty lines share one hairline above the group. */
+.detail-body--ruled > .detail-body__main { gap: 0; }
+.detail-body--ruled > .detail-body__main > * { padding-block: 24px; border-top: 1px solid var(--color-border); }
+.detail-body--ruled > .detail-body__main > .is-empty { padding-block: 8px; }
+.detail-body--ruled > .detail-body__main > :not(.is-empty) + .is-empty { padding-top: 20px; }
+.detail-body--ruled > .detail-body__main > .is-empty + .is-empty { border-top: 0; }
+.detail-body--ruled > .detail-body__main > .is-empty:has(+ :not(.is-empty)),
+.detail-body--ruled > .detail-body__main > .is-empty:last-child { padding-bottom: 20px; }
+.detail-body--ruled > .detail-body__main > :first-child { border-top: 0; padding-top: 0; }
+/* The family page's notes are open rows too: no hairline between them. */
+.detail-body--ruled .owner-notes--plain { display: grid; gap: 6px; }
+.detail-body--ruled .owner-notes--plain [data-note-row] { border-top: 0; }
+.section-add {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-block: -8px; padding: 0;
+  border: 0; border-radius: 6px; background: none; font: inherit; font-size: var(--text-sm); font-weight: 400;
+  color: var(--color-link); cursor: pointer; white-space: nowrap; letter-spacing: 0; text-transform: none;
+}
+.section-add:hover { text-decoration: underline; }
+.section-add:disabled { opacity: 0.5; cursor: not-allowed; }
+.section-label__aside:has(.section-add) { display: inline-flex; align-items: baseline; gap: 16px; }
+.section-empty { display: flex; align-items: baseline; gap: 14px; }
+.section-empty__lead { display: inline-flex; align-items: center; gap: 6px; vertical-align: baseline; }
+.section-empty__label { flex: 0 0 auto; min-width: 120px; }
+.section-empty__what { flex: 1; min-width: 0; font-size: var(--text-sm); color: var(--color-text-muted); }
+.section-empty__name { font-size: var(--text-md); font-weight: 600; color: var(--color-text); }
 /* S6: the family row's tint, a soft step off the page in both themes. */
 .family-record-row { background: var(--color-family-row); }
 .family-record-row:hover { background: var(--color-family-row-hover); }
@@ -2878,6 +2909,16 @@ html.dark .react-flow__minimap-mask {
 .ledger__rule--dashed::before { width: 0; background: none; border-left: 1px dashed var(--color-text-muted); }
 .ledger__ev:first-child .ledger__rule::before { top: 20px; }
 .ledger__ev:last-child .ledger__rule::before { bottom: auto; height: 24px; }
+/* The phantom row that ends a timeline (#157): a dashed dot on a dashed rule and a
+   dashed-outline "Add an event" row. */
+.ledger__phantom .ledger__rule::before { top: 0; bottom: auto; height: 24px; }
+.ledger__phantom:first-child .ledger__rule::before { display: none; }
+.ledger__phantom-btn {
+  display: block; width: 100%; margin: 4px 0 0; padding: 14px 10px 15px; text-align: left;
+  border: 1px dashed var(--color-border); border-radius: 10px; background: transparent;
+  font: inherit; font-size: var(--text-base); font-weight: 500; color: var(--color-link); cursor: pointer;
+}
+.ledger__phantom-btn:hover { background: var(--color-surface-2); text-decoration: underline; }
 .ledger__dot {
   position: absolute; left: 5px; top: 20px; width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box;
   background: var(--color-surface); border: 1.5px solid var(--color-text-muted);
@@ -2970,15 +3011,16 @@ html.dark .react-flow__minimap-mask {
 .event-panel__media .ledger-foot { border-top: 0; margin-top: 0; }
 .event-panel__media .ledger-foot > button { min-height: 32px; padding-block: 4px; }
 /* Names (locked board): serif name and cite pin, the type and dates muted on the right. */
-.name-list { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--color-border); }
-.name-list__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 45px; padding: 6px 0; border-top: 1px solid var(--color-border); }
-.name-list__editor { padding: 8px 0; border-top: 1px solid var(--color-border); }
+/* Open rows (#157): spacing only between names, no hairlines and no bottom rule. */
+.name-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.name-list__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 38px; padding: 3px 0; }
+.name-list__editor { padding: 8px 0; }
 .name-list__name { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; font-size: 17px; font-weight: 600; color: var(--text); }
 .name-list__meta { font-size: var(--text-meta); color: var(--text-muted); white-space: nowrap; }
 .name-list__meta .date-mono { font-size: var(--text-meta); }
-.note-list { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--color-border); }
-.note-list__row { border-top: 1px solid var(--color-border); }
-.note-list__btn { display: block; width: calc(100% + 16px); margin-inline: -8px; padding: 12px 8px 14px; text-align: left; border: 0; border-radius: 0; background: transparent; font: inherit; }
+/* Open rows (#157), like Names: spacing between notes, no hairlines. */
+.note-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.note-list__btn { display: block; width: calc(100% + 16px); margin-inline: -8px; padding: 8px; text-align: left; border: 0; border-radius: 8px; background: transparent; font: inherit; }
 .note-list__btn:enabled { cursor: pointer; }
 .note-list__btn:enabled:hover { background: var(--color-hover-surface); }
 .note-list__label { display: block; margin-bottom: 4px; font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--text-muted); }

@@ -8,6 +8,8 @@ interface SectionIndexEntry {
   /** The id of the section element the entry scrolls to. */
   id: string;
   label: string;
+  /** The section has nothing in it (#157): the entry greys out and reads "Notes · none". */
+  empty?: boolean;
 }
 
 export interface DetailBodyProps {
@@ -19,8 +21,14 @@ export interface DetailBodyProps {
   divided?: boolean;
   /** Tint the main column as a cream sheet (#131): person, family and place pages. Needs a rail. */
   sheet?: boolean;
+  /**
+   * Hairlines between the main column's sections, 24px above and below, in place of
+   * the 40px gap (#157, person and family pages). A section marked `is-empty` is one
+   * line, and consecutive empty lines group under one hairline.
+   */
+  ruled?: boolean;
   className?: string;
-  /** The main column. Its sections are separated by spacing only. */
+  /** The main column. Its sections are separated by spacing only, or by hairlines when `ruled`. */
   children: React.ReactNode;
 }
 
@@ -30,11 +38,11 @@ export interface DetailBodyProps {
  * (it narrows instead of dropping to the bottom); the index appears from 1180px.
  * Phones don't use this: they keep their own panes.
  */
-export function DetailBody({ index, rail, divided = false, sheet = false, className, children }: DetailBodyProps) {
+export function DetailBody({ index, rail, divided = false, sheet = false, ruled = false, className, children }: DetailBodyProps) {
   const hasIndex = index != null && index.length > 0;
   const main = useRef<HTMLDivElement>(null);
   return (
-    <div className={cx('detail-body', hasIndex && 'detail-body--index', rail != null && 'detail-body--rail', divided && 'detail-body--divided', sheet && rail != null && 'detail-body--sheet', className)}>
+    <div className={cx('detail-body', hasIndex && 'detail-body--index', rail != null && 'detail-body--rail', divided && 'detail-body--divided', sheet && rail != null && 'detail-body--sheet', ruled && 'detail-body--ruled', className)}>
       {hasIndex && <SectionIndex entries={index} mainRef={main} />}
       <div ref={main} className="detail-body__main">{children}</div>
       {rail != null && <aside className="detail-body__rail">{rail}</aside>}
@@ -77,9 +85,10 @@ function SectionIndex({ entries, mainRef }: { entries: SectionIndexEntry[]; main
             <a
               href={`#${e.id}`}
               aria-current={current === e.id ? 'location' : undefined}
-              className="section-index__link block rounded-md px-2.5 py-1.5 text-sm no-underline focus-ring transition-colors"
+              className={cx('section-index__link block rounded-md px-2.5 py-1.5 text-sm no-underline focus-ring transition-colors', e.empty && 'is-empty')}
             >
               {e.label}
+              {e.empty && <span className="section-index__none"> · {t('index_none')}</span>}
             </a>
           </li>
         ))}

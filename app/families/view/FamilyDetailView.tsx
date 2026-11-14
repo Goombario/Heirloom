@@ -21,9 +21,9 @@ import CitationPreview from '@/app/components/citations/CitationPreview';
 import { CiteSheets, type CiteSheetTarget, type CiteSheetsSlot } from '@/app/components/citations/CiteSheets';
 import Cite from '@/app/components/Cite';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
-import { chipCitations, citationFactFor, datedFactValue, describeCitationFact, numberSources, withFallbackCitationFacts } from '@/app/components/citations/factDescriptors';
+import { chipCitations, citationFactFor, datedFactValue, describeCitationFact, groupCitationFactsBySource, numberSources, withFallbackCitationFacts } from '@/app/components/citations/factDescriptors';
 import InlineEventEditor from '@/app/components/InlineEventEditor';
-import { AddRow, DetailBody, PageShell, InlineDataError, SectionHeader } from '@/app/components/ui';
+import { DetailBody, PageShell, InlineDataError, SectionAdd, SectionEmpty, SectionHeader } from '@/app/components/ui';
 import { cx } from '@/app/components/ui/cx';
 import { FACT_TABLES, isFactTableValue, type FactTableValue } from '@/lib/db/fact-tables';
 import type { FamilyType } from '@/lib/db/schema';
@@ -35,7 +35,7 @@ import { useFamilyWrites } from './desktop/familyWrites';
 import { coupleName } from './mobile/model';
 import { hasRecordedDeath, partnerName, sortChildrenByBirth, partnershipKindKey, partnershipYears, earlierDeathPartner, endFromEvents } from './derive';
 import { FamilyTimeline } from './sections';
-import { useReturnFocus } from '@/app/hooks/useReturnFocus';
+import { useReturnFocus, useReturnFocusTo } from '@/app/hooks/useReturnFocus';
 import { useDataCheckMarks } from '@/app/components/data-checks/marks';
 import { MobilePersonSkeleton } from '@/app/people/view/mobile/MobilePersonPage';
 import { MobileFamilyPage } from './mobile/MobileFamilyPage';
@@ -56,7 +56,16 @@ export default function FamilyDetailsClient() {
         placeCoords, isOpen, toggle, fetchFamily, activeTreeId, activePermission,
     } = useFamilyDetail();
     // "+ Add event" unmounts while its panel is open; closing hands focus back (#690).
-    const addEventRef = useReturnFocus(showInlineEvent);
+    // The heading's "Add event" and the timeline's phantom row both open the add-event
+    // panel; closing hands focus back to the one used (#690, #157).
+    const eventOpeners = useReturnFocusTo<'head' | 'phantom'>(showInlineEvent);
+    const openAddEvent = (from: 'head' | 'phantom') => { eventOpeners.opened(from); setNewEventType(undefined); setShowInlineEvent(true); };
+    // #157: Add media and Add note sit on their headings and open the cards' own panels.
+    const [mediaAddRequest, setMediaAddRequest] = useState(0);
+    const [notesAddRequest, setNotesAddRequest] = useState(0);
+    const [notesAdding, setNotesAdding] = useState(false);
+    const [notesLoaded, setNotesLoaded] = useState(false);
+    const addNoteRef = useReturnFocus(notesAdding);
 
     const [editingHero, setEditingHero] = useState(false);
     const [noteCount, setNoteCount] = useState(0);
@@ -66,6 +75,10 @@ export default function FamilyDetailsClient() {
     const [notesRefresh, setNotesRefresh] = useState(0);
     const tChecks = useTranslations('dataChecks');
     const tPhone = useTranslations('familyPhone');
+    const tDesk = useTranslations('personDesktop');
+    const tKit = useTranslations('detailKit');
+    const tNotes = useTranslations('notes');
+    const tMedia = useTranslations('ownerMedia');
     const run = useChange({
         treeId: activeTreeId,
         canUndo: activePermission === 'owner' || activePermission === 'edit',
@@ -173,6 +186,16 @@ export default function FamilyDetailsClient() {
         ) })),
     ].sort((a, b) => (a.sortKey ?? Infinity) - (b.sortKey ?? Infinity)).map(item => item.fact);
     const familyCitationFacts = withFallbackCitationFacts(timelineFacts, citationMap, (table, factId) => tCommon('citation_fact_fallback', { table, id: factId }));
+
+    // #157: each section's Add sits on its heading, and an empty section is one line.
+    const addEventShown = canEdit && !showInlineEvent;
+    const mediaEmpty = mediaCount === 0;
+    const addMedia = canEdit ? <SectionAdd label={tMedia('add_button')} onClick={() => setMediaAddRequest((n) => n + 1)} /> : null;
+    const notesEmpty = notesLoaded && noteCount === 0 && !notesAdding;
+    const addNote = canEdit && !notesAdding
+        ? <SectionAdd ref={addNoteRef} label={tNotes('add_button')} onClick={() => setNotesAddRequest((n) => n + 1)} />
+        : null;
+    const sourcesEmpty = groupCitationFactsBySource(familyCitationFacts).length === 0;
     const sourceNumbers = numberSources(familyCitationFacts);
     const attachFact = attachTarget ? citationFactFor(familyCitationFacts, attachTarget) : null;
     const research = attachFact ? familyResearchSubject(details, attachFact.factTable, attachFact.factId, new Date().getFullYear()) : null;
@@ -305,11 +328,12 @@ export default function FamilyDetailsClient() {
                 <DetailBody
                     divided
                     sheet
+                    ruled
                     index={[
                         { id: 'life-together', label: t('life_together') },
-                        { id: 'media', label: t('section_media') },
-                        { id: 'notes', label: t('section_notes') },
-                        { id: 'sources', label: t('section_sources') },
+                        { id: 'media', label: t('section_media'), empty: mediaEmpty },
+                        { id: 'notes', label: t('section_notes'), empty: notesEmpty },
+                        { id: 'sources', label: t('section_sources'), empty: sourcesEmpty },
                     ]}
                     rail={(
                         <FamilyRail
@@ -338,8 +362,12 @@ export default function FamilyDetailsClient() {
                             level="label"
                             headingId="life-together-title"
                             title={t('life_together')}
-                            action={marks.open.length > 0 ? (
-                                <a className="ledger-flag" href={`/data-checks?family=${family.Id}`}>{tChecks('flag_count', { count: marks.open.length })}</a>
+                            // The dates to check stay beside Add event (#157).
+                            action={(marks.open.length > 0 || addEventShown) ? (
+                                <>
+                                    {marks.open.length > 0 && <a className="ledger-flag" href={`/data-checks?family=${family.Id}`}>{tChecks('flag_count', { count: marks.open.length })}</a>}
+                                    {addEventShown && <SectionAdd ref={eventOpeners.ref('head')} label={t('detail_add_event')} onClick={() => openAddEvent('head')} />}
+                                </>
                             ) : undefined}
                         />
                         <FamilyTimeline
@@ -356,7 +384,9 @@ export default function FamilyDetailsClient() {
                             earlierPartner={earlierPartner}
                             marks={marks}
                             run={run}
-                            onRecordEnd={() => { setNewEventType('DIV'); setShowInlineEvent(true); }}
+                            onRecordEnd={() => { eventOpeners.opened('head'); setNewEventType('DIV'); setShowInlineEvent(true); }}
+                            addEvent={addEventShown ? { label: tKit('add_an_event'), onClick: () => openAddEvent('phantom') } : undefined}
+                            addEventRef={eventOpeners.ref('phantom')}
                             onCitationClick={(factTable, factId, factLabel, citation, anchor) => {
                                 const fact = familyCitationFacts.find(f => f.factTable === factTable && f.factId === factId)
                                     ?? describeCitationFact(citationMap, factTable, factId, factLabel, factLabel);
@@ -365,7 +395,7 @@ export default function FamilyDetailsClient() {
                                 else if (citationsReady) setAttachTarget({ factTable, factId, factLabel, initialView: canEdit ? 'add' : 'search' });
                             }}
                             onChanged={fetchFamily}
-                            footer={canEdit && (showInlineEvent ? (
+                            footer={canEdit && showInlineEvent && (
                                 <div className="pt-3">
                                     <InlineEventEditor
                                         target={{ kind: 'family', familyId: parseInt(familyId, 10) }}
@@ -380,9 +410,7 @@ export default function FamilyDetailsClient() {
                                         }}
                                     />
                                 </div>
-                            ) : (
-                                <AddRow ref={addEventRef} label={t('detail_add_event')} onClick={() => { setNewEventType(undefined); setShowInlineEvent(true); }} />
-                            ))}
+                            )}
                         />
                     </section>
 
@@ -390,9 +418,15 @@ export default function FamilyDetailsClient() {
                         copies would only ask for them a second time (#1270). */}
                     {!phoneCites && (
                         <>
-                            <section id="media" aria-labelledby="media-title">
-                                <SectionHeader level="label" headingId="media-title" title={t('section_media')} count={mediaCount ?? undefined} />
+                            {/* The cards stay mounted when their section is one empty line (#157):
+                                they own the section's load and its add panel. */}
+                            <section id="media" aria-labelledby="media-title" className={cx(mediaEmpty && 'is-empty')}>
+                                {mediaEmpty
+                                    ? <SectionEmpty headingId="media-title" title={t('section_media')} action={addMedia}>{tDesk('none_yet')}</SectionEmpty>
+                                    : <SectionHeader level="label" headingId="media-title" title={t('section_media')} count={mediaCount ?? undefined} action={addMedia} />}
                                 <OwnerMediaCard
+                                    addRow={false}
+                                    addRequest={mediaAddRequest}
                                     look="strip"
                                     ownerTable="Families"
                                     ownerId={family.Id}
@@ -410,9 +444,14 @@ export default function FamilyDetailsClient() {
                                 />
                             </section>
 
-                            <section id="notes" aria-labelledby="notes-title">
-                                <SectionHeader level="label" headingId="notes-title" title={t('section_notes')} count={noteCount || undefined} />
+                            <section id="notes" aria-labelledby="notes-title" className={cx(notesEmpty && 'is-empty')}>
+                                {notesEmpty
+                                    ? <SectionEmpty headingId="notes-title" title={t('section_notes')} action={addNote}>{tDesk('none_yet')}</SectionEmpty>
+                                    : <SectionHeader level="label" headingId="notes-title" title={t('section_notes')} count={noteCount || undefined} action={addNote} />}
                                 <OwnerNotesCard
+                                    addRow={false}
+                                    addRequest={notesAddRequest}
+                                    onAddingChange={setNotesAdding}
                                     // Flush with the heading, sentence-case labels, like the person page (fix 12).
                                     look="plain"
                                     ownerTable="Families"
@@ -423,15 +462,13 @@ export default function FamilyDetailsClient() {
                                     // The lead note is About this family, beside the portrait.
                                     showPreferred={false}
                                     refreshKey={notesRefresh}
-                                    onNotesChange={(notes) => { setNoteCount(notes.length); setFamilyNotes(notes); }}
+                                    onNotesChange={(notes) => { setNoteCount(notes.length); setFamilyNotes(notes); setNotesLoaded(true); }}
                                 />
                             </section>
                         </>
                     )}
 
-                    <section id="sources" aria-labelledby="sources-title">
-                        <SourcesSection facts={familyCitationFacts} title={t('detail_sources_cited')} />
-                    </section>
+                    <SourcesSection facts={familyCitationFacts} title={t('detail_sources_cited')} />
                 </DetailBody>
                 </div>
             </PageShell>

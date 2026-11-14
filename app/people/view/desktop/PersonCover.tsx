@@ -10,7 +10,7 @@ import { getInitials } from '@/lib/utils/initials';
 import ProfileImage from '@/app/components/ProfileImage';
 import { CoverBand, Lifespan, RecordMenu, cx, type RecordMenuItem } from '@/app/components/ui';
 import { LeadNote } from '@/app/components/notes/LeadNote';
-import { avatarClass, fullName } from '../derive';
+import { avatarClass, fullName, hasDeathFact } from '../derive';
 import { nameBarParts } from '../mobile/model';
 import type { RunChange } from '../mobile/useChange';
 
@@ -67,7 +67,10 @@ export function PersonCover({ person, media, treeId, role, biography, bioRequest
   const parts = [
     hasYears ? <Lifespan key="y" birth={person.BirthDate} death={person.DeathDate} status={status} tone="evidence" /> : null,
     places || null,
-    status === 'living' ? t('status_living') : null,
+    // The life line carries the status for every role (#49). With no death on record
+    // it also says when the status is unknown, which the line above the timeline used
+    // to say until #157 removed it.
+    status === 'living' ? t('status_living') : status === 'unknown' && !hasDeathFact(person) ? t('status_unknown') : null,
   ].filter(Boolean);
 
   return (
