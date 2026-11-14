@@ -55,6 +55,27 @@ export interface PendingCitation {
     };
 }
 
+/** A citation offered to copy (#34): picking it prefills the source and its detail. */
+export interface CitationPick {
+    key: string;
+    sourceId: number;
+    sourceTitle: string | null;
+    sourceType: string | null;
+    sourceRepo: string | null;
+    page: string | null;
+    quay: string | null;
+    dataText: string | null;
+    url: string | null;
+    /** Whose citation it is ("Hazel Arbor"), shown before the detail. */
+    context: string | null;
+}
+
+export interface CitationPickGroup {
+    id: string;
+    label: string;
+    picks: CitationPick[];
+}
+
 interface ExistingCitation {
     Id: number;
     SourceId: number;
@@ -89,6 +110,12 @@ interface AttachSourceSidebarProps {
     research?: ResearchSubject | null;
     /** False for a viewer, who gets only the Search records tab, without its outcome buttons. */
     canCite?: boolean;
+    /**
+     * Citations to copy, listed first under Add source (#34): picking one selects its
+     * source and prefills the detail, certainty, transcription and link, all still
+     * editable. Saving writes a new citation as usual.
+     */
+    citationPicks?: CitationPickGroup[];
 }
 
 const SOURCE_TYPES = ['Census', 'Vital', 'Church', 'Newspaper', 'Oral', 'Document', 'Photo', 'Other'];
@@ -98,7 +125,7 @@ type SidebarView = 'attached' | 'add' | 'editor' | 'search';
 
 export default function AttachSourceSidebar({
     factTable, factId, factLabel, personName, onClose, onAttached, onPending, existingCitations,
-    initialView, initialCitationId, canDetach = true, research = null, canCite = true,
+    initialView, initialCitationId, canDetach = true, research = null, canCite = true, citationPicks,
 }: AttachSourceSidebarProps) {
     const t = useTranslations('library');
     const tr = useTranslations('research');
@@ -129,6 +156,8 @@ export default function AttachSourceSidebar({
     // The tree's most recently cited sources, listed first until a search (#799).
     const [recentSources, setRecentSources] = useState<Source[]>([]);
     const [selected, setSelected] = useState<Source | null>(null);
+    // The quick pick the form was prefilled from, if any (#34).
+    const [pickedKey, setPickedKey] = useState<string | null>(null);
     const [page, setPage] = useState('');
     const [quay, setQuay] = useState('');
     const [dataText, setDataText] = useState('');
@@ -224,7 +253,7 @@ export default function AttachSourceSidebar({
     const filtered = byType(sources).filter(s => !recentIds.has(s.Id));
 
     function resetAddForm() {
-        setSelected(null); setPage(''); setQuay(''); setDataText(''); setUrl('');
+        setSelected(null); setPickedKey(null); setPage(''); setQuay(''); setDataText(''); setUrl('');
         setNewSource(emptySourceForm);
     }
 
@@ -459,18 +488,50 @@ export default function AttachSourceSidebar({
         );
     }
 
+    // A citation to copy: its source, with the form prefilled from it (#34).
+    function choosePick(pick: CitationPick) {
+        setSelected({ Id: pick.sourceId, Title: pick.sourceTitle, Type: pick.sourceType, Author: null, RepositoryName: pick.sourceRepo });
+        setPickedKey(pick.key);
+        setPage(pick.page ?? '');
+        setQuay(pick.quay ?? '');
+        setDataText(pick.dataText ?? '');
+        setUrl(pick.url ?? '');
+    }
+
+    function renderPickOption(pick: CitationPick) {
+        const detail = [pick.context, pick.page].filter(Boolean).join(' · ');
+        return (
+            <button
+                key={pick.key}
+                type="button"
+                aria-pressed={pickedKey === pick.key}
+                onClick={() => choosePick(pick)}
+                className="text-left py-2.5 px-3.5 min-h-11 w-full border-0 border-b border-solid border-border cursor-pointer focus-ring-inset"
+                style={{ background: pickedKey === pick.key ? 'var(--surface-2)' : 'transparent' }}
+            >
+                <div className="flex items-center gap-1.5 mb-0.5">
+                    <Badge className="text-xs">{sourceTypeLabel(pick.sourceType ?? 'Document')}</Badge>
+                    <span className="font-medium text-sm truncate text-text">{pick.sourceTitle ?? t('untitled_source')}</span>
+                </div>
+                {detail && <div className="muted text-xs truncate">{detail}</div>}
+            </button>
+        );
+    }
+
+    const pickGroups = !q ? (citationPicks ?? []).filter(g => g.picks.length > 0) : [];
+
     // One row in the Add-source list (search results, or the recent and all-sources groups).
     function renderSourceOption(s: Source) {
         return (
             <button
                 key={s.Id}
                 type="button"
-                aria-pressed={selected?.Id === s.Id}
-                onClick={() => setSelected(s)}
+                aria-pressed={pickedKey == null && selected?.Id === s.Id}
+                onClick={() => { setPickedKey(null); setSelected(s); }}
                 className="text-left py-2.5 px-3.5 min-h-11"
                 style={{
                     width: '100%',
-                    background: selected?.Id === s.Id ? 'var(--surface-2)' : 'transparent',
+                    background: pickedKey == null && selected?.Id === s.Id ? 'var(--surface-2)' : 'transparent',
                     border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer',
                 }}
             >
@@ -677,6 +738,12 @@ export default function AttachSourceSidebar({
                             </div>
                         </div>
                         <div className="flex-1 overflow-auto">
+                            {pickGroups.map(g => (
+                                <div key={g.id} role="group" aria-labelledby={`attach-pick-${g.id}`}>
+                                    <div id={`attach-pick-${g.id}`} className="eyebrow pt-2.5 pb-1 px-3.5">{g.label}</div>
+                                    {g.picks.map(renderPickOption)}
+                                </div>
+                            ))}
                             {recent.length === 0 && filtered.length === 0 ? (
                                 <div className="muted py-6 px-4 text-center text-sm">
                                     {t('no_sources_found')}

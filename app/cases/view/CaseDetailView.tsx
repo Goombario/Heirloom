@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useCaseDetail } from './useCaseDetail';
+import { useJournalCitationPicks } from './useJournalCitationPicks';
 import MobileCasePage, { MobileCaseSkeleton } from './MobileCasePage';
 import { ResearchWorkspace } from './desktop/ResearchWorkspace';
 import { StartCase } from './desktop/StartCase';
@@ -40,6 +41,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
     } = cd;
 
     const tCite = useTranslations('citeSheet');
+    const citationPicks = useJournalCitationPicks(caseData, cd.showComposerCite, activeTreeId);
     // Footnote numbers for the preview: each source's first appearance in the list.
     const citationNumbers = useMemo(() => {
         const numbers = new Map<number, number>();
@@ -180,6 +182,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
                     factId={null}
                     factLabel={caseData.Title || t('new_case_label')}
                     onClose={() => cd.setShowComposerCite(false)}
+                    citationPicks={citationPicks}
                     onPending={(pending) => {
                         cd.setPendingCommentCite(pending);
                         cd.setShowComposerCite(false);
