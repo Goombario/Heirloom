@@ -15,13 +15,14 @@ function titles(form: string): string[] {
 
 /**
  * The kind a place's own FORM gives it, or null. The FORM must have one title per
- * level of the name: a header default ("City, County, State, Country") applied to
- * "USA" would otherwise call a country a city.
+ * level of the name, or just one title, which can only name this level: a header
+ * default ("City, County, State, Country") applied to "USA" would otherwise call a
+ * country a city.
  */
 export function kindFromOwnForm(name: string, form: string | null | undefined): string | null {
     if (!form?.trim()) return null;
     const t = titles(form);
-    return t.length === levels(name).length ? t[0] || null : null;
+    return t.length === 1 || t.length === levels(name).length ? t[0] || null : null;
 }
 
 /**

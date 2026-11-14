@@ -8,6 +8,8 @@ describe('place kind from PLAC.FORM (#45)', () => {
   it('reads the leaf from its own first title', () => {
     expect(kindFromOwnForm(LEAF, FORM)).toBe('City');
     expect(kindFromOwnForm('Baltimore, , Maryland, USA', FORM)).toBe('City');
+    // One title can only name this level.
+    expect(kindFromOwnForm('Lumen, Asteria', 'Province')).toBe('Province');
   });
 
   it('ignores a FORM whose titles do not line up with the name', () => {
