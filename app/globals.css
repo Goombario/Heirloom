@@ -177,17 +177,19 @@
 
   /* Gender avatar colors — muted to sit alongside the archival warm palette
      instead of clashing with it. Male/female/non-binary are saturation-matched
-     (S 25-29%) so none of the three visually dominates the others. */
-  --color-male: #5B7C99;
+     (S 25-29%) so none of the three visually dominates the others. Each gradient's
+     light end keeps white initials at 4.5:1 or better (WCAG AA for the 8–10px
+     initials): #5B7C99, #976AAF and #a8a29e measured 4.39, 4.20 and 2.52. */
+  --color-male: #587895;
   --color-male-dark: #456278;
   --color-female: #9A5B6F;
   --color-female-dark: #774655;
   /* Lightened from #845B9A to keep separation from --color-male under
      protanopia/deuteranopia simulation (they were nearly indistinguishable
      at equal lightness — RGB distance dropped to ~14/24 out of ~440). */
-  --color-nonbinary: #976AAF;
+  --color-nonbinary: #9162AB;
   --color-nonbinary-dark: #7A5488;
-  --color-neutral: #a8a29e;
+  --color-neutral: #7B736E;
   --color-neutral-dark: #57534e;
 
   /* Button variants */
@@ -197,7 +199,10 @@
   --color-button-danger-hover: #991B1B;
 
   /* Hover states */
-  --color-hover-surface: #F3F4F6;
+  /* Warm, and a step stronger than the old cool #F3F4F6 (1.10:1 on white, barely there):
+     1.16:1 on white. #EEEBE5 was tried and read too close to the selected fill
+     (--color-surface-2), so a hovered row looked selected. */
+  --color-hover-surface: #F1EEE8;
 
   /* Hero section. Light mode is ink navy (#1246), chosen to sit under the slate nav;
      dark mode keeps the warm umber. --color-hero-tint is the colour the hero gradient's
@@ -1701,19 +1706,13 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   pointer-events: none;
 }
 .place-cover--borrowed .location-map-pin-body svg { opacity: 0.7; }
-/* The Explore place pane's draggable edge (#56 review): a hairline that thickens on hover,
-   focus and drag, with a wider invisible grip around it. */
-.explore-resizer { position: relative; z-index: 2; background: var(--color-border); touch-action: none; }
-.explore-resizer--vertical { width: 1px; cursor: col-resize; }
-.explore-resizer--horizontal { height: 1px; cursor: row-resize; }
-.explore-resizer::before { content: ''; position: absolute; inset: 0 -5px; }
-.explore-resizer--horizontal::before { inset: -5px 0; }
-.explore-resizer::after { content: ''; position: absolute; inset: 0 -1px; background: transparent; transition: background var(--dur-fast); }
-.explore-resizer--horizontal::after { inset: -1px 0; }
-.explore-resizer:hover::after, .explore-resizer:active::after, .explore-resizer:focus-visible::after { background: var(--place-mark); }
+/* The Explore place card and its folded tab, floating over the map: a deeper shadow
+   than a card's, so they read as lifted off the map rather than printed on it. */
+.explore-card { box-shadow: 0 0 0 1px rgba(28, 20, 12, 0.04), 0 4px 12px rgba(28, 20, 12, 0.14), 0 22px 56px -8px rgba(28, 20, 12, 0.38); }
+html.dark .explore-card { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5), 0 22px 56px -8px rgba(0, 0, 0, 0.8); }
 /* The lanes' and chronicle's ink: the navy band colour in light mode, lifted toward the text
    colour so it still reads on the dark theme's near-black (where the band is umber). */
-.explore-resizer, .place-dec, .place-lanes, .place-lleg, .place-evsum { --place-mark: color-mix(in srgb, var(--color-hero-bg) 60%, var(--color-text)); }
+.place-dec, .place-lanes, .place-lleg, .place-evsum { --place-mark: color-mix(in srgb, var(--color-hero-bg) 60%, var(--color-text)); }
 /* What happened here, By decade (#56, locked PlaceMapCover board): the decade in the
    left gutter, its records on a hairline rail, an opened record as a card on the rail. */
 .place-dec { display: grid; grid-template-columns: 88px minmax(0, 1fr); column-gap: 20px; padding-top: 6px; }

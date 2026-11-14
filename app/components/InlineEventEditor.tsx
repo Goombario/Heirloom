@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import DateInput from '@/app/components/DateInput';
 import { hasUncommittedDate } from '@/app/components/date-input/DateInput';
-import { EditorActions, FilterChip, fieldClass, Input, SelectField } from '@/app/components/ui';
+import { EditorActions, fieldClass, Input, SelectField } from '@/app/components/ui';
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { EVENT_TYPE_GROUPS } from '@/app/people/view/mobile/model';
 import { Sheet } from '@/app/components/ui/Sheet';
@@ -570,46 +570,39 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
         // languages keep the label as written.
         return language.startsWith('en') ? name.toLocaleLowerCase('en') : name;
     };
-    // A new event with no preset type starts on the chooser, and can go back to it.
-    const choosing = !isEdit && !isSyntheticVital && !type;
-    const canChangeType = !isEdit && !isSyntheticVital && !defaultType && !!type;
-    const heading = choosing ? t('add_life_event')
+    // A new event with no preset type picks it from a grouped dropdown at the top of the panel.
+    const choosingType = !isEdit && !isSyntheticVital && !defaultType;
+    const heading = !type ? t('add_life_event')
         : isEdit ? t('edit_named', { type: typeName(type) })
         : t('add_named', { type: typeName(type) });
-    const chooserGroups: { key: string; label: string; types: string[] }[] = isPerson
+    const typeGroups = isPerson
         ? [
             ...EVENT_TYPE_GROUPS.map((g) => ({
                 key: g.key,
                 label: tGroups(`group_${g.key}`),
-                types: g.types.filter((v) => (v === 'BIRT' ? allowVital?.birth ?? false : v === 'DEAT' ? allowVital?.death ?? false : true)),
+                options: g.types
+                    .filter((v) => (v === 'BIRT' ? allowVital?.birth ?? false : v === 'DEAT' ? allowVital?.death ?? false : true))
+                    .map((v) => ({ value: v, label: optionLabel(v) })),
             })),
-            { key: 'other', label: t('group_other'), types: ['EVEN'] },
-        ].filter((g) => g.types.length > 0)
-        : [{ key: 'family', label: '', types: typeOptions.map((o) => o.value) }];
-
-    const desktopChooser = (
-        <>
-            {chooserGroups.map((g) => (
-                <div key={g.key} className="grid gap-1.5">
-                    {g.label && <h4 className="eyebrow m-0 text-text-muted">{g.label}</h4>}
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label={g.label || heading}>
-                        {g.types.map((v) => (
-                            <FilterChip key={v} label={optionLabel(v)} onClick={() => { pickedType.current = true; setType(v); }} />
-                        ))}
-                    </div>
-                </div>
-            ))}
-            {isPerson && <p className="m-0 text-meta text-text-muted">{t('marriages_from_family')}</p>}
-            <div className="flex justify-end">
-                <button type="button" onClick={onCancel} className="inline-flex items-center h-8 px-3 rounded-btn text-sm text-text-secondary bg-transparent border-0 cursor-pointer hover:bg-hover-surface focus-ring">{tc('cancel')}</button>
-            </div>
-        </>
-    );
+            { key: 'other', label: t('group_other'), options: [{ value: 'EVEN', label: optionLabel('EVEN') }] },
+        ].filter((g) => g.options.length > 0)
+        : null;
 
     const fieldLabel = 'block text-meta font-medium mb-1 text-[color:var(--text-2)]';
     const desktopFields = (
         <>
-            {/* Type: only when editing an event that can change type (a new one picked it above). */}
+            {/* Type: a new event picks it here; an edit shows it once "Change type" is pressed. */}
+            {choosingType && (
+                <div className="max-w-[340px]">
+                    <label htmlFor={typeFieldId} className={fieldLabel}>{t('field_type')}</label>
+                    <SelectField id={typeFieldId} size="sm" value={type} placeholder={t('choose_event')}
+                        onChange={(v) => { pickedType.current = true; setType(v); }}
+                        {...(typeGroups
+                            ? { groups: typeGroups }
+                            : { options: typeOptions.map((opt) => ({ value: opt.value, label: optionLabel(opt.value) })) })} />
+                    {isPerson && <p className="m-0 mt-1 text-xs text-text-muted">{t('marriages_from_family')}</p>}
+                </div>
+            )}
             {isEdit && !isSyntheticVital && retyping && (
                 <div className="max-w-[340px]">
                     <label htmlFor={typeFieldId} className={fieldLabel}>{t('field_type')}</label>
@@ -621,7 +614,7 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
                 <div className="min-w-0">
                     <label htmlFor={dateFieldId} className={fieldLabel}>{t('field_date')}</label>
                     <DateInput id={dateFieldId} value={date} onChange={setDate} className={fieldClass('sm')} />
-                    <p className="m-0 mt-1 text-xs text-text-muted">{(date && ageHint?.(date)) || t('date_hint')}</p>
+                    {date && ageHint?.(date) && <p className="m-0 mt-1 text-xs text-text-muted">{ageHint(date)}</p>}
                 </div>
                 <div className="min-w-0">
                     <label htmlFor={placeFieldId} className={fieldLabel}>{t('field_place')}</label>
@@ -727,15 +720,11 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
         <div ref={panelRef} className="inline-panel event-panel grid gap-3.5" role="group" aria-labelledby={headingId}>
             <div className="flex items-baseline justify-between gap-2.5">
                 <h3 id={headingId} className="m-0 text-base font-semibold text-text">{heading}</h3>
-                {choosing && <span className="text-meta text-text-muted">{t('choose_type')}</span>}
                 {isEdit && !isSyntheticVital && !retyping && (
                     <button type="button" onClick={() => setRetyping(true)} className="p-0 bg-transparent border-0 text-sm text-link cursor-pointer hover:underline focus-ring rounded-sm">{t('change_type')}</button>
                 )}
-                {canChangeType && (
-                    <button type="button" onClick={() => setType('')} className="p-0 bg-transparent border-0 text-sm text-link cursor-pointer hover:underline focus-ring rounded-sm">{t('change_type')}</button>
-                )}
             </div>
-            {choosing ? desktopChooser : desktopFields}
+            {desktopFields}
         </div>
     );
 }

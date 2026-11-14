@@ -37,6 +37,13 @@ interface LocationMapProps {
    *  jurisdiction, everything geocoded below it). Changing it mutates those marker elements
    *  only: no re-init, no fitBounds, no tile reload. */
   highlightedIds?: readonly number[];
+  /** Which lit pins carry a name chip. Left out, a highlight that lights exactly one
+   *  drawn pin names it; Explore passes its own (the selected and the hovered place each
+   *  name their pin), so a selection and a hover can both be named at once. */
+  labelledIds?: readonly number[];
+  /** Extra room around framed pins, as a share of the map's width (sides) and height
+   *  (top and bottom), on top of the usual margin: Explore frames a little looser. */
+  fitMargin?: number;
   /** Lets the pins be dragged (#566). Toggled, not re-mounted — entering edit mode must not
    *  rebuild the map. Only meaningful where a drag has somewhere to write to. */
   draggable?: boolean;
@@ -54,13 +61,66 @@ interface LocationMapProps {
    *  zooms it themselves: the Explore map shares its row with a pane that can be dragged
    *  wider or narrower, so a view framed for the old width would cut pins off. */
   refitOnResize?: boolean;
+  /** Room covered by something floating over the map — the Explore place card on its
+   *  left edge. Kept as camera padding, on top of `insets`: the pins frame beside it and
+   *  the view centres in the uncovered part. A change never re-frames or zooms: the view
+   *  slides over only as far as it takes to bring the pins out from under it. */
+  fitInsets?: { top: number; right: number; bottom: number; left: number };
+  /** The pin the reader picked. When it (or, with none, the pins in view) sits under
+   *  `fitInsets`, the view slides over to clear it, at the same zoom. */
+  focusId?: number | null;
+  /** A request to frame these points — a place and the places inside it — in the part of
+   *  the map left open by `fitInsets`, zooming in or out to fit them. Each new `n` frames
+   *  once; other pins may fall outside. One point is centred at street-level zoom. */
+  frameTarget?: { n: number; points: readonly { lat: number; lng: number }[] } | null;
+  /** Where a full map's zoom buttons sit. Explore moves them right: its card floats left. */
+  controlsCorner?: 'top-left' | 'top-right';
 }
 
 /** Room kept around framed pins. A full map's pin stands 40px tall above its point, so
  *  the top keeps more than the sides, or the northernmost pin's head is cut off. The
  *  sides keep a clear margin too, so no pin sits on the map's edge (owner review 2026-11-13). */
-function fitPadding(variant: 'full' | 'mini') {
-  return variant === 'full' ? { top: 88, right: 72, bottom: 56, left: 72 } : 30;
+function fitPadding(variant: 'full' | 'mini', el?: HTMLElement | null, margin = 0) {
+  const base = variant === 'full' ? { top: 88, right: 72, bottom: 56, left: 72 } : 30;
+  // Plus `fitMargin` of the map's size, where the caller asks for a looser frame.
+  if (!el || margin <= 0 || typeof base === 'number') return base;
+  const x = Math.round(el.clientWidth * margin), y = Math.round(el.clientHeight * margin);
+  return { top: base.top + y, right: base.right + x, bottom: base.bottom + y, left: base.left + x };
+}
+
+type Insets = NonNullable<LocationMapProps['insets']>;
+const NO_PADDING: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/** The camera padding: the cover's insets plus whatever floats over the map. MapLibre adds
+ *  it to every fitBounds padding and centres the view in what is left. */
+function cameraPadding(insets?: Insets, over?: Insets): Insets {
+  const a = insets ?? NO_PADDING, b = over ?? NO_PADDING;
+  return { top: a.top + b.top, right: a.right + b.right, bottom: a.bottom + b.bottom, left: a.left + b.left };
+}
+
+/** Room kept between a cleared pin and the edge of what covers the map. */
+const CLEAR_MARGIN = 48;
+
+/**
+ * How far (px) to slide the view so pins clear a cover on the map's left (the Explore
+ * card). The picked pin is brought into the uncovered part outright, from under the
+ * card or from off screen. With none picked, the pins in view slide right only as far
+ * as the rightmost can go without leaving the map.
+ */
+function clearingShift(map: MapInstance, markers: MapMarker[], focusId: number | null, padding: Insets): { x: number; y: number } {
+  const el = map.getContainer();
+  const w = el.clientWidth, h = el.clientHeight;
+  const left = padding.left + CLEAR_MARGIN, right = w - padding.right - CLEAR_MARGIN;
+  const top = padding.top + CLEAR_MARGIN, bottom = h - padding.bottom - CLEAR_MARGIN;
+  const into = (v: number, lo: number, hi: number) => (v < lo ? lo - v : v > hi ? hi - v : 0);
+  const pins = markers.filter((m) => !m.ghost).map((m) => ({ id: m.id, ...map.project([m.lng, m.lat]) }));
+  const focus = focusId == null ? undefined : pins.find((p) => p.id === focusId);
+  if (focus) return { x: into(focus.x, left, right), y: into(focus.y, top, bottom) };
+  const shown = pins.filter((p) => p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h);
+  if (shown.length === 0) return { x: 0, y: 0 };
+  const minX = Math.min(...shown.map((p) => p.x));
+  const room = right - Math.max(...shown.map((p) => p.x));
+  return { x: Math.max(0, Math.min(left - minX, room)), y: 0 };
 }
 
 /** Stable empty default — a fresh `[]` in the parameter list would be a new array every
@@ -180,12 +240,18 @@ export default function LocationMap({
   onMarkerClick,
   onMarkerHover,
   highlightedIds = NO_IDS,
+  labelledIds,
+  fitMargin = 0,
   draggable = false,
   onMarkerDragEnd,
   gestures = false,
   onBackgroundClick,
   insets,
   refitOnResize = false,
+  fitInsets,
+  controlsCorner = 'top-left',
+  focusId = null,
+  frameTarget = null,
 }: LocationMapProps) {
   const t = useTranslations('common');
   const creditOsm = t('map_credit_osm');
@@ -203,6 +269,16 @@ export default function LocationMap({
   const insetsRef = useRef(insets);
   const refitRef = useRef(refitOnResize);
   refitRef.current = refitOnResize;
+  // Read once, when the map is built, like the insets.
+  const controlsCornerRef = useRef(controlsCorner);
+  const fitInsetsRef = useRef(fitInsets);
+  fitInsetsRef.current = fitInsets;
+  const fitInsetsKey = fitInsets ? `${fitInsets.top},${fitInsets.right},${fitInsets.bottom},${fitInsets.left}` : '';
+
+  // Set once the view has been placed on purpose — a frame request or a slide clear of
+  // the card — so a later resize keeps that view instead of re-framing every pin. A drill
+  // (a new set of places) releases it.
+  const heldRef = useRef(false);
   const markersKey = markers
     .map((m) => `${m.lat},${m.lng},${m.label}|${m.href ?? ''}|${m.id ?? ''}|${m.ghost ? 'g' : ''}`)
     .join(';');
@@ -224,6 +300,15 @@ export default function LocationMap({
   hoverRef.current = onMarkerHover;
   const highlightedIdsRef = useRef(highlightedIds);
   highlightedIdsRef.current = highlightedIds;
+  const fitMarginRef = useRef(fitMargin);
+  fitMarginRef.current = fitMargin;
+  const labelledIdsRef = useRef(labelledIds);
+  labelledIdsRef.current = labelledIds;
+  /** The lit keys that get a name chip: the caller's choice, else the one-pin rule. */
+  const namedKeys = (lit: ReadonlySet<string>): ReadonlySet<string> => {
+    if (labelledIdsRef.current) return keysForIds(labelledIdsRef.current);
+    return highlightNamesOne(lit, drawnKeys(registryRef.current)) ? lit : new Set<string>();
+  };
   const draggableRef = useRef(draggable);
   draggableRef.current = draggable;
   const dragEndRef = useRef(onMarkerDragEnd);
@@ -275,12 +360,12 @@ export default function LocationMap({
         });
         map.on('error', () => { if (!cancelled) setFailed(true); });
         addMapCredit(map, { osm: creditOsm, tiles: creditTiles });
-        if (insetsRef.current) map.setPadding(insetsRef.current);
+        if (insetsRef.current || fitInsetsRef.current) map.setPadding(cameraPadding(insetsRef.current, fitInsetsRef.current));
 
         // Pins stop their own clicks, so this is only ever the map itself.
         map.on('click', () => backgroundClickRef.current?.());
         if (variant === 'full') {
-          map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+          map.addControl(new maplibregl.NavigationControl({ showCompass: false }), controlsCornerRef.current);
         } else if (gestures) {
           // Pans and zooms like the full map, but stays north-up and keeps the wheel for the page.
           map.scrollZoom.disable();
@@ -307,7 +392,7 @@ export default function LocationMap({
           const bounds = new maplibregl.LngLatBounds();
           current.forEach((m) => bounds.extend([m.lng, m.lat]));
           // animate:false — snap to the framed view instead of a long zoom-out fly on load.
-          map.fitBounds(bounds, { padding: fitPadding(variant), maxZoom: 14, animate: false });
+          map.fitBounds(bounds, { padding: fitPadding(variant, elRef.current, fitMarginRef.current), maxZoom: 14, animate: false });
         }
         framedKeyRef.current = currentKey;
 
@@ -395,22 +480,26 @@ export default function LocationMap({
     });
 
     // A marker that was rebuilt starts unhighlighted; re-assert the current highlight.
-    const named = highlightNamesOne(highlightKeysRef.current, drawnKeys(registry));
+    const named = namedKeys(highlightKeysRef.current);
     highlightKeysRef.current.forEach((key) => {
       setHighlighted(registry.get(key), true);
-      setLabelled(registry.get(key), named);
+      setLabelled(registry.get(key), named.has(key));
     });
 
     // Re-frame only when the set of PLACES changed (a drill) — never on a highlight, and
     // never because a pin moved (a drag, or coordinates typed into the edit field).
     if (framedKeyRef.current !== identityKeyRef.current) {
       framedKeyRef.current = identityKeyRef.current;
+      heldRef.current = false;
+      // Frame for what covers the map NOW: a drill that also opens the Explore card
+      // lands in this same commit, before the padding effect below runs.
+      map.setPadding(cameraPadding(insetsRef.current, fitInsetsRef.current));
       if (next.length === 1) {
         map.jumpTo({ center: [next[0].lng, next[0].lat], zoom: variant === 'mini' ? 9 : 11 });
       } else if (next.length > 1) {
         const bounds = new maplibregl.LngLatBounds();
         next.forEach((m) => bounds.extend([m.lng, m.lat]));
-        map.fitBounds(bounds, { padding: fitPadding(variant), maxZoom: 14, animate: false });
+        map.fitBounds(bounds, { padding: fitPadding(variant, elRef.current, fitMarginRef.current), maxZoom: 14, animate: false });
       }
     } else if (next.length === 1 && !map.getBounds().contains([next[0].lng, next[0].lat])) {
       // Same place, moved right off the screen — typed coordinates can do that, where a
@@ -436,6 +525,7 @@ export default function LocationMap({
   // render does not re-run this — and so a hover that overlaps the previous one (parent
   // then child) leaves the shared pins alone instead of flickering them off and on.
   const highlightKey = [...highlightedIds].sort((a, b) => a - b).join(',');
+  const labelKey = labelledIds ? [...labelledIds].sort((a, b) => a - b).join(',') : '-';
   useEffect(() => {
     if (!map) return;
     const next = keysForIds(highlightedIdsRef.current);
@@ -447,10 +537,10 @@ export default function LocationMap({
     on.forEach((key) => setHighlighted(registryRef.current.get(key), true));
     // Applied to the whole set, not just the newly-lit: growing a one-pin highlight into a
     // jurisdiction has to take the chip off the pin that was already on.
-    const named = highlightNamesOne(next, drawnKeys(registryRef.current));
-    next.forEach((key) => setLabelled(registryRef.current.get(key), named));
+    const named = namedKeys(next);
+    next.forEach((key) => setLabelled(registryRef.current.get(key), named.has(key)));
     highlightKeysRef.current = next;
-  }, [map, highlightKey]);
+  }, [map, highlightKey, labelKey]);
 
   // A map that fills its parent follows the parent's size, not just the window's: the
   // Explore pane beside it can widen (#56), which MapLibre's own resize tracking misses.
@@ -470,7 +560,7 @@ export default function LocationMap({
     let frame = 0;
     const ro = new ResizeObserver(() => {
       map.resize();
-      if (!refitRef.current) return;
+      if (!refitRef.current || heldRef.current) return;
       if (moved && movedFor === framedKeyRef.current) return;
       moved = false;
       cancelAnimationFrame(frame);
@@ -481,7 +571,7 @@ export default function LocationMap({
         if (pins.length === 1) { map.setCenter([pins[0].lng, pins[0].lat]); return; }
         const bounds = new gl.LngLatBounds();
         pins.forEach((m) => bounds.extend([m.lng, m.lat]));
-        map.fitBounds(bounds, { padding: fitPadding(variant), maxZoom: 14, animate: false });
+        map.fitBounds(bounds, { padding: fitPadding(variant, elRef.current, fitMarginRef.current), maxZoom: 14, animate: false });
       });
     });
     ro.observe(el);
@@ -491,6 +581,56 @@ export default function LocationMap({
       map.off('movestart', onMove);
     };
   }, [map, variant]);
+
+  // What floats over the map changed (the Explore card opened or folded), or the reader
+  // picked another place: keep the zoom, and slide the view only as far as it takes to
+  // bring the picked pin into the open part — or, with none, the pins in view out from
+  // under the card.
+  // Never a re-frame, so a pick never zooms out. Not on the first run: the map was just
+  // built with this padding.
+  //
+  // A frame request (a rail pick) wins over that: it fits the place and the places inside
+  // it into the open part, zooming as it needs to.
+  const paddedForRef = useRef(fitInsetsKey);
+  const focusedRef = useRef(focusId);
+  const frameTargetRef = useRef(frameTarget);
+  frameTargetRef.current = frameTarget;
+  const frameN = frameTarget?.n ?? null;
+  const framedNRef = useRef(frameN);
+  useEffect(() => {
+    if (!map) return;
+    const padChanged = paddedForRef.current !== fitInsetsKey;
+    const frameAsked = framedNRef.current !== frameN && frameN != null;
+    if (!padChanged && !frameAsked && focusedRef.current === focusId) return;
+    paddedForRef.current = fitInsetsKey;
+    focusedRef.current = focusId;
+    framedNRef.current = frameN;
+    const next = cameraPadding(insetsRef.current, fitInsetsRef.current);
+    const points = frameAsked ? frameTargetRef.current?.points ?? [] : [];
+    const gl = glRef.current;
+    if (points.length === 1) {
+      heldRef.current = true;
+      map.easeTo({ center: [points[0].lng, points[0].lat], zoom: variant === 'mini' ? 9 : 11, padding: next, duration: 400 });
+      return;
+    }
+    if (points.length > 1 && gl) {
+      const bounds = new gl.LngLatBounds();
+      points.forEach((pt) => bounds.extend([pt.lng, pt.lat]));
+      heldRef.current = true;
+      map.setPadding(next);
+      map.fitBounds(bounds, { padding: fitPadding(variant, elRef.current, fitMarginRef.current), maxZoom: 14, duration: 400 });
+      return;
+    }
+    const shift = clearingShift(map, markersRef.current, focusId, next);
+    if (!padChanged && shift.x === 0 && shift.y === 0) return;
+    // The camera centres on the middle of the padded area; pick the centre that leaves
+    // every pin where it is on screen, moved by `shift`.
+    if (shift.x !== 0 || shift.y !== 0) heldRef.current = true;
+    const el = map.getContainer();
+    const cx = next.left + (el.clientWidth - next.left - next.right) / 2;
+    const cy = next.top + (el.clientHeight - next.top - next.bottom) / 2;
+    map.easeTo({ center: map.unproject([cx - shift.x, cy - shift.y]), padding: next, duration: 300 });
+  }, [map, fitInsetsKey, focusId, frameN, variant]);
 
   if (failed) {
     return (

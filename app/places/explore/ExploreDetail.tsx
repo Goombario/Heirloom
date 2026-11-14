@@ -1,11 +1,11 @@
 'use client';
 
-// The detail surface filling the panel's right column beside the index rail — it renders
-// NO card of its own (the panel is the card). Empty state = "select a place" prompt centred
-// in that column (no fetch — key=null). On selection, reuse the shipped PlaceDetail payload
+// The selected place, inside the card that floats over the Explore map — it renders NO
+// card of its own (ExploreView's card is the card), and nothing until a place is picked
+// (the card stays hidden then). On selection, reuse the shipped PlaceDetail payload
 // via useCachedResource on the shared placeDetailKey (warm from the drill hover). Header:
-// name · badges (geocoded uses a MapPin — NOT the inherited-diamond, per #266) · "Open full
-// page →". Body is TWO columns: People (clickable → profile, warmed on hover, one entry per
+// name · the "Part of" chain · the counts line, with the open-page icon and the collapse
+// chevron beside the name. Body is TWO columns: People (clickable → profile, warmed on hover, one entry per
 // person with its linking facts stacked beneath the name) / Events + Place details stacked.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,13 +23,13 @@ import { groupFactLinks } from './groupFactLinks';
 import { prefetchPerson } from '@/app/people/view/personCache';
 import { ExploreDetailSkeleton } from './ExploreSkeleton';
 import { warmThumbnails } from '@/lib/media/warmThumbnails';
-import { ActionLink, SectionHeader, buttonClass, cx } from '@/app/components/ui';
-import { ArrowUpRight, MapPin, ChevronRight } from '@/lib/icons';
+import { ActionLink, SectionHeader, cx } from '@/app/components/ui';
+import { ArrowUpRight, ChevronLeft, ChevronRight } from '@/lib/icons';
 import { sortableYear } from '@/lib/date-utils';
 import type { PlaceDetail } from '@/lib/data/types';
 import { placeHref } from '@/lib/places/place-key';
-import { PinMark } from '../PinMark';
-import type { PlaceTreeNode } from '@/lib/places/hierarchy';
+import { yearStats } from '@/app/places/view/mobile/placeStats';
+import { DecadeChart } from '@/app/places/view/mobile/DecadeChart';
 
 // The pane is a preview beside the drill, and every entry mounts a PersonAvatar
 // (one media resolution each — an IndexedDB blob read in the static build). A
@@ -46,25 +46,18 @@ const MAX_REASONS_PER_PERSON = 3;
 const PERSON_AVATAR_SIZE = 30;
 
 export interface ExploreDetailProps {
-  /** Selected place name, or null for the empty state. */
+  /** Selected place name; null renders nothing. */
   placeName: string | null;
   /** Its id (#1186), which addresses it when present. */
   placeId?: number | null;
   treeId: number | null;
   /** Picks a place listed under Places within, in Explore itself. */
   onPickPlace?: (id: number) => void;
-  /** What the pane shows while nothing is picked: the level being browsed. */
-  overview?: ExploreOverview;
+  /** Folds the card down to its tab. */
+  onCollapse?: () => void;
 }
 
-/** The nothing-picked pane (#56 review): the tree's places at a glance, and where to start. */
-export interface ExploreOverview {
-  records: number;
-  /** The places with the most records, busiest first. */
-  top: PlaceTreeNode[];
-}
-
-export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overview }: ExploreDetailProps) {
+export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, onCollapse }: ExploreDetailProps) {
   const [allPeople, setAllPeople] = useState<string | null>(null);
   const [allPlaces, setAllPlaces] = useState<string | null>(null);
   const t = useTranslations('places');
@@ -126,40 +119,9 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
     const ys = factRows.map((f) => sortableYear(f.date)).filter((y): y is number => y != null);
     return ys.length > 0 ? { first: Math.min(...ys), last: Math.max(...ys) } : null;
   }, [factRows]);
+  const decadeStats = useMemo(() => yearStats(factRows), [factRows]);
 
-  if (!placeName) {
-    // The pane stays up with nothing picked (#56 review, 2026-11-13), so the map beside
-    // it never moves: it names the whole tree and offers its busiest places to start from.
-    return (
-      <div className="flex flex-col">
-        <div className="px-5 pt-5 pb-4 border-b border-border-light">
-          <h2 className="serif text-2xl font-semibold text-text leading-tight m-0">{t('explore_all_places')}</h2>
-          {overview && <p className="mt-1.5 mb-0 text-sm text-text-secondary tabular-nums">{t('records_total', { count: overview.records })}</p>}
-          <p className="mt-3 mb-0 flex items-start gap-2 text-sm text-text-muted">
-            <MapPin size={16} aria-hidden="true" className="shrink-0 mt-px" />
-            <span>{t('explore_overview_hint')}</span>
-          </p>
-        </div>
-        {overview && overview.top.length > 0 && (
-          <section className="px-5 py-4">
-            <SectionHeader level="label" title={t('explore_most_records')} />
-            <div className="flex flex-col">
-              {overview.top.map((p) => (
-                <button key={p.id ?? p.name} type="button" onClick={() => { if (p.id != null) onPickPlace?.(p.id); }}
-                  className="flex items-center gap-2.5 -mx-2 px-2 py-2 min-h-10 rounded-lg text-left bg-transparent border-0 cursor-pointer hover:bg-[color:var(--color-hover-surface)] focus-ring">
-                  <PinMark state={p.pinState} />
-                  <span className="flex-1 min-w-0 serif text-sm font-semibold text-text truncate">{p.name.split(',')[0]?.trim() ?? p.name}</span>
-                  <span className="text-xs text-text-secondary tabular-nums">{p.rolledCount.toLocaleString()}</span>
-                  <ChevronRight size={14} className="text-text-muted shrink-0" aria-hidden="true" />
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 mb-0 text-xs text-text-muted">{t('explore_drill_hint')}</p>
-          </section>
-        )}
-      </div>
-    );
-  }
+  if (!placeName) return null;
 
   // Loading shape mirrors the loaded layout, so selecting a place does not collapse
   // the pane and push it back out when the payload lands.
@@ -195,16 +157,14 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
     <div className="flex flex-col">
       {/* The place: name, the "Part of" chain, the counts line, and the way to its page. */}
       <div className="px-5 pt-5 pb-4 border-b border-border-light">
-        <h2 className="serif text-2xl font-semibold text-text leading-tight m-0 break-words line-clamp-3" title={placeName}>{short}</h2>
+        <div className="flex items-start gap-1">
+          <h2 className="flex-1 min-w-0 serif text-2xl font-semibold text-text leading-tight m-0 break-words line-clamp-3" title={placeName}>{short}</h2>
+          <PlaceCardActions placeId={placeId} placeName={placeName} onCollapse={onCollapse} />
+        </div>
         {partOf.length > 0 && (
           <p className="mt-1 mb-0 text-meta text-text-muted">{t('part_of_chain', { chain: partOf.join(' › ') })}</p>
         )}
         {summary && <p className="mt-1.5 mb-0 text-sm text-text-secondary tabular-nums">{summary}</p>}
-        <div className="mt-2.5">
-          <Link href={placeHref({ id: placeId, name: placeName })} className={cx(buttonClass({ variant: 'outline', size: 'sm' }), 'no-underline')}>
-            {t('open_place_page')}<ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-          </Link>
-        </div>
       </div>
 
       {/* People here: five rows, expanding in place (no link out). One entry per person,
@@ -256,7 +216,8 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
                       <div className="text-xs text-text-muted italic">{t('explore_more_facts', { count: hidden })}</div>
                     )}
                   </div>
-                  <ChevronRight size={15} className="text-text-muted shrink-0 self-center" aria-hidden="true" />
+                  {/* An arrow, not a chevron: the row leaves for the person's page. */}
+                  <ArrowUpRight size={15} className="text-text-muted shrink-0 self-center" aria-hidden="true" />
                 </Link>
               );
             })}
@@ -321,13 +282,45 @@ export function ExploreDetail({ placeName, placeId, treeId, onPickPlace, overvie
         )}
       </section>
 
-      {/* Years: the first and last dated record here. */}
+      {/* Years: the records here by decade, as on the phone's place page. */}
       <section className="px-5 py-4">
         <SectionHeader level="label" title={t('years_title')} />
-        <p className="text-sm text-text-secondary m-0 tabular-nums">
-          {years ? t('years_span', { first: years.first, last: years.last }) : t('years_none')}
-        </p>
+        {decadeStats.busiest ? (
+          <DecadeChart decades={decadeStats.decades} busiest={decadeStats.busiest} />
+        ) : (
+          <p className="text-sm text-text-secondary m-0">{t('years_none')}</p>
+        )}
       </section>
     </div>
+  );
+}
+
+/** The card's header controls, also used on its collapsed tab: the way to the place's
+ *  own page, then (on the open card) the chevron that folds it down. */
+export function PlaceCardActions({ placeId, placeName, onCollapse, onExpand }: {
+  placeId?: number | null;
+  placeName: string;
+  onCollapse?: () => void;
+  onExpand?: () => void;
+}) {
+  const t = useTranslations('places');
+  const iconButton = 'inline-flex items-center justify-center w-8 h-8 shrink-0 rounded-full text-text-muted bg-transparent border-0 cursor-pointer hover:bg-hover-surface hover:text-text focus-ring';
+  return (
+    <>
+      {onExpand && (
+        <button type="button" onClick={onExpand} aria-label={t('explore_card_expand')} title={t('explore_card_expand')} className={iconButton}>
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
+      )}
+      {onExpand && <span className="serif text-md font-semibold text-text truncate max-w-[220px] pr-1">{placeName.split(',')[0]?.trim() ?? placeName}</span>}
+      <Link href={placeHref({ id: placeId, name: placeName })} aria-label={t('open_place_page')} title={t('open_place_page')} className={cx(iconButton, 'no-underline')}>
+        <ArrowUpRight size={16} aria-hidden="true" />
+      </Link>
+      {onCollapse && (
+        <button type="button" onClick={onCollapse} aria-label={t('explore_card_collapse')} title={t('explore_card_collapse')} className={iconButton}>
+          <ChevronLeft size={16} aria-hidden="true" />
+        </button>
+      )}
+    </>
   );
 }

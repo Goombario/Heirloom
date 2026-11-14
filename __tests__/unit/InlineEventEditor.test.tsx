@@ -84,26 +84,26 @@ afterEach(() => {
 });
 
 describe('InlineEventEditor — new-event type default (FL-1)', () => {
-    it('starts on the grouped type chips, with Birth, Death and Burial in Life first', async () => {
+    it('picks the type from a grouped dropdown, with Birth, Death and Burial in Life first', async () => {
         const user = userEvent.setup();
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} allowVital={{ birth: true, death: true }} onCancel={() => {}} onSaved={() => {}} />);
         expect(screen.getByRole('heading', { name: 'add_life_event' })).toBeInTheDocument();
-        // No fields and no Save until a type is chosen (locked board).
-        expect(screen.queryByRole('button', { name: SAVE })).toBeNull();
+        // Save stays off until a type is chosen.
+        expect(screen.getByRole('button', { name: SAVE })).toBeDisabled();
+        await user.click(screen.getByRole('combobox', { name: 'field_type' }));
         const life = screen.getByRole('group', { name: 'group_life' });
-        expect(within(life).getAllByRole('button').map((b) => b.textContent)).toEqual(['BIRT', 'ADOP', 'DEAT', 'BURI']);
-        await user.click(screen.getByRole('button', { name: 'BURI' }));
+        expect(within(life).getAllByRole('option').map((o) => o.textContent)).toEqual(['BIRT', 'ADOP', 'DEAT', 'BURI']);
+        await user.click(screen.getByRole('option', { name: 'BURI' }));
         expect(screen.getByRole('heading', { name: 'add_named' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: SAVE })).toBeEnabled();
-        // Change type goes back to the chips.
-        await user.click(screen.getByRole('button', { name: 'change_type' }));
-        expect(screen.getByRole('heading', { name: 'add_life_event' })).toBeInTheDocument();
     });
 
-    it('leaves out a vital the person already has', () => {
+    it('leaves out a vital the person already has', async () => {
+        const user = userEvent.setup();
         render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} allowVital={{ birth: false, death: true }} onCancel={() => {}} onSaved={() => {}} />);
-        expect(screen.queryByRole('button', { name: 'BIRT' })).toBeNull();
-        expect(screen.getByRole('button', { name: 'DEAT' })).toBeInTheDocument();
+        await user.click(screen.getByRole('combobox', { name: 'field_type' }));
+        expect(screen.queryByRole('option', { name: 'BIRT' })).toBeNull();
+        expect(screen.getByRole('option', { name: 'DEAT' })).toBeInTheDocument();
     });
 });
 

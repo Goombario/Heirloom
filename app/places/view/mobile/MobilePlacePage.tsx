@@ -26,7 +26,8 @@ import { eventTypeLabel } from '@/lib/places/eventTypes';
 import { initialsFromName } from '@/lib/utils/initials';
 import { groupFactLinks } from '../../explore/groupFactLinks';
 import { usePlaceFactReason } from '../../usePlaceFactReason';
-import { decadeTicks, recordGroups, yearOf, yearSpan, yearStats } from './placeStats';
+import { recordGroups, yearOf, yearSpan, yearStats } from './placeStats';
+import { DecadeChart } from './DecadeChart';
 import { PlaceSheets, type PlaceSheet } from './PlaceSheets';
 import { placeHref } from '@/lib/places/place-key';
 
@@ -476,8 +477,6 @@ function YearsPanel({ stats, reason }: { stats: ReturnType<typeof yearStats>; re
     if (decades.length === 0 || !busiest || !first || !last) {
         return <>{<p className="m-0 px-4 py-3 text-base text-text-muted">{t('no_dated')}</p>}{undatedRow}</>;
     }
-    const W = 328, H = 88, base = 70, top = 14, bw = W / decades.length;
-    const from = decades[0].decade, to = decades[decades.length - 1].decade;
     const row = (label: string, sub: string, year: string) => (
         <div className="flex items-baseline gap-3 px-4 py-[11px] border-t border-border/70 text-base">
             <span className="flex-1 min-w-0">
@@ -490,30 +489,7 @@ function YearsPanel({ stats, reason }: { stats: ReturnType<typeof yearStats>; re
     return (
         <div>
             <div className="px-4 pt-3 pb-1.5">
-                <svg viewBox={`0 0 ${W} ${H}`} className="block w-full h-auto" role="img" aria-label={t('chart_label', { from, to })}>
-                    <line x1="0" x2={W} y1={base} y2={base} className="stroke-border" />
-                    {decades.map((d, i) => {
-                        if (d.count === 0) return null;
-                        const h = (d.count / busiest.count) * (base - top);
-                        const x = i * bw;
-                        const top1 = d.decade === busiest.decade;
-                        return (
-                            <g key={d.decade}>
-                                <rect x={x + 1.5} y={base - h} width={Math.max(bw - 3, 2)} height={h} rx="2" className="fill-[color:var(--color-date)]" opacity={top1 ? 1 : 0.5} />
-                                {top1 && <text x={x + bw / 2} y={base - h - 4} textAnchor="middle" className="fill-text font-mono text-xs font-medium">{d.count}</text>}
-                            </g>
-                        );
-                    })}
-                    {decadeTicks(from, to).map((d) => {
-                        const x = ((d - from) / 10) * bw + bw / 2;
-                        return (
-                            <g key={d}>
-                                <line x1={x} x2={x} y1={base} y2={base + 4} className="stroke-border" />
-                                <text x={Math.min(Math.max(x, 16), W - 16)} y={base + 16} textAnchor="middle" className="fill-text-muted font-mono text-xs">{d}</text>
-                            </g>
-                        );
-                    })}
-                </svg>
+                <DecadeChart decades={decades} busiest={busiest} />
             </div>
             {row(t('first_record'), `${first.link.name} · ${reason(first.link, { withDate: false })}`, String(first.year))}
             {row(t('busiest_decade'), t('records_count', { count: busiest.count }), t('decade', { decade: busiest.decade }))}

@@ -132,7 +132,7 @@ export default function InlineMarriageEditor({ familyId, treeId, marriageDate, m
                 <div className="min-w-0">
                     <label htmlFor={`${fieldId}-date`} className={fieldLabel}>{te('field_date')}</label>
                     <DateInput id={`${fieldId}-date`} value={date} onChange={setDate} className={fieldClass('sm')} />
-                    <p className="m-0 mt-1 text-xs text-text-muted">{(date && ageHint?.(date)) || te('date_hint')}</p>
+                    {date && ageHint?.(date) && <p className="m-0 mt-1 text-xs text-text-muted">{ageHint(date)}</p>}
                 </div>
                 <div className="min-w-0">
                     <label htmlFor={`${fieldId}-place`} className={fieldLabel}>{te('field_place')}</label>
