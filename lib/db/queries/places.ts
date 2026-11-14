@@ -1031,6 +1031,8 @@ export interface PlaceGeocodeWrite {
 export async function upsertPlaceGeocode(exec: Exec, w: PlaceGeocodeWrite): Promise<PlaceEditChange> {
     return writePlaceRow(exec, w,
         `"Latitude" = $1, "Longitude" = $2, "DisplayName" = COALESCE($3, "DisplayName"),
+         -- This path carries no kind (ADR 0050): keep it only while the match is the same.
+         "OsmKind" = CASE WHEN "OsmType" IS NOT DISTINCT FROM $4 AND "OsmId" IS NOT DISTINCT FROM $5::bigint THEN "OsmKind" END,
          "OsmType" = $4, "OsmId" = $5, "PinSuppressed" = $6`,
         { columns: ['Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'PinSuppressed'], values: ['$1', '$2', '$3', '$4', '$5', '$6'] },
         [w.latitude, w.longitude, w.displayName, w.osmType, w.osmId, w.pinSuppressed]);

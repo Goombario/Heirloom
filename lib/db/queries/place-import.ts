@@ -150,7 +150,9 @@ export async function restorePlaceEntries(
                 "Longitude" = COALESCE("Places"."Longitude", v."Longitude"),
                 "DisplayName" = COALESCE("Places"."DisplayName", v."DisplayName"),
                 "OsmType" = COALESCE("Places"."OsmType", v."OsmType"),
-                "OsmKind" = COALESCE("Places"."OsmKind", v."OsmKind"),
+                -- Only a kind that describes the place's own match (ADR 0050).
+                "OsmKind" = CASE WHEN "Places"."OsmId" IS NULL OR "Places"."OsmId" = v."OsmId"
+                                 THEN COALESCE("Places"."OsmKind", v."OsmKind") ELSE "Places"."OsmKind" END,
                 "OsmId" = COALESCE("Places"."OsmId", v."OsmId")
                FROM (VALUES ${values}) AS v(${updateColumns.map((c) => `"${c}"`).join(', ')})
               WHERE "Places"."Id" = v."Id" AND "Places"."TreeId" = $${params.push(treeId)}`,

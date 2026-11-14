@@ -3,7 +3,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { newEmptyClusterDb } from '../setup/pglite-snapshot';
 import { query, __setTestDb } from '@/lib/db/connection.pglite';
 import { resolveDefaultTree } from '@/lib/db/queries/trees';
-import { getPlaceDetailService, upsertPlaceHierarchyService, updatePlaceCoordinatesService } from '@/lib/services/places';
+import { getPlaceDetailService, upsertPlaceGeocodeService, upsertPlaceHierarchyService, updatePlaceCoordinatesService } from '@/lib/services/places';
 import { revertAuditEntry } from '@/lib/db/queries/audit';
 
 vi.mock('@/lib/db/connection', async () => await import('@/lib/db/connection.pglite'));
@@ -68,5 +68,11 @@ describe('place detail kind (#45)', () => {
     // Moving the pin by hand leaves the kind alone.
     await updatePlaceCoordinatesService({ ...ctx, placeId: city.Id, latitude: 59.8, longitude: 17.5 });
     expect((await row('Uppsala, Sweden')).OsmKind).toBe('place/city');
+
+    // A save that keeps the same match keeps the kind; another match drops it.
+    await upsertPlaceGeocodeService({ ...ctx, placeId: city.Id, latitude: 59.8, longitude: 17.5, osmType: null, osmId: null });
+    expect((await row('Uppsala, Sweden')).OsmKind).toBe('place/city');
+    await upsertPlaceGeocodeService({ ...ctx, placeId: city.Id, latitude: 59.8, longitude: 17.5, osmType: 'node', osmId: 7 });
+    expect((await row('Uppsala, Sweden')).OsmKind).toBeNull();
   });
 });
