@@ -5300,5 +5300,30 @@
     "stat_records": "{count, plural, one {record} other {records}}",
     "stat_within": "{count, plural, one {place within} other {places within}}",
     "stat_years": "first to last record"
+  },
+  "placeKinds": {
+    "country": "Country",
+    "state": "State",
+    "province": "Province",
+    "region": "Region",
+    "county": "County",
+    "district": "District",
+    "municipality": "Municipality",
+    "city": "City",
+    "town": "Town",
+    "village": "Village",
+    "hamlet": "Hamlet",
+    "farm": "Farm",
+    "borough": "Borough",
+    "suburb": "Suburb",
+    "neighbourhood": "Neighbourhood",
+    "island": "Island",
+    "locality": "Locality",
+    "cemetery": "Cemetery",
+    "place_of_worship": "Place of worship",
+    "church": "Church",
+    "hospital": "Hospital",
+    "school": "School",
+    "house": "House"
   }
 }

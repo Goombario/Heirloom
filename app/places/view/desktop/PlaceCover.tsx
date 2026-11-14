@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { usePlaceKind } from '../usePlaceKind';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import LocationMap, { type MapMarker } from '@/app/components/LocationMap';
@@ -116,6 +117,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
     const short = shortName(placeName);
     const ringedIds = useMemo(() => (ringed != null ? [ringed] : []), [ringed]);
     const parents = detail.parents ?? [];
+    const placeKind = usePlaceKind(detail);
     const within = detail.children?.length ?? 0;
     const otherNames = (detail.otherNames ?? []).map((n) => n.name);
     const counts = <Counts people={people} records={records} within={within} years={years} />;
@@ -128,8 +130,8 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
                 title={<span className="line-clamp-3" title={placeName}>{short}</span>}
                 meta={(
                     <span className="grid gap-1">
-                        {parents.length > 0 ? <PartOf parents={parents} kind={detail.kind} /> : (
-                            <span>{detail.kind ? `${detail.kind} · ` : ''}{t('not_inside_yet')}</span>
+                        {parents.length > 0 ? <PartOf parents={parents} kind={placeKind} /> : (
+                            <span>{placeKind ? `${placeKind} · ` : ''}{t('not_inside_yet')}</span>
                         )}
                         <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
                             <span>{t('not_on_map_yet')}</span>
@@ -179,7 +181,7 @@ export function PlaceCover({ detail, placeName, map, people, records, years, men
                         <h1 className="title-record m-0 min-w-0 line-clamp-3 text-[color:var(--color-text)] [overflow-wrap:anywhere]" title={placeName}>{short}</h1>
                         {actions && <div className="shrink-0 pt-1">{actions}</div>}
                     </div>
-                    {(parents.length > 0 || detail.kind) && <PartOf parents={parents} kind={detail.kind} />}
+                    {(parents.length > 0 || placeKind) && <PartOf parents={parents} kind={placeKind} />}
                     {otherNames.length > 0 && (
                         <p className="m-0 text-sm text-[color:var(--color-text-secondary)]">{t('also_recorded_as', { names: otherNames.join(', ') })}</p>
                     )}

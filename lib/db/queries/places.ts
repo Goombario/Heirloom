@@ -27,6 +27,8 @@ export interface Place {
     ParentId: number | null;
     Form: string | null;
     OsmType?: string | null;
+    /** OSM's `key/value` for the geocoder match (#45, ADR 0050). */
+    OsmKind?: string | null;
     /** BIGINT: a number on both engines, or text past `Number.MAX_SAFE_INTEGER` (#868). */
     OsmId?: number | string | null;
     PinSuppressed?: boolean;
@@ -924,7 +926,7 @@ export async function revertPlaceMove(exec: Exec, treeId: number, snap: PlaceMov
  * An audit entry stores each touched row's values before and after, so a revert
  * restores exactly these columns and nothing a later rename or note touched.
  */
-const PLACE_EDIT_FIELDS = ['Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'PinSuppressed', 'ParentId'] as const;
+const PLACE_EDIT_FIELDS = ['Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'OsmKind', 'PinSuppressed', 'ParentId'] as const;
 
 export type PlaceEditState = Record<(typeof PLACE_EDIT_FIELDS)[number], unknown>;
 
@@ -1057,6 +1059,8 @@ export interface PlaceHierarchyLevel {
     displayName: string | null;
     osmType: string | null;
     osmId: number | null;
+    /** OSM's `key/value` for the level (#45, ADR 0050). */
+    osmKind: string | null;
 }
 
 /**
@@ -1087,9 +1091,10 @@ export async function upsertPlaceHierarchy(
              "DisplayName" = COALESCE($4, "DisplayName"),
              "OsmType" = CASE WHEN $1::double precision IS NOT NULL THEN $5 ELSE "OsmType" END,
              "OsmId" = CASE WHEN $1::double precision IS NOT NULL THEN $6::bigint ELSE "OsmId" END,
-             "PinSuppressed" = CASE WHEN $1::double precision IS NOT NULL THEN FALSE ELSE "PinSuppressed" END`,
-            { columns: ['Latitude', 'Longitude', 'ParentId', 'DisplayName', 'OsmType', 'OsmId'], values: ['$1', '$2', '$3', '$4', '$5', '$6'] },
-            [level.latitude, level.longitude, parentId, level.displayName, level.osmType, level.osmId]);
+             "PinSuppressed" = CASE WHEN $1::double precision IS NOT NULL THEN FALSE ELSE "PinSuppressed" END,
+             "OsmKind" = CASE WHEN $1::double precision IS NOT NULL THEN $7::text ELSE COALESCE("OsmKind", $7::text) END`,
+            { columns: ['Latitude', 'Longitude', 'ParentId', 'DisplayName', 'OsmType', 'OsmId', 'OsmKind'], values: ['$1', '$2', '$3', '$4', '$5', '$6', '$7'] },
+            [level.latitude, level.longitude, parentId, level.displayName, level.osmType, level.osmId, level.osmKind]);
         seen.add(change.id);
         changes.push(change);
         parentId = change.id;
@@ -1176,7 +1181,7 @@ export async function revertPlaceEdits(exec: Exec, treeId: number, changes: Plac
         } else {
             await exec.query(
                 `UPDATE "Places" SET "Latitude" = NULL, "Longitude" = NULL, "DisplayName" = NULL, "OsmType" = NULL,
-                   "OsmId" = NULL, "PinSuppressed" = FALSE, "ParentId" = NULL, "UpdatedAt" = CURRENT_TIMESTAMP
+                   "OsmId" = NULL, "OsmKind" = NULL, "PinSuppressed" = FALSE, "ParentId" = NULL, "UpdatedAt" = CURRENT_TIMESTAMP
                  WHERE "Id" = $1 AND "TreeId" = $2`,
                 [change.id, treeId],
             );

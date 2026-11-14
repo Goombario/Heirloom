@@ -91,6 +91,14 @@ describe('parsePlacesSidecar', () => {
     expect(parsePlacesSidecar(JSON.stringify(built)).places).toEqual(built.places);
   });
 
+  it('carries a valid geocoder kind and drops one that is not an OSM tag (ADR 0050)', () => {
+    const built = buildPlacesSidecar([{ ...ROWS[0], OsmKind: 'place/city' }]);
+    expect(built.places[0].osmKind).toBe('place/city');
+    expect(parsePlacesSidecar(JSON.stringify(built)).places[0].osmKind).toBe('place/city');
+    const junk = JSON.stringify({ places: [{ name: 'X', osmKind: '<b>city</b>' }] });
+    expect(parsePlacesSidecar(junk).places[0]).not.toHaveProperty('osmKind');
+  });
+
   it('throws only on invalid JSON (the caller turns that into a 400)', () => {
     expect(() => parsePlacesSidecar('{ not json')).toThrow();
   });

@@ -5300,5 +5300,30 @@
     "stat_records": "{count, plural, one {acte} other {actes}}",
     "stat_within": "{count, plural, one {lieu inclus} other {lieux inclus}}",
     "stat_years": "du premier au dernier acte"
+  },
+  "placeKinds": {
+    "country": "Pays",
+    "state": "État",
+    "province": "Province",
+    "region": "Région",
+    "county": "Comté",
+    "district": "District",
+    "municipality": "Commune",
+    "city": "Ville",
+    "town": "Ville",
+    "village": "Village",
+    "hamlet": "Hameau",
+    "farm": "Ferme",
+    "borough": "Arrondissement",
+    "suburb": "Quartier",
+    "neighbourhood": "Quartier",
+    "island": "Île",
+    "locality": "Lieu-dit",
+    "cemetery": "Cimetière",
+    "place_of_worship": "Lieu de culte",
+    "church": "Église",
+    "hospital": "Hôpital",
+    "school": "École",
+    "house": "Maison"
   }
 }
