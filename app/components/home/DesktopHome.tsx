@@ -20,6 +20,7 @@ import { avatarClass } from '@/lib/utils/avatar';
 import { getInitials } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
 import { useChangeLine, useChangeParts } from './useChangeLine';
+import { useCountUp } from '@/app/hooks/useCountUp';
 
 /*
  * The desktop home (#53, locked 2026-10-31): a cover band with the tree's name and
@@ -93,6 +94,9 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, ca
     const ready = phase === 'ready' && data != null;
     const firstRun = stats?.people === 0;
     const span = data?.yearSpan;
+    // The band's counts count up the first time this tab shows them (#20).
+    const people = useCountUp(stats?.people ?? 0, `home-count:${treeId}:people`, ready);
+    const families = useCountUp(stats?.families ?? 0, `home-count:${treeId}:families`, ready);
 
     const band = (
         <CoverBand
@@ -102,8 +106,8 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, ca
             titleSize="hero"
             meta={firstRun ? (canEdit ? t('first_run_band_meta') : undefined) : ready && stats ? (
                 t.rich(span?.first != null && span.last != null ? 'desk_counts_span' : 'desk_counts', {
-                    people: stats.people,
-                    families: stats.families,
+                    people,
+                    families,
                     first: span?.first ?? 0,
                     last: span?.last ?? 0,
                     y: (chunks) => <span className="date-mono">{chunks}</span>,
@@ -133,7 +137,7 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, ca
     const rail = (
         <DetailRail look="open">
             {canEdit && <QuickAdd />}
-            <NeedsAttention canEdit={canEdit} datesToCheck={datesToCheck} duplicates={duplicates} cases={stats?.casesInProgress ?? 0} ready={ready} />
+            <NeedsAttention treeId={treeId} canEdit={canEdit} datesToCheck={datesToCheck} duplicates={duplicates} cases={stats?.casesInProgress ?? 0} ready={ready} />
             {ready && <WhereTheyLived data={data} />}
         </DetailRail>
     );
@@ -184,7 +188,7 @@ function PickUp({ person, lastChange, treeId, viewer }: { person: CardPerson; la
         <section aria-labelledby="home-pickup" className={cx('pick-up mb-7 grid overflow-hidden rounded-panel border border-border bg-card shadow-card', showSteps && 'min-[1100px]:grid-cols-[minmax(0,1fr)_340px]')}>
             <div className="flex flex-wrap items-start gap-6 p-6">
                 {/* The portrait repeats the name link, so it leaves the tab order. */}
-                <GuardedLink href={href} tabIndex={-1} aria-hidden="true" className="shrink-0 rounded-card">
+                <GuardedLink href={href} tabIndex={-1} aria-hidden="true" className="hover-lift shrink-0 rounded-card">
                     <Portrait person={person} treeId={treeId} />
                 </GuardedLink>
                 <div className="grid min-w-[220px] flex-1 content-start gap-1.5">
@@ -255,7 +259,7 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
             {loading ? <RowsSkeleton rows={4} /> : people.length === 0 ? (
                 <QuietBox icon={<Clock className="w-4 h-4" />} title={t('quiet_recent_title')} message={t('quiet_recent_body')} />
             ) : (
-                <ul className="m-0 grid list-none gap-x-6 p-0 min-[1100px]:grid-cols-2">
+                <ul className="rows-enter m-0 grid list-none gap-x-6 p-0 min-[1100px]:grid-cols-2">
                     {people.map((p) => {
                         const name = displayFullName(p) || t('person_fallback', { id: p.Id });
                         const { change, time } = changeParts(p.lastChange);
@@ -297,7 +301,7 @@ function Research({ cases, loading, canEdit }: { cases: OpenCase[]; loading: boo
                     message={canEdit ? t('quiet_cases_body') : t('quiet_cases_body_viewer')}
                     action={canEdit ? <ButtonLink href="/cases/new">{t('new_case')}</ButtonLink> : undefined} />
             ) : (
-                <ul className="m-0 grid list-none p-0">
+                <ul className="rows-enter m-0 grid list-none p-0">
                     {cases.map((c) => (
                         <li key={c.Id}>
                             <GuardedLink href={`/cases/view?id=${c.Id}`}
@@ -346,7 +350,7 @@ function QuickAdd() {
     );
 }
 
-function NeedsAttention({ canEdit, datesToCheck, duplicates, cases, ready }: { canEdit: boolean; datesToCheck: number; duplicates: number; cases: number; ready: boolean }) {
+function NeedsAttention({ treeId, canEdit, datesToCheck, duplicates, cases, ready }: { treeId: number | null; canEdit: boolean; datesToCheck: number; duplicates: number; cases: number; ready: boolean }) {
     const t = useTranslations('home');
     // The phone's rule: editors see the data-check rows when they have something; everyone sees cases.
     const rows = [
@@ -375,7 +379,7 @@ function NeedsAttention({ canEdit, datesToCheck, duplicates, cases, ready }: { c
                         <GuardedLink href={r.href}
                             className="flex items-center gap-2 border-t border-border-light px-2 py-3 text-sm text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
                             <span className="min-w-0 flex-1">{r.label}</span>
-                            <span className="font-mono text-sm font-medium text-text-muted">{ready ? r.count.toLocaleString() : '–'}</span>
+                            <span className="font-mono text-sm font-medium text-text-muted">{ready ? <CountUp value={r.count} countKey={`home-count:${treeId}:${r.href}`} /> : '–'}</span>
                             <ArrowUpRight className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />
                         </GuardedLink>
                     </li>
@@ -383,6 +387,11 @@ function NeedsAttention({ canEdit, datesToCheck, duplicates, cases, ready }: { c
             </ul>
         </section>
     );
+}
+
+/** A stat that counts up the first time this tab shows it (#20). */
+function CountUp({ value, countKey }: { value: number; countKey: string }) {
+    return <>{useCountUp(value, countKey).toLocaleString()}</>;
 }
 
 function WhereTheyLived({ data }: { data: DashboardData }) {

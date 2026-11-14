@@ -12,6 +12,8 @@ import { DesktopHome } from '@/app/components/home/DesktopHome';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/app/hooks/useActiveTreeName', () => ({ useActiveTreeName: () => 'Lindqvist family' }));
 vi.mock('@/app/hooks/useTimestamp', () => ({ useTimestamp: () => ({ timestamp: (v: string) => v, activityTime: () => '2 hours ago' }) }));
+// The count-up has its own test (use-count-up); here the numbers show as they are.
+vi.mock('@/app/hooks/useCountUp', () => ({ useCountUp: (value: number) => value }));
 vi.mock('@/app/components/GuardedLink', () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
