@@ -68,7 +68,7 @@ export async function getMediaForOwner(
 
 /**
  * Every record one media row is linked to, named for the viewer's "Linked to"
- * list (#510): people first, then families, events and sources, oldest link
+ * list (#510): people first, then families, events, sources and citations, oldest link
  * first within each. Each owner is read in the media's own tree, so a link to a
  * record in another tree (which validation never writes) names nothing.
  */
@@ -80,6 +80,7 @@ export async function getMediaLinkOwners(mediaId: number, treeId: number): Promi
                 ${primaryNickname('p')} AS "Nickname",
                 p2."FirstName" AS "Partner2FirstName", p2."LastName" AS "Partner2LastName",
                 s."Title" AS "SourceTitle", e."Type" AS "EventType",
+                ci."SourceId" AS "CitationSourceId", ci."Page" AS "CitationPage",
                 CASE
                     WHEN l."OwnerTable" = 'People' AND l."OwnerFact" = 'Birth' THEN lp."BirthDate"
                     WHEN l."OwnerTable" = 'People' AND l."OwnerFact" = 'Death' THEN lp."DeathDate"
@@ -91,12 +92,15 @@ export async function getMediaLinkOwners(mediaId: number, treeId: number): Promi
          LEFT JOIN "People" lp ON l."OwnerTable" = 'People' AND lp."Id" = l."OwnerId" AND lp."TreeId" = $2
          LEFT JOIN "Families" f ON l."OwnerTable" = 'Families' AND f."Id" = l."OwnerId" AND f."TreeId" = $2
          LEFT JOIN "Events" e ON l."OwnerTable" = 'Events' AND e."Id" = l."OwnerId" AND e."TreeId" = $2
-         LEFT JOIN "Sources" s ON l."OwnerTable" = 'Sources' AND s."Id" = l."OwnerId" AND s."TreeId" = $2
+         LEFT JOIN "Citation" ci ON l."OwnerTable" = 'Citation' AND ci."Id" = l."OwnerId" AND ci."TreeId" = $2
+         -- A citation's file names the citation's source (#47).
+         LEFT JOIN "Sources" s ON s."TreeId" = $2
+              AND s."Id" = CASE l."OwnerTable" WHEN 'Sources' THEN l."OwnerId" WHEN 'Citation' THEN ci."SourceId" END
          LEFT JOIN "People" p ON p."TreeId" = $2 AND p."Id" = COALESCE(lp."Id", f."Partner1Id", e."PersonId")
          LEFT JOIN "People" p2 ON p2."TreeId" = $2 AND p2."Id" = f."Partner2Id"
          WHERE l."MediaId" = $1
-           AND COALESCE(lp."Id", f."Id", e."Id", s."Id") IS NOT NULL
-         ORDER BY CASE l."OwnerTable" WHEN 'People' THEN 0 WHEN 'Families' THEN 1 WHEN 'Events' THEN 2 ELSE 3 END,
+           AND COALESCE(lp."Id", f."Id", e."Id", s."Id", ci."Id") IS NOT NULL
+         ORDER BY CASE l."OwnerTable" WHEN 'People' THEN 0 WHEN 'Families' THEN 1 WHEN 'Events' THEN 2 WHEN 'Sources' THEN 3 ELSE 4 END,
                   l."CreatedAt", l."OwnerId"`,
         [mediaId, treeId],
     );

@@ -98,7 +98,7 @@ export default function MobileLightbox({
     if (!isMobile) return null;
 
     const docPeople = doc?.links ? linkedPeopleNames(doc.links, tc('unknown')) : [];
-    const docSources = doc?.links?.filter((l) => l.OwnerTable === 'Sources').length ?? 0;
+    const docSources = doc?.links?.filter((l) => l.OwnerTable === 'Sources' || l.OwnerTable === 'Citation').length ?? 0;
     const names = doc ? docPeople : tags.map(tg => tagPersonName(tg, alt));
     const canEdit = evidence.canEdit !== false;
     const handlers: StageHandlers = {

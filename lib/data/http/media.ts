@@ -41,7 +41,7 @@ export class HttpMediaClient implements MediaClient {
     return (await res.json()) as MediaStorageSummary;
   }
 
-  async listForOwner(ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<Media[]> {
+  async listForOwner(ownerTable: MediaOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<Media[]> {
     const params = new URLSearchParams({ ownerTable, recordId: String(ownerId) });
     if (treeId != null) params.set('treeId', String(treeId));
     if (ownerFact) params.set('ownerFact', ownerFact);
@@ -59,7 +59,7 @@ export class HttpMediaClient implements MediaClient {
     return ((await res.json()) as { media: OwnerGalleryMedia[] }).media;
   }
 
-  async unlinkFromOwner(id: number, ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
+  async unlinkFromOwner(id: number, ownerTable: MediaOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
     const params = new URLSearchParams({ ownerTable, recordId: String(ownerId) });
     if (treeId != null) params.set('treeId', String(treeId));
     if (ownerFact) params.set('ownerFact', ownerFact);
@@ -67,7 +67,7 @@ export class HttpMediaClient implements MediaClient {
     if (!res.ok) await throwForStatus(res);
   }
 
-  async linkToOwner(mediaId: number, ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
+  async linkToOwner(mediaId: number, ownerTable: MediaOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
     const qs = treeId != null ? `?treeId=${treeId}` : '';
     const res = await fetch(`/api/media/${mediaId}/links${qs}`, {
       method: 'POST',
