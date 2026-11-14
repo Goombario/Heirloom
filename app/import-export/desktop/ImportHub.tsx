@@ -156,7 +156,7 @@ function Panel({ title, line, muted = false, children }: { title: string; line: 
     return (
         <Card className="grid gap-3 p-5" pad={false}>
             <div>
-                <SectionHeader level="rail" rule={false} title={title} className={cx(muted && 'opacity-70')} />
+                <SectionHeader level="rail" as="h2" rule={false} title={title} className={cx(muted && 'opacity-70')} />
                 <p className="m-0 text-sm leading-normal text-text-secondary">{line}</p>
             </div>
             {children}

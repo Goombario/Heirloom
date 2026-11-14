@@ -189,7 +189,7 @@ function Block({ row, first, actions, onFace, onPick }: {
   return (
     <li className={cx('pt-3.5 pb-1.5', !first && 'border-t border-border')} data-testid="face-block">
       <div className="flex items-baseline gap-2 px-4">
-        <h3 className="serif m-0 min-w-0 flex-1 truncate text-lg font-semibold">{name}</h3>
+        <h2 className="serif m-0 min-w-0 flex-1 truncate text-lg font-semibold">{name}</h2>
         <span className="shrink-0 text-meta tabular-nums text-text-muted">{ft('group_faces_count', { count: n })}</span>
       </div>
       <p className={cx('m-0 px-4 pt-px text-meta font-medium', tone)}>

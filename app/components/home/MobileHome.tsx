@@ -154,7 +154,7 @@ export function MobileHome({ data, phase, datesToCheck, duplicates, canEdit, tre
                     )}
                     <section aria-labelledby="home-attention" className="mt-1 pt-[18px] border-t border-border">
                         <div className="px-4 pb-1">
-                            <SectionHeader level="eyebrow" headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
+                            <SectionHeader level="eyebrow" as="h2" headingId="home-attention" title={canEdit ? t('mobile_needs_attention') : t('mobile_research')} />
                         </div>
                         {canEdit && datesToCheck > 0 && (
                             <MobileRow icon={<CalendarDays />} label={<Counted label={t('mobile_dates_to_check')} count={datesToCheck} />} end="leave" href="/data-checks" />
