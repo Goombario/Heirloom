@@ -183,3 +183,18 @@ export class DatabaseInterruptedError extends Error {
     this.name = 'DatabaseInterruptedError';
   }
 }
+
+/**
+ * The server failed (HTTP 5xx) and named the failure with a short id that is
+ * also on its log line (#8). The UI shows the id so a reported failure can be
+ * found in the server log.
+ */
+export class ServerError extends Error {
+  readonly errorId: string;
+
+  constructor(message: string, errorId: string) {
+    super(message);
+    this.name = 'ServerError';
+    this.errorId = errorId;
+  }
+}

@@ -71,6 +71,7 @@
     "error_offline": "Vous semblez être hors ligne. Vérifiez votre connexion.",
     "error_interrupted": "Cette modification n’a peut-être pas été enregistrée. Rechargez la page et vérifiez avant de réessayer.",
     "error_generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "error_reference": "(Référence : {id})",
     "loading": "Chargement...",
     "save_changes": "Enregistrer",
     "saving": "Enregistrement...",
