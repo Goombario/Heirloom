@@ -9,6 +9,19 @@ import { cx } from './cx';
 import { pushSheet } from './sheetStack';
 import { dismissChangeToast } from './Toast';
 
+/** A sheet's tallest: the screen less a 40px peek of the page and the notch. */
+const SHEET_CAP = 'calc(100dvh - 40px - var(--sat, 0px))';
+/** How long after a viewport change or blur iOS has finished moving things for the keyboard. */
+const KEYBOARD_SETTLE_MS = 350;
+
+/** Whether a text field in the sheet still has focus, so the keyboard may still be up. */
+function typingInto(el: HTMLElement): boolean {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || !el.contains(active)) return false;
+  return active.tagName === 'TEXTAREA' || active.isContentEditable
+    || (active.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'submit', 'reset', 'range', 'color', 'file'].includes((active as HTMLInputElement).type));
+}
+
 interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -155,27 +168,47 @@ function SheetBody({
   // A typing sheet rides the visible viewport. With the keyboard up, iOS scrolls the page
   // to bring the caret into view, which would carry the header (and Save) off the top; so
   // the sheet sits above the keyboard and 40px below whatever is visible (Vaul's own
-  // keyboard fitting is off for these).
+  // keyboard fitting is off for these). Other sheets leave the keyboard to Vaul.
+  //
+  // Once the keyboard is gone, every sheet drops its keyboard fit, ours or Vaul's, so it
+  // is back where it started (#50). iOS can send its last viewport event before it has
+  // reset the scroll, or none at all, so a closing keyboard is checked again once settled.
   useEffect(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    if (!open || size !== 'full' || !vv) return;
+    if (!open || !vv) return;
     let frame = 0;
+    let late = 0;
     const fit = () => {
       const el = contentRef.current;
       // Pinched in, the visible area isn't the screen; leave the sheet where it is.
       if (!el || vv.scale > 1.01) return;
-      el.style.bottom = `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`;
+      const keyboard = window.innerHeight - vv.height - vv.offsetTop;
+      if (keyboard < 1 && !typingInto(el)) {
+        el.style.bottom = '';
+        el.style.height = size === 'full' ? SHEET_CAP : '';
+        return;
+      }
+      if (size !== 'full') return;
+      el.style.bottom = `${Math.max(0, keyboard)}px`;
       el.style.height = `calc(${vv.height}px - 40px - var(--sat, 0px))`;
     };
     const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fit); };
+    const settle = () => {
+      schedule();
+      window.clearTimeout(late);
+      late = window.setTimeout(schedule, KEYBOARD_SETTLE_MS);
+    };
     // The panel mounts with the portal, a frame after it opens.
     schedule();
-    vv.addEventListener('resize', schedule);
-    vv.addEventListener('scroll', schedule);
+    vv.addEventListener('resize', settle);
+    vv.addEventListener('scroll', settle);
+    document.addEventListener('focusout', settle);
     return () => {
       cancelAnimationFrame(frame);
-      vv.removeEventListener('resize', schedule);
-      vv.removeEventListener('scroll', schedule);
+      window.clearTimeout(late);
+      vv.removeEventListener('resize', settle);
+      vv.removeEventListener('scroll', settle);
+      document.removeEventListener('focusout', settle);
     };
   }, [open, size]);
 
@@ -221,7 +254,7 @@ function SheetBody({
 
   const Root = depth > 1 ? Drawer.NestedRoot : Drawer.Root;
   const typing = size === 'full' || onSave !== undefined;
-  const cap = 'calc(100dvh - 40px - var(--sat, 0px))';
+  const cap = SHEET_CAP;
   const screen = size === 'screen';
 
   return (

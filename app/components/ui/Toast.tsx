@@ -149,12 +149,22 @@ function useKeyboardInset() {
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       root.style.setProperty('--kb-inset', `${Math.round(inset)}px`);
     };
+    // iOS can report the closing keyboard late, or not at all: look again once it settles (#50).
+    let late = 0;
+    const settle = () => {
+      update();
+      window.clearTimeout(late);
+      late = window.setTimeout(update, 350);
+    };
     update();
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
+    vv.addEventListener('resize', settle);
+    vv.addEventListener('scroll', settle);
+    document.addEventListener('focusout', settle);
     return () => {
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
+      window.clearTimeout(late);
+      vv.removeEventListener('resize', settle);
+      vv.removeEventListener('scroll', settle);
+      document.removeEventListener('focusout', settle);
       root.style.removeProperty('--kb-inset');
     };
   }, []);

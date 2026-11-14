@@ -96,7 +96,7 @@ export default function Modal({
             aria-modal="true"
             aria-labelledby={labelledBy}
             aria-describedby={describedBy}
-            className={`fixed inset-0 bg-black/50 flex ${size === 'form' ? 'items-start pt-12' : 'items-center'} justify-center p-4 animate-backdrop-in ${elevated ? 'z-80 pointer-events-auto' : 'z-50'}`}
+            className={`fixed inset-0 bg-black/50 flex ${size === 'form' ? 'items-start pt-[max(3rem,calc(var(--sat)+1rem))]' : 'items-center pt-[calc(var(--sat)+1rem)]'} justify-center px-4 pb-4 animate-backdrop-in ${elevated ? 'z-80 pointer-events-auto' : 'z-50'}`}
             onClick={(e) => {
                 // Only a click whose mousedown+mouseup both land on the backdrop
                 // (target === currentTarget) closes. A drag that starts on the card

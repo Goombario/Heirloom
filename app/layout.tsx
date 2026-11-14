@@ -12,7 +12,6 @@ import GlobalSearch from "./components/GlobalSearch";
 import LocalFirstRunNotice from "./components/LocalFirstRunNotice";
 import BackupNudge from "./components/backup/BackupNudge";
 import { PageNoticeProvider } from "./components/ui/PageNotice";
-import DiagOverlay from "./components/DiagOverlay";
 import DbWarmup from "./components/DbWarmup";
 import RegisterServiceWorker from "./components/RegisterServiceWorker";
 import DesktopWindowFit from "./components/DesktopWindowFit";
@@ -145,7 +144,6 @@ export default function RootLayout({
                 </div>
                 {/* Safari 26's phone status-bar colour (#1099): see .top-edge-tint in globals.css. */}
                 <div className="top-edge-tint" aria-hidden="true" />
-                <DiagOverlay />
                 <DbWarmup />
                 <RegisterServiceWorker />
                 <DesktopWindowFit />
