@@ -1,4 +1,7 @@
 import { query } from '@/lib/db/connection';
+import { withTransaction } from '@/lib/db/rollback';
+
+type Exec = { query: (sql: string, params: unknown[]) => Promise<{ rows: unknown[]; rowCount?: number | null }> };
 
 /**
  * An archive/repository that holds sources (GEDCOM REPO record). Activated in
@@ -53,8 +56,8 @@ export async function getRepositoriesWithCounts(treeId: number): Promise<Reposit
  *  name would otherwise hit. DO UPDATE (a no-op rewrite of "Name") — not DO NOTHING —
  *  so RETURNING always yields the row even when it already existed. Keyed per TREE so
  *  a same-named repository in a sibling tree is never cross-linked. */
-async function findOrCreateRepository(ownerId: number, treeId: number, name: string): Promise<Repository> {
-    const result = await query(
+async function findOrCreateRepository(ownerId: number, treeId: number, name: string, exec: Exec = { query }): Promise<Repository> {
+    const result = await exec.query(
         `INSERT INTO "Repository" ("OwnerId", "TreeId", "Name") VALUES ($1, $2, $3)
          ON CONFLICT ("TreeId", "Name") DO UPDATE SET
            "Name" = EXCLUDED."Name"
@@ -72,8 +75,11 @@ export async function syncSourceRepository(sourceId: number, ownerId: number, tr
         await query(`UPDATE "Sources" SET "RepositoryId" = NULL WHERE "Id" = $1 AND "TreeId" = $2`, [sourceId, treeId]);
         return;
     }
-    const repo = await findOrCreateRepository(ownerId, treeId, name);
-    await query(`UPDATE "Sources" SET "RepositoryId" = $1 WHERE "Id" = $2 AND "TreeId" = $3`, [repo.Id, sourceId, treeId]);
+    // Together, so a failure can't leave a new repository no source points at (#51, L-14).
+    await withTransaction(async (client) => {
+        const repo = await findOrCreateRepository(ownerId, treeId, name, client);
+        await client.query(`UPDATE "Sources" SET "RepositoryId" = $1 WHERE "Id" = $2 AND "TreeId" = $3`, [repo.Id, sourceId, treeId]);
+    });
 }
 
 /** Create a new repository. Returns null when a repository with the same
@@ -114,31 +120,35 @@ export async function updateRepository(
     if (sets.length === 0) return getRepositoryById(id, treeId);
 
     values.push(id, treeId);
-    const result = await query(
-        `UPDATE "Repository" SET ${sets.join(', ')} WHERE "Id" = $${i++} AND "TreeId" = $${i} RETURNING *`,
-        values,
-    );
-    const repo = (result.rows[0] as Repository | undefined) ?? null;
-    if (!repo) return null;
-
-    if (fields.Name !== undefined) {
-        await query(
-            `UPDATE "Sources" SET "RepositoryName" = $1 WHERE "RepositoryId" = $2 AND "TreeId" = $3`,
-            [fields.Name, id, treeId],
+    // The rename and its mirror onto the sources land together (#51, L-14).
+    return withTransaction(async (client) => {
+        const result = await client.query(
+            `UPDATE "Repository" SET ${sets.join(', ')} WHERE "Id" = $${i++} AND "TreeId" = $${i} RETURNING *`,
+            values,
         );
-    }
-    return repo;
+        const repo = (result.rows[0] as Repository | undefined) ?? null;
+        if (!repo) return null;
+
+        if (fields.Name !== undefined) {
+            await client.query(
+                `UPDATE "Sources" SET "RepositoryName" = $1 WHERE "RepositoryId" = $2 AND "TreeId" = $3`,
+                [fields.Name, id, treeId],
+            );
+        }
+        return repo;
+    });
 }
 
-/** Delete a repository, detaching its sources first (clears both the link and the
- *  legacy text name). Returns false when nothing was deleted (not found / not owned). */
+/** Delete a repository, unlinking its sources first (in one transaction, #51 L-14). */
 export async function deleteRepository(id: number, treeId: number): Promise<boolean> {
-    await query(
-        `UPDATE "Sources" SET "RepositoryName" = NULL, "RepositoryId" = NULL WHERE "RepositoryId" = $1 AND "TreeId" = $2`,
-        [id, treeId],
-    );
-    const result = await query(`DELETE FROM "Repository" WHERE "Id" = $1 AND "TreeId" = $2`, [id, treeId]);
-    return (result.rowCount ?? 0) > 0;
+    return withTransaction(async (client) => {
+        await client.query(
+            `UPDATE "Sources" SET "RepositoryName" = NULL, "RepositoryId" = NULL WHERE "RepositoryId" = $1 AND "TreeId" = $2`,
+            [id, treeId],
+        );
+        const result = await client.query(`DELETE FROM "Repository" WHERE "Id" = $1 AND "TreeId" = $2`, [id, treeId]);
+        return (result.rowCount ?? 0) > 0;
+    });
 }
 
 /** One repository scoped to its tree (null if not found / not in this tree). */

@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getMediaById } from '@/lib/db/queries/media';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
@@ -68,7 +69,7 @@ export async function PUT(
         const { searchParams } = new URL(request.url);
         const requestedTreeId = parseIdParam(searchParams.get('treeId'));
         const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
-        const body = await request.json();
+        const body = await readJsonObject(request);
 
         const media = await updateMediaService({
             requestedTreeId, requestedOwnerId, currentUserId: user.id, id: mediaId, body,

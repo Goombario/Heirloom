@@ -3427,9 +3427,17 @@ export async function importSpreadsheetService(params: ImportSpreadsheetParams):
 export async function resetService(params: ResetParams): Promise<{ success: true; message: string }> {
   const { currentUserId } = params;
 
+  let storedFiles: string[] = [];
   const client = await getClient();
   try {
     await client.query('BEGIN');
+    // The uploaded files go too, after the commit, as an overwrite import's do
+    // (#51, L-9). Local mode stores bytes in the database, so this is empty.
+    const media = await client.query<{ FilePath: string }>(
+      'SELECT "FilePath" FROM "Media" WHERE "UserId" = $1 AND "FilePath" IS NOT NULL',
+      [currentUserId]
+    );
+    storedFiles = media.rows.map((r) => r.FilePath);
     await client.query('DELETE FROM "Cases" WHERE "UserId" = $1', [currentUserId]);
     await client.query('DELETE FROM "DataCheckConfirmations" WHERE "UserId" = $1', [currentUserId]);
     await client.query('DELETE FROM "AuditLog" WHERE "TreeOwnerId" = $1', [currentUserId]);
@@ -3459,6 +3467,9 @@ export async function resetService(params: ResetParams): Promise<{ success: true
   } finally {
     client.release();
   }
+
+  // Best-effort: the data is already gone, so a failed unlink is logged, not thrown.
+  if (storedFiles.length > 0) await cleanupMediaFilesCounting(currentUserId, storedFiles);
 
   return { success: true, message: 'Your data has been erased successfully' };
 }

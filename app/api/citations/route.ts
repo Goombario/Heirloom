@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam, parseOptionalIdParam } from '@/lib/utils/parse-id';
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 
   let body;
   try {
-    body = await request.json();
+    body = await readJsonObject(request);
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }

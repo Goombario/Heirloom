@@ -12,8 +12,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const requestedTreeId = parseIdParam(searchParams.get('treeId'));
     const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
-    const page = searchParams.get('page') ? parseInt(searchParams.get('page')!, 10) : undefined;
-    const pageSize = searchParams.get('pageSize') ? parseInt(searchParams.get('pageSize')!, 10) : undefined;
+    // The service checks these are whole numbers and clamps them into range.
+    const page = searchParams.get('page') ? Number(searchParams.get('page')) : undefined;
+    const pageSize = searchParams.get('pageSize') ? Number(searchParams.get('pageSize')) : undefined;
     const entityType = searchParams.get('entityType') || undefined;
     const action = searchParams.get('action') || undefined;
     const who = parseIdParam(searchParams.get('who')) ?? undefined;

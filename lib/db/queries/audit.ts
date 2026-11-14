@@ -153,6 +153,11 @@ export async function getAuditLog(
  * Distinct editors (users who have any audit entry) for a tree — powers
  * the "Who" filter dropdown.
  */
+/** The same entries with each editor's email removed, for view-only members (#51, L-4). */
+export function withoutEditorEmails<T extends { UserEmail?: string | null }>(entries: T[]): T[] {
+    return entries.map((e) => ({ ...e, UserEmail: null }));
+}
+
 export async function getAuditEditors(
     treeId: number
 ): Promise<{ userId: number; name: string }[]> {
@@ -763,7 +768,8 @@ async function revertSingleEntry(
     // mutation. This is the authorization check for the four entities whose
     // ownership is not represented by a legacy UserId column.
     const config = ENTITY_CONFIG[entry.EntityType];
-    if (!config) throw new Error(`Unknown entity type: ${entry.EntityType}`);
+    // e.g. a `datacheck` confirmation: recorded for the log, not revertible here (#51, L-1).
+    if (!config) throw new ValidationError(`Changes of type ${entry.EntityType} can't be reverted`);
 
     const current = await getScopedEntity(config, entry.EntityId, treeId, treeOwnerId, executor);
     if (current && config.scope === 'owner-tree' && current.OwnerId !== treeOwnerId) {

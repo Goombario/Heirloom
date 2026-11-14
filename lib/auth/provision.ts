@@ -1,5 +1,6 @@
 import { getUserSummaryByGoogleId, getUserSummaryByEmail, linkGoogleAccount, insertUser } from '@/lib/db/queries/users';
 import { debugLog } from '@/lib/logger';
+import { AccessError } from '@/lib/data/errors';
 
 /**
  * Node-only user provisioning. Imported by the NextAuth **Node** instance
@@ -12,6 +13,11 @@ export interface ProvisionInput {
   email: string;
   name: string | null;
   image: string | null;
+  /**
+   * Google's `email_verified`. Only a verified address may take over an
+   * existing email-only Users row (#51, L-10); unknown counts as unverified.
+   */
+  emailVerified: boolean;
 }
 
 export interface ProvisionedUser {
@@ -28,7 +34,7 @@ export interface ProvisionedUser {
  * `getUserFromRequest` (as the fallback for tokens minted before #12).
  */
 export async function resolveOrCreateUser(input: ProvisionInput): Promise<ProvisionedUser> {
-  const { googleId, email, name, image } = input;
+  const { googleId, email, name, image, emailVerified } = input;
 
   // Fast: already provisioned, keyed by GoogleId.
   const existing = await getUserSummaryByGoogleId(googleId);
@@ -38,6 +44,11 @@ export async function resolveOrCreateUser(input: ProvisionInput): Promise<Provis
 
   // Not found by GoogleId — link to an existing email-only row (legacy users).
   const linkable = await getUserSummaryByEmail(email);
+  if (linkable && !emailVerified) {
+    // Someone else's history must not pass to an account whose address Google
+    // hasn't verified (#51, L-10).
+    throw new AccessError('This Google account’s email address is not verified');
+  }
   if (linkable) {
     await linkGoogleAccount(linkable.Id, googleId, name, image);
     debugLog('[Auth] Linked GoogleId to an existing user');

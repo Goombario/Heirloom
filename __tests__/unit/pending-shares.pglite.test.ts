@@ -88,7 +88,7 @@ describe('pending shares', () => {
 
     it('applies at first sign-in: the newcomer gets the tree at the stored permission', async () => {
         await share('newcomer@example.com', 'contribute');
-        const user = await resolveOrCreateUser({ googleId: 'g-new', email: 'Newcomer@example.com', name: 'New', image: null });
+        const user = await resolveOrCreateUser({ googleId: 'g-new', email: 'Newcomer@example.com', name: 'New', image: null, emailVerified: true });
         expect(await applyPendingSharesForUser(user.id, 'Newcomer@example.com')).toBe(1);
         expect(await pendingRows()).toEqual([]);
         const scope = await resolveTreeScope({ treeId }, user.id);
@@ -100,7 +100,7 @@ describe('pending shares', () => {
     it('applies only the matching address and keeps an existing share as it is', async () => {
         await share('newcomer@example.com', 'edit');
         await share('someone-else@example.com');
-        const user = await resolveOrCreateUser({ googleId: 'g-new', email: 'newcomer@example.com', name: 'New', image: null });
+        const user = await resolveOrCreateUser({ googleId: 'g-new', email: 'newcomer@example.com', name: 'New', image: null, emailVerified: true });
         await query(`INSERT INTO "TreeSharing" ("OwnerId", "SharedWithId", "TreeId", "Permission") VALUES ($1, $2, $3, 'view')`, [OWNER, user.id, treeId]);
         await applyPendingSharesForUser(user.id, 'newcomer@example.com');
         expect(await pendingRows()).toEqual([expect.objectContaining({ Email: 'someone-else@example.com' })]);

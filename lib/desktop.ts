@@ -18,11 +18,12 @@ export function isWebUrl(url: string): boolean {
 
 /**
  * Open a web link in the system browser from the desktop app. The plugin is
- * loaded on demand so web and static builds never fetch it.
+ * loaded on demand so web and static builds never fetch it. The opener only
+ * allows https (#51, L-12), so a plain http link is opened as https.
  */
 export async function openInSystemBrowser(url: string): Promise<void> {
   const { openUrl } = await import('@tauri-apps/plugin-opener');
-  await openUrl(url.trim());
+  await openUrl(url.trim().replace(/^http:\/\//i, 'https://'));
 }
 
 /**

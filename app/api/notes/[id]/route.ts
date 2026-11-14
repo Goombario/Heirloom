@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -23,7 +24,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'ownerTable and recordId are required' }, { status: 400 });
   }
 
-  const body = await request.json().catch(() => ({}));
+  const body = await readJsonObject(request).catch(() => ({}));
 
   try {
     const note = await updateNoteService({
@@ -65,7 +66,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: 'ownerTable and recordId are required' }, { status: 400 });
   }
 
-  const body = await request.json().catch(() => ({}));
+  const body = await readJsonObject(request).catch(() => ({}));
   if (body.moveTo !== undefined) {
     const to = body.moveTo as { ownerTable?: unknown; recordId?: unknown; ownerFact?: unknown } | null;
     const toRecordId = typeof to?.recordId === 'number' && Number.isInteger(to.recordId) ? to.recordId : null;

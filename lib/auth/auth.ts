@@ -53,6 +53,7 @@ const nextAuth = NextAuth({
         try {
           const user = await resolveOrCreateUser({
             googleId,
+            emailVerified: params.profile.email_verified === true,
             email: token.email as string,
             name: (token.name as string | undefined) ?? null,
             image: (token.picture as string | undefined) ?? null,

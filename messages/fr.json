@@ -920,7 +920,7 @@
   },
   "geocodingPrompt": {
     "title": "Rechercher les lieux en ligne ?",
-    "body": "Pour proposer des correspondances et des repères sur la carte, les noms de lieux que vous saisissez sont envoyés à Photon (photon.komoot.io), un géocodeur basé sur les données OpenStreetMap. Rien d'autre de votre arbre n'est envoyé. Vous pouvez changer ce choix dans les Options.",
+    "body": "Pour proposer des correspondances et des repères sur la carte, les noms de lieux que vous saisissez sont envoyés à Photon (photon.komoot.io), un géocodeur basé sur les données OpenStreetMap. Rien d'autre de votre arbre n'est envoyé. Vous pouvez changer ce choix dans les Options. Les cartes chargent leurs images depuis OpenFreeMap, qui voit votre adresse IP et la zone affichée, jamais les noms de lieux.",
     "turn_on": "Activer la recherche",
     "keep_off": "Laisser désactivé"
   },
@@ -1371,7 +1371,7 @@
     "experimental_title": "Expérimental",
     "experimental_desc": "Ces fonctionnalités sont en cours de développement et peuvent changer ou être supprimées.",
     "geocoding_label": "Recherche de lieu en direct",
-    "geocoding_help": "Désactivée tant que vous ne l'activez pas. Une fois activée, les noms de lieux que vous saisissez sont envoyés à Photon (photon.komoot.io), un géocodeur basé sur les données OpenStreetMap, pour proposer des correspondances et des repères sur la carte. Rien d'autre de votre arbre n'est envoyé.",
+    "geocoding_help": "Désactivée tant que vous ne l'activez pas. Une fois activée, les noms de lieux que vous saisissez sont envoyés à Photon (photon.komoot.io), un géocodeur basé sur les données OpenStreetMap, pour proposer des correspondances et des repères sur la carte. Rien d'autre de votre arbre n'est envoyé. Les cartes chargent leurs images depuis OpenFreeMap, qui voit votre adresse IP et la zone affichée, jamais les noms de lieux.",
     "quoted_names_label": "Noms entre guillemets dans l'arbre",
     "quoted_names_desc": "Contrôle l'affichage des noms avec des surnoms entre guillemets (ex. William \"Bill\" Hartley) sur les nœuds de l'arbre.",
     "quoted_show": "Utiliser le surnom — ex. Bill Hartley (défaut)",
