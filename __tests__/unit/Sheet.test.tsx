@@ -161,7 +161,44 @@ describe('Sheet v2 (#1042, #854)', () => {
       // (happy-dom drops the calc() height, so only the bottom edge is checked here.)
       Object.assign(vv, { height: 844, offsetTop: 0 });
       vv.dispatchEvent(new Event('resize'));
-      await waitFor(() => expect(sheet.style.bottom).toBe('0px'));
+      // The keyboard is gone: the sheet drops its keyboard fit entirely (#50).
+      await waitFor(() => expect(sheet.style.bottom).toBe(''));
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true });
+    }
+  });
+
+  it('settles back once the keyboard has closed, even with no last viewport event (#50)', async () => {
+    const vv = Object.assign(new EventTarget(), { height: 500, offsetTop: 120, scale: 1 });
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+    try {
+      render(<Sheet open onClose={vi.fn()} title="Biography" size="full" onSave={vi.fn()}><textarea aria-label="Text" /></Sheet>);
+      const sheet = await screen.findByRole('dialog', { name: 'Biography' });
+      await waitFor(() => expect(sheet.style.bottom).toBe('224px'));
+      // iOS: the field blurs while the viewport still reports the keyboard, then
+      // resets without telling anyone.
+      fireEvent.focusOut(screen.getByLabelText('Text'));
+      Object.assign(vv, { height: 844, offsetTop: 0 });
+      await waitFor(() => expect(sheet.style.bottom).toBe(''), { timeout: 1500 });
+    } finally {
+      Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true });
+    }
+  });
+
+  it("clears a keyboard fit left on a regular sheet once the keyboard is gone (#50)", async () => {
+    const vv = Object.assign(new EventTarget(), { height: 844, offsetTop: 0, scale: 1 });
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 844, configurable: true });
+    try {
+      render(<Sheet open onClose={vi.fn()} title="Filters"><p>body</p></Sheet>);
+      const sheet = await screen.findByRole('dialog', { name: 'Filters' });
+      // What Vaul's input repositioning can leave behind after the keyboard closes.
+      sheet.style.bottom = '300px';
+      sheet.style.height = '400px';
+      vv.dispatchEvent(new Event('resize'));
+      await waitFor(() => expect(sheet.style.bottom).toBe(''));
+      expect(sheet.style.height).toBe('');
     } finally {
       Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true });
     }
