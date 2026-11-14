@@ -10,6 +10,8 @@ import { useErrorToast } from '@/app/components/useErrorToast';
 import { X } from '@/lib/icons';
 import { ValidationError } from '@/lib/validation';
 import type { Repository } from '@/lib/data/types';
+import { ExternalLink } from '@/app/components/ExternalLink';
+import { contactHref } from '@/lib/utils/contact-links';
 
 interface RepositoryModalProps {
     /** The repository to view/edit, or `null` to create a new one. */
@@ -24,9 +26,22 @@ interface RepositoryModalProps {
     onOpenSource: (id: number) => void;
 }
 
-type RepoSource = { Id: number; Title: string | null };
+/** The small caps label over each field and the sources list. */
+const FIELD_LABEL = 'muted text-[10px] uppercase tracking-[0.06em]';
 
-/** View/edit a single repository (archive): rename, edit address, list its sources, delete. Also creates a new one when `repositoryId` is null. */
+type RepoSource = { Id: number; Title: string | null };
+type Contacts = { Website: string; Phone: string; Email: string };
+const NO_CONTACTS: Contacts = { Website: '', Phone: '', Email: '' };
+const CONTACT_FIELDS = [
+    { key: 'Website', type: 'url', label: 'repo_field_website', autoComplete: 'url' },
+    { key: 'Phone', type: 'tel', label: 'repo_field_phone', autoComplete: 'tel' },
+    { key: 'Email', type: 'email', label: 'repo_field_email', autoComplete: 'email' },
+] as const;
+
+/** A contact field as the API takes it: trimmed, and null when blank. */
+const contactValue = (v: string) => v.trim() || null;
+
+/** View/edit a single repository (archive): rename, edit address and contacts, list its sources, delete. Also creates a new one when `repositoryId` is null. */
 export default function RepositoryModal({
     repositoryId, treeId, canEdit, canDelete, onClose, onChanged, onOpenSource,
 }: RepositoryModalProps) {
@@ -38,6 +53,7 @@ export default function RepositoryModal({
     const [sources, setSources] = useState<RepoSource[]>([]);
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
+    const [contacts, setContacts] = useState<Contacts>(NO_CONTACTS);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loadError, setLoadError] = useState(false);
@@ -45,6 +61,7 @@ export default function RepositoryModal({
     const titleId = useId();
     const nameId = useId();
     const addressId = useId();
+    const contactId = useId();
     const [sourcesError, setSourcesError] = useState(false);
     const [editorKey, setEditorKey] = useState(isNew ? scopeKey : null);
     const [sourcesKey, setSourcesKey] = useState<string | null>(isNew ? scopeKey : null);
@@ -63,6 +80,7 @@ export default function RepositoryModal({
             setRepo(r);
             setName(r.Name);
             setAddress(r.Address ?? '');
+            setContacts({ Website: r.Website ?? '', Phone: r.Phone ?? '', Email: r.Email ?? '' });
             setEditorKey(scopeKey);
         } catch (e) {
             if (repoRequest.current !== request) return;
@@ -94,6 +112,7 @@ export default function RepositoryModal({
         setRepo(null);
         setName('');
         setAddress('');
+        setContacts(NO_CONTACTS);
         setSources([]);
         setError(null);
         setLoadError(false);
@@ -116,10 +135,14 @@ export default function RepositoryModal({
         setError(null);
         try {
             const client = await getDataClient();
+            const input = {
+                Name: name.trim(), Address: address.trim() || null,
+                Website: contactValue(contacts.Website), Phone: contactValue(contacts.Phone), Email: contactValue(contacts.Email),
+            };
             if (repositoryId === null) {
-                await client.repositories.create({ Name: name.trim(), Address: address.trim() || null }, treeId);
+                await client.repositories.create(input, treeId);
             } else {
-                await client.repositories.update(repositoryId, { Name: name.trim(), Address: address.trim() || null }, treeId);
+                await client.repositories.update(repositoryId, input, treeId);
             }
             onChanged();
             onClose();
@@ -154,7 +177,9 @@ export default function RepositoryModal({
 
     const dirty = isNew
         ? name.trim().length > 0
-        : editorReady && repo != null && (name.trim() !== repo.Name || (address.trim() || null) !== (repo.Address ?? null));
+        : editorReady && repo != null && (name.trim() !== repo.Name || (address.trim() || null) !== (repo.Address ?? null)
+            || CONTACT_FIELDS.some(({ key }) => contactValue(contacts[key]) !== (repo[key] ?? null)));
+    const savedWebsite = contactHref('Website', repo?.Website);
 
     return (
         <Modal open onClose={onClose} size="md" labelledBy={titleId}>
@@ -174,7 +199,7 @@ export default function RepositoryModal({
 
                 <div className="p-4 overflow-y-auto flex-1 min-h-0 flex flex-col gap-[14px]">
                     <div>
-                        <label htmlFor={nameId} className="muted text-[10px] uppercase tracking-[0.06em] block mb-1">
+                        <label htmlFor={nameId} className={`${FIELD_LABEL} block mb-1`}>
                             {t('repo_field_name')}
                         </label>
                         <input
@@ -187,7 +212,7 @@ export default function RepositoryModal({
                         />
                     </div>
                     <div>
-                        <label htmlFor={addressId} className="muted text-[10px] uppercase tracking-[0.06em] block mb-1">
+                        <label htmlFor={addressId} className={`${FIELD_LABEL} block mb-1`}>
                             {t('repo_field_address')}
                         </label>
                         <textarea
@@ -200,6 +225,30 @@ export default function RepositoryModal({
                             placeholder={t('repo_address_placeholder')}
                         />
                     </div>
+                    {CONTACT_FIELDS.map(({ key, type, label, autoComplete }) => (
+                        <div key={key}>
+                            <div className="flex items-baseline justify-between gap-3 mb-1">
+                                <label htmlFor={`${contactId}-${key}`} className={`${FIELD_LABEL} block`}>
+                                    {t(label)}
+                                </label>
+                                {key === 'Website' && savedWebsite && editorReady && (
+                                    <ExternalLink href={savedWebsite} className="text-meta text-link hover:underline">
+                                        {t('repo_visit_website')}
+                                    </ExternalLink>
+                                )}
+                            </div>
+                            <input
+                                id={`${contactId}-${key}`}
+                                type={type}
+                                value={editorReady ? contacts[key] : ''}
+                                onChange={e => { const value = e.target.value; setContacts(c => ({ ...c, [key]: value })); }}
+                                disabled={!canEdit}
+                                autoComplete={autoComplete}
+                                className={fieldClass()}
+                                placeholder={key === 'Website' ? t('repo_website_placeholder') : undefined}
+                            />
+                        </div>
+                    ))}
 
                     {!isNew && loadError && (
                         <InlineDataError
@@ -212,7 +261,7 @@ export default function RepositoryModal({
 
                     {!isNew && (
                     <div>
-                        <div className="muted text-[10px] uppercase tracking-[0.06em] mb-1.5">
+                        <div className={`${FIELD_LABEL} mb-1.5`}>
                             {t('repo_sources_heading', { count: currentSources.length })}
                         </div>
                         {sourcesError ? (

@@ -11,6 +11,10 @@ export interface Repository {
     TreeId?: number | null;
     Name: string;
     Address: string | null;
+    /** The first `WWW`, `PHON` and `EMAIL` of its GEDCOM record (#40, ADR 0049). */
+    Website?: string | null;
+    Phone?: string | null;
+    Email?: string | null;
     CreatedAt: string;
     /** A GEDCOM REPO record's lines the app doesn't model, re-emitted on export (#966). */
     RawGedcom?: string | null;
@@ -76,6 +80,10 @@ export async function syncSourceRepository(sourceId: number, ownerId: number, tr
     await query(`UPDATE "Sources" SET "RepositoryId" = $1 WHERE "Id" = $2 AND "TreeId" = $3`, [repo.Id, sourceId, treeId]);
 }
 
+/** A repository's contact fields, as create and update take them (ADR 0049). */
+type ContactFields = { Website?: string | null; Phone?: string | null; Email?: string | null };
+const CONTACT_COLUMNS = ['Website', 'Phone', 'Email'] as const;
+
 /** Create a new repository. Returns null when a repository with the same
  *  (tree, name) already exists — the per-tree unique index makes the ON CONFLICT
  *  a no-op, so the caller can surface a duplicate-name error. A same-named
@@ -83,23 +91,24 @@ export async function syncSourceRepository(sourceId: number, ownerId: number, tr
 export async function createRepository(
     ownerId: number,
     treeId: number,
-    fields: { Name: string; Address?: string | null },
+    fields: { Name: string; Address?: string | null } & ContactFields,
 ): Promise<Repository | null> {
     const result = await query(
-        `INSERT INTO "Repository" ("OwnerId", "TreeId", "Name", "Address") VALUES ($1, $2, $3, $4)
+        `INSERT INTO "Repository" ("OwnerId", "TreeId", "Name", "Address", "Website", "Phone", "Email")
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT ("TreeId", "Name") DO NOTHING
          RETURNING *`,
-        [ownerId, treeId, fields.Name, fields.Address ?? null],
+        [ownerId, treeId, fields.Name, fields.Address ?? null, fields.Website ?? null, fields.Phone ?? null, fields.Email ?? null],
     );
     return (result.rows[0] as Repository | undefined) ?? null;
 }
 
-/** Update a repository's name/address. Renaming dual-writes the legacy
+/** Update a repository's name, address and contact fields. Renaming dual-writes the legacy
  *  `Sources."RepositoryName"` text so the two stay consistent during migration. */
 export async function updateRepository(
     id: number,
     treeId: number,
-    fields: { Name?: string; Address?: string | null },
+    fields: { Name?: string; Address?: string | null } & ContactFields,
 ): Promise<Repository | null> {
     const sets: string[] = [];
     const values: unknown[] = [];
@@ -110,6 +119,9 @@ export async function updateRepository(
         sets.push(`"AddressRawGedcom" = CASE WHEN "Address" IS DISTINCT FROM $${i} THEN NULL ELSE "AddressRawGedcom" END`);
         sets.push(`"Address" = $${i++}`);
         values.push(fields.Address);
+    }
+    for (const column of CONTACT_COLUMNS) {
+        if (fields[column] !== undefined) { sets.push(`"${column}" = $${i++}`); values.push(fields[column]); }
     }
     if (sets.length === 0) return getRepositoryById(id, treeId);
 

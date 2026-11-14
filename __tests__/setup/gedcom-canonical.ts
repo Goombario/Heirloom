@@ -296,8 +296,8 @@ export async function canonicalizeTree(
   // "Id" is selected only to resolve note owners by natural key (see
   // noteOwnerKey); it is stripped before the repositories channel is compared,
   // since a re-import reassigns it.
-  const repositoryRows = await rows<{ Id: number; Name: string; Address: string | null }>(
-    'SELECT "Id","Name","Address" FROM "Repository" WHERE "TreeId" = $1',
+  const repositoryRows = await rows<{ Id: number; Name: string; Address: string | null; Website: string | null; Phone: string | null; Email: string | null }>(
+    'SELECT "Id","Name","Address","Website","Phone","Email" FROM "Repository" WHERE "TreeId" = $1',
     [treeId],
   );
   const repositoryName = new Map(repositoryRows.map(r => [r.Id, r.Name]));

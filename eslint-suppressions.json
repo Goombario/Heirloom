@@ -84,7 +84,7 @@
   },
   "app/library/RepositoryModal.tsx": {
     "ds/no-arbitrary-font-size": {
-      "count": 3
+      "count": 1
     }
   },
   "app/library/sections/LibraryPhotoBulkToolbar.tsx": {

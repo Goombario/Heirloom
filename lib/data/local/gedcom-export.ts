@@ -138,11 +138,11 @@ export async function exportGedcomLocalService(params: {
   const allMediaLinks = await getAllMediaLinks(treeId);
   const repoIdByName = new Map<string, number>();
   const repoAddrByName = new Map<string, string>();
-  const repositoryDetails = new Map<string, { Address: string | null; RawGedcom?: string | null; AddressRawGedcom?: string | null }>();
+  const repositoryDetails = new Map<string, { Address: string | null; RawGedcom?: string | null; AddressRawGedcom?: string | null; Website?: string | null; Phone?: string | null; Email?: string | null }>();
   for (const repo of await getRepositories(treeId)) {
     repoIdByName.set(repo.Name, repo.Id);
     if (repo.Address) repoAddrByName.set(repo.Name, repo.Address);
-    repositoryDetails.set(repo.Name, { Address: repo.Address, RawGedcom: repo.RawGedcom, AddressRawGedcom: repo.AddressRawGedcom });
+    repositoryDetails.set(repo.Name, { Address: repo.Address, RawGedcom: repo.RawGedcom, AddressRawGedcom: repo.AddressRawGedcom, Website: repo.Website, Phone: repo.Phone, Email: repo.Email });
   }
   const exportSources = allSources.map((source) => ({
     ...source,

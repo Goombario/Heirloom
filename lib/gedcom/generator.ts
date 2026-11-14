@@ -127,7 +127,7 @@ export interface GedcomExportExtras {
      */
     repoIdByName?: Map<string, number>;
     /** Repository name → its address and GEDCOM passthrough, for every repository in the tree (#966). */
-    repositoryDetails?: Map<string, { Address: string | null; RawGedcom?: string | null; AddressRawGedcom?: string | null }>;
+    repositoryDetails?: Map<string, { Address: string | null; RawGedcom?: string | null; AddressRawGedcom?: string | null; Website?: string | null; Phone?: string | null; Email?: string | null }>;
 }
 
 // GEDCOM 5.5.1 spec: line length includes level, tag, value, delimiters, AND terminator (CRLF).
@@ -749,7 +749,9 @@ export function generateGedcomWithReport(
             pushGedcomLine(lines, 1, 'NAME', name);
             const details = extras?.repositoryDetails?.get(name);
             const addr = details?.Address ?? repoNameToAddr.get(name);
-            if (addr || details?.AddressRawGedcom) {
+            const hasContacts = Boolean(details?.Website || details?.Phone || details?.Email);
+            // GEDCOM 5.5.1 needs an ADDR wherever PHON, EMAIL or WWW is used (ADR 0049).
+            if (addr || details?.AddressRawGedcom || hasContacts) {
                 // A multi-line address continues on CONT lines; ADR1, CITY, … follow (#966).
                 const [first, ...rest] = (addr ?? '').split(/\r\n?|\n/);
                 if (first) pushGedcomLine(lines, 1, 'ADDR', first);
@@ -757,6 +759,9 @@ export function generateGedcomWithReport(
                 for (const line of rest) pushGedcomLine(lines, 2, 'CONT', line);
                 pushRaw(lines, details?.AddressRawGedcom);
             }
+            if (details?.Phone) pushGedcomLine(lines, 1, 'PHON', details.Phone);
+            if (details?.Email) pushGedcomLine(lines, 1, 'EMAIL', details.Email);
+            if (details?.Website) pushGedcomLine(lines, 1, 'WWW', details.Website);
             // REPOSITORY_RECORD +1 <<NOTE_STRUCTURE>>, after NAME/ADDR per the spec's
             // own ordering (ged551-2.txt:227-232).
             const repoId = extras?.repoIdByName?.get(name);

@@ -181,11 +181,11 @@ export async function exportGedcomService(params: ExportGedcomParams): Promise<E
     // rows onto the REPO records it synthesises from source name strings (ADR 0012).
     const repoAddrByName = new Map<string, string>();
     const repoIdByName = new Map<string, number>();
-    const repositoryDetails = new Map<string, { Address: string | null; RawGedcom?: string | null; AddressRawGedcom?: string | null }>();
+    const repositoryDetails = new Map<string, { Address: string | null; RawGedcom?: string | null; AddressRawGedcom?: string | null; Website?: string | null; Phone?: string | null; Email?: string | null }>();
     for (const r of await getRepositories(exportTreeId)) {
         if (r.Address) repoAddrByName.set(r.Name, r.Address);
         repoIdByName.set(r.Name, r.Id);
-        repositoryDetails.set(r.Name, { Address: r.Address, RawGedcom: r.RawGedcom, AddressRawGedcom: r.AddressRawGedcom });
+        repositoryDetails.set(r.Name, { Address: r.Address, RawGedcom: r.RawGedcom, AddressRawGedcom: r.AddressRawGedcom, Website: r.Website, Phone: r.Phone, Email: r.Email });
     }
     const exportSources = allSources.map(s => ({
         ...s,

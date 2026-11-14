@@ -645,6 +645,7 @@ function LibraryPageContent() {
                   <RepositoryHeader
                     name={selectedRepo.Name}
                     address={selectedRepo.Address}
+                    contacts={selectedRepo}
                     count={panelRepositories.find((r) => r.id === selectedRepo.Id)?.count ?? 0}
                     canEdit={canEdit}
                     onEdit={() => setEditRepoId(selectedRepo.Id)}
