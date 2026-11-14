@@ -16,6 +16,7 @@ import DbWarmup from "./components/DbWarmup";
 import RegisterServiceWorker from "./components/RegisterServiceWorker";
 import DesktopWindowFit from "./components/DesktopWindowFit";
 import { AppToaster } from "./components/ui";
+import { BackgroundMediaStatus } from "./components/media/BackgroundMediaStatus";
 import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import { SkipLink } from '@/app/components/SkipLink';
 
@@ -151,6 +152,7 @@ export default function RootLayout({
                 <GlobalSearch />
                 <LocalFirstRunNotice />
                 <AppToaster />
+                <BackgroundMediaStatus />
               </UnsavedChangesProvider>
             </TreeProvider>
           </ThemeProvider>
