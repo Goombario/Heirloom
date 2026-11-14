@@ -129,6 +129,26 @@ describe('Phone research case (#135)', () => {
         expect(screen.queryByRole('button', { name: 'Find a record' })).not.toBeInTheDocument();
     });
 
+    it('opens New lead as a full sheet with Add lead in its header', async () => {
+        renderPage();
+        fireEvent.click(await screen.findByRole('button', { name: /Lead 1 of 2/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /New lead/ }));
+        const sheet = await screen.findByRole('dialog', { name: 'New lead' });
+        expect(within(sheet).getByRole('button', { name: 'Add lead' })).toBeInTheDocument();
+        expect(within(sheet).getByRole('button', { name: /Cancel/ })).toBeInTheDocument();
+    });
+
+    it('shows About this case with Edit, which opens Edit the question', async () => {
+        renderPage(state({}, { Description: 'Raised by her aunt in Mora.', Tags: ['adoption'] }));
+        fireEvent.click(await screen.findByRole('button', { name: /Lead 1 of 2/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /About this case/ }));
+        const about = await screen.findByRole('dialog', { name: 'About this case' });
+        expect(within(about).getByText('Raised by her aunt in Mora.')).toBeInTheDocument();
+        expect(within(about).getByText('adoption')).toBeInTheDocument();
+        fireEvent.click(within(about).getByRole('button', { name: 'Edit' }));
+        expect(await screen.findByRole('dialog', { name: 'Edit the question' })).toBeInTheDocument();
+    });
+
     it('opens a closed case on the answer, with no pill', async () => {
         renderPage(state({}, { Status: 'closed', Outcome: 'answered', ClosedAt: '2026-11-13',
             comments: [note(9, { Kind: 'conclusion', Body: 'Hilda was the daughter of Elin Ström.' })] }));

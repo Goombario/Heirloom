@@ -26,14 +26,14 @@ import { yearsLabel } from '../desktop/LeadsRail';
 import type { ClaimConflict } from '../desktop/claims';
 import { PhoneLead } from './PhoneLead';
 import { AddNoteSheet, PhoneJournal, StrikeSheet } from './PhoneJournal';
-import { CaseMenuSheet, LeadMenuSheet, LeadsSheet, LogReplySheet, WhichHoldsSheet } from './PhoneSheets';
+import { AboutCaseSheet, CaseMenuSheet, LeadMenuSheet, LeadsSheet, LogReplySheet, WhichHoldsSheet } from './PhoneSheets';
 
 type SheetKind =
     | { kind: 'leads' } | { kind: 'lead-menu' } | { kind: 'case-menu' }
     | { kind: 'which'; conflict: ClaimConflict } | { kind: 'reply'; request: CaseRequest }
     | { kind: 'find'; leadId: number; start: FindStart } | { kind: 'record'; findingId: number }
     | { kind: 'close' } | { kind: 'note' } | { kind: 'strike'; note: CaseComment }
-    | { kind: 'new-lead' } | { kind: 'edit-lead'; leadId: number } | { kind: 'about' }
+    | { kind: 'new-lead' } | { kind: 'edit-lead'; leadId: number } | { kind: 'about' } | { kind: 'edit-about' }
     | { kind: 'add-media'; leadId: number } | { kind: 'export' } | { kind: 'drop'; leadId: number } | { kind: 'delete' };
 
 /**
@@ -258,7 +258,7 @@ export function PhoneWorkspace({ cd }: { cd: CaseDetailState }) {
                     canClose={editable} canExport={ws.workspace != null}
                     canDelete={manage && canDelete && !changedTree}
                     onAnswer={() => setSheet({ kind: 'close' })}
-                    onEditQuestion={() => setSheet({ kind: 'about' })}
+                    onEditQuestion={() => setSheet({ kind: 'edit-about' })}
                     onToggleHold={() => { void cd.patchCase({ Status: caseData.Status === 'on_hold' ? 'in_progress' : 'on_hold' }); }}
                     onReopen={() => { void cd.patchCase({ Status: 'in_progress' }).then((ok) => { if (ok) firstLead(); }); }}
                     onCopyLink={() => { void navigator.clipboard?.writeText(window.location.href).then(() => showSuccessToast(t('link_copied'))); }}
@@ -307,9 +307,13 @@ export function PhoneWorkspace({ cd }: { cd: CaseDetailState }) {
                     onFiled={setLastFiled} onClose={shut} />
                 {sheet?.kind === 'strike' && <StrikeSheet key={sheet.note.Id} note={sheet.note} cd={cd} onClose={shut} />}
 
-                {/* These still open as the desktop's dialogs; their phone sheets follow (#135). */}
+                <AboutCaseSheet open={sheet?.kind === 'about'} caseData={caseData} treeId={activeTreeId} canEdit={manage && !closed}
+                    onEdit={() => setSheet({ kind: 'edit-about' })} onAddPhotos={() => cd.setShowUploadModal(true)} onOpenPhoto={(i) => cd.setLightboxIndex(i)}
+                    onClose={shut} />
+
+                {/* The desktop's forms, as full sheets. */}
                 {sheet?.kind === 'new-lead' && (
-                    <LeadDialog casePeople={caseData.people} treeId={activeTreeId} onClose={shut}
+                    <LeadDialog sheet casePeople={caseData.people} treeId={activeTreeId} onClose={shut}
                         onSave={async (input) => {
                             const id = await ws.run(async () => (await client()).cases.addLead(caseId, input, activeTreeId));
                             if (typeof id === 'number') { ws.open({ kind: 'lead', leadId: id }); setTab('main'); }
@@ -319,15 +323,15 @@ export function PhoneWorkspace({ cd }: { cd: CaseDetailState }) {
                 {sheet?.kind === 'edit-lead' && (() => {
                     const lead = leads.find((l) => l.Id === sheet.leadId);
                     return lead ? (
-                        <LeadDialog lead={lead} casePeople={caseData.people} treeId={activeTreeId} onClose={shut}
+                        <LeadDialog sheet lead={lead} casePeople={caseData.people} treeId={activeTreeId} onClose={shut}
                             onSave={async (input) => after(await ws.run(async () => (await client()).cases.changeLead(caseId, lead.Id, { action: 'edit', ...input }, activeTreeId)))} />
                     ) : null;
                 })()}
-                {sheet?.kind === 'about' && <AboutDialog caseData={caseData} treeId={activeTreeId} onClose={shut} onSave={saveAbout} />}
+                {sheet?.kind === 'edit-about' && <AboutDialog sheet caseData={caseData} treeId={activeTreeId} onClose={shut} onSave={saveAbout} />}
                 {sheet?.kind === 'add-media' && (() => {
                     const lead = leads.find((l) => l.Id === sheet.leadId);
                     return lead ? (
-                        <AddMediaDialog lead={lead} treeId={activeTreeId} onClose={shut}
+                        <AddMediaDialog sheet lead={lead} treeId={activeTreeId} onClose={shut}
                             onSave={async (input) => {
                                 const ok = after(await ws.run(async () => (await client()).cases.addFinding(caseId, input, activeTreeId)));
                                 if (ok) showSuccessToast(t('media_added'));
@@ -336,7 +340,7 @@ export function PhoneWorkspace({ cd }: { cd: CaseDetailState }) {
                     ) : null;
                 })()}
                 {sheet?.kind === 'export' && ws.workspace && (
-                    <ExportDialog caseData={caseData} workspace={ws.workspace} onClose={shut} onPrint={() => setPrinting((n) => n + 1)} />
+                    <ExportDialog sheet caseData={caseData} workspace={ws.workspace} onClose={shut} onPrint={() => setPrinting((n) => n + 1)} />
                 )}
                 {printing > 0 && ws.workspace && (
                     <CasePrint key={printing} caseData={caseData} workspace={ws.workspace} summaries={ws.summaries} onDone={() => setPrinting(0)} />

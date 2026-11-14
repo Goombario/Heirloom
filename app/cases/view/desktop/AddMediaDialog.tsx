@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, FormDialog, fieldClass } from '@/app/components/ui';
+import { fieldClass } from '@/app/components/ui';
 import { getDataClient } from '@/lib/data';
 import type { CaseLead } from '@/lib/db/schema';
 import type { CaseFindingInput } from '@/lib/data/types';
+import { CaseFormFrame } from './CaseFormFrame';
 
 /** A file's name without its extension, as the title it starts with. */
 const baseName = (name: string) => name.replace(/\.[^.]+$/, '').trim();
@@ -15,15 +16,16 @@ const baseName = (name: string) => name.replace(/\.[^.]+$/, '').trim();
  * saved as a record with no claims yet, so it is filed under the lead, logged in
  * the journal and listed in All evidence; its claims can be added on its card.
  */
-export function AddMediaDialog({ lead, treeId, onSave, onClose }: {
+export function AddMediaDialog({ lead, treeId, sheet = false, onSave, onClose }: {
     lead: CaseLead;
     treeId: number | null;
+    /** On a phone, a full sheet (#135). */
+    sheet?: boolean;
     /** Resolves false when the save failed, keeping the dialog. */
     onSave: (input: CaseFindingInput) => Promise<boolean>;
     onClose: () => void;
 }) {
     const t = useTranslations('caseResearch');
-    const tc = useTranslations('common');
     const [file, setFile] = useState<File | null>(null);
     const [title, setTitle] = useState('');
     const [busy, setBusy] = useState(false);
@@ -54,20 +56,8 @@ export function AddMediaDialog({ lead, treeId, onSave, onClose }: {
     };
 
     return (
-        <FormDialog
-            open
-            onClose={onClose}
-            title={t('add_media')}
-            subtitle={lead.Question}
-            dirty={file != null}
-            busy={busy}
-            footer={(requestClose) => (
-                <>
-                    <Button variant="outline" onClick={requestClose} disabled={busy}>{tc('cancel')}</Button>
-                    <Button onClick={() => { void save(); }} disabled={!ready}>{t('add_media_save')}</Button>
-                </>
-            )}
-        >
+        <CaseFormFrame sheet={sheet} title={t('add_media')} subtitle={lead.Question} dirty={file != null} busy={busy} ready={ready}
+            saveLabel={t('add_media_save')} onSave={save} onClose={onClose}>
             <div className="grid gap-5">
                 <label className="grid gap-1.5 text-sm text-text-secondary">
                     {t('add_media_file')}
@@ -87,6 +77,6 @@ export function AddMediaDialog({ lead, treeId, onSave, onClose }: {
                 <p className="m-0 text-meta text-text-muted">{t('add_media_note')}</p>
                 {error && <p role="alert" className="m-0 text-sm text-error">{error}</p>}
             </div>
-        </FormDialog>
+        </CaseFormFrame>
     );
 }

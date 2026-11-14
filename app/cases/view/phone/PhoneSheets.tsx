@@ -1,13 +1,19 @@
 'use client';
 
 import { useId, useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { CopperPill, RadioRow, fieldClass } from '@/app/components/ui';
 import { Sheet } from '@/app/components/ui/Sheet';
+import PersonAvatar from '@/app/components/PersonAvatar';
+import MediaImg from '@/app/components/MediaImg';
+import { initialsFromName } from '@/lib/utils/initials';
+import { displayFullName } from '@/lib/utils/names';
 import { CheckCircle2, ClipboardList, Clock, Download, Info, LinkIcon, Pencil, Plus, RotateCcw, Trash2 } from '@/lib/icons';
-import type { CaseClaimDecision, CaseClaim, CaseRequest, CaseRequestState } from '@/lib/db/schema';
+import type { CaseClaimDecision, CaseClaim, CaseRequest, CaseRequestState, CaseWithRelations } from '@/lib/db/schema';
 import { claimWhat, holdsDecisions, whichHolds, type ClaimConflict, type Holds } from '../desktop/claims';
 import { LeadStatusDot } from '../desktop/LeadStatus';
+import { yearsLabel } from '../desktop/LeadsRail';
 import type { LeadSummary } from '../desktop/useCaseWorkspace';
 import { Eyebrow, SheetRow } from './PhoneKit';
 
@@ -203,6 +209,94 @@ export function LogReplySheet({ request, onSave, onClose }: {
             </div>
             <label htmlFor={`${ids}-n`} className="block mt-4 mb-1.5 text-sm font-semibold text-text">{t('reply_note')}</label>
             <textarea id={`${ids}-n`} rows={3} value={note} onChange={(e) => setNote(e.target.value)} className={`${fieldClass()} resize-y`} />
+        </Sheet>
+    );
+}
+
+/**
+ * About this case (#135): what you already know, the people, the scope, the
+ * photos from the library (with Add), and tags. Edit opens Edit the question.
+ */
+export function AboutCaseSheet({ open, caseData, treeId, canEdit, onEdit, onAddPhotos, onOpenPhoto, onClose }: {
+    open: boolean;
+    caseData: CaseWithRelations;
+    treeId: number | null;
+    canEdit: boolean;
+    onEdit: () => void;
+    onAddPhotos: () => void;
+    onOpenPhoto: (index: number) => void;
+    onClose: () => void;
+}) {
+    const t = useTranslations('caseResearch');
+    const tc = useTranslations('common');
+    const years = yearsLabel(caseData.FromYear, caseData.ToYear);
+    const then = (fn: () => void) => () => { onClose(); fn(); };
+    return (
+        <Sheet open={open} onClose={onClose} title={t('about_case')} size="full"
+            onSave={canEdit ? then(onEdit) : undefined} saveLabel={tc('edit')} saveWhenClean>
+            <div className="grid gap-5">
+                {caseData.Description && (
+                    <section className="grid gap-1.5">
+                        <h3 className="eyebrow m-0 text-text-muted">{t('background')}</h3>
+                        <p className="m-0 text-base text-text-secondary whitespace-pre-wrap break-words">{caseData.Description}</p>
+                    </section>
+                )}
+                <section className="grid gap-2">
+                    <h3 className="eyebrow m-0 text-text-muted">{t('people')}</h3>
+                    {caseData.people.length === 0 ? <p className="m-0 text-sm text-text-muted">{t('no_people')}</p> : (
+                        <ul className="m-0 p-0 list-none grid gap-2">
+                            {caseData.people.map((p) => {
+                                const name = displayFullName(p) || t('unnamed');
+                                return (
+                                    <li key={p.Id}>
+                                        <Link href={`/people/view?id=${p.Id}`} className="flex items-center gap-2.5 min-h-11 text-base text-text no-underline focus-ring rounded-sm">
+                                            <PersonAvatar as="span" size={32} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
+                                                sex={p.Sex} name={name} initials={initialsFromName(name)} />
+                                            <span className="serif min-w-0 truncate">{name}</span>
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    )}
+                </section>
+                {(years || caseData.Place) && (
+                    <section className="grid gap-2">
+                        <h3 className="eyebrow m-0 text-text-muted">{t('scope')}</h3>
+                        <dl className="m-0 grid grid-cols-[64px_minmax(0,1fr)] gap-x-2 gap-y-1.5 text-base">
+                            {years && <><dt className="text-text-muted">{t('years')}</dt><dd className="m-0 date-mono">{years}</dd></>}
+                            {caseData.Place && <><dt className="text-text-muted">{t('place')}</dt><dd className="m-0 text-text break-words">{caseData.Place}</dd></>}
+                        </dl>
+                    </section>
+                )}
+                <section className="grid gap-2">
+                    <div className="flex items-center justify-between gap-2">
+                        <h3 className="eyebrow m-0 text-text-muted">{t('from_library')}</h3>
+                        {canEdit && (
+                            <button type="button" onClick={then(onAddPhotos)}
+                                className="inline-flex items-center gap-1 min-h-11 bg-transparent border-0 p-0 text-sm text-link cursor-pointer focus-ring rounded-sm">
+                                <Plus className="w-[15px] h-[15px]" aria-hidden="true" />{t('add')}
+                            </button>
+                        )}
+                    </div>
+                    {caseData.media.length > 0 ? (
+                        <div className="grid grid-cols-4 gap-1.5">
+                            {caseData.media.map((m, i) => (
+                                <button key={m.Id} type="button" onClick={then(() => onOpenPhoto(i))} aria-label={m.Title || t('photo')}
+                                    className="aspect-square overflow-hidden rounded-btn border-0 p-0 bg-card-alt cursor-pointer focus-ring">
+                                    <MediaImg mediaId={m.Id} contentType={m.ContentType} treeId={treeId} width={120} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </button>
+                            ))}
+                        </div>
+                    ) : <p className="m-0 text-sm text-text-muted">{t('photos_added', { count: 0 })}</p>}
+                </section>
+                {(caseData.Tags?.length ?? 0) > 0 && (
+                    <section className="grid gap-2">
+                        <h3 className="eyebrow m-0 text-text-muted">{t('tags')}</h3>
+                        <p className="m-0 text-base text-text-secondary break-words">{caseData.Tags?.join(', ')}</p>
+                    </section>
+                )}
+            </div>
         </Sheet>
     );
 }
