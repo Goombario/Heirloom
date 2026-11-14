@@ -1,13 +1,8 @@
 import type { DataClient } from './types';
 
-export type DataMode = 'http' | 'local';
+import { DATA_MODE } from './mode';
 
-/**
- * Build-time data mode. `NEXT_PUBLIC_` so it is inlined into the client bundle
- * and statically tree-shakeable. Defaults to 'http' (the hosted app).
- */
-export const DATA_MODE: DataMode =
-  process.env.NEXT_PUBLIC_DATA_MODE === 'local' ? 'local' : 'http';
+export { DATA_MODE, type DataMode } from './mode';
 
 type WriteBatch = <T>(run: (client: DataClient) => Promise<T>) => Promise<T>;
 

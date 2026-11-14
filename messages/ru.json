@@ -183,7 +183,11 @@
     "scanning": "Проверяем вашу библиотеку…",
     "state_picked_twice": "Выбрана дважды",
     "faces_found": "{count, plural, one {# лицо найдено в метаданных фото} few {# лица найдено в метаданных фото} many {# лиц найдено в метаданных фото} other {# лица найдено в метаданных фото}}",
-    "faces_review": "Просмотреть"
+    "faces_review": "Просмотреть",
+    "background_adding": "Добавление медиа · {done} из {total}",
+    "background_added": "{count, plural, one {Добавлен # файл} few {Добавлено # файла} many {Добавлено # файлов} other {Добавлено # файла}}",
+    "background_stopped": "Остановлено после {done} из {total}. {message}",
+    "background_dismiss": "Закрыть"
   },
   "addMedia": {
     "title": "Добавить медиа",

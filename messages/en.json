@@ -183,7 +183,11 @@
     "scanning": "Checking your library…",
     "state_picked_twice": "Picked twice",
     "faces_found": "{count, plural, one {# face found in the photo metadata} other {# faces found in the photo metadata}}",
-    "faces_review": "Review"
+    "faces_review": "Review",
+    "background_adding": "Adding media · {done} of {total}",
+    "background_added": "{count, plural, one {# item added} other {# items added}}",
+    "background_stopped": "Stopped after {done} of {total}. {message}",
+    "background_dismiss": "Dismiss"
   },
   "addMedia": {
     "title": "Add media",
