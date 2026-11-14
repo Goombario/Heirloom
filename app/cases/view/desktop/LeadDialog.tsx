@@ -3,13 +3,14 @@
 import { useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import PersonAvatar from '@/app/components/PersonAvatar';
-import { Button, FormDialog, PersonFinder, fieldClass, cx } from '@/app/components/ui';
+import { PersonFinder, fieldClass, cx } from '@/app/components/ui';
 import { Plus, X } from '@/lib/icons';
 import { initialsFromName } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
 import { getDataClient } from '@/lib/data';
 import type { CaseLead, CasePersonRef, PersonResult } from '@/lib/db/schema';
 import type { CaseLeadInput } from '@/lib/data/types';
+import { CaseFormFrame } from './CaseFormFrame';
 
 type Who = { kind: 'person'; id: number; name: string; ref?: CasePersonRef | PersonResult } | { kind: 'new'; key: string; name: string };
 
@@ -20,17 +21,18 @@ const yearOrNull = (s: string): number | null => (/^\d{1,4}$/.test(s.trim()) ? N
  * and who, from the case's people, someone else in the tree, or a new person. People
  * added here join the case; a new person is made in the tree when the lead saves.
  */
-export function LeadDialog({ lead, casePeople, treeId, onSave, onClose }: {
+export function LeadDialog({ lead, casePeople, treeId, sheet = false, onSave, onClose }: {
     /** Editing this lead; a new one when absent. */
     lead?: CaseLead;
     casePeople: CasePersonRef[];
     treeId: number | null;
+    /** On a phone, a full sheet (#135). */
+    sheet?: boolean;
     /** Resolves false when the save failed; the dialog stays open. */
     onSave: (input: CaseLeadInput) => Promise<boolean>;
     onClose: () => void;
 }) {
     const t = useTranslations('caseResearch');
-    const tc = useTranslations('common');
     const ids = useId();
     const [question, setQuestion] = useState(lead?.Question ?? '');
     const [from, setFrom] = useState(lead?.FromYear != null ? String(lead.FromYear) : '');
@@ -75,19 +77,8 @@ export function LeadDialog({ lead, casePeople, treeId, onSave, onClose }: {
     };
 
     return (
-        <FormDialog
-            open
-            onClose={onClose}
-            title={lead ? t('edit_lead') : t('new_lead')}
-            dirty={dirty}
-            busy={busy}
-            footer={(requestClose) => (
-                <>
-                    <Button variant="outline" onClick={requestClose} disabled={busy}>{tc('cancel')}</Button>
-                    <Button onClick={() => { void save(); }} disabled={!ready}>{lead ? t('save_lead') : t('add_lead')}</Button>
-                </>
-            )}
-        >
+        <CaseFormFrame sheet={sheet} title={lead ? t('edit_lead') : t('new_lead')} dirty={dirty} busy={busy} ready={ready}
+            saveLabel={lead ? t('save_lead') : t('add_lead')} onSave={save} onClose={onClose}>
             <form className="grid gap-5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
                 <label className="grid gap-1.5 text-sm text-text-secondary">
                     {t('lead_question')}
@@ -144,6 +135,6 @@ export function LeadDialog({ lead, casePeople, treeId, onSave, onClose }: {
                 </fieldset>
                 {error && <p role="alert" className="m-0 text-sm text-error">{error}</p>}
             </form>
-        </FormDialog>
+        </CaseFormFrame>
     );
 }

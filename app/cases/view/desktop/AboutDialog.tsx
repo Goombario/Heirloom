@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Button, FormDialog, PersonFinder, fieldClass, cx } from '@/app/components/ui';
+import { PersonFinder, fieldClass, cx } from '@/app/components/ui';
 import { Plus, X } from '@/lib/icons';
 import { displayFullName } from '@/lib/utils/names';
 import type { CaseWithRelations } from '@/lib/db/schema';
 import type { UpdateCaseInput } from '@/lib/data/types';
+import { CaseFormFrame } from './CaseFormFrame';
 
 const yearOrNull = (s: string): number | null => (/^\d{1,4}$/.test(s.trim()) ? Number(s.trim()) : null);
 
@@ -14,9 +15,11 @@ const yearOrNull = (s: string): number | null => (/^\d{1,4}$/.test(s.trim()) ? N
  * Edit the question (#58): its wording, people, years and focus place. The About
  * this case pencil and the case ⋯ menu both open it.
  */
-export function AboutDialog({ caseData, treeId, onSave, onClose }: {
+export function AboutDialog({ caseData, treeId, sheet = false, onSave, onClose }: {
     caseData: CaseWithRelations;
     treeId: number | null;
+    /** On a phone, a full sheet (#135). */
+    sheet?: boolean;
     onSave: (patch: UpdateCaseInput) => Promise<boolean>;
     onClose: () => void;
 }) {
@@ -54,19 +57,8 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
     };
 
     return (
-        <FormDialog
-            open
-            onClose={onClose}
-            title={t('edit_question')}
-            dirty={dirty}
-            busy={busy}
-            footer={(requestClose) => (
-                <>
-                    <Button variant="outline" onClick={requestClose} disabled={busy}>{tc('cancel')}</Button>
-                    <Button onClick={() => { void save(); }} disabled={!ready}>{tc('save')}</Button>
-                </>
-            )}
-        >
+        <CaseFormFrame sheet={sheet} title={t('edit_question')} dirty={dirty} busy={busy} ready={ready}
+            saveLabel={tc('save')} onSave={save} onClose={onClose}>
             <form className="grid gap-5" onSubmit={(e) => { e.preventDefault(); void save(); }}>
                 <label className="grid gap-1.5 text-sm text-text-secondary">
                     {t('question')}
@@ -122,6 +114,6 @@ export function AboutDialog({ caseData, treeId, onSave, onClose }: {
                     <span id="about-tags-hint" className="text-meta text-text-muted">{t('tags_hint')}</span>
                 </label>
             </form>
-        </FormDialog>
+        </CaseFormFrame>
     );
 }
