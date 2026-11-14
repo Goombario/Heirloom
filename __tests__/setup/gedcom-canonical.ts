@@ -1,5 +1,6 @@
 import { query } from '@/lib/db/connection.pglite';
 import { factPlaceTextColumns } from '@/lib/db/queries/place-links';
+import { takeCitationMediaPointers } from '@/lib/gedcom/raw-pointers';
 
 /** One projected record. Values are plain JSON scalars, arrays or nested rows. */
 export type CanonicalRow = Record<string, unknown>;
@@ -352,11 +353,11 @@ export async function canonicalizeTree(
 
   // The table is "Citation" (singular). "FactId" is polymorphic over "FactTable".
   const citationRows = await rows<{
-    SourceId: number; FactTable: string; FactId: number; Page: string | null;
+    Id: number; SourceId: number; FactTable: string; FactId: number; Page: string | null;
     Quay: string | null; DataText: string | null; DataDate: string | null;
     Even: string | null; Role: string | null; RawGedcom: string | null; Url: string | null;
   }>(
-    `SELECT "SourceId","FactTable","FactId","Page","Quay","DataText","DataDate","Even","Role","RawGedcom","Url"
+    `SELECT "Id","SourceId","FactTable","FactId","Page","Quay","DataText","DataDate","Even","Role","RawGedcom","Url"
        FROM "Citation" WHERE "TreeId" = $1`,
     [treeId],
   );
@@ -458,13 +459,21 @@ export async function canonicalizeTree(
     }))),
     sources: sortByJson(sourceRows.map(({ Id: _id, ...rest }) => rest)),
     repositories: sortByJson(repositoryRows.map(({ Id: _id, ...rest }) => rest)),
-    citations: sortByJson(citationRows.map(c => ({
-      source: sourceTitle.get(c.SourceId) ?? `<missing source:${c.SourceId}>`,
-      FactTable: c.FactTable,
-      fact: factKey(c.FactTable, c.FactId),
-      Page: c.Page, Quay: c.Quay, DataText: c.DataText,
-      DataDate: c.DataDate, Even: c.Even, Role: c.Role, RawGedcom: passthrough(c.RawGedcom), Url: c.Url,
-    }))),
+    // A citation's own files (#47) compare as one set, whether a file still rides
+    // the citation's passthrough as an `OBJE` token (a tree imported before #47)
+    // or is a citation media link: an import moves the first into the second.
+    citations: sortByJson(citationRows.map(c => {
+      const taken = c.RawGedcom == null ? { raw: null, mediaIds: [] } : takeCitationMediaPointers(c.RawGedcom);
+      const linked = mediaLinkRows.filter(l => l.OwnerTable === 'Citation' && l.OwnerId === c.Id).map(l => l.MediaId);
+      return {
+        source: sourceTitle.get(c.SourceId) ?? `<missing source:${c.SourceId}>`,
+        FactTable: c.FactTable,
+        fact: factKey(c.FactTable, c.FactId),
+        Page: c.Page, Quay: c.Quay, DataText: c.DataText,
+        DataDate: c.DataDate, Even: c.Even, Role: c.Role, RawGedcom: passthrough(taken.raw), Url: c.Url,
+        files: [...new Set([...taken.mediaIds, ...linked])].map(id => mediaKey.get(id) ?? `<missing media:${id}>`).sort(),
+      };
+    })),
     notes: sortByJson(noteRows.map(n => ({
       Text: n.Text,
       OwnerTable: n.OwnerTable,
@@ -481,7 +490,7 @@ export async function canonicalizeTree(
       Title: m.Title, Format: m.Format, ContentType: m.ContentType,
       FocalX: m.FocalX, FocalY: m.FocalY, FocalRadius: m.FocalRadius, FileRawGedcom: m.FileRawGedcom,
     }))),
-    mediaLinks: sortByJson(mediaLinkRows.map(l => ({
+    mediaLinks: sortByJson(mediaLinkRows.filter(l => l.OwnerTable !== 'Citation').map(l => ({
       media: mediaKey.get(l.MediaId) ?? `<missing media:${l.MediaId}>`,
       OwnerTable: l.OwnerTable,
       owner: mediaOwnerKey(l.OwnerTable, l.OwnerId),
