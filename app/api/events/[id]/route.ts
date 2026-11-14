@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getEventById } from '@/lib/db/queries/events';
 import { updateEventService, deleteEventService } from '@/lib/services/events';
@@ -59,7 +60,7 @@ export async function PUT(
         }
 
         const { searchParams } = new URL(request.url);
-        const body = await request.json();
+        const body = await readJsonObject(request);
         // The service checks the tree scope, that a re-pointed PersonId/FamilyId
         // is in the same tree, and that a person gets no BIRT/DEAT row (#756).
         const event = await updateEventService({

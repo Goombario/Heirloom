@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getEventsByPersonId, createEvent, getEventById, deleteEvent } from '@/lib/db/queries/events';
 import { validateDateField, validateNameField, validateStringField } from '@/lib/validation';
@@ -85,7 +86,7 @@ export async function POST(
         // route inserts directly (no service layer), so check here.
         await assertOwnerInTree('People', personId, scope.treeId);
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
 
         const eventData: NewGedcomEvent = {
             UserId: scope.ownerId, // legacy owner column: the TREE's owner (unchanged semantics for shared contributors)

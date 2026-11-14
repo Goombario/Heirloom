@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { rateLimit } from '@/lib/rate-limit';
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const body = await request.json();
+        const body = await readJsonObject(request);
         const candidateIds = Array.isArray(body.candidateIds) ? body.candidateIds as number[] : [];
         if (candidateIds.length === 0) {
             return NextResponse.json({ error: 'candidateIds must be a non-empty array of ids' }, { status: 400 });

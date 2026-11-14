@@ -33,7 +33,7 @@ async function userCount(): Promise<number> {
 
 describe('resolveOrCreateUser (auth provisioning)', () => {
   it('creates a new user on first sign-in', async () => {
-    const u = await resolveOrCreateUser({ googleId: 'g-1', email: 'ada@example.com', name: 'Ada', image: null });
+    const u = await resolveOrCreateUser({ googleId: 'g-1', email: 'ada@example.com', name: 'Ada', image: null, emailVerified: true });
     expect(u.id).toBeGreaterThan(0);
     expect(u.email).toBe('ada@example.com');
     expect(u.name).toBe('Ada');
@@ -41,24 +41,32 @@ describe('resolveOrCreateUser (auth provisioning)', () => {
   });
 
   it('is idempotent by GoogleId — repeat sign-ins reuse the row', async () => {
-    const a = await resolveOrCreateUser({ googleId: 'g-1', email: 'ada@example.com', name: 'Ada', image: null });
-    const b = await resolveOrCreateUser({ googleId: 'g-1', email: 'ada@example.com', name: 'Ada', image: null });
+    const a = await resolveOrCreateUser({ googleId: 'g-1', email: 'ada@example.com', name: 'Ada', image: null, emailVerified: true });
+    const b = await resolveOrCreateUser({ googleId: 'g-1', email: 'ada@example.com', name: 'Ada', image: null, emailVerified: true });
     expect(b.id).toBe(a.id);
     expect(await userCount()).toBe(1);
   });
 
   it('links a new GoogleId onto an existing row matched by email (no duplicate)', async () => {
-    const first = await resolveOrCreateUser({ googleId: 'old-sub', email: 'grace@example.com', name: 'Grace', image: null });
-    const relinked = await resolveOrCreateUser({ googleId: 'new-sub', email: 'grace@example.com', name: 'Grace H.', image: null });
+    const first = await resolveOrCreateUser({ googleId: 'old-sub', email: 'grace@example.com', name: 'Grace', image: null, emailVerified: true });
+    const relinked = await resolveOrCreateUser({ googleId: 'new-sub', email: 'grace@example.com', name: 'Grace H.', image: null, emailVerified: true });
     expect(relinked.id).toBe(first.id);
     const row = await query('SELECT "GoogleId" FROM "Users" WHERE "Id" = $1', [first.id]);
     expect((row.rows[0] as { GoogleId: string }).GoogleId).toBe('new-sub');
     expect(await userCount()).toBe(1);
   });
 
+  it('refuses to link an unverified address onto an existing row (#51, L-10)', async () => {
+    const first = await resolveOrCreateUser({ googleId: 'old-sub', email: 'grace@example.com', name: 'Grace', image: null, emailVerified: true });
+    await expect(resolveOrCreateUser({ googleId: 'other-sub', email: 'grace@example.com', name: 'Mallory', image: null, emailVerified: false }))
+      .rejects.toThrow(/not verified/);
+    const row = await query('SELECT "GoogleId" FROM "Users" WHERE "Id" = $1', [first.id]);
+    expect((row.rows[0] as { GoogleId: string }).GoogleId).toBe('old-sub');
+  });
+
   it('keeps distinct Google accounts as separate users', async () => {
-    const a = await resolveOrCreateUser({ googleId: 'g-a', email: 'a@example.com', name: 'A', image: null });
-    const b = await resolveOrCreateUser({ googleId: 'g-b', email: 'b@example.com', name: 'B', image: null });
+    const a = await resolveOrCreateUser({ googleId: 'g-a', email: 'a@example.com', name: 'A', image: null, emailVerified: true });
+    const b = await resolveOrCreateUser({ googleId: 'g-b', email: 'b@example.com', name: 'B', image: null, emailVerified: true });
     expect(b.id).not.toBe(a.id);
     expect(await userCount()).toBe(2);
   });

@@ -507,11 +507,18 @@ export async function updateMediaService(
   // FilePath is deliberately NOT writable via the API: the only legitimate
   // writer is the upload route (direct SQL); a client-supplied value would be
   // a path-traversal vector into the export-zip and delete-cleanup sinks.
-  if (body.Format !== undefined) updateData.Format = body.Format as string | null;
-  if (body.ContentType !== undefined) updateData.ContentType = body.ContentType as string | null;
-  if (body.FocalX !== undefined) updateData.FocalX = Math.max(0, Math.min(100, Number(body.FocalX)));
-  if (body.FocalY !== undefined) updateData.FocalY = Math.max(0, Math.min(100, Number(body.FocalY)));
-  if (body.FocalRadius !== undefined) updateData.FocalRadius = body.FocalRadius === null ? null : Math.max(0, Math.min(500, Number(body.FocalRadius)));
+  // Format and ContentType aren't writable either (#51, L-2): they describe the
+  // stored bytes, which only the upload sets, and a bad value made the file
+  // route fail for everyone. Ignored like FilePath, so old clients still work.
+  const focal = (name: string, value: unknown, max: number): number => {
+    const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+    if (!Number.isFinite(n)) throw new ValidationError(`${name} must be a number`);
+    return Math.max(0, Math.min(max, n));
+  };
+  if (body.Title !== undefined && body.Title !== null && typeof body.Title !== 'string') throw new ValidationError('Title must be text');
+  if (body.FocalX !== undefined) updateData.FocalX = focal('FocalX', body.FocalX, 100);
+  if (body.FocalY !== undefined) updateData.FocalY = focal('FocalY', body.FocalY, 100);
+  if (body.FocalRadius !== undefined) updateData.FocalRadius = body.FocalRadius === null ? null : focal('FocalRadius', body.FocalRadius, 500);
 
   const client = await getClient();
   try {

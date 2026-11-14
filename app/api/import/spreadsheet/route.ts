@@ -1,3 +1,4 @@
+import { handleApiError } from '@/lib/api/handle-error';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { rateLimit } from '@/lib/rate-limit';
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
         if (err instanceof AccessError) {
             return NextResponse.json({ error: err.message }, { status: 403 });
         }
-        throw err;
+        // A JSON 500 with an error id rather than Next's bare one (#51, L-8).
+        return handleApiError(err, 'Failed to import spreadsheet');
     }
 }

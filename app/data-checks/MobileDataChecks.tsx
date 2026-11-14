@@ -298,7 +298,7 @@ export function MobileDataCheckEntry({ entry, text, position, total, onStep, onC
     );
 }
 
-/** The marked date's typing sheet: the date with its qualifier chips, and whether it clears the problem. */
+/** The marked date's typing sheet: the date with its Kind menu and About box, and whether it clears the problem. */
 function DateSheet({ entry, fact, label, treeId, onClose, onSaved }: {
     entry: DataCheckEntry; fact: DataCheckFact; label: string; treeId: number | null; onClose: () => void; onSaved: () => Promise<void>;
 }) {
@@ -337,7 +337,7 @@ function DateSheet({ entry, fact, label, treeId, onClose, onSaved }: {
         <Sheet open onClose={onClose} title={label} size="full" dirty={changed} onSave={save} saveDisabled={!changed || saving}>
             <div className="grid gap-1.5 pt-1">
                 <label htmlFor={id} className="text-meta font-semibold text-text-secondary">{t('row_to_fix')}</label>
-                <DateInput id={id} value={draft} onChange={setDraft} qualifierChips className={cx(fieldClass(), 'min-h-11')} />
+                <DateInput id={id} value={draft} onChange={setDraft} touch className={cx(fieldClass(), 'min-h-11')} />
                 <p role="status" className={cx('m-0 min-h-5 text-meta', clears ? 'text-success font-medium' : 'text-text-secondary')}>
                     {clears == null ? null : t(clears ? 'fix_clears' : 'fix_does_not_clear')}
                 </p>

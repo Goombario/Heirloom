@@ -163,7 +163,8 @@ export function DataTable<T>({
           })}
         </tr>
       </thead>
-      <tbody>
+      {/* Rows fade up as they replace the list's skeleton or a new page (#20). */}
+      <tbody className="rows-enter">
         {rows.length === 0 ? (
           <tr>
             <td colSpan={totalCols} style={{ padding: 0 }}>

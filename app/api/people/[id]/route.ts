@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { getPersonService, updatePersonService, deletePersonService } from '@/lib/services/people';
@@ -42,7 +43,7 @@ export async function PUT(
     if (personId === null) return NextResponse.json({ error: 'Invalid person ID' }, { status: 400 });
 
     const { searchParams } = new URL(request.url);
-    const body = await request.json();
+    const body = await readJsonObject(request);
 
     const person = await updatePersonService({
       id: personId,

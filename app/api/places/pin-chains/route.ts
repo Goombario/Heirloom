@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonObject(request).catch(() => ({}));
     const names = Array.isArray(body?.names)
       ? (body.names as unknown[]).filter((n): n is string => typeof n === 'string')
       : [];

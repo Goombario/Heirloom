@@ -82,7 +82,7 @@ describe('InlineEventEditor action row and mobile sheet (#797)', () => {
         expect(panel.contains(document.activeElement)).toBe(true);
         // Editing keeps its type behind "Change type" (fix 02), so the date comes first.
         expect(screen.queryByRole('combobox', { name: 'field_type' })).toBeNull();
-        expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'qualifier_label' }));
+        expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'kind_label' }));
     });
 
     it('opens in a sheet below md, with the qualifier stacked and the notes rail flat', () => {
@@ -91,7 +91,7 @@ describe('InlineEventEditor action row and mobile sheet (#797)', () => {
         const sheet = screen.getByTestId('sheet');
         expect(sheet).toHaveAttribute('aria-label', 'editing_event');
         expect(sheet.querySelector('.inline-panel')).toBeNull();
-        const qualifier = screen.getByRole('combobox', { name: 'qualifier_label' });
+        const qualifier = screen.getByRole('combobox', { name: 'kind_label' });
         expect(qualifier.closest('.flex-col')).not.toBeNull();
         expect(screen.getByTestId('notes-rail').closest('.sheet-flat')).not.toBeNull();
     });

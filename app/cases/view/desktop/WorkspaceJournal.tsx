@@ -9,6 +9,7 @@ import { useTimestamp } from '@/app/hooks/useTimestamp';
 import type { CaseComment, CaseLead } from '@/lib/db/schema';
 import type { CaseDetailState } from '../useCaseDetail';
 import { loggedEntryText } from '../case-detail-helpers';
+import { JournalMediaPicker, type JournalMediaScope } from './JournalMediaPicker';
 
 type EntryType = 'all' | 'notes' | 'findings' | 'searches' | 'status';
 /** Which leads the journal shows: the open lead, one lead, or the whole case. */
@@ -47,7 +48,10 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
     const t = useTranslations('caseResearch');
     const tCases = useTranslations('cases');
     const { timestamp } = useTimestamp();
-    const { caseData, canEdit, commentBody, setCommentBody, postComment, postingComment, journalFile, setJournalFile, pendingCommentCite, setPendingCommentCite } = cd;
+    const { caseData, canEdit, commentBody, setCommentBody, postComment, postingComment, journalFile, setJournalFile, journalMedia, setJournalMedia, pendingCommentCite, setPendingCommentCite } = cd;
+    // Attach (#34): Upload a file, or pick media the case or its people already have.
+    const fileRef = useRef<HTMLInputElement>(null);
+    const [mediaScope, setMediaScope] = useState<JournalMediaScope | null>(null);
     const [showing, setShowing] = useState<Showing>('this');
     const [type, setType] = useState<EntryType>('all');
     // Filed under follows the open lead until it is changed for this lead.
@@ -115,11 +119,11 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
                     <textarea aria-label={t('add_note')} value={commentBody} onChange={(e) => setCommentBody(e.target.value)} rows={2}
                         placeholder={t('add_note')} className="w-full border-0 outline-none resize-none bg-transparent text-sm text-text"
                         onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void post(); }} />
-                    {(journalFile || pendingCommentCite) && (
+                    {(journalFile || journalMedia || pendingCommentCite) && (
                         <div className="flex flex-wrap items-center gap-2 text-meta text-text-secondary">
-                            {journalFile && (
-                                <span className="inline-flex items-center gap-1">{journalFile.name}
-                                    <button type="button" aria-label={t('remove_photo')} onClick={() => setJournalFile(null)} className="grid place-items-center w-6 h-6 rounded-full bg-transparent border-0 text-text-muted hover:text-text cursor-pointer focus-ring"><X className="w-3 h-3" aria-hidden="true" /></button>
+                            {(journalFile || journalMedia) && (
+                                <span className="inline-flex items-center gap-1">{journalFile ? journalFile.name : (journalMedia!.Title || t('photo'))}
+                                    <button type="button" aria-label={t('remove_photo')} onClick={() => { setJournalFile(null); setJournalMedia(null); }} className="grid place-items-center w-6 h-6 rounded-full bg-transparent border-0 text-text-muted hover:text-text cursor-pointer focus-ring"><X className="w-3 h-3" aria-hidden="true" /></button>
                                 </span>
                             )}
                             {pendingCommentCite && (
@@ -131,10 +135,19 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
                         </div>
                     )}
                     <div className="flex flex-wrap items-center gap-2 border-t border-border-light pt-2">
-                        <label className="inline-flex items-center gap-1.5 h-7 rounded-btn border border-border bg-card px-2.5 text-meta text-text-secondary cursor-pointer hover:bg-hover-surface focus-ring-within">
-                            <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) setJournalFile(f); e.target.value = ''; }} />
-                            <Paperclip className="w-3.5 h-3.5" aria-hidden="true" />{t('photo')}
-                        </label>
+                        <input ref={fileRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-hidden="true"
+                            onChange={(e) => { const f = e.target.files?.[0]; if (f) { setJournalMedia(null); setJournalFile(f); } e.target.value = ''; }} />
+                        <RecordMenu
+                            recordName={t('attach')}
+                            menuLabel={t('attach')}
+                            trigger={<><Paperclip className="w-3.5 h-3.5" aria-hidden="true" />{t('attach')}</>}
+                            triggerClassName="inline-flex items-center gap-1.5 h-7 rounded-btn border border-border bg-card px-2.5 text-meta text-text-secondary cursor-pointer hover:bg-hover-surface focus-ring"
+                            items={[
+                                { label: t('attach_upload'), onSelect: () => fileRef.current?.click() },
+                                { label: t('attach_from_case'), onSelect: () => setMediaScope('case'), disabled: caseData.media.length === 0, disabledReason: t('attach_none_case') },
+                                { label: t('attach_from_people'), onSelect: () => setMediaScope('people'), disabled: caseData.people.length === 0, disabledReason: t('attach_no_people') },
+                            ]}
+                        />
                         <button type="button" onClick={() => cd.setShowComposerCite(true)}
                             className="inline-flex items-center gap-1.5 h-7 rounded-btn border border-border bg-card px-2.5 text-meta text-text-secondary cursor-pointer hover:bg-hover-surface focus-ring">
                             <Quote className="w-3.5 h-3.5" aria-hidden="true" />{t('cite')}
@@ -253,6 +266,10 @@ export function WorkspaceJournal({ cd, leads, openLeadId }: { cd: CaseDetailStat
                         );
                     })}
                 </ol>
+            )}
+            {mediaScope && (
+                <JournalMediaPicker scope={mediaScope} caseId={caseData.Id} caseMedia={caseData.media} treeId={cd.activeTreeId}
+                    onPick={(m) => { setJournalMedia(m); setMediaScope(null); }} onClose={() => setMediaScope(null)} />
             )}
         </section>
     );
