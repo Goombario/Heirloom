@@ -32,6 +32,15 @@ describe('withCacheInvalidation', () => {
     expect(dataCache.has('x')).toBe(false);
   });
 
+  it("leaves the cache alone for the account client's writes (#35)", async () => {
+    const setLastSeenVersion = vi.fn(async () => undefined);
+    const client = withCacheInvalidation({ account: { setLastSeenVersion } } as unknown as import('@/lib/data/types').DataClient);
+    dataCache.set('x', 1);
+    await client.account.setLastSeenVersion('1.1.0');
+    expect(setLastSeenVersion).toHaveBeenCalledWith('1.1.0');
+    expect(dataCache.has('x')).toBe(true);
+  });
+
   it('clears after update and remove too', async () => {
     const client = withCacheInvalidation(makeFakeClient());
     dataCache.set('x', 1);

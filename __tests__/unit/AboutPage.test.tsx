@@ -99,4 +99,12 @@ describe('About page (#1256)', () => {
     fireEvent.click(screen.getByRole('button', { name: en.about.credits_link }));
     expect(await screen.findByText(en.about.file_error)).toBeInTheDocument();
   });
+
+  it("reopens What's new from its row (#35)", async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_VERSION', '9.0.0');
+    renderPage();
+    fireEvent.click(within(row(en.about.whats_new)).getByRole('button', { name: en.about.whats_new_link }));
+    expect(await screen.findByRole('dialog', { name: en.whats_new.title })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Version 1.1.0' })).toBeInTheDocument();
+  });
 });

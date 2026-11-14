@@ -1,0 +1,27 @@
+[
+  {
+    "version": "1.1.0",
+    "items": [
+      {
+        "en": "The desktop pages are redesigned: people, families, places, research cases, lists and the home page.",
+        "fr": "Les pages sur ordinateur ont été repensées : personnes, familles, lieux, dossiers de recherche, listes et accueil.",
+        "ru": "Страницы на компьютере переработаны: люди, семьи, места, исследования, списки и главная."
+      },
+      {
+        "en": "A family can have its own photo.",
+        "fr": "Une famille peut avoir sa propre photo.",
+        "ru": "У семьи может быть своя фотография."
+      },
+      {
+        "en": "Repositories can keep a website, a phone number and an email address.",
+        "fr": "Les dépôts peuvent garder un site web, un numéro de téléphone et une adresse e-mail.",
+        "ru": "У архива можно указать сайт, телефон и электронную почту."
+      },
+      {
+        "en": "After an update, this window shows what changed. You can open it again from About Heirloom.",
+        "fr": "Après une mise à jour, cette fenêtre montre ce qui a changé. Vous pouvez la rouvrir depuis À propos de Heirloom.",
+        "ru": "После обновления это окно показывает, что изменилось. Его можно открыть снова в разделе «О Heirloom»."
+      }
+    ]
+  }
+]

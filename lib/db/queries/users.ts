@@ -78,3 +78,20 @@ export async function insertUser(input: {
     );
     return result.rows[0] as UserSummary;
 }
+
+/** The last app version whose What's new this user has seen (#35), or null before the first. */
+export async function getLastSeenVersion(userId: number): Promise<string | null> {
+    const result = await query(
+        'SELECT "LastSeenVersion" FROM "Users" WHERE "Id" = $1',
+        [userId]
+    );
+    const row = result.rows[0] as { LastSeenVersion: string | null } | undefined;
+    return row?.LastSeenVersion ?? null;
+}
+
+export async function setLastSeenVersion(userId: number, version: string): Promise<void> {
+    await query(
+        'UPDATE "Users" SET "LastSeenVersion" = $1 WHERE "Id" = $2',
+        [version, userId]
+    );
+}

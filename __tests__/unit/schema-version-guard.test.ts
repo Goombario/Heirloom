@@ -133,7 +133,8 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // v72 — a repository's website, phone and email (#40, ADR 0049): three nullable
 // columns and the one-time lift of the first WWW/PHON/EMAIL out of its passthrough.
 // v73 — a place's geocoder kind (#45, ADR 0050): "Places"."OsmKind".
-const EXPECTED_FINGERPRINT = 'd87a2419f5fa0cd422c7f9bccb843b2ff30a188d5d9230445b2a115a9083a0e9';
+// v74 — the last version whose What's new a user has seen (#35, ADR 0051): "Users"."LastSeenVersion".
+const EXPECTED_FINGERPRINT = 'f40ab165b64ef8febfc5057b8646cb96e04ab2cbed038b32d627156e4bb97b3a';
 
 function schemaFingerprint(): string {
   const src = readFileSync(
