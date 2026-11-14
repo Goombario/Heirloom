@@ -1480,8 +1480,27 @@ select:-webkit-autofill:focus {
 .animate-fade-in-up  { animation: fade-in-up var(--dur-base) ease-out; }
 .animate-push-in     { animation: push-in 0.22s cubic-bezier(0.4, 0, 0.2, 1); }
 
+/* Motion pass (#20). One idea, kept small: things arriving fade up once, and a
+   pointed-at picture lifts. A list's skeleton has no entrance of its own, so the
+   rows that replace it own the only one: they fade up 6px, staggered 20ms for the
+   first eight. Rows that move (a sort) keep their elements and don't replay it. */
+.rows-enter > * { animation: fade-in-up var(--dur-base) var(--ease) both; }
+.rows-enter > :nth-child(2) { animation-delay: 20ms; }
+.rows-enter > :nth-child(3) { animation-delay: 40ms; }
+.rows-enter > :nth-child(4) { animation-delay: 60ms; }
+.rows-enter > :nth-child(5) { animation-delay: 80ms; }
+.rows-enter > :nth-child(6) { animation-delay: 100ms; }
+.rows-enter > :nth-child(7) { animation-delay: 120ms; }
+.rows-enter > :nth-child(n+8) { animation-delay: 140ms; }
+/* A link around a picture or card: the same lift as Card `interactive`. */
+.hover-lift { transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+.hover-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-push-in { animation: none; }
+  /* No entrance at all, so no row waits out a delay. */
+  .rows-enter > * { animation: none; }
+  .hover-lift:hover { transform: none; }
 }
 
 .skeleton {
