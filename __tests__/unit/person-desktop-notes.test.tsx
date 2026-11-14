@@ -12,7 +12,7 @@ import type { CitationFactDescriptor } from '@/app/components/citations/types';
 import { NotesSection } from '@/app/people/view/desktop/NotesSection';
 import { SourcesSection } from '@/app/people/view/desktop/SourcesSection';
 import { dataCache } from '@/lib/data/cache';
-import { notesKey } from '@/app/people/view/personCache';
+import { notesKey } from '@/app/components/notes/ownerNotesCache';
 
 const note = (Id: number, Text: string, extra: Partial<Note> = {}): Note =>
   ({ Id, Text, OwnerId: 1, GedcomXref: null, BackfilledFromPersonId: null, CreatedAt: '', IsPrimary: 0, OwnerFact: null, AddedInApp: 1, ...extra });

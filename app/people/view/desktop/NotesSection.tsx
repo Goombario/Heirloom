@@ -11,7 +11,7 @@ import { ActionLink, AddRow, InlinePanel, SectionHeader, SelectField, cx, fieldC
 import { biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
 import { hasBirthFact, hasDeathFact } from '../derive';
 import { dataCache } from '@/lib/data/cache';
-import { loadOwnerNotes, notesKey } from '../personCache';
+import { loadOwnerNotes, notesKey } from '@/app/components/notes/ownerNotesCache';
 import { nameBarParts } from '../mobile/model';
 import type { RunChange } from '../mobile/useChange';
 

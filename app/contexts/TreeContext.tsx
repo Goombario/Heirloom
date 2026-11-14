@@ -78,6 +78,7 @@ export function TreeProvider({ children }: TreeProviderProps) {
   const [activeOwnerEmail, setActiveOwnerEmail] = useState<string | null>(null);
   const [activeOwnerName, setActiveOwnerName] = useState<string | null>(null);
 
+  const meRequested = useRef(false);
   // Resolve the current user's database ID when the session loads (or immediately
   // in desktop mode). Prefer the id seeded into the session token at sign-in (#12)
   // and fall back to /api/users/me for tokens minted before that change and for
@@ -96,6 +97,10 @@ export function TreeProvider({ children }: TreeProviderProps) {
       return;
     }
 
+    // Once per page load: a session refresh re-runs this effect before the
+    // answer lands, and would ask again (#66).
+    if (meRequested.current) return;
+    meRequested.current = true;
     fetch('/api/users/me')
       .then(res => res.json())
       .then(data => {
@@ -104,7 +109,7 @@ export function TreeProvider({ children }: TreeProviderProps) {
           setActivePermission('owner'); // default tree = own tree
         }
       })
-      .catch(err => console.error('Failed to fetch user:', err));
+      .catch(err => { meRequested.current = false; console.error('Failed to fetch user:', err); });
   }, [session, isDesktop, currentUserId]);
 
   // Validate the (synchronously seeded) persisted tree selection once the user

@@ -11,9 +11,11 @@
  */
 import type { PersonWithRelations, PersonGalleryMedia } from '@/lib/db/schema';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
-import type { Citation, Note } from '@/lib/data/types';
+import type { Citation } from '@/lib/data/types';
 import { getDataClient } from '@/lib/data';
 import { dataCache } from '@/lib/data/cache';
+import { sharedLoad } from '@/lib/data/shared-load';
+import { loadOwnerNotes } from '@/app/components/notes/ownerNotesCache';
 import { type NameVariant } from '@/app/components/person-form/NamesPanel';
 
 // null treeId = the current user's default tree — a legit, stable scope of its own.
@@ -22,8 +24,6 @@ export const personKey = (treeId: number | null, id: string | number) => `people
 export const mediaKey = (treeId: number | null, id: string | number) => `people:media:${scope(treeId)}:${id}`;
 export const citationsKey = (treeId: number | null, id: string | number) => `people:citations:${scope(treeId)}:${id}`;
 export const variantsKey = (treeId: number | null, id: string | number) => `people:variants:${scope(treeId)}:${id}`;
-/** Notes on a person (`People`) or on one of their events (`Events`), for the desktop Notes section (#65). */
-export const notesKey = (treeId: number | null, table: 'People' | 'Events', id: string | number) => `notes:${table}:${scope(treeId)}:${id}`;
 /** Lightweight identity summary (from the list/tree) for an instant hero paint (#2). */
 const personSummaryKey = (treeId: number | null, id: string | number) => `people:summary:${scope(treeId)}:${id}`;
 
@@ -48,23 +48,8 @@ export function getPersonSummary(id: string | number, treeId: number | null): Pe
     return dataCache.get<PersonSummary>(personSummaryKey(treeId, id)) ?? null;
 }
 
-// One request per resource at a time: a page that mounts while a hover prefetch
-// of the same person is still running joins it instead of asking again (#65).
-const pending = new Map<string, Promise<unknown>>();
-// Keyed by cache generation too: a load that started before a write is never
-// joined after it, and none is shared while a write is still running.
-function shared<T>(cacheKey: string, load: () => Promise<T>): Promise<T> {
-    if (dataCache.writing()) return load();
-    const key = `${dataCache.generation()}:${cacheKey}`;
-    const running = pending.get(key) as Promise<T> | undefined;
-    if (running) return running;
-    const promise = load().finally(() => pending.delete(key));
-    pending.set(key, promise);
-    return promise;
-}
-
 export async function loadPerson(id: number, treeId: number | null): Promise<PersonWithRelations> {
-    return shared(personKey(treeId, id), async () => {
+    return sharedLoad(personKey(treeId, id), async () => {
         const client = await getDataClient();
         const person = await client.people.get(id, treeId);
         dataCache.set(personKey(treeId, id), person);
@@ -73,7 +58,7 @@ export async function loadPerson(id: number, treeId: number | null): Promise<Per
 }
 
 export async function loadPersonMedia(id: number, treeId: number | null): Promise<PersonGalleryMedia[]> {
-    return shared(mediaKey(treeId, id), async () => {
+    return sharedLoad(mediaKey(treeId, id), async () => {
         const client = await getDataClient();
         const { media } = await client.media.list<PersonGalleryMedia>({ personId: id, treeId, includeTagged: true });
         dataCache.set(mediaKey(treeId, id), media);
@@ -82,7 +67,7 @@ export async function loadPersonMedia(id: number, treeId: number | null): Promis
 }
 
 export async function loadPersonCitations(id: number, treeId: number | null): Promise<PersonCitationMap> {
-    return shared(citationsKey(treeId, id), async () => {
+    return sharedLoad(citationsKey(treeId, id), async () => {
         const client = await getDataClient();
         const citationMap = await client.citations.listForPerson(id, treeId);
         const value = citationMap ?? {};
@@ -92,21 +77,12 @@ export async function loadPersonCitations(id: number, treeId: number | null): Pr
 }
 
 export async function loadPersonVariants(id: number, treeId: number | null): Promise<NameVariant[]> {
-    return shared(variantsKey(treeId, id), async () => {
+    return sharedLoad(variantsKey(treeId, id), async () => {
         const client = await getDataClient();
         const variants = await client.people.listNameVariants(id, treeId);
         const mapped = variants.map(v => ({ ...v, Type: v.Type as NameVariant['Type'], IsPrimary: v.IsPrimary ? 1 : 0 }));
         dataCache.set(variantsKey(treeId, id), mapped);
         return mapped;
-    });
-}
-
-export async function loadOwnerNotes(table: 'People' | 'Events', id: number, treeId: number | null): Promise<Note[]> {
-    return shared(notesKey(treeId, table, id), async () => {
-        const client = await getDataClient();
-        const notes = await client.notes.listForOwner(table, id, treeId) as Note[];
-        dataCache.set(notesKey(treeId, table, id), notes);
-        return notes;
     });
 }
 

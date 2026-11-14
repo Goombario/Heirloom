@@ -15,7 +15,8 @@ vi.mock('@/lib/data', () => ({
   }),
 }));
 
-const { loadPerson, loadOwnerNotes, notesKey, prefetchPerson } = await import('@/app/people/view/personCache');
+const { loadPerson, prefetchPerson } = await import('@/app/people/view/personCache');
+const { loadOwnerNotes, notesKey } = await import('@/app/components/notes/ownerNotesCache');
 
 describe('person cache loads (#65)', () => {
   beforeEach(() => {
