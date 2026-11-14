@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { escapeHtml } from '@/lib/validation';
 import { useTheme } from '@/app/components/ThemeProvider';
-import { getMapStyleUrl, collapseCompactAttribution, configureMapLibreWorker } from '@/lib/geo/map-style';
+import { getMapStyleUrl, addMapCredit, configureMapLibreWorker } from '@/lib/geo/map-style';
 import { numberedPinSvgHtml } from './map-pin';
 import type { JourneyStop } from './LocationJourneyModal';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -15,6 +16,9 @@ import 'maplibre-gl/dist/maplibre-gl.css';
  */
 export function useJourneyMap(stops: JourneyStop[]) {
   const { resolvedTheme } = useTheme();
+  const t = useTranslations('common');
+  const creditOsm = t('map_credit_osm');
+  const creditTiles = t('map_credit_tiles');
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('maplibre-gl').Map | null>(null);
   const markerRefs = useRef<import('maplibre-gl').Marker[]>([]);
@@ -38,11 +42,11 @@ export function useJourneyMap(stops: JourneyStop[]) {
           style: getMapStyleUrl(resolvedTheme),
           center: [stops[0].lng, stops[0].lat],
           zoom: stops.length === 1 ? 9 : 5, // single stop: framed by the constructor; many: fitBounds below
-          attributionControl: { compact: true },
+          attributionControl: false,
         });
         mapRef.current = map;
         map.on('error', () => { if (!cancelled) setFailed(true); });
-        collapseCompactAttribution(map);
+        addMapCredit(map, { osm: creditOsm, tiles: creditTiles });
 
         const coords: [number, number][] = stops.map((s) => [s.lng, s.lat]);
         const linkColor =
@@ -98,7 +102,7 @@ export function useJourneyMap(stops: JourneyStop[]) {
       mapRef.current = null;
       markerRefs.current = [];
     };
-  }, [key, resolvedTheme]);
+  }, [key, resolvedTheme, creditOsm, creditTiles]);
 
   const focusStop = (i: number) => {
     const map = mapRef.current;
