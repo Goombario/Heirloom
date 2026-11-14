@@ -21,7 +21,7 @@ import {
 } from './familyCache';
 import { partnerName } from './derive';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
-import { factPlaceKey, uniquePlaceKeys } from '@/lib/places/place-key';
+import { factPlaceKey, uniquePlaceKeys, type PlaceKey } from '@/lib/places/place-key';
 
 /**
  * A person as the family-detail read returns them: the `Person` columns plus the
@@ -282,13 +282,15 @@ export function useFamilyDetail() {
     const marriagePlace = details?.family.MarriagePlace;
     const marriagePlaceId = details?.family.MarriagePlaceId;
     const familyEvents = details?.events;
+    // By place id where the fact has one: two places may share a name (#1186).
+    // Keyed by the places, so a revalidation with the same places doesn't ask again (#66).
+    const placeKeysSig = JSON.stringify(uniquePlaceKeys([
+        factPlaceKey(marriagePlace, marriagePlaceId),
+        ...(familyEvents ?? []).map(e => factPlaceKey(e.Place, e.PlaceId)),
+        ...(familyChildren ?? []).flatMap(c => [factPlaceKey(c.BirthPlace, c.BirthPlaceId), factPlaceKey(c.DeathPlace, c.DeathPlaceId)]),
+    ]));
     useEffect(() => {
-        // By place id where the fact has one: two places may share a name (#1186).
-        const keys = uniquePlaceKeys([
-            factPlaceKey(marriagePlace, marriagePlaceId),
-            ...(familyEvents ?? []).map(e => factPlaceKey(e.Place, e.PlaceId)),
-            ...(familyChildren ?? []).flatMap(c => [factPlaceKey(c.BirthPlace, c.BirthPlaceId), factPlaceKey(c.DeathPlace, c.DeathPlaceId)]),
-        ]);
+        const keys = JSON.parse(placeKeysSig) as PlaceKey[];
         if (keys.length === 0) return;
         let active = true;
         (async () => {
@@ -305,7 +307,7 @@ export function useFamilyDetail() {
         // before fresh coords arrived. LocationMap only renders places the current
         // family has, so stale coords for other places are simply never shown.
         return () => { active = false; };
-    }, [marriagePlace, marriagePlaceId, familyEvents, familyChildren, activeTreeId, familyId]);
+    }, [placeKeysSig, activeTreeId, familyId]);
 
     // Prefer the state record for the current id; otherwise the freshly-cached one —
     // keeps a same-route ?id change from momentarily showing the previous family.

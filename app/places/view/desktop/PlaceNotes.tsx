@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { getDataClient } from '@/lib/data';
+import { loadOwnerNotes } from '@/app/components/notes/ownerNotesCache';
 import type { Note } from '@/lib/data/types';
 import { AddRow, Card, InlinePanel, SectionHeader, cx, fieldClass } from '@/app/components/ui';
 import type { RunChange } from '@/app/people/view/mobile/useChange';
@@ -37,8 +38,7 @@ export function PlaceNotes({ placeId, treeId, canEdit, canDelete, run, refreshKe
         let live = true;
         (async () => {
             try {
-                const client = await getDataClient();
-                const rows = await client.notes.listForOwner('Places', placeId, treeId);
+                const rows = await loadOwnerNotes('Places', placeId, treeId);
                 if (live) setNotes(rows);
             } catch {
                 if (live) setNotes([]);

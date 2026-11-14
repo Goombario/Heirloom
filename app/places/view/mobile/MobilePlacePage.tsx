@@ -13,6 +13,7 @@ import { useChange } from '@/app/people/view/mobile/useChange';
 import { useHeroHeader } from '@/app/people/view/mobile/useHeroHeader';
 import { Head, Quiet, Section } from '@/app/people/view/mobile/panes';
 import { getDataClient } from '@/lib/data';
+import { loadOwnerNotes } from '@/app/components/notes/ownerNotesCache';
 import type { Note, PlaceDetail } from '@/lib/data/types';
 import { Globe, List, MapPin, Menu, Move, Pencil, Plus } from '@/lib/icons';
 import { OtherNamesSubtitle, useOtherNameMeta } from '../OtherNames';
@@ -105,8 +106,8 @@ export function MobilePlacePage({ detail, placeName, treeId, role, onChanged, st
     const loadNotes = useCallback(async () => {
         if (placeId == null) return;
         try {
-            const client = await getDataClient();
-            setNotes({ placeId, notes: await client.notes.listForOwner('Places', placeId, treeId) });
+            // Shared with the desktop layout's load: both are mounted (#66).
+            setNotes({ placeId, notes: await loadOwnerNotes('Places', placeId, treeId) });
         } catch { /* the notes section just stays empty */ }
     }, [placeId, treeId]);
     // The list arrives after an await; the rule can't see past the call.

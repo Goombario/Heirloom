@@ -10,6 +10,8 @@ import { sortableYear } from '@/lib/date-utils';
 import { ActionLink, AddRow, InlinePanel, SectionHeader, SelectField, cx, fieldClass } from '@/app/components/ui';
 import { biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
 import { hasBirthFact, hasDeathFact } from '../derive';
+import { dataCache } from '@/lib/data/cache';
+import { loadOwnerNotes, notesKey } from '@/app/components/notes/ownerNotesCache';
 import { nameBarParts } from '../mobile/model';
 import type { RunChange } from '../mobile/useChange';
 
@@ -55,8 +57,14 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
   const tp = useTranslations('personDetail');
   const tTypes = useTranslations('eventTypes');
   const ids = useId();
-  const [personNotes, setPersonNotes] = useState<Note[]>([]);
-  const [eventNotes, setEventNotes] = useState<{ eventId: number; notes: Note[] }[]>([]);
+  // Paint straight from a hover prefetch when there was one (#65); the effect below still re-reads.
+  const [personNotes, setPersonNotes] = useState<Note[]>(() => dataCache.get<Note[]>(notesKey(treeId, 'People', person.Id)) ?? []);
+  const [eventNotes, setEventNotes] = useState<{ eventId: number; notes: Note[] }[]>(() => (person.events ?? [])
+    .filter((e) => (e.noteCount ?? 0) > 0)
+    .flatMap((e) => {
+      const notes = dataCache.get<Note[]>(notesKey(treeId, 'Events', e.Id));
+      return notes ? [{ eventId: e.Id, notes }] : [];
+    }));
   const [open, setOpen] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [about, setAbout] = useState('');
@@ -72,10 +80,9 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
   useEffect(() => {
     let live = true;
     (async () => {
-      const client = await getDataClient();
       const [own, ...byEvent] = await Promise.all([
-        client.notes.listForOwner('People', person.Id, treeId),
-        ...(withNotes ? withNotes.split(',').map(Number) : []).map(async (eventId) => ({ eventId, notes: await client.notes.listForOwner('Events', eventId, treeId) })),
+        loadOwnerNotes('People', person.Id, treeId),
+        ...(withNotes ? withNotes.split(',').map(Number) : []).map(async (eventId) => ({ eventId, notes: await loadOwnerNotes('Events', eventId, treeId) })),
       ]);
       if (!live) return;
       setPersonNotes(own as Note[]);
