@@ -37,8 +37,10 @@ export function BackgroundMediaStatus() {
     <div className="fixed bottom-4 left-4 z-60 max-w-[min(26rem,calc(100vw-2rem))] shadow-card">
       {failure ? (
         <Banner tone="warning" align="center" icon={<AlertTriangle className="h-4 w-4" />}>
-          <span className="flex-1">{t('background_stopped', { done: failure.done, total: failure.total, message: failure.message })}</span>
-          {dismiss}
+          <span className="flex items-center gap-2">
+            <span className="flex-1">{t('background_stopped', { done: failure.done, total: failure.total, message: failure.message })}</span>
+            {dismiss}
+          </span>
         </Banner>
       ) : running ? (
         <Banner tone="info" align="center" icon={<Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />}>
@@ -46,8 +48,10 @@ export function BackgroundMediaStatus() {
         </Banner>
       ) : (
         <Banner tone="success" align="center" icon={<Check className="h-4 w-4" />}>
-          <span className="flex-1">{t('background_added', { count: finished ?? 0 })}</span>
-          {dismiss}
+          <span className="flex items-center gap-2">
+            <span className="flex-1">{t('background_added', { count: finished ?? 0 })}</span>
+            {dismiss}
+          </span>
         </Banner>
       )}
     </div>
