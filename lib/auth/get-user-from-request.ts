@@ -4,6 +4,7 @@ import { debugLog } from '@/lib/logger';
 import { hasPlaceholderAuthSecret } from '@/lib/config-guard';
 import { hasActiveMembership } from './membership';
 import { resolveOrCreateUser } from './provision';
+import { AccessError } from '@/lib/data/errors';
 
 export interface AuthenticatedUser {
   id: number;
@@ -99,12 +100,20 @@ export async function getUserFromRequest(): Promise<AuthenticatedUser | null> {
   } else {
     // Fallback: tokens minted before #12 (or a jwt-provisioning failure) — resolve
     // and provision now, via the same helper the jwt callback uses.
+    // The session doesn't carry Google's flag, so this path never links by email:
+    // an email-only legacy row makes it throw, and the user is sent to sign in
+    // again, where the verified flag is known (#51, L-2).
     const provisioned = await resolveOrCreateUser({
       googleId,
+      emailVerified: false,
       email: session.user.email,
       name: session.user.name ?? null,
       image: session.user.image ?? null,
+    }).catch((error: unknown) => {
+      if (error instanceof AccessError) return null;
+      throw error;
     });
+    if (!provisioned) return null;
     user = { id: provisioned.id, email: provisioned.email, name: provisioned.name, googleId };
   }
 

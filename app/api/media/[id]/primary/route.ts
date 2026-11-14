@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { handleApiError } from '@/lib/api/handle-error';
@@ -17,7 +18,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid media ID' }, { status: 400 });
     }
 
-    const body = await request.json() as { personId?: unknown };
+    const body = await readJsonObject(request) as { personId?: unknown };
     const personId = parseIdParam(body.personId == null ? null : String(body.personId));
     if (personId === null) {
       return NextResponse.json({ error: 'A valid personId is required' }, { status: 400 });

@@ -1,3 +1,4 @@
+import { parseIdParam } from '@/lib/utils/parse-id';
 import type { Audited } from '@/lib/db/queries/audit-capture';
 import {
   getCitationsForPerson,
@@ -130,9 +131,10 @@ export async function createCitationService(params: CreateCitationParams): Promi
   }
 
   const factTable: FactTableValue = input.FactTable;
-  const sourceId = Number(input.SourceId);
-  const factId = Number(input.FactId);
-  if (!Number.isFinite(sourceId) || !Number.isFinite(factId)) {
+  // Whole positive ids only: Number() let "1.5" and [5] through to SQL (#51, L-1).
+  const sourceId = parseIdParam(input.SourceId as string | number);
+  const factId = parseIdParam(input.FactId as string | number);
+  if (sourceId === null || factId === null) {
     throw new ValidationError('SourceId and FactId must be integers');
   }
 
@@ -285,8 +287,8 @@ export async function createCitationsService(params: CreateCitationsParams): Pro
     throw new AccessError('You only have view permission for this tree');
   }
 
-  const sourceId = Number(input?.SourceId);
-  if (!Number.isInteger(sourceId) || sourceId <= 0) {
+  const sourceId = parseIdParam(input?.SourceId as string | number);
+  if (sourceId === null) {
     throw new ValidationError('SourceId must be a positive integer');
   }
   if (!Array.isArray(input.facts) || input.facts.length === 0) {
