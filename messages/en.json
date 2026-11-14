@@ -1954,6 +1954,8 @@
     "rec_family_photo": "Family photo of <r>{record}</r>"
   },
   "cases": {
+    "cite_pick_case": "This case's sources",
+    "cite_pick_people": "Cited on the case's people",
     "research_journal": "Research journal",
     "composer_placeholder": "Log a finding — what did you check, and what did it show?",
     "attach": "Attach",
@@ -3677,6 +3679,14 @@
     "back_to_search": "Back to the search"
   },
   "caseResearch": {
+    "attach": "Attach",
+    "attach_upload": "Upload a file",
+    "attach_from_case": "From this case's media",
+    "attach_from_people": "From the case's people's media",
+    "attach_none_case": "This case has no media yet.",
+    "attach_none_people": "The case's people have no other media.",
+    "attach_no_people": "No people are linked to this case.",
+    "attach_load_failed": "Couldn't load the media. Try again.",
     "eyebrow": "Research",
     "main_label": "Open lead",
     "rail_label": "Case pages",

@@ -298,6 +298,8 @@ export async function createCitationsService(params: CreateCitationsParams): Pro
   const quay = normalizeQuay(input.Quay);
   const dataText = trimmedOrNull(input.DataText);
   const sharedPage = trimmedOrNull(input.Page);
+  // Checked before anything is written: a bad link rejects the whole bulk cite (#41).
+  const url = normalizeUrl(input.Url);
 
   const facts: { factTable: FactTableValue; factId: number; page: string | null }[] = [];
   const seen = new Set<string>();
@@ -342,6 +344,7 @@ export async function createCitationsService(params: CreateCitationsParams): Pro
           Page: fact.page,
           Quay: quay,
           DataText: dataText,
+          Url: url,
         },
         currentUserId,
         client,
