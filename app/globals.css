@@ -131,7 +131,7 @@
      contrast/colour and cuts eye-strain; faded/sepia genealogy scans benefit
      most, and the side panel stays dark so there's no bright edge next to the
      stage). These are dark CONSTANTS, deliberately NOT wired to
-     prefers-color-scheme. The white-on-dark FG scale the panel text uses lives
+     the light or dark theme. The white-on-dark FG scale the panel text uses lives
      in the reusable `.dark-island` base (see @layer components near .hero-dark).
      See design-system.md + issue #332. */
   --color-lightbox-panel: #16120f;        /* opaque metadata rail (EvidencePanel) */
@@ -408,23 +408,15 @@
 /* ============================================
    SECTION 3: DARK MODE OVERRIDES
 
-   Two selectors for dark mode support:
-   - @media (prefers-color-scheme: dark) with
-     :root:not(.light) — respects OS preference
-     unless user explicitly chose light mode
-   - html.dark — user manually selected dark mode
-
-   Both override the same --color-* variables
-   defined in @theme above. The duplication is
-   necessary because CSS can't share declarations
-   between a media query and a class selector.
+   One selector: html.dark. The page is marked
+   dark when the user chose dark, or chose
+   "system" (the default) on a dark OS. The
+   layout's pre-paint script and ThemeProvider
+   resolve "system", so the palette is written
+   once rather than again in a media query (#2).
    ============================================ */
 
-/* Dark palette — authored ONCE, applied through two selectors:
-   - :root:not(.light) inside the OS media query : respect OS dark unless forced light
-   - html.dark : user manually selected dark
-   Keeping the selectors separate preserves exact resolution order; only the
-   declaration list is de-duplicated. */
+/* Dark palette — authored once. */
 html.dark {
   color-scheme: dark;
   /* --color-primary is the main-action FILL under white text (5.3:1). It is too dark
@@ -476,7 +468,7 @@ html.dark {
   --color-error: #F87171;
   /* red-950, not the red-900 that its success/warning/info siblings use: --color-error
      (#F87171) on red-900 (#7F1D1D) is only 3.62:1, under AA. Guarded by
-     contrast-tokens.test.ts. Keep in sync with the prefers-color-scheme block below. */
+     contrast-tokens.test.ts. */
   --color-error-bg: #450A0A;
   --color-warning-text: #FDBA74;
   --color-warning-bg: #431407;
@@ -529,101 +521,6 @@ html.dark {
   --panel-shadow: 0 28px 56px rgba(0, 0, 0, 0.62);
   --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 36px -18px rgba(0, 0, 0, 0.7);
 }
-
-/* System preference: dark — applied unless the user forced light mode.
-   Re-applies the dark palette via the same declarations as above. CSS cannot
-   share a declaration list between a media query and a top-level selector, so
-   this one duplication is unavoidable; keep it byte-identical to the block above. */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --color-primary: #A9531F;
-    --color-primary-dark: #8C4418;
-    --color-primary-light: #C6702A;
-    --color-focus: #A7B4C6;
-    --color-evidence: #E6B24A;
-    --color-date: #E6B24A;
-    --color-evidence-soft: #3A2A0E;
-    --color-evidence-border: #8A6418;
-    --color-evidence-bg: #451A03;
-    --color-evidence-tag: #7A5410;
-    --color-on-evidence-tag: #FFF1C2;
-    --color-on-evidence: #1C1917;
-    --color-nav-bg: #2B2622;
-    --color-link: #A7B4C6;
-    --color-surface: #1C1917;
-    --color-surface-2: #0C0A09;
-    --color-family-row: #2E2925;
-    --color-family-row-hover: #3A3430;
-    --color-column: #24211F;
-    --color-toast-bg: #F3ECE5;
-    --color-toast-fg: #231B16;
-    --color-toast-action: #9A4A1A;
-    --color-card: #292524;
-    --color-segment-on: #FAFAF9;
-    --color-on-segment: #292524;
-    --color-card-alt: #44403C;
-    --color-border: #44403C;
-    --color-border-light: rgba(255, 255, 255, 0.06);
-    --color-drop-edge: #9C958C;
-    --color-text: #FAFAF9;
-    --color-text-secondary: #D6D3CC;
-    --color-text-muted: #B8B2AA;
-    --color-tree-edge: #6B7280;
-    --color-success: #34D399;
-    --color-success-bg: #064E3B;
-    --color-error: #F87171;
-    /* Keep in sync with the [data-theme="dark"] block above (see note there). */
-    --color-error-bg: #450A0A;
-    --color-warning-text: #FDBA74;
-    --color-warning-bg: #431407;
-    --color-warning-border: #7C2D12;
-    --color-warning-edge: #F97316;
-    --color-info-text: #93C5FD;
-    --color-info-bg: #1E3A8A;
-    --color-male: #8CA8C0;
-    --color-male-dark: #5B7C99;
-    --color-female: #C08C9C;
-    --color-female-dark: #9A5B6F;
-    --color-nonbinary: #BFA0CF;
-    --color-nonbinary-dark: #976AAF;
-    --color-neutral: #57534e;
-    --color-neutral-dark: #292524;
-    --color-button-success: #10B981;
-    --color-button-success-hover: #059669;
-    --color-button-danger: #DC2626;
-    --color-button-danger-hover: #B91C1C;
-    --color-hover-surface: #3D3836;
-    --color-bg-subtle: #1C1917;
-    --color-surface-dark: #0C0A09;
-    --color-badge-info-bg: #1E3A8A;
-    --color-badge-info-text: #93C5FD;
-    --color-badge-warning-bg: #431407;
-    --color-badge-warning-text: #FDBA74;
-    --color-badge-count-bg: #581C87;
-    --color-badge-count-text: #E9D5FF;
-    --color-count-bg: #581C87;
-    --color-count-text: #E9D5FF;
-    --color-new-bg: #3A3635;
-    --color-on-new: #D6D3CC;
-    --color-status-living: #34D399;
-    --color-status-deceased: #78716C;
-    --color-status-unknown: #B8B2AA;
-    --color-on-status: #FFFFFF;
-    --color-hero-bg: #4a3d38;
-    --color-hero-tint: #8a6034;
-    --color-hero-select: #2A2320;
-    --shadow-hero: 0 14px 28px -14px rgba(58, 40, 28, 0.38), 0 3px 8px -4px rgba(0, 0, 0, 0.2);
-    --color-slim-bar: transparent;
-    --color-slim-bar-solid: color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-hero-tint));
-    /* Explore elevation (4a) — keep in sync with the html.dark block above. */
-    --map-well-shadow: inset 0 2px 18px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-    --map-well-bg: #100D0C;
-    --panel-shadow: 0 28px 56px rgba(0, 0, 0, 0.62);
-    --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 36px -18px rgba(0, 0, 0, 0.7);
-  }
-}
-
 
 /* ============================================
    SECTION 4: BASE STYLES
@@ -2374,17 +2271,7 @@ main#main-content:focus {
 /* .filter-chip retired — the chip is now the ui/FilterChip primitive (Tailwind
    utilities). The .list-filter-chips scroll container above is unrelated (kept). */
 
-/* Dark mode minimap — system preference */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) .react-flow__minimap {
-    background-color: var(--color-card);
-  }
-  :root:not(.light) .react-flow__minimap-mask {
-    fill: rgba(12, 10, 9, 0.7) !important;
-  }
-}
-
-/* Dark mode minimap — manual toggle */
+/* Dark mode minimap */
 html.dark .react-flow__minimap {
   background-color: var(--color-card);
 }
