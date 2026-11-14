@@ -466,7 +466,7 @@ export default function DateInput({ value, onChange, className = fieldClass(), p
 
     const kind = kindOf(parts.qualifier);
     const range = hasRange(parts.qualifier);
-    const kindWidth = touch ? 'w-[112px]' : stacked ? 'w-full' : 'w-auto';
+    const kindWidth = touch ? 'w-[128px]' : stacked ? 'w-full' : 'w-auto';
     const kindMenu = (
         <SelectField<DateKind>
             aria-label={t('kind_label')}
@@ -495,7 +495,7 @@ export default function DateInput({ value, onChange, className = fieldClass(), p
         />
     );
     const connector = (
-        <span className={cx('text-text-muted text-sm', touch ? 'w-[112px] shrink-0 text-right pr-1' : 'px-0.5')}>
+        <span className={cx('text-text-muted text-sm', touch ? 'w-[128px] shrink-0 text-right pr-1' : 'px-0.5')}>
             {parts.qualifier === 'BET' ? t('conn_and') : t('conn_to')}
         </span>
     );
