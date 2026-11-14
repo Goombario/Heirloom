@@ -21,11 +21,11 @@ import { type NameVariant } from '@/app/components/person-form/NamesPanel';
 import {
     personKey, mediaKey, citationsKey, variantsKey,
     loadPerson, loadPersonMedia, loadPersonCitations, loadPersonVariants,
-    getPersonSummary,
+    getPersonSummary, type PersonCitationMap,
 } from './personCache';
 import { fullName } from './derive';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
-import { factPlaceKey, uniquePlaceKeys } from '@/lib/places/place-key';
+import { factPlaceKey, uniquePlaceKeys, type PlaceKey } from '@/lib/places/place-key';
 
 export type CitationRow = Citation;
 export type CitationMap = Record<string, Citation[]>;
@@ -124,25 +124,28 @@ export function usePersonDetail() {
     // previous person's list until fetchMedia resolves; prefer the cached list for the
     // new id, else use an empty current-scope list. Cross-tree or cross-person media
     // must never remain actionable while the replacement read is pending.
-    const media = mediaState.treeId === activeTreeId && mediaState.id === id
-        ? mediaState.value
-        : (id ? dataCache.get<PersonGalleryMedia[]>(mediaKey(activeTreeId, id)) ?? [] : []);
+    // On a same-route jump to another person, state still holds the previous one
+    // until the load effect runs; until then a prefetched entry paints, so a
+    // hovered relative opens with no skeleton (#65).
+    const cachedCitations = id ? dataCache.get<PersonCitationMap>(citationsKey(activeTreeId, id)) : undefined;
+    const cachedVariants = id ? dataCache.get<NameVariant[]>(variantsKey(activeTreeId, id)) : undefined;
+    const cachedMedia = id ? dataCache.get<PersonGalleryMedia[]>(mediaKey(activeTreeId, id)) : undefined;
+    const media = mediaState.treeId === activeTreeId && mediaState.id === id ? mediaState.value : cachedMedia ?? [];
     const activeCitationMap = useMemo(
-        () => citationState.treeId === activeTreeId && citationState.id === id ? citationState.value : {},
-        [citationState, activeTreeId, id],
+        () => citationState.treeId === activeTreeId && citationState.id === id ? citationState.value : cachedCitations ?? {},
+        [citationState, activeTreeId, id, cachedCitations],
     );
     const activeVariants = useMemo(
-        () => variantsState.treeId === activeTreeId && variantsState.id === id ? variantsState.value : [],
-        [variantsState, activeTreeId, id],
+        () => variantsState.treeId === activeTreeId && variantsState.id === id ? variantsState.value : cachedVariants ?? [],
+        [variantsState, activeTreeId, id, cachedVariants],
     );
-    const mediaLoading = !(mediaStatus.treeId === activeTreeId && mediaStatus.id === id && mediaStatus.loaded);
-    const citationsLoading = !(citationStatus.treeId === activeTreeId && citationStatus.id === id && citationStatus.loaded);
-    const variantsLoading = !(variantsStatus.treeId === activeTreeId && variantsStatus.id === id && variantsStatus.loaded);
+    const settled = (status: ScopedStatus, cached: unknown) =>
+        status.treeId === activeTreeId && status.id === id ? status.loaded : cached !== undefined;
+    const mediaLoading = !settled(mediaStatus, cachedMedia);
+    const citationsLoading = !settled(citationStatus, cachedCitations);
+    const variantsLoading = !settled(variantsStatus, cachedVariants);
     const currentCitationsError = citationsErrorScope?.treeId === activeTreeId && citationsErrorScope.id === id ? citationsError : null;
-    const citationsReady = !currentCitationsError
-        && citationStatus.treeId === activeTreeId
-        && citationStatus.id === id
-        && citationStatus.loaded;
+    const citationsReady = !currentCitationsError && !citationsLoading;
     // Only show the skeleton when there is genuinely nothing to paint yet. A cache
     // hit (or a completed load) makes `activePerson` non-null, so no skeleton flashes
     // on back/related-person nav; the `loadedIdentity` term still lets a failed cold fetch
@@ -206,8 +209,9 @@ export function usePersonDetail() {
         const request = ++mediaRequest.current;
         setMediaError(null);
         setMediaErrorScope(null);
-        setMediaStatus({ treeId: activeTreeId, id, loaded: false });
         const cached = dataCache.get<PersonGalleryMedia[]>(mediaKey(activeTreeId, id));
+        // A cached list paints as loaded while it revalidates: no skeleton over it (#65).
+        setMediaStatus({ treeId: activeTreeId, id, loaded: cached !== undefined });
         if (cached !== undefined) setMediaState({ treeId: activeTreeId, id, value: cached });
         try {
             const list = await loadPersonMedia(Number(id), activeTreeId);
@@ -254,8 +258,8 @@ export function usePersonDetail() {
         const request = ++variantsRequest.current;
         setVariantsError(null);
         setVariantsErrorScope(null);
-        setVariantsStatus({ treeId: activeTreeId, id, loaded: false });
         const cached = dataCache.get<NameVariant[]>(variantsKey(activeTreeId, id));
+        setVariantsStatus({ treeId: activeTreeId, id, loaded: cached !== undefined });
         if (cached) {
             setVariantsState({ treeId: activeTreeId, id, value: cached });
         }
@@ -297,13 +301,16 @@ export function usePersonDetail() {
 
     useDocumentTitle(activePerson ? fullName(activePerson, t('unknown')) : null);
 
+    // By place id where the fact has one: two places may share a name (#1186).
+    // Keyed by the places themselves, not the person object, so a background
+    // revalidation that returns the same places doesn't ask again (#66).
+    const placeKeysSig = JSON.stringify(uniquePlaceKeys([
+        factPlaceKey(activePerson?.BirthPlace, activePerson?.BirthPlaceId),
+        factPlaceKey(activePerson?.DeathPlace, activePerson?.DeathPlaceId),
+        ...((activePerson?.events ?? []).map(e => factPlaceKey(e.Place, e.PlaceId))),
+    ]));
     useEffect(() => {
-        // By place id where the fact has one: two places may share a name (#1186).
-        const keys = uniquePlaceKeys([
-            factPlaceKey(activePerson?.BirthPlace, activePerson?.BirthPlaceId),
-            factPlaceKey(activePerson?.DeathPlace, activePerson?.DeathPlaceId),
-            ...((activePerson?.events ?? []).map(e => factPlaceKey(e.Place, e.PlaceId))),
-        ]);
+        const keys = JSON.parse(placeKeysSig) as PlaceKey[];
         if (keys.length === 0) return;
         let active = true;
         (async () => {
@@ -320,7 +327,7 @@ export function usePersonDetail() {
         // fresh coords arrived. The next successful load overwrites them; coords
         // for places the current person no longer has are simply never rendered.
         return () => { active = false; };
-    }, [activePerson?.BirthPlace, activePerson?.BirthPlaceId, activePerson?.DeathPlace, activePerson?.DeathPlaceId, activePerson?.events, activeTreeId, id]);
+    }, [placeKeysSig, activeTreeId, id]);
 
     const placeCoords = placeCoordsState?.treeId === activeTreeId && placeCoordsState.id === id
         ? placeCoordsState.value
