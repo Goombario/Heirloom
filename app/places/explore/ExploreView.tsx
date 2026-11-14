@@ -1,26 +1,29 @@
 'use client';
 
 // Composes the full-page Explore workspace (#56): builds the tree, runs useExploreState,
-// and lays out three panes that each scroll on their own: the list rail, the selected
-// place, and the map filling the rest.
+// and lays out the list rail and the map filling the rest. The selected place opens in a
+// card floating over the map's left edge, beside the rail; it stays hidden until a place
+// is picked and folds down to a tab. The map never resizes for it: the pins re-frame
+// into the room the card leaves clear.
 //
-// The map tracks the CURRENT JURISDICTION (state.currentNode): it re-fits only when you drill
-// into a different level — a click on a parent entry — never on hover or a leaf select. Combined
-// with LocationMap keying off marker *values* + fitBounds animate:false, that means no burst of
-// basemap tile loads while browsing.
+// The map always carries every place's pin. It moves on purpose only: a pick in the rail (a
+// row or a breadcrumb) frames that place and the places inside it, zooming as it needs to;
+// a pin click, the card opening or a pick off screen slides the view at the same zoom. Hover
+// never moves it, and LocationMap keys off marker *values*, so browsing loads no new tiles.
 //
 // Desktop and tablet only: phones get MobilePlacesExplore (#1118).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocationMap from '@/app/components/LocationMap';
 import { collapseEmptyIntermediaries, type PlaceTreeNode } from '@/lib/places/hierarchy';
 import { findNodeById, useExploreState } from './useExploreState';
 import { ExploreDrill } from './ExploreDrill';
-import { ExploreDetail, type ExploreOverview } from './ExploreDetail';
+import { ExploreDetail, PlaceCardActions } from './ExploreDetail';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { ScrollArea } from '@/app/components/ui/ScrollArea';
+import { Card } from '@/app/components/ui';
 import { collectPins } from './collectPins';
 import { MapPin } from '@/lib/icons';
 import { usePrefetchPlaceDetail } from '@/lib/places/prefetch';
@@ -45,10 +48,10 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
   const displayRoots = useMemo(() => collapseEmptyIntermediaries(roots), [roots]);
   const state = useExploreState(displayRoots);
 
-  const markers = useMemo(
-    () => collectPins(state.currentNode ? [state.currentNode] : displayRoots),
-    [state.currentNode, displayRoots],
-  );
+  // Every place's pin stays on the map whatever level the rail is at: drilling into a
+  // country frames it (below) rather than taking the rest of the world's pins away.
+  const markers = useMemo(() => collectPins(displayRoots), [displayRoots]);
+  const drawnIds = useMemo(() => new Set(markers.map((m) => m.id)), [markers]);
 
   const openFullPage = (node: PlaceTreeNode) =>
     router.push(placeHref(node));
@@ -60,12 +63,35 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
   // which can also address a place by name.
   const onRowClick = (node: PlaceTreeNode) => (node.id == null ? openFullPage(node) : state.select(node));
 
-  // A pin click is the same act as a row click — same rules — so it goes through the same handler rather than calling
-  // state.goTo: goTo would drill INTO a leaf, emptying the list, where select keeps the
-  // leaf's siblings on screen. Markers only carry ids for places that have one.
+  // A pick in the rail — a row or a breadcrumb — also frames the place and the places
+  // inside it in the open part of the map, zooming as it needs to; other pins may fall
+  // outside. Nothing else zooms: a pin is already on screen, so a pin click only slides
+  // the map to clear it of the card.
+  const [frameTarget, setFrameTarget] = useState<{ n: number; points: { lat: number; lng: number }[] } | null>(null);
+  const frame = (nodes: readonly PlaceTreeNode[]) => {
+    const points = nodes.flatMap((n) => pinsWithin(n)).map(({ lat, lng }) => ({ lat, lng }));
+    if (points.length > 0) setFrameTarget((f) => ({ n: (f?.n ?? 0) + 1, points }));
+  };
+  const onRailClick = (node: PlaceTreeNode) => {
+    onRowClick(node);
+    if (node.id != null) frame([node]);
+  };
+  // The breadcrumbs go up a level; they frame the level they land on, or the whole tree.
+  const railState = {
+    ...state,
+    goTo: (id: number | null) => {
+      state.goTo(id);
+      const node = findNodeById(displayRoots, id);
+      frame(node ? [node] : displayRoots);
+    },
+  };
+
+  // A pin click takes the rail to the pin's place wherever it is in the tree — the list
+  // it sits in, with it selected (a place with places inside opens on them) — the same
+  // way the card's quick picks do. Markers only carry ids for places that have one.
   const onMarkerClick = (id: number) => {
     const node = findNodeById(displayRoots, id);
-    if (node) onRowClick(node);
+    if (node) state.reveal(node);
   };
 
   // Which pin the drill is pointing at. Hover only: it never changes selection or the URL.
@@ -97,17 +123,28 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
   // rule drops a jurisdiction's own coordinate whenever anything below it is geocoded —
   // that is what keeps a country centroid from blowing out the fitted bounds — so at the
   // root, where every row is a jurisdiction, matching one id lit nothing at all.
+  //
+  // The selected place stays lit too, alongside whatever is hovered.
+  const selectedId = state.selected?.id ?? null;
   const highlightedIds = useMemo(() => {
-    const node = findNodeById(displayRoots, hoveredId);
-    if (!node) return [];
+    const ids = new Set<number>();
+    for (const id of [hoveredId, selectedId]) {
+      const node = findNodeById(displayRoots, id);
+      if (node) pinsWithin(node).forEach((p) => ids.add(p.id));
+    }
+    return [...ids];
+  }, [displayRoots, hoveredId, selectedId]);
+  // The selected and the hovered place each name their pin when they come down to one
+  // drawn pin (a town, or a county with one geocoded town), so both can be named at once.
+  const labelledIds = useMemo(() => {
     const out: number[] = [];
-    const walk = (n: PlaceTreeNode) => {
-      if (n.id != null && n.latitude != null && n.longitude != null) out.push(n.id);
-      n.children.forEach(walk);
-    };
-    walk(node);
+    for (const id of [hoveredId, selectedId]) {
+      const node = findNodeById(displayRoots, id);
+      const drawn = node ? pinsWithin(node).filter((p) => drawnIds.has(p.id)) : [];
+      if (drawn.length === 1) out.push(drawn[0].id);
+    }
     return out;
-  }, [displayRoots, hoveredId]);
+  }, [displayRoots, hoveredId, selectedId, drawnIds]);
 
   // Pointing at a pin does what pointing at its row does: the pin takes the highlight, and
   // the place's detail is warmed so the click paints from cache rather than flashing the
@@ -120,48 +157,14 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
     if (node) prefetch(node.id ?? node.name);
   };
 
-  // The place pane stays up whether or not a place is picked (#56 review), so picking
-  // one never moves the map. Beside the map on wide windows, its width dragged by the
-  // edge; under the map below lg, so the map never drops out, its height dragged instead.
+  // The card: hidden until a place is picked, folded to a tab by its chevron. Folded
+  // stays folded: picking another place only renames the tab.
   const stacked = useIsMobile('lg');
-  const [paneW, setPaneW] = usePaneSize(WIDTH_KEY, PANE_W);
-  const [paneH, setPaneH] = usePaneSize(HEIGHT_KEY, PANE_H);
-  const workRef = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState({ w: 0, h: 0 });
-  useEffect(() => {
-    const el = workRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(([e]) => setBox({ w: e.contentRect.width, h: e.contentRect.height }));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  // The map always keeps room of its own: the pane stops short of it.
-  const maxW = Math.max(PANE_W_MIN, box.w - RAIL_W - MAP_MIN);
-  const maxH = Math.max(PANE_H_MIN, box.h - MAP_MIN_H);
-  const width = clamp(paneW, PANE_W_MIN, maxW);
-  const height = clamp(paneH, PANE_H_MIN, maxH);
+  const [collapsed, setCollapsed] = useState(false);
+  const selected = state.selected;
+  const cardOpen = selected != null && !collapsed;
+  const fitInsets = cardOpen ? { top: 0, right: 0, bottom: 0, left: CARD_GAP + CARD_W } : NO_INSETS;
 
-  const overview = useMemo<ExploreOverview>(() => {
-    const all: PlaceTreeNode[] = [];
-    const walk = (ns: PlaceTreeNode[]) => ns.forEach((n) => { if (n.children.length === 0 && n.id != null) all.push(n); walk(n.children); });
-    walk(displayRoots);
-    return {
-      records: displayRoots.reduce((sum, n) => sum + n.rolledCount, 0),
-      top: all.sort((a, b) => b.rolledCount - a.rolledCount).slice(0, 6),
-    };
-  }, [displayRoots]);
-
-  const pane = (
-    <ScrollArea className="flex-1 min-h-0">
-      <ExploreDetail
-        placeName={state.selected?.name ?? null}
-        placeId={state.selected?.id ?? null}
-        treeId={treeId}
-        overview={overview}
-        onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) state.reveal(node); }}
-      />
-    </ScrollArea>
-  );
   const map = (
     <div className="relative min-h-0 min-w-0 flex-1" style={{ background: 'var(--map-well-bg)' }}>
       {markers.length === 0 ? (
@@ -180,125 +183,75 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
           onMarkerClick={onMarkerClick}
           onMarkerHover={onMarkerHover}
           highlightedIds={highlightedIds}
+          labelledIds={labelledIds}
+          fitMargin={FIT_MARGIN}
           refitOnResize
+          fitInsets={fitInsets}
+          focusId={selected?.id ?? null}
+          frameTarget={frameTarget}
+          controlsCorner="top-right"
         />
+      )}
+      {selected && collapsed && (
+        <Card pad={false} className="explore-card absolute top-4 left-4 z-[2] flex items-center gap-1 p-1.5">
+          <PlaceCardActions placeId={selected.id} placeName={selected.name} onExpand={() => setCollapsed(false)} />
+        </Card>
+      )}
+      {selected && !collapsed && (
+        // The map's zoom buttons sit top-right here, so the card has the left edge to itself.
+        <Card pad={false} role="region" aria-label={t('explore_card_label')}
+          className="explore-card absolute left-4 z-[2] flex flex-col overflow-hidden"
+          // As tall as its content, up to the map's height less a margin each end;
+          // past that the content scrolls inside it.
+          style={{ top: CARD_GAP, maxHeight: `calc(100% - ${CARD_GAP * 2}px)`, width: `min(${CARD_W}px, calc(100% - 96px))` }}>
+          <ScrollArea className="min-h-0">
+            <ExploreDetail
+              placeName={selected.name}
+              placeId={selected.id ?? null}
+              treeId={treeId}
+              onPickPlace={(id) => { const node = findNodeById(displayRoots, id); if (node) state.reveal(node); }}
+              onCollapse={() => setCollapsed(true)}
+            />
+          </ScrollArea>
+        </Card>
       )}
     </div>
   );
 
   return (
-    // Three panes, each scrolling on its own (#56): the list rail, the place pane and
-    // the map. Below lg the pane docks under the map instead of beside it.
-    <div ref={workRef} className="explore-workspace flex-1 min-h-0 grid" style={{ gridTemplateColumns: `${stacked ? RAIL_W_NARROW : RAIL_W}px minmax(0,1fr)` }}>
+    <div className="explore-workspace flex-1 min-h-0 grid" style={{ gridTemplateColumns: `${stacked ? RAIL_W_NARROW : RAIL_W}px minmax(0,1fr)` }}>
       <div className="min-h-0 flex flex-col bg-card border-r border-border">
         <ExploreDrill
-          state={state}
+          state={railState}
           search={search}
-          onRowClick={onRowClick}
+          onRowClick={onRailClick}
           onRowHover={onRowHover}
           onClearSearch={onClearSearch}
         />
       </div>
-      {stacked ? (
-        <div className="min-h-0 min-w-0 flex flex-col">
-          {map}
-          <PaneResizer orientation="horizontal" value={height} min={PANE_H_MIN} max={maxH} onChange={setPaneH} label={t('pane_resize')} invert />
-          <div className="shrink-0 min-h-0 flex flex-col bg-card" style={{ height }}>{pane}</div>
-        </div>
-      ) : (
-        <div className="min-h-0 min-w-0 flex">
-          <div className="shrink-0 min-h-0 flex flex-col bg-card" style={{ width }}>{pane}</div>
-          <PaneResizer orientation="vertical" value={width} min={PANE_W_MIN} max={maxW} onChange={setPaneW} label={t('pane_resize')} />
-          {map}
-        </div>
-      )}
+      {map}
     </div>
   );
 }
 
+/** A place's own pin and those of every place inside it: what lights up for it, and
+ *  what a rail pick frames. */
+function pinsWithin(node: PlaceTreeNode): { id: number; lat: number; lng: number }[] {
+  const out: { id: number; lat: number; lng: number }[] = [];
+  const walk = (n: PlaceTreeNode) => {
+    if (n.id != null && n.latitude != null && n.longitude != null) out.push({ id: n.id, lat: n.latitude, lng: n.longitude });
+    n.children.forEach(walk);
+  };
+  walk(node);
+  return out;
+}
+
+/** Extra room around framed pins: a tenth of the map's width and height. */
+const FIT_MARGIN = 0.1;
+
 const RAIL_W = 320;
 const RAIL_W_NARROW = 300;
-/** The place pane's width beside the map: 420 to start, never under 360. */
-const PANE_W = 420;
-const PANE_W_MIN = 360;
-/** The pane's height docked under the map. */
-const PANE_H = 360;
-const PANE_H_MIN = 200;
-/** What the map keeps, whichever way the pane is dragged. */
-const MAP_MIN = 320;
-const MAP_MIN_H = 200;
-const WIDTH_KEY = 'places-explore-pane-width';
-const HEIGHT_KEY = 'places-explore-pane-height';
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
-
-/** A dragged pane size, kept as a preference on this device. */
-function usePaneSize(key: string, initial: number): [number, (n: number) => void] {
-  // A lazy read is hydration-safe here: Explore only renders after the client-side fetch.
-  const [size, setSize] = useState(() => {
-    try {
-      const saved = Number(localStorage.getItem(key));
-      return Number.isFinite(saved) && saved > 0 ? saved : initial;
-    } catch {
-      return initial;
-    }
-  });
-  const save = useCallback((n: number) => {
-    setSize(n);
-    try { localStorage.setItem(key, String(Math.round(n))); } catch { /* ignore */ }
-  }, [key]);
-  return [size, save];
-}
-
-/**
- * The pane's draggable edge: a window splitter (role="separator") the pointer drags and the
- * arrow keys step, 16px at a time (Home and End go to the limits). `invert` is for a pane
- * BELOW its edge, which grows as the edge moves up.
- */
-function PaneResizer({ orientation, value, min, max, onChange, label, invert = false }: {
-  orientation: 'vertical' | 'horizontal'; value: number; min: number; max: number;
-  onChange: (n: number) => void; label: string; invert?: boolean;
-}) {
-  const start = useRef<{ pos: number; value: number } | null>(null);
-  const vertical = orientation === 'vertical';
-  const set = (n: number) => onChange(clamp(Math.round(n), min, max));
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    start.current = { pos: vertical ? e.clientX : e.clientY, value };
-  };
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!start.current) return;
-    const delta = (vertical ? e.clientX : e.clientY) - start.current.pos;
-    set(start.current.value + (invert ? -delta : delta));
-  };
-  const end = () => { start.current = null; };
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const grow = vertical ? 'ArrowRight' : invert ? 'ArrowUp' : 'ArrowDown';
-    const shrink = vertical ? 'ArrowLeft' : invert ? 'ArrowDown' : 'ArrowUp';
-    if (e.key === grow) set(value + 16);
-    else if (e.key === shrink) set(value - 16);
-    else if (e.key === 'Home') set(min);
-    else if (e.key === 'End') set(max);
-    else return;
-    e.preventDefault();
-  };
-  return (
-    <div
-      role="separator"
-      tabIndex={0}
-      aria-label={label}
-      aria-orientation={orientation}
-      aria-valuenow={Math.round(value)}
-      aria-valuemin={min}
-      aria-valuemax={Math.round(max)}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={end}
-      onPointerCancel={end}
-      onKeyDown={onKeyDown}
-      className={`explore-resizer explore-resizer--${orientation} shrink-0 focus-ring-inset`}
-    />
-  );
-}
+/** The floating card's width, and its gap from the map's edges. */
+const CARD_W = 340;
+const CARD_GAP = 16;
+const NO_INSETS = { top: 0, right: 0, bottom: 0, left: 0 };

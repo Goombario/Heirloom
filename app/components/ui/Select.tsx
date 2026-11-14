@@ -104,7 +104,7 @@ export function Select<T>({ label, valueLabel, options, isSelected, onSelect, ic
                 ? g.options.map(renderOption)
                 : (
                   <div key={`${g.label}-${i}`} role="group" aria-label={g.label}>
-                    <div aria-hidden="true" className="eyebrow px-2.5 pt-2 pb-1">{g.label}</div>
+                    <div aria-hidden="true" className="eyebrow font-bold text-text-secondary px-2.5 pt-2 pb-1">{g.label}</div>
                     {g.options.map(renderOption)}
                   </div>
                 ))}
@@ -146,6 +146,8 @@ interface SelectFieldProps<V extends string> {
   fieldClassName?: string;
   className?: string;
   disabled?: boolean;
+  /** Muted text the trigger shows while `value` matches no option. */
+  placeholder?: string;
 }
 
 // `pointer-events-auto`: inside a Vaul sheet, Radix sets `pointer-events: none` on
@@ -170,7 +172,7 @@ const PANEL_MAX = 280;
  */
 export function SelectField<V extends string>({
   value, onChange, options, groups, id, 'aria-label': ariaLabel, size = 'md', width = 'w-full',
-  fieldClassName, className, disabled = false,
+  fieldClassName, className, disabled = false, placeholder,
 }: SelectFieldProps<V>) {
   const baseId = React.useId();
   const listId = `${baseId}-list`;
@@ -314,7 +316,7 @@ export function SelectField<V extends string>({
       {groups
         ? groups.map((g) => (
           <div key={g.key} role="group" aria-labelledby={`${baseId}-g-${g.key}`}>
-            <div id={`${baseId}-g-${g.key}`} role="presentation" className="eyebrow px-2.5 pt-2 pb-1">{g.label}</div>
+            <div id={`${baseId}-g-${g.key}`} role="presentation" className="eyebrow font-bold text-text-secondary px-2.5 pt-2 pb-1">{g.label}</div>
             {g.options.map((opt) => renderOption(opt, index++))}
           </div>
         ))
@@ -349,7 +351,9 @@ export function SelectField<V extends string>({
       >
         {/* A label can carry a time-dependent part (a time zone's current offset),
             so a prerendered value may differ from the client's. */}
-        <span className="truncate" suppressHydrationWarning>{flat[selectedIndex]?.label ?? value}</span>
+        {selectedIndex < 0 && placeholder
+          ? <span className="truncate text-text-muted">{placeholder}</span>
+          : <span className="truncate" suppressHydrationWarning>{flat[selectedIndex]?.label ?? value}</span>}
         <ChevronDown size={14} aria-hidden className="shrink-0 text-text-muted" />
       </button>
       {list}

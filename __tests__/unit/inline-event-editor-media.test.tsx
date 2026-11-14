@@ -340,12 +340,13 @@ describe('InlineEventEditor — add-event Birth/Death has no media box (#927)', 
     it('blocks Save when media was staged before switching the type to Death', async () => {
         const user = userEvent.setup();
         render(<InlineEventEditor target={{ kind: 'person', personId: 4 }} allowVital={{ birth: true, death: true }} onCancel={h.cancelled} onSaved={h.saved} />);
-        // The desktop panel starts on the type chips; Change type goes back to them.
-        await user.click(screen.getByRole('button', { name: 'RESI' }));
+        // The desktop panel picks the type from its dropdown, and can switch it later.
+        await user.click(screen.getByRole('combobox', { name: 'field_type' }));
+        await user.click(screen.getByRole('option', { name: 'RESI' }));
         await stageExistingAndFiles(user);
 
-        await user.click(screen.getByRole('button', { name: 'change_type' }));
-        await user.click(screen.getByRole('button', { name: 'DEAT' }));
+        await user.click(screen.getByRole('combobox', { name: 'field_type' }));
+        await user.click(screen.getByRole('option', { name: 'DEAT' }));
 
         expect(screen.getByTestId('event-media-draft-panel')).toBeInTheDocument();
         expect(screen.getByText('vital_media_unsupported')).toBeInTheDocument();

@@ -1,7 +1,8 @@
 'use client';
 
 // Loading shapes for the Explore workspace. Each mirrors the real layout's geometry —
-// the list rail, the selected-place pane and the map filling the rest (#56) — so the
+// the list rail and the map filling the rest (#56; no place is picked on load, so
+// no card) — so the
 // page does not reflow when the data lands. The whole
 // view used to be a centred "Loading…" line, which reserved none of that space
 // (review 6 §11.2.1).
@@ -73,10 +74,9 @@ export function ExploreSkeleton() {
     // role="status" + a label: every bar below is aria-hidden, so without this the
     // load is silent to a screen reader.
     <div role="status" aria-busy="true" aria-label={t('loading')}
-      className="flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_420px_minmax(0,1fr)]">
+      className="flex-1 min-h-0 grid grid-cols-[300px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)]">
       <div className="min-h-0 flex flex-col bg-card-alt border-r border-border"><RailSkeleton /></div>
-      <div className="min-h-0 bg-card border-r border-border"><ExploreDetailSkeleton /></div>
-      <div className="hidden lg:block" style={{ background: 'var(--map-well-bg)' }} aria-hidden="true" />
+      <div style={{ background: 'var(--map-well-bg)' }} aria-hidden="true" />
     </div>
   );
 }
