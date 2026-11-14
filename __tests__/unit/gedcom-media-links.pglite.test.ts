@@ -211,9 +211,12 @@ describe('GEDCOM media identity and canonical links', () => {
       { MediaId: again.rows[0].Id, OwnerTable: 'Citation', OwnerId: citedAgain.rows[0].Id },
     ]);
 
-    // A second merge of the same file adds no citations.
+    // A second merge of the same file adds no citations, and no second file to
+    // the one that has its file already.
     await importGedcom(text, 'merge');
     expect((await query('SELECT COUNT(*)::int AS n FROM "Citation" WHERE "TreeId" = $1', [treeId])).rows[0].n).toBe(2);
+    expect((await query(`SELECT COUNT(*)::int AS n FROM "MediaLink" WHERE "OwnerTable" = 'Citation'`, [])).rows[0].n).toBe(1);
+    expect((await query('SELECT "RawGedcom" FROM "Citation" WHERE "Id" = $1', [citedAgain.rows[0].Id])).rows[0].RawGedcom).toBeNull();
   });
 
   it('moves a file pointer an older import left in citation passthrough when a file merges in (#47)', async () => {

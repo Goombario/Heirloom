@@ -175,7 +175,8 @@ async function resolvePassthroughPointers(
  * (`3 OBJE @O1@` under a fact's `2 SOUR`) becomes a citation media link, and
  * leaves the citation's passthrough. Reads every citation in the tree that still
  * holds one, so merging a file into a tree imported before #47 moves its files
- * too. A pointer to media outside the tree stays passthrough.
+ * too. A pointer to media outside the tree stays passthrough. A citation that
+ * already has files keeps just those, so a repeated merge adds no copies.
  */
 async function promoteCitationMediaPointers(client: ImportClient, treeId: number): Promise<void> {
   const rows = (await client.query(
@@ -188,6 +189,12 @@ async function promoteCitationMediaPointers(client: ImportClient, treeId: number
     `SELECT "Id" FROM "Media" WHERE "TreeId" = $1`,
     [treeId],
   )).rows as Array<{ Id: number }>).map((row) => row.Id));
+  // A merge fills only what a citation lacks (#1035): one that already has its
+  // files keeps them, and the copy this file brought is not added beside them.
+  const hasFiles = new Set(((await client.query(
+    `SELECT DISTINCT "OwnerId" FROM "MediaLink" WHERE "OwnerTable" = 'Citation' AND "OwnerId" = ANY($1::int[])`,
+    [rows.map((row) => row.id)],
+  )).rows as Array<{ OwnerId: number }>).map((row) => row.OwnerId));
   const citationIds: number[] = [];
   const raws: Array<string | null> = [];
   const linkCitations: number[] = [];
@@ -200,6 +207,7 @@ async function promoteCitationMediaPointers(client: ImportClient, treeId: number
     const dropped = taken.mediaIds.filter((id) => !inTree.has(id)).map((id) => `1 OBJE @~O:${id}@`);
     citationIds.push(row.id);
     raws.push([taken.raw, ...dropped].filter(Boolean).join('\n') || null);
+    if (hasFiles.has(row.id)) continue;
     for (const id of ids) { linkCitations.push(row.id); linkMedia.push(id); }
   }
   if (citationIds.length === 0) return;
