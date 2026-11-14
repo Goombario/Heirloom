@@ -75,7 +75,7 @@ function FileRow({ file, treeId, page, canEdit, busy, onRemove }: {
     const href = fileHref == null ? null : n == null ? fileHref : `${fileHref}#page=${n}`;
     const name = file.Title?.trim() || t('untitled');
     return (
-        <div className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-2 p-2">
+        <div className="flex min-w-0 items-center gap-3 rounded-[10px] border border-border bg-surface-2 p-2">
             <MediaImg
                 mediaId={file.Id}
                 treeId={treeId}
@@ -93,23 +93,23 @@ function FileRow({ file, treeId, page, canEdit, busy, onRemove }: {
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-9 items-center gap-1 rounded px-2 text-sm text-link hover:underline focus-ring"
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded px-1.5 text-sm text-link hover:underline focus-ring pointer-coarse:min-h-11"
                 >
                     {t('open')}
                     <ArrowUpRight size={14} aria-hidden="true" />
                 </a>
             )}
             {canEdit && (
-                <Button
-                    variant="ghost"
-                    size="sm"
+                <button
+                    type="button"
                     disabled={busy}
                     onClick={onRemove}
                     aria-label={t('remove_aria', { title: name })}
-                    icon={<X size={14} aria-hidden="true" />}
+                    title={t('remove')}
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-hover-surface hover:text-text disabled:opacity-50 focus-ring pointer-coarse:size-11"
                 >
-                    {t('remove')}
-                </Button>
+                    <X size={16} aria-hidden="true" />
+                </button>
             )}
         </div>
     );
@@ -172,7 +172,7 @@ export function CitationFileField({ citationId, treeId, page, canEdit, targetNam
     if (!canEdit && files != null && files.length === 0 && !error) return null;
 
     return (
-        <div className={cx('grid gap-1.5', className)}>
+        <div className={cx('grid min-w-0 gap-1.5', className)}>
             <span className="text-meta font-semibold text-text-secondary">{t('label')}</span>
             {files?.map((file) => (
                 <FileRow key={file.Id} file={file} treeId={treeId} page={page} canEdit={canEdit} busy={busy} onRemove={() => void remove(file)} />
