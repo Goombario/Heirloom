@@ -123,6 +123,8 @@ interface TreeVisualizationProps {
   sidebarSelectedId?: number | null;
   colorblindMode?: boolean;
   showAgeIndicator?: boolean;
+  /** The living-status mark on the cards (#68). */
+  showStatusMark?: boolean;
   /** DEBUG (bar review): zoom threshold for the bar's name-only mode. */
   barZoomThreshold?: number;
   /** Increment this to trigger a fitView; silent reloads should NOT increment it. */
@@ -144,7 +146,7 @@ interface TreeVisualizationProps {
  * - Smooth edge connections
  * - Minimap and controls
  */
-function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
+function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
   const [debugMode, setDebugMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -298,6 +300,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         onPersonClick,
         onPersonDoubleClick,
         showAgeIndicator,
+        showStatusMark,
         barZoomThreshold,
       },
     }));
@@ -321,7 +324,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         requestAnimationFrame(() => setIsPositioned(true));
       }, 50);
     }
-  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
+  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
 
   // Surgical selection update: flip isSidebarSelected only on the nodes whose
   // selection state actually changed (previously- and newly-selected), leaving
@@ -383,6 +386,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
       // it is open (see .tree-canvas in globals.css). Inset only — the canvas is
       // NOT resized, so the tree never re-fits or shifts under the user.
       className="tree-canvas"
+      data-panel-open={sidebarSelectedId != null && !isExporting ? '' : undefined}
       style={{
         width: '100%',
         height: '100%',
