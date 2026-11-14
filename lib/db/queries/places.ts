@@ -27,6 +27,8 @@ export interface Place {
     ParentId: number | null;
     Form: string | null;
     OsmType?: string | null;
+    /** OSM's `key/value` for the geocoder match (#45, ADR 0050). */
+    OsmKind?: string | null;
     /** BIGINT: a number on both engines, or text past `Number.MAX_SAFE_INTEGER` (#868). */
     OsmId?: number | string | null;
     PinSuppressed?: boolean;
@@ -924,7 +926,7 @@ export async function revertPlaceMove(exec: Exec, treeId: number, snap: PlaceMov
  * An audit entry stores each touched row's values before and after, so a revert
  * restores exactly these columns and nothing a later rename or note touched.
  */
-const PLACE_EDIT_FIELDS = ['Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'PinSuppressed', 'ParentId'] as const;
+const PLACE_EDIT_FIELDS = ['Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'OsmKind', 'PinSuppressed', 'ParentId'] as const;
 
 export type PlaceEditState = Record<(typeof PLACE_EDIT_FIELDS)[number], unknown>;
 
@@ -1029,6 +1031,8 @@ export interface PlaceGeocodeWrite {
 export async function upsertPlaceGeocode(exec: Exec, w: PlaceGeocodeWrite): Promise<PlaceEditChange> {
     return writePlaceRow(exec, w,
         `"Latitude" = $1, "Longitude" = $2, "DisplayName" = COALESCE($3, "DisplayName"),
+         -- This path carries no kind (ADR 0050): keep it only while the match is the same.
+         "OsmKind" = CASE WHEN "OsmType" IS NOT DISTINCT FROM $4 AND "OsmId" IS NOT DISTINCT FROM $5::bigint THEN "OsmKind" END,
          "OsmType" = $4, "OsmId" = $5, "PinSuppressed" = $6`,
         { columns: ['Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'PinSuppressed'], values: ['$1', '$2', '$3', '$4', '$5', '$6'] },
         [w.latitude, w.longitude, w.displayName, w.osmType, w.osmId, w.pinSuppressed]);
@@ -1057,6 +1061,8 @@ export interface PlaceHierarchyLevel {
     displayName: string | null;
     osmType: string | null;
     osmId: number | null;
+    /** OSM's `key/value` for the level (#45, ADR 0050). */
+    osmKind: string | null;
 }
 
 /**
@@ -1087,9 +1093,10 @@ export async function upsertPlaceHierarchy(
              "DisplayName" = COALESCE($4, "DisplayName"),
              "OsmType" = CASE WHEN $1::double precision IS NOT NULL THEN $5 ELSE "OsmType" END,
              "OsmId" = CASE WHEN $1::double precision IS NOT NULL THEN $6::bigint ELSE "OsmId" END,
-             "PinSuppressed" = CASE WHEN $1::double precision IS NOT NULL THEN FALSE ELSE "PinSuppressed" END`,
-            { columns: ['Latitude', 'Longitude', 'ParentId', 'DisplayName', 'OsmType', 'OsmId'], values: ['$1', '$2', '$3', '$4', '$5', '$6'] },
-            [level.latitude, level.longitude, parentId, level.displayName, level.osmType, level.osmId]);
+             "PinSuppressed" = CASE WHEN $1::double precision IS NOT NULL THEN FALSE ELSE "PinSuppressed" END,
+             "OsmKind" = CASE WHEN $1::double precision IS NOT NULL THEN $7::text ELSE COALESCE("OsmKind", $7::text) END`,
+            { columns: ['Latitude', 'Longitude', 'ParentId', 'DisplayName', 'OsmType', 'OsmId', 'OsmKind'], values: ['$1', '$2', '$3', '$4', '$5', '$6', '$7'] },
+            [level.latitude, level.longitude, parentId, level.displayName, level.osmType, level.osmId, level.osmKind]);
         seen.add(change.id);
         changes.push(change);
         parentId = change.id;
@@ -1176,7 +1183,7 @@ export async function revertPlaceEdits(exec: Exec, treeId: number, changes: Plac
         } else {
             await exec.query(
                 `UPDATE "Places" SET "Latitude" = NULL, "Longitude" = NULL, "DisplayName" = NULL, "OsmType" = NULL,
-                   "OsmId" = NULL, "PinSuppressed" = FALSE, "ParentId" = NULL, "UpdatedAt" = CURRENT_TIMESTAMP
+                   "OsmId" = NULL, "OsmKind" = NULL, "PinSuppressed" = FALSE, "ParentId" = NULL, "UpdatedAt" = CURRENT_TIMESTAMP
                  WHERE "Id" = $1 AND "TreeId" = $2`,
                 [change.id, treeId],
             );
@@ -1256,4 +1263,17 @@ export async function revertPlaceDelete(exec: Exec, treeId: number, snap: PlaceD
     }
     await insertSnapshotRow(exec, 'Places', place, { TreeId: treeId });
     for (const n of snap.names) await insertSnapshotRow(exec, 'PlaceName', n, { TreeId: treeId, PlaceId: id });
+}
+
+/** The names and FORMs of the given places that have a FORM, for a place's kind (#45).
+ *  Shortest name first, so the nearest descendant that names a level answers. */
+export async function getPlaceForms(placeIds: number[], treeId: number): Promise<{ name: string; form: string }[]> {
+    if (placeIds.length === 0) return [];
+    const result = await query(
+        `SELECT "Name" AS name, "Form" AS form FROM "Places"
+          WHERE "TreeId" = $1 AND "Id" = ANY($2) AND "Form" IS NOT NULL AND btrim("Form") <> ''
+          ORDER BY length("Name"), "Id" LIMIT 200`,
+        [treeId, placeIds],
+    );
+    return result.rows as { name: string; form: string }[];
 }

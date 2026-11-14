@@ -23,7 +23,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 72;
+export const SCHEMA_VERSION = 73;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -1508,6 +1508,9 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
   // Distinct from "no pin yet" (Latitude IS NULL, inherits from ParentId): an explicit
   // opt-out that must override inheritance even though Latitude/Longitude are also null.
   await pool.query(`ALTER TABLE "Places" ADD COLUMN IF NOT EXISTS "PinSuppressed" BOOLEAN NOT NULL DEFAULT FALSE;`);
+  // #45 (ADR 0050): what kind of place the geocoder matched, as OSM's `key/value`
+  // ("place/city", "landuse/cemetery"). Set by a match; shown when FORM gives no kind.
+  await pool.query(`ALTER TABLE "Places" ADD COLUMN IF NOT EXISTS "OsmKind" TEXT;`);
 
   // (The "every referenced place gets a Places row" backfill now lives at the
   // END of init — it is keyed per tree and must run after the TreeId stamping

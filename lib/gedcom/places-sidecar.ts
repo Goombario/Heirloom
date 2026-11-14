@@ -38,6 +38,7 @@ export interface SidecarPlaceInput {
   DisplayName?: string | null;
   OsmType?: string | null;
   OsmId?: number | string | null;
+  OsmKind?: string | null;
   PinSuppressed?: boolean | null;
 }
 
@@ -73,6 +74,9 @@ export interface SidecarPlaceEntry {
   osmType: string | null;
   /** String, not number: OsmId is a BIGINT and would lose precision as a JS number. */
   osmId: string | null;
+  /** What kind of place the geocoder matched, as OSM's `key/value` (#45, ADR 0050).
+   *  Additive: written only when known. */
+  osmKind?: string | null;
   pinSuppressed: boolean;
   /** The place's other names. Additive (ADR 0009): written only when there are any. */
   names?: SidecarPlaceName[];
@@ -209,12 +213,15 @@ export function buildPlacesSidecar(
       displayName: p.DisplayName ?? null,
       osmType: p.OsmType ?? null,
       osmId: p.OsmId === null || p.OsmId === undefined ? null : String(p.OsmId),
+      ...(p.OsmKind ? { osmKind: p.OsmKind } : {}),
       pinSuppressed: p.PinSuppressed === true,
       ...(namesById.has(p.Id) ? { names: namesById.get(p.Id) } : {}),
     })),
     ...(factPlaces.length > 0 ? { facts: factPlaces } : {}),
   };
 }
+
+import { isOsmKind } from '@/lib/places/osm-kind';
 
 const optionalText = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
 
@@ -259,6 +266,7 @@ export function parsePlacesSidecar(raw: string): { places: SidecarPlaceEntry[]; 
         // Accept the string we write and the number a hand-edited bundle might carry.
         osmId: typeof r.osmId === 'string' ? r.osmId
           : typeof r.osmId === 'number' ? String(r.osmId) : null,
+        ...(typeof r.osmKind === 'string' && isOsmKind(r.osmKind) ? { osmKind: r.osmKind } : {}),
         pinSuppressed: r.pinSuppressed === true || r.pinSuppressed === 1,
         ...(Array.isArray(r.names) ? { names: parseNames(r.names, r.name) } : {}),
       });

@@ -1218,6 +1218,7 @@
     "place": "Место",
     "place_name": "Название места",
     "on_map_as": "На карте",
+    "kind_of_place": "Тип места",
     "latitude": "Широта",
     "longitude": "Долгота",
     "pin": "Метка",
@@ -5299,5 +5300,30 @@
     "stat_records": "{count, plural, one {запись} few {записи} many {записей} other {записи}}",
     "stat_within": "{count, plural, one {место внутри} few {места внутри} many {мест внутри} other {места внутри}}",
     "stat_years": "от первой до последней записи"
+  },
+  "placeKinds": {
+    "country": "Страна",
+    "state": "Штат",
+    "province": "Провинция",
+    "region": "Регион",
+    "county": "Округ",
+    "district": "Район",
+    "municipality": "Муниципалитет",
+    "city": "Город",
+    "town": "Город",
+    "village": "Деревня",
+    "hamlet": "Хутор",
+    "farm": "Ферма",
+    "borough": "Район города",
+    "suburb": "Пригород",
+    "neighbourhood": "Квартал",
+    "island": "Остров",
+    "locality": "Местность",
+    "cemetery": "Кладбище",
+    "place_of_worship": "Место богослужения",
+    "church": "Церковь",
+    "hospital": "Больница",
+    "school": "Школа",
+    "house": "Дом"
   }
 }

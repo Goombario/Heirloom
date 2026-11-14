@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { usePlaceKind } from '../usePlaceKind';
 import { useTranslations } from 'next-intl';
 import LocationMap, { type MapMarker } from '@/app/components/LocationMap';
 import PersonAvatar from '@/app/components/PersonAvatar';
@@ -159,6 +160,7 @@ export function MobilePlacePage({ detail, placeName, treeId, role, onChanged, st
         tabsRef.current?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)?.focus();
     };
 
+    const placeKind = usePlaceKind(detail);
     const groups = useMemo(() => groupFactLinks(detail.factLinks), [detail.factLinks]);
     const records = useMemo(() => recordGroups(detail.factLinks), [detail.factLinks]);
     const years = useMemo(() => yearStats(detail.factLinks), [detail.factLinks]);
@@ -208,6 +210,7 @@ export function MobilePlacePage({ detail, placeName, treeId, role, onChanged, st
                     <h1 className="m-0 serif font-semibold text-white mp-hero-name text-balance">{name}</h1>
                     <OtherNamesSubtitle names={detail.otherNames} className="text-md text-white/80" />
                     <p className="m-0 text-sm text-white/80">
+                        {placeKind && <>{placeKind} · </>}
                         {parents.length === 0 ? t('top_level_place') : (
                             <>
                                 {tp('part_of')}{' '}
@@ -337,6 +340,7 @@ export function MobilePlacePage({ detail, placeName, treeId, role, onChanged, st
                         <Section first>
                             <Head title={t('place')} />
                             <QuietRow label={tp('place_name')}>{placeName}</QuietRow>
+                            {placeKind && <QuietRow label={t('kind_of_place')}>{placeKind}</QuietRow>}
                             {detail.displayName && <QuietRow label={t('on_map_as')}>{detail.displayName}</QuietRow>}
                             {own ? (
                                 <>

@@ -544,22 +544,22 @@ export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
   const mkPlace = async (
     name: string, form: string | null, lat: number | null, lng: number | null,
     parentId: number | null,
-    geo?: { displayName?: string; osmType?: string; osmId?: number; pinSuppressed?: boolean },
+    geo?: { displayName?: string; osmType?: string; osmId?: number; osmKind?: string; pinSuppressed?: boolean },
   ): Promise<number> => {
     const values = [U, T, name, form, lat, lng, parentId,
-      geo?.displayName ?? null, geo?.osmType ?? null, geo?.osmId ?? null, geo?.pinSuppressed ?? false];
+      geo?.displayName ?? null, geo?.osmType ?? null, geo?.osmId ?? null, geo?.pinSuppressed ?? false, geo?.osmKind ?? null];
     // A fact above already made the bare place of its name (ADR 0037): fill that one in.
     const existing = await db.query<{ Id: number }>(
       `UPDATE "Places" SET "Form" = $4, "Latitude" = $5, "Longitude" = $6, "ParentId" = $7, "DisplayName" = $8,
-              "OsmType" = $9, "OsmId" = $10, "PinSuppressed" = $11
+              "OsmType" = $9, "OsmId" = $10, "PinSuppressed" = $11, "OsmKind" = $12
         WHERE "Id" = "PlaceIdByName"($2, $3) AND "Name" = $3 AND "UserId" = $1 RETURNING "Id"`,
       values,
     );
     if (existing.rows[0]) return existing.rows[0].Id;
     const r = await db.query<{ Id: number }>(
       `INSERT INTO "Places"
-       ("UserId","TreeId","Name","Form","Latitude","Longitude","ParentId","DisplayName","OsmType","OsmId","PinSuppressed")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING "Id"`,
+       ("UserId","TreeId","Name","Form","Latitude","Longitude","ParentId","DisplayName","OsmType","OsmId","PinSuppressed","OsmKind")
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING "Id"`,
       values,
     );
     return r.rows[0].Id;
@@ -571,7 +571,7 @@ export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
   // .ged has no PLAC sub-structure for any of them.
   const paris = { rows: [{ Id: await mkPlace(
     'Paris, Île-de-France, France', 'City', 48.8566, 2.3522, idf,
-    { displayName: 'Paris, Île-de-France, France métropolitaine', osmType: 'relation', osmId: 7444, pinSuppressed: true },
+    { displayName: 'Paris, Île-de-France, France métropolitaine', osmType: 'relation', osmId: 7444, osmKind: 'place/city', pinSuppressed: true },
   ) }] };
 
   const canada = await mkPlace('Canada', 'Country', 56.1, -106.3, null);

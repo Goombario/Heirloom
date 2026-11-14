@@ -316,10 +316,10 @@ export async function canonicalizeTree(
     Id: number; Name: string; Form: string | null; Latitude: number | null;
     Longitude: number | null; ParentId: number | null;
     DisplayName: string | null; OsmType: string | null;
-    OsmId: number | string | null; PinSuppressed: boolean | null;
+    OsmId: number | string | null; PinSuppressed: boolean | null; OsmKind: string | null;
   }>(
     `SELECT "Id","Name","Form","Latitude","Longitude","ParentId",
-            "DisplayName","OsmType","OsmId","PinSuppressed"
+            "DisplayName","OsmType","OsmId","PinSuppressed","OsmKind"
      FROM "Places" WHERE "TreeId" = $1`,
     [treeId],
   );
@@ -516,6 +516,7 @@ export async function canonicalizeTree(
       OsmType: p.OsmType ?? null,
       OsmId: p.OsmId === null || p.OsmId === undefined ? null : String(p.OsmId),
       PinSuppressed: p.PinSuppressed === true,
+      OsmKind: p.OsmKind ?? null,
     }))),
   };
 }

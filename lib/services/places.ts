@@ -1,9 +1,11 @@
 import { query, getClient } from '@/lib/db/connection';
+import { kindFromOwnForm, placeKindFromForms } from '@/lib/places/place-kind';
+import { isOsmKind } from '@/lib/places/osm-kind';
 import { safeRollback } from '@/lib/db/rollback';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import { primaryPhotoJoin } from '@/lib/db/queries/media-tags';
 import {
-  getChildPlaces, getGeocodedPlaceDescendants, getNearestPlaceAncestorWithCoords, getPlaceAncestors, getPlaceFactLinks, movePlaceRecords, renamePlace, deleteUnusedPlace, placeUses,
+  getChildPlaces, getPlaceForms, getGeocodedPlaceDescendants, getNearestPlaceAncestorWithCoords, getPlaceAncestors, getPlaceFactLinks, movePlaceRecords, renamePlace, deleteUnusedPlace, placeUses,
   upsertPlaceCoordinates, upsertPlaceGeocode, upsertPlaceHierarchy, type PlaceEditChange, type PlaceUsage,
 } from '@/lib/db/queries/places';
 import { effectiveFirstName, primaryNickname } from '@/lib/db/queries/people';
@@ -236,13 +238,13 @@ export async function getPlaceDetailService(
     // with NULL — silently discarding a match the row already had.
     // A fact's string may be another of the place's names (#1167); it opens that place.
     typeof target === 'number'
-      ? `SELECT "Id", "Name", "Latitude", "Longitude", "DisplayName", "OsmType", "OsmId", "ParentId", "Form" FROM "Places"
+      ? `SELECT "Id", "Name", "Latitude", "Longitude", "DisplayName", "OsmType", "OsmId", "ParentId", "Form", "OsmKind" FROM "Places"
           WHERE "TreeId" = $1 AND "Id" = $2`
-      : `SELECT "Id", "Name", "Latitude", "Longitude", "DisplayName", "OsmType", "OsmId", "ParentId", "Form" FROM "Places"
+      : `SELECT "Id", "Name", "Latitude", "Longitude", "DisplayName", "OsmType", "OsmId", "ParentId", "Form", "OsmKind" FROM "Places"
           WHERE "TreeId" = $1 AND "Id" = "PlaceIdByName"($1, $2)`,
     [scope.treeId, target]
   );
-  const geoRow = (geo.rows[0] as { Id: number; Name: string; Latitude: number | null; Longitude: number | null; DisplayName: string | null; OsmType: string | null; OsmId: string | number | null; ParentId: number | null; Form: string | null } | undefined);
+  const geoRow = (geo.rows[0] as { Id: number; Name: string; Latitude: number | null; Longitude: number | null; DisplayName: string | null; OsmType: string | null; OsmId: string | number | null; ParentId: number | null; Form: string | null; OsmKind: string | null } | undefined);
 
   // Roll-up set: the place itself + every descendant place (walking `ParentId`), so a
   // jurisdiction's detail aggregates the people/events/marriages of everything inside it
@@ -274,7 +276,7 @@ export async function getPlaceDetailService(
     ? getGeocodedPlaceDescendants(geoRow.Id, scope.treeId)
     : Promise.resolve([]);
 
-  const [peopleResult, eventsResult, familiesResult, ancestors, childRows, factLinks, inheritedFromRow, descendantRows, nameUse] = await Promise.all([
+  const [peopleResult, eventsResult, familiesResult, ancestors, childRows, factLinks, inheritedFromRow, descendantRows, nameUse, forms] = await Promise.all([
     query(
       `SELECT p."Id", p."FirstName", p."LastName",
               ${effectiveFirstName('p')} AS "EffectiveFirstName",
@@ -318,6 +320,8 @@ export async function getPlaceDetailService(
     inheritedFromPromise,
     descendantPinsPromise,
     geoRow ? getPlaceNameUse(geoRow.Id, scope.treeId) : Promise.resolve({ otherNames: [], ownNameRecords: 0 }),
+    // A place with its own FORM needs no descendant's to say what kind it is.
+    geoRow && !kindFromOwnForm(geoRow.Name, geoRow.Form) ? getPlaceForms(placeIds, scope.treeId) : Promise.resolve([]),
   ]);
   const uses = geoRow ? await placeUses({ query }, scope.treeId, geoRow.Id) : null;
 
@@ -346,6 +350,8 @@ export async function getPlaceDetailService(
     osmId: geoRow?.OsmId != null ? Number(geoRow.OsmId) : null,
     id: geoRow?.Id ?? null,
     form: geoRow?.Form ?? null,
+    kind: geoRow ? placeKindFromForms(geoRow.Name, geoRow.Form, forms) : null,
+    osmKind: geoRow?.OsmKind ?? null,
     descendantPins: descendantRows.map((r) => ({ id: r.Id, name: r.Name, lat: r.Latitude, lng: r.Longitude })),
     inheritedFrom: inheritedFromRow && descendantRows.length === 0
       ? { id: inheritedFromRow.Id, name: inheritedFromRow.Name, lat: inheritedFromRow.Latitude, lng: inheritedFromRow.Longitude }
@@ -612,6 +618,8 @@ export interface HierarchyLevelInput {
   displayName?: string | null;
   osmType?: 'node' | 'way' | 'relation' | null;
   osmId?: number | null;
+  /** OSM's `key/value` for the level ("place/city"; #45). Anything else is dropped. */
+  osmKind?: string | null;
 }
 
 export interface UpsertPlaceHierarchyParams {
@@ -676,6 +684,7 @@ export async function upsertPlaceHierarchyService(params: UpsertPlaceHierarchyPa
       displayName: level.displayName ?? null,
       osmType: level.osmType ?? null,
       osmId: level.osmId ?? null,
+      osmKind: typeof level.osmKind === 'string' && isOsmKind(level.osmKind) ? level.osmKind : null,
     })),
   }));
   return { auditIds };

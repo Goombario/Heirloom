@@ -257,6 +257,10 @@ export interface PlaceDetail {
   } | null;
   /** GEDCOM PLAC.FORM jurisdiction template, if recorded. */
   form?: string | null;
+  /** What kind of place it is ("City", "County"), from its own or a descendant's FORM (#45). */
+  kind?: string | null;
+  /** What the geocoder matched, as OSM's `key/value` (#45, ADR 0050); shown when `kind` is not. */
+  osmKind?: string | null;
   /** Jurisdiction ancestors, root-first (breadcrumb). */
   parents?: PlaceRef[];
   /** Direct child places in the hierarchy, with the events and marriages recorded in each (itself and below). */
@@ -352,7 +356,7 @@ export interface PlacesClient {
   updateCoordinates(place: PlaceKey, latitude: number, longitude: number, treeId?: number | null): Promise<Audited>;
   /** Persist a resolved jurisdiction chain (hierarchy rollup) in one call; `leafId`
    *  lands the last level on that place. */
-  geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited>;
+  geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null; osmKind?: string | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited>;
   /** How many other places currently inherit their pin from this one. */
   dependentCount(place: PlaceKey, treeId?: number | null): Promise<number>;
   /** Rename a place, or merge it into an existing one (rewrites fact columns + gazetteer). */

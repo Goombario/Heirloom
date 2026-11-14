@@ -13,6 +13,8 @@ export interface GeocodeResult {
   osmType: 'node' | 'way' | 'relation' | null;
   osmId: number | null;
   countryCode: string | null;
+  /** What the match is, as OSM's `key/value` ("place/city", "landuse/cemetery"; #45). */
+  osmKind?: string | null;
 }
 
 export interface PhotonProps {
@@ -20,6 +22,8 @@ export interface PhotonProps {
   state?: string; country?: string; countrycode?: string;
   housenumber?: string;
   osm_id?: number; osm_type?: string;
+  /** The OSM tag the match comes from: `place` + `city`, `landuse` + `cemetery`, … */
+  osm_key?: string; osm_value?: string;
 }
 
 const PHOTON_URL = 'https://photon.komoot.io/api/';
@@ -34,6 +38,11 @@ const inFlight = new Map<string, Promise<GeocodeResult[]>>();
 
 function normKey(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** A match's `key/value` OSM tag, or null when Photon left either out (#45). */
+function osmKindOf(p: PhotonProps): string | null {
+  return p.osm_key && p.osm_value ? `${p.osm_key}/${p.osm_value}` : null;
 }
 
 function osmTypeFromCode(code?: string): GeocodeResult['osmType'] {
@@ -53,6 +62,8 @@ export interface HierarchyLevel {
   displayName?: string | null;
   osmType?: GeocodeResult['osmType'];
   osmId?: number | null;
+  /** What kind of place this level is, as OSM's `key/value` (#45). */
+  osmKind?: string | null;
 }
 
 export interface PhotonCandidate {
@@ -86,6 +97,7 @@ export async function fetchCandidates(
         osmType: osmTypeFromCode(p.osm_type),
         osmId: p.osm_id ?? null,
         countryCode: p.countrycode ?? null,
+        osmKind: osmKindOf(p),
       };
       return { props: p, result };
     })
@@ -128,10 +140,11 @@ function breadcrumb(...parts: (string | undefined)[]): string {
  */
 export function buildHierarchyLevels(p: PhotonProps): HierarchyLevel[] {
   const levels: HierarchyLevel[] = [];
-  if (p.country) levels.push({ name: breadcrumb(p.country), latitude: null, longitude: null });
-  if (p.state) levels.push({ name: breadcrumb(p.state), latitude: null, longitude: null });
-  if (p.county) levels.push({ name: breadcrumb(p.county), latitude: null, longitude: null });
-  if (p.city) levels.push({ name: breadcrumb(p.city, p.county, p.state, p.country), latitude: null, longitude: null });
+  // Each level's kind is the field Photon filed it under (#45).
+  if (p.country) levels.push({ name: breadcrumb(p.country), latitude: null, longitude: null, osmKind: 'place/country' });
+  if (p.state) levels.push({ name: breadcrumb(p.state), latitude: null, longitude: null, osmKind: 'place/state' });
+  if (p.county) levels.push({ name: breadcrumb(p.county), latitude: null, longitude: null, osmKind: 'place/county' });
+  if (p.city) levels.push({ name: breadcrumb(p.city, p.county, p.state, p.country), latitude: null, longitude: null, osmKind: 'place/city' });
   return levels;
 }
 
@@ -144,7 +157,7 @@ export function chainFromCandidate(candidate: PhotonCandidate, leafName: string)
   // insert that same gazetteer row twice and make it its own parent.
   const leafLabel = leafName.split(',')[0]?.trim().toLowerCase();
   const lastLabel = levels.at(-1)?.name.split(',')[0]?.trim().toLowerCase();
-  if (leafLabel && leafLabel === lastLabel) levels.pop();
+  const selectedLevel = leafLabel && leafLabel === lastLabel ? levels.pop() : undefined;
   levels.push({
     name: leafName,
     latitude: candidate.result.lat,
@@ -152,6 +165,8 @@ export function chainFromCandidate(candidate: PhotonCandidate, leafName: string)
     displayName: buildCanonicalName(candidate.props) || null,
     osmType: candidate.result.osmType,
     osmId: candidate.result.osmId,
+    // A match Photon gave no tag keeps the kind its own level had (#45).
+    osmKind: osmKindOf(candidate.props) ?? selectedLevel?.osmKind ?? null,
   });
   return levels;
 }
@@ -193,6 +208,7 @@ export async function resolvePlace(
           latitude: top.result.lat,
           longitude: top.result.lng,
           displayName: buildCanonicalName(top.props) || null,
+          osmKind: osmKindOf(top.props) ?? matched.osmKind,
         };
       }
       levels.push({ name: trimmedFull, latitude: null, longitude: null, displayName: null });
@@ -311,6 +327,7 @@ export async function searchPlaces(
         osmType: osmTypeFromCode(p.osm_type),
         osmId: p.osm_id ?? null,
         countryCode: p.countrycode ?? null,
+        osmKind: osmKindOf(p),
       };
     }).filter((r) => r.name.length > 0);
 

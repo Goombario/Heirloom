@@ -116,7 +116,7 @@ export async function seedAuditReviewEntries(exec: DbExecutor, options: { userId
     `INSERT INTO "AuditLog" ("TreeOwnerId", "UserId", "TreeId", "Action", "EntityType", "EntityId", "EntityLabel", "Changes") VALUES ($1, $2, $3, 'update', 'place', $4, $5, $6)`,
     [owner, userId, treeId, place.Id, `Reverted: Renamed Dovr → ${placeName} (1 record)`, JSON.stringify({ snapshot: { revertOf: renameId } })],
   );
-  const placeState = { Latitude: place.Latitude ?? null, Longitude: place.Longitude ?? null, DisplayName: place.DisplayName ?? null, OsmType: null, OsmId: null, PinSuppressed: false, ParentId: null };
+  const placeState = { Latitude: place.Latitude ?? null, Longitude: place.Longitude ?? null, DisplayName: place.DisplayName ?? null, OsmType: null, OsmId: null, OsmKind: null, PinSuppressed: false, ParentId: null };
   await auditPlaceEdit({ kind: 'coordinates', changes: [{ id: place.Id as number, name: placeName, before: { ...placeState, Latitude: null, Longitude: null }, after: { ...placeState, Latitude: 51.13, Longitude: 1.31 } }], treeOwnerId: owner, userId, treeId, exec });
 
   await auditImport('merge', { people: 12, families: 4, sources: 3 }, owner, userId, exec, treeId);

@@ -20,7 +20,7 @@ const CHUNK_PARAMS = 30000;
 const PLACE_COLUMN_TYPES: Record<string, string> = {
     Id: 'integer', UserId: 'integer', TreeId: 'integer', Name: 'text', Form: 'text',
     Latitude: 'double precision', Longitude: 'double precision', DisplayName: 'text',
-    OsmType: 'text', OsmId: 'bigint', PinSuppressed: 'boolean',
+    OsmType: 'text', OsmId: 'bigint', OsmKind: 'text', PinSuppressed: 'boolean',
 };
 
 /** A VALUES list whose parameters carry their column types, as a FROM list needs. */
@@ -75,7 +75,7 @@ interface ExistingPlace {
 /** How far apart, in degrees (about 50 km), two same-name places are told apart on import. */
 const SAME_PLACE_DEGREES = 0.5;
 
-const ENTRY_COLUMNS = ['UserId', 'TreeId', 'Name', 'Form', 'Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'PinSuppressed'];
+const ENTRY_COLUMNS = ['UserId', 'TreeId', 'Name', 'Form', 'Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'OsmKind', 'PinSuppressed'];
 
 /**
  * Restore places.json's places into a tree, returning the place each entry became,
@@ -128,7 +128,7 @@ export async function restorePlaceEntries(
         if (match) {
             candidates.splice(candidates.indexOf(match), 1);
             placeByEntry.set(index, match.Id);
-            updates.push([match.Id, entry.form, entry.latitude, entry.longitude, entry.displayName, entry.osmType, entry.osmId]);
+            updates.push([match.Id, entry.form, entry.latitude, entry.longitude, entry.displayName, entry.osmType, entry.osmId, entry.osmKind ?? null]);
             return;
         }
         let round = rounds.find((r) => !r.has(entry.name));
@@ -136,7 +136,7 @@ export async function restorePlaceEntries(
         round.set(entry.name, index);
     });
 
-    const updateColumns = ['Id', 'Form', 'Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId'];
+    const updateColumns = ['Id', 'Form', 'Latitude', 'Longitude', 'DisplayName', 'OsmType', 'OsmId', 'OsmKind'];
     const perUpdate = Math.max(1, Math.floor(CHUNK_PARAMS / updateColumns.length));
     for (let start = 0; start < updates.length; start += perUpdate) {
         const params: unknown[] = [];
@@ -150,6 +150,9 @@ export async function restorePlaceEntries(
                 "Longitude" = COALESCE("Places"."Longitude", v."Longitude"),
                 "DisplayName" = COALESCE("Places"."DisplayName", v."DisplayName"),
                 "OsmType" = COALESCE("Places"."OsmType", v."OsmType"),
+                -- Only a kind that describes the place's own match (ADR 0050).
+                "OsmKind" = CASE WHEN "Places"."OsmId" IS NULL OR "Places"."OsmId" = v."OsmId"
+                                 THEN COALESCE("Places"."OsmKind", v."OsmKind") ELSE "Places"."OsmKind" END,
                 "OsmId" = COALESCE("Places"."OsmId", v."OsmId")
                FROM (VALUES ${values}) AS v(${updateColumns.map((c) => `"${c}"`).join(', ')})
               WHERE "Places"."Id" = v."Id" AND "Places"."TreeId" = $${params.push(treeId)}`,
@@ -164,7 +167,7 @@ export async function restorePlaceEntries(
             const params: unknown[] = [];
             const tuples = indexes.slice(start, start + perInsert).map((i) => {
                 const e = entries[i];
-                const row = [ownerId, treeId, e.name, e.form, e.latitude, e.longitude, e.displayName, e.osmType, e.osmId, e.pinSuppressed];
+                const row = [ownerId, treeId, e.name, e.form, e.latitude, e.longitude, e.displayName, e.osmType, e.osmId, e.osmKind ?? null, e.pinSuppressed];
                 return `(${row.map((value) => `$${params.push(value)}`).join(', ')})`;
             });
             const inserted = (await exec.query(
