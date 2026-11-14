@@ -139,6 +139,28 @@ describeIf('API /api/repositories', () => {
         expect(sources.find(s => s.Id === src.Id)!.RepositoryName).toBe('New Name');
     });
 
+    it('creates and edits a website, phone and email (ADR 0049)', async () => {
+        const res = await CREATE_REPO(createRequest('http://localhost:3000/api/repositories', {
+            method: 'POST', body: { Name: 'County Archive', Website: ' https://county.example ', Phone: '555\n0100', Email: '' },
+        }));
+        expect(res.status).toBe(201);
+        const { repository } = await parseResponse<{ repository: RepoShape & { Website: string | null; Phone: string | null; Email: string | null } }>(res);
+        expect(repository).toMatchObject({ Website: 'https://county.example', Phone: '555 0100', Email: null });
+
+        const put = await UPDATE_REPO(
+            createRequest(`http://localhost:3000/api/repositories/${repository.Id}`, { method: 'PUT', body: { Email: 'desk@county.example', Website: null } }),
+            { params: Promise.resolve({ id: String(repository.Id) }) },
+        );
+        const updated = (await parseResponse<{ repository: { Website: string | null; Phone: string | null; Email: string | null } }>(put)).repository;
+        expect(updated).toMatchObject({ Website: null, Phone: '555 0100', Email: 'desk@county.example' });
+
+        const tooLong = await UPDATE_REPO(
+            createRequest(`http://localhost:3000/api/repositories/${repository.Id}`, { method: 'PUT', body: { Phone: 'x'.repeat(101) } }),
+            { params: Promise.resolve({ id: String(repository.Id) }) },
+        );
+        expect(tooLong.status).toBe(400);
+    });
+
     it('rejects an empty repository name with 400', async () => {
         await createSourceWithRepo('Census 1881', 'Some Archive');
         const repoId = (await listRepos()).find(r => r.Name === 'Some Archive')!.Id;

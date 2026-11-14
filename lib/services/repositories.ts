@@ -47,8 +47,25 @@ export async function listSourcesForRepositoryService(
   return getSourcesForRepository(id, scope.treeId);
 }
 
+/** Contact fields and their length limits (ADR 0049). Looser than GEDCOM's, so an
+ *  imported value that ran long can still be saved back unchanged. */
+const CONTACT_LIMITS = { Website: 500, Phone: 100, Email: 255 } as const;
+type ContactInput = { Website?: string | null; Phone?: string | null; Email?: string | null };
+
+/** The contact fields present in a body, validated; absent ones are left out. */
+function contactFields(body: Record<string, unknown>): ContactInput {
+  const out: ContactInput = {};
+  for (const [field, max] of Object.entries(CONTACT_LIMITS) as Array<[keyof typeof CONTACT_LIMITS, number]>) {
+    const value = body[field];
+    if (value === undefined) continue;
+    // One GEDCOM line each, so a pasted line break becomes a space.
+    out[field] = value === null ? null : validateStringField(value, field, max)?.replace(/\s*[\r\n]+\s*/g, ' ').trim() || null;
+  }
+  return out;
+}
+
 export interface CreateRepositoryParams extends RepositoryServiceBase {
-  body: { Name?: unknown; Address?: unknown };
+  body: { Name?: unknown; Address?: unknown; Website?: unknown; Phone?: unknown; Email?: unknown };
 }
 
 /** POST /api/repositories — check write permission, validate, then create. */
@@ -63,22 +80,22 @@ export async function createRepositoryService(params: CreateRepositoryParams): P
     ? null
     : validateStringField(body.Address, 'Address', 500) || null;
 
-  const repo = await createRepository(scope.ownerId, scope.treeId, { Name: name, Address: address });
+  const repo = await createRepository(scope.ownerId, scope.treeId, { Name: name, Address: address, ...contactFields(body) });
   if (!repo) throw new ValidationError('A repository with this name already exists');
   return repo;
 }
 
 export interface UpdateRepositoryParams extends RepositoryByIdParams {
-  body: { Name?: unknown; Address?: unknown };
+  body: { Name?: unknown; Address?: unknown; Website?: unknown; Phone?: unknown; Email?: unknown };
 }
 
-/** PUT /api/repositories/[id] — check write permission, validate, then update name/address. */
+/** PUT /api/repositories/[id] — check write permission, validate, then update name, address and contacts. */
 export async function updateRepositoryService(params: UpdateRepositoryParams): Promise<Repository> {
   const { id, body, requestedTreeId, requestedOwnerId, currentUserId } = params;
   const scope = await resolveTreeScope({ treeId: requestedTreeId, ownerId: requestedOwnerId }, currentUserId);
   if (scope.permission === 'view') throw new AccessError('You only have view permission for this tree');
 
-  const fields: { Name?: string; Address?: string | null } = {};
+  const fields: { Name?: string; Address?: string | null } & ContactInput = contactFields(body);
   if (body.Name !== undefined) {
     const name = validateStringField(body.Name, 'Name', 255);
     if (!name) throw new ValidationError('Name is required');

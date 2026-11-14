@@ -238,11 +238,13 @@ export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
   );
   const sourceId = src.rows[0].Id;
   const repo = await db.query<{ Id: number }>(
-    `INSERT INTO "Repository" ("OwnerId","TreeId","Name","Address","RawGedcom","AddressRawGedcom")
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING "Id"`,
-    // A REPO's unmodeled lines and its ADDR's structured lines ride back (#966).
+    `INSERT INTO "Repository" ("OwnerId","TreeId","Name","Address","RawGedcom","AddressRawGedcom","Website","Phone","Email")
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "Id"`,
+    // A REPO's unmodeled lines and its ADDR's structured lines ride back (#966), and
+    // so do its first website, phone and email (ADR 0049); a second phone stays raw.
     [U, T, REPO_NAME, '59 rue Guynemer, Pierrefitte-sur-Seine',
-     '1 PHON +33 1 00 00 00 00\n1 WWW https://archives.example', '2 CITY Pierrefitte-sur-Seine\n2 CTRY France'],
+     '1 PHON +33 1 11 11 11 11', '2 CITY Pierrefitte-sur-Seine\n2 CTRY France',
+     'https://archives.example', '+33 1 00 00 00 00', 'contact@archives.example'],
   );
   await db.query('UPDATE "Sources" SET "RepositoryId" = $1 WHERE "Id" = $2', [repo.rows[0].Id, sourceId]);
 

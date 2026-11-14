@@ -594,13 +594,54 @@ describe('a repository keeps its details (#966)', () => {
   it('merging again changes nothing, and a new address drops the old ADDR lines', async () => {
     await importGedcomService({ file: ged(FILE), mode: 'overwrite', currentUserId: USER_ID });
     const before = await repo();
-    expect(before).toEqual([expect.objectContaining({ Address: '1 High St', RawGedcom: '1 PHON 555-0100', AddressRawGedcom: '2 CITY Leeds' })]);
+    expect(before).toEqual([expect.objectContaining({ Address: '1 High St', RawGedcom: null, AddressRawGedcom: '2 CITY Leeds' })]);
     await importGedcomService({ file: ged(FILE), mode: 'merge', currentUserId: USER_ID });
     expect(await repo()).toEqual(before);
     await updateRepository(before[0].Id, treeId, { Address: '1 High St' });
     expect((await repo())[0].AddressRawGedcom).toBe('2 CITY Leeds');
     await updateRepository(before[0].Id, treeId, { Address: '2 Low Rd' });
-    expect((await repo())[0]).toMatchObject({ Address: '2 Low Rd', AddressRawGedcom: null, RawGedcom: '1 PHON 555-0100' });
+    expect((await repo())[0]).toMatchObject({ Address: '2 Low Rd', AddressRawGedcom: null, RawGedcom: null });
+  });
+});
+
+describe('a repository has a website, phone and email (#40, ADR 0049)', () => {
+  const FILE = [
+    '0 HEAD',
+    '0 @I1@ INDI', '1 NAME Ann /Repo/', '1 SOUR @S1@',
+    '0 @S1@ SOUR', '1 TITL Parish register', '1 REPO @R1@',
+    '0 @R1@ REPO', '1 NAME Archive',
+    '1 PHON 555-0100', '1 PHON 555-0199', '1 EMAIL desk@@archive.example', '1 WWW https://archive.example', '1 FAX 555-0111',
+    '0 TRLR',
+  ].join('\n');
+
+  const repo = async () => (await query(
+    `SELECT "Id", "Address", "RawGedcom", "Website", "Phone", "Email" FROM "Repository" WHERE "TreeId" = $1`, [treeId],
+  )).rows as Array<{ Id: number; Address: string | null; RawGedcom: string | null; Website: string | null; Phone: string | null; Email: string | null }>;
+
+  it('lifts the first of each, keeps the rest raw, and exports each once with an empty ADDR', async () => {
+    await importGedcomService({ file: ged(FILE), mode: 'overwrite', currentUserId: USER_ID });
+    const [r] = await repo();
+    expect(r).toMatchObject({
+      Website: 'https://archive.example', Phone: '555-0100', Email: 'desk@archive.example',
+      RawGedcom: '1 PHON 555-0199\n1 FAX 555-0111',
+    });
+    const lines = (await exportGed()).split(/\r?\n/);
+    const at = lines.findIndex((l) => / REPO$/.test(l));
+    const record = lines.slice(at + 1, lines.findIndex((l, i) => i > at && l.startsWith('0 ')));
+    expect(record).toEqual([
+      '1 NAME Archive', '1 ADDR', '1 PHON 555-0100', '1 EMAIL desk@archive.example', '1 WWW https://archive.example',
+      '1 PHON 555-0199', '1 FAX 555-0111',
+    ]);
+  });
+
+  it('a merge fills only empty fields and an edit keeps the raw ones', async () => {
+    await importGedcomService({ file: ged(FILE), mode: 'overwrite', currentUserId: USER_ID });
+    const [r] = await repo();
+    await updateRepository(r.Id, treeId, { Phone: '555-0000', Email: null });
+    await importGedcomService({ file: ged(FILE), mode: 'merge', currentUserId: USER_ID });
+    expect((await repo())[0]).toMatchObject({
+      Phone: '555-0000', Email: 'desk@archive.example', RawGedcom: '1 PHON 555-0199\n1 FAX 555-0111',
+    });
   });
 });
 

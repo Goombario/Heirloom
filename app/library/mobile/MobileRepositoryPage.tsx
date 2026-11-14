@@ -14,15 +14,18 @@ import { RecordBand } from '@/app/components/mobile/RecordBand';
 import { InlineDataError, MobileRow, PageShell } from '@/app/components/ui';
 import { Head, Section } from '@/app/people/view/mobile/panes';
 import { Landmark, Plus } from '@/lib/icons';
+import { QuietRow } from '@/app/components/mobile/RecordBand';
+import { contactHref } from '@/lib/utils/contact-links';
 import { SourceRow, sourceHref } from '../MobileLibrary';
 import { RepositorySheet } from './RepositorySheet';
 import { SourceFormSheet } from './SourceFormSheet';
 
 /**
  * The repository page on phones (#1119): the same band with "Repository" as the
- * eyebrow and the address under the name, then Sources held, each opening its page,
+ * eyebrow and the address under the name, then Contact when it has a website, phone
+ * or email (ADR 0049), then Sources held, each opening its page,
  * and "Add a source here", which opens New source with this repository picked. The
- * pencil opens Name, Address and a red Delete.
+ * pencil opens the repository sheet and a red Delete.
  */
 export function MobileRepositoryPage({ repositoryId }: { repositoryId: number }) {
     const t = useTranslations('mobileLibrary');
@@ -79,7 +82,16 @@ export function MobileRepositoryPage({ repositoryId }: { repositoryId: number })
                     onEdit={editor ? () => setSheet('edit') : undefined}
                     editLabel={t('edit_repository')}
                 />
-                <Section first>
+                {(repo.Website || repo.Phone || repo.Email) && (
+                    <Section first>
+                        <Head title={t('contact')} />
+                        {(['Website', 'Phone', 'Email'] as const).filter((key) => repo[key]).map((key) => (
+                            <QuietRow key={key} label={tl(`repo_field_${key.toLowerCase() as 'website' | 'phone' | 'email'}`)}
+                                href={contactHref(key, repo[key]) ?? undefined}>{repo[key]}</QuietRow>
+                        ))}
+                    </Section>
+                )}
+                <Section first={!(repo.Website || repo.Phone || repo.Email)}>
                     <Head title={t('sources_held')} count={held.length} />
                     {held.length === 0 && <p className="m-0 px-4 pb-2.5 pt-1 text-sm text-text-muted">{t('repo_empty')}</p>}
                     {held.map((s, i) => <SourceRow key={s.Id} source={s} divided={i > 0} leave />)}

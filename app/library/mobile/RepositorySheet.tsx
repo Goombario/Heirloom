@@ -10,8 +10,14 @@ import { MobileRow, showChangeToast } from '@/app/components/ui';
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
 import { Trash2 } from '@/lib/icons';
 
+const CONTACTS = [
+    { key: 'Website', type: 'url', label: 'repo_field_website', inputMode: 'url' },
+    { key: 'Phone', type: 'tel', label: 'repo_field_phone', inputMode: 'tel' },
+    { key: 'Email', type: 'email', label: 'repo_field_email', inputMode: 'email' },
+] as const;
+
 /**
- * The phone repository sheet (#1119): Name and Address, Save as the copper pill, and
+ * The phone repository sheet (#1119): Name, Address, Website, Phone and Email (ADR 0049), Save as the copper pill, and
  * for an existing repository Delete as the last red row, which asks once. Its sources
  * stay, just without a repository.
  */
@@ -39,16 +45,23 @@ function Body({ open, repository, onClose, onSaved, onDeleted, canDelete = false
     const ids = useId();
     const [name, setName] = useState(repository?.Name ?? '');
     const [address, setAddress] = useState(repository?.Address ?? '');
+    const [contacts, setContacts] = useState({
+        Website: repository?.Website ?? '', Phone: repository?.Phone ?? '', Email: repository?.Email ?? '',
+    });
     const [busy, setBusy] = useState(false);
     const [confirming, setConfirming] = useState(false);
-    const dirty = name.trim() !== (repository?.Name ?? '') || address.trim() !== (repository?.Address ?? '');
+    const dirty = name.trim() !== (repository?.Name ?? '') || address.trim() !== (repository?.Address ?? '')
+        || CONTACTS.some(({ key }) => contacts[key].trim() !== (repository?.[key] ?? ''));
 
     const save = async () => {
         if (!name.trim() || busy) return;
         setBusy(true);
         try {
             const client = await getDataClient();
-            const input = { Name: name.trim(), Address: address.trim() || null };
+            const input = {
+                Name: name.trim(), Address: address.trim() || null,
+                Website: contacts.Website.trim() || null, Phone: contacts.Phone.trim() || null, Email: contacts.Email.trim() || null,
+            };
             const saved = repository
                 ? await client.repositories.update(repository.Id, input, activeTreeId)
                 : await client.repositories.create(input, activeTreeId);
@@ -89,6 +102,14 @@ function Body({ open, repository, onClose, onSaved, onDeleted, canDelete = false
                     <span className="text-meta font-semibold text-text-secondary">{t('repo_field_address')} <span className="font-normal text-text-muted">· {tm('optional')}</span></span>
                     <input id={`${ids}-address`} className={field} value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t('repo_address_placeholder')} autoComplete="off" />
                 </label>
+                {CONTACTS.map(({ key, type, label, inputMode }) => (
+                    <label key={key} className="grid gap-1.5" htmlFor={`${ids}-${key}`}>
+                        <span className="text-meta font-semibold text-text-secondary">{t(label)} <span className="font-normal text-text-muted">· {tm('optional')}</span></span>
+                        <input id={`${ids}-${key}`} className={field} type={type} inputMode={inputMode} value={contacts[key]}
+                            onChange={(e) => { const value = e.target.value; setContacts((c) => ({ ...c, [key]: value })); }}
+                            placeholder={key === 'Website' ? t('repo_website_placeholder') : undefined} autoComplete="off" />
+                    </label>
+                ))}
             </div>
             {repository && canDelete && (
                 <div className="-mx-4 mt-5 border-t border-border">

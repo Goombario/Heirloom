@@ -903,7 +903,7 @@
     },
     {
       "file": "genealogy/repository-details.ged",
-      "covers": "A REPO's address lines, phone, email, web address and CHAN are kept and exported back, and a REPO no source cites still round-trips",
+      "covers": "A REPO's address lines, phone, email, web address and CHAN are kept and exported back (phone, email and web address as fields, ADR 0049, so a REPO with only a phone gains an empty ADDR), and a REPO no source cites still round-trips",
       "issue": 966,
       "outcome": "imports",
       "people": [
@@ -914,7 +914,7 @@
       ],
       "exported": [
         "1 NAME County Archive\n1 ADDR 1 High Street\n2 CONT Leeds\n2 ADR1 1 High Street\n2 CITY Leeds\n2 POST LS1 1AA\n2 CTRY England\n1 PHON +44 113 000 0000\n1 EMAIL desk@archive.example\n1 WWW https://archive.example\n1 CHAN\n2 DATE 1 JAN 2020\n",
-        "1 NAME Uncited Library\n1 PHON 555-0100\n"
+        "1 NAME Uncited Library\n1 ADDR\n1 PHON 555-0100\n"
       ],
       "warnings": []
     },
