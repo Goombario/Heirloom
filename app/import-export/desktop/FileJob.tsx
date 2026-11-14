@@ -14,6 +14,7 @@ import { ImportReport } from '../ImportReport';
 import type { ImportViewProps } from './DesktopImportExport';
 import { DropZone, HelpCard, JobShell, TreeCard } from './JobShell';
 import { useLastBackup } from './lastBackup';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /** A browser-build import of this many people takes long enough to warn about (ST-1). */
 const LARGE_IMPORT_PEOPLE = 1000;
@@ -29,6 +30,7 @@ export function FileJob({ p, restore, onLeave }: { p: ImportViewProps; restore: 
     const t = useTranslations('importDesktop');
     const tm = useTranslations('mobileImport');
     const ti = useTranslations('importExport');
+    const desktop = useIsDesktopApp();
     const [, markBackup] = useLastBackup(p.activeTreeId);
     const [backedUp, setBackedUp] = useState(false);
     const [showSkipped, setShowSkipped] = useState(false);
@@ -237,7 +239,7 @@ export function FileJob({ p, restore, onLeave }: { p: ImportViewProps; restore: 
                                     )}
                                 </div>
                             )}
-                            {DATA_MODE === 'local' && pv.toImport.peopleCount >= LARGE_IMPORT_PEOPLE && <p className="m-0 text-sm text-text-muted">{ti('import_browser_note')}</p>}
+                            {DATA_MODE === 'local' && pv.toImport.peopleCount >= LARGE_IMPORT_PEOPLE && <p className="m-0 text-sm text-text-muted">{ti(desktop ? 'import_browser_note_desktop' : 'import_browser_note')}</p>}
                         </section>
                     )}
                 </>

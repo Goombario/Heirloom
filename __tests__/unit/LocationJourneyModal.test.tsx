@@ -24,7 +24,7 @@ const mapRemove = vi.fn();
 const mapGetZoom = vi.fn(() => 5);
 const MapMock = vi.fn(function (this: unknown, _opts: { center: number[]; zoom: number }) {
   return {
-    on: mapOn, once: vi.fn(), getContainer: () => document.createElement('div'),
+    on: mapOn, once: vi.fn(), getContainer: () => document.createElement('div'), addControl: vi.fn(),
     addSource: mapAddSource, addLayer: mapAddLayer,
     fitBounds: mapFitBounds, setCenter: mapSetCenter, setZoom: mapSetZoom,
     flyTo: mapFlyTo, remove: mapRemove, getZoom: mapGetZoom,

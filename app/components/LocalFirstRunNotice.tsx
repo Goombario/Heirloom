@@ -3,15 +3,18 @@
 import { useState, useEffect, useId } from 'react';
 import { useTranslations } from 'next-intl';
 import { DATA_MODE } from '@/lib/data';
+import { isDesktopApp } from '@/lib/desktop';
 import Modal from '@/app/components/Modal';
 import { Button, Card } from '@/app/components/ui';
 
 const SEEN_KEY = 'heirloom_local_first_run_seen';
 
 /**
- * Modal shown once on first visit in local (static) mode.
+ * Modal shown once on first visit in local (static) mode in a browser.
  * Explains data locality, requests persistent storage, then stores a flag
- * so it never appears again on this device/browser.
+ * so it never appears again on this device/browser. The desktop app skips it
+ * (#61): its storage is not a website's, and the home page's first-run Import
+ * already says where to start.
  */
 export default function LocalFirstRunNotice() {
   const t = useTranslations('options');
@@ -25,7 +28,7 @@ export default function LocalFirstRunNotice() {
   const bodyId = useId();
 
   useEffect(() => {
-    if (DATA_MODE !== 'local') return;
+    if (DATA_MODE !== 'local' || isDesktopApp()) return;
     if (localStorage.getItem(SEEN_KEY)) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true);

@@ -31,4 +31,15 @@ describe('LocalFirstRunNotice (#731)', () => {
     render(<LocalFirstRunNotice />);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('never shows in the desktop app (#61)', async () => {
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+    try {
+      render(<LocalFirstRunNotice />);
+      await Promise.resolve();
+      expect(screen.queryByRole('dialog')).toBeNull();
+    } finally {
+      delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+    }
+  });
 });

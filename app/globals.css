@@ -1354,8 +1354,23 @@ body::after {
 }
 .hero-geo-map:hover .hero-journey-hint,
 .hero-journey-btn:focus-visible .hero-journey-hint { opacity: 1; }
-/* Keep the MapLibre credits ⓘ above the View journey overlay and clickable (#740). */
+/* Keep the map credit above the View journey overlay and clickable (#740). */
 .hero-geo-map .maplibregl-ctrl-bottom-right { z-index: 4; }
+
+/* The basemap credit (#42): always-visible text in each map's corner, never a
+   collapsing ⓘ. Quiet: 11px secondary text on a translucent card wash. */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl.map-credit {
+  margin: 0 4px 4px 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-card) 78%, transparent);
+  white-space: nowrap;
+}
+.map-credit a { color: inherit; text-decoration: none; }
+.map-credit a:hover { text-decoration: underline; }
 
 /* Close/dismiss icon button */
 .btn-close {
