@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/app/components/Modal';
-import { Button } from '@/app/components/ui';
+import { Button, ScrollArea } from '@/app/components/ui';
 import { Plus, X } from '@/lib/icons';
 import RepositoriesList from './RepositoriesList';
 
@@ -45,9 +45,9 @@ export default function RepositoriesDialog({
             <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <ScrollArea className="min-h-0 flex-1">
           <RepositoriesList treeId={treeId} onOpenRepo={onOpenRepo} refreshKey={refreshKey} bare />
-        </div>
+        </ScrollArea>
         {canEdit && (
           <div className="flex justify-end border-t border-border bg-card-alt px-5 py-3">
             <Button variant="primary" size="sm" icon={<Plus size={14} aria-hidden="true" />} onClick={onAddRepository}>

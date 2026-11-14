@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/app/components/Modal';
-import { Button, DialogActions, DialogHeader, fieldClass, showChangeToast, showSuccessToast } from '@/app/components/ui';
+import { Button, DialogActions, DialogHeader, ScrollArea, fieldClass, showChangeToast, showSuccessToast } from '@/app/components/ui';
 import { Sheet } from '@/app/components/ui/Sheet';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { getDataClient } from '@/lib/data';
@@ -138,7 +138,7 @@ function MoveRecordsFields({ placeName, targets, failed, rows, state, onState }:
                     autoComplete="off"
                     className={fieldClass()}
                 />
-                <div id={`${ids}-places`} className="max-h-64 overflow-y-auto rounded-lg border border-border">
+                <ScrollArea id={`${ids}-places`} className="max-h-64 rounded-lg border border-border">
                     {failed ? (
                         <p className="m-0 p-3 text-sm text-error">{t('move_records_load_failed')}</p>
                     ) : !targets ? (
@@ -161,7 +161,7 @@ function MoveRecordsFields({ placeName, targets, failed, rows, state, onState }:
                             <span className="text-meta text-text-muted tabular-nums shrink-0 mt-0.5">{t('move_records_count', { count: p.count })}</span>
                         </label>
                     ))}
-                </div>
+                </ScrollArea>
             </fieldset>
 
             <fieldset className="grid gap-2 min-w-0">
@@ -179,7 +179,7 @@ function MoveRecordsFields({ placeName, targets, failed, rows, state, onState }:
                             />
                             <span className="text-sm font-medium text-text">{t('move_records_all', { count: rows.length })}</span>
                         </label>
-                        <div className="max-h-56 overflow-y-auto">
+                        <ScrollArea className="max-h-56">
                             {rows.map((r) => (
                                 <label key={r.key} className="flex items-start gap-3 px-3 py-2 min-h-[44px] cursor-pointer border-b border-border-light last:border-0">
                                     <input
@@ -194,7 +194,7 @@ function MoveRecordsFields({ placeName, targets, failed, rows, state, onState }:
                                     </span>
                                 </label>
                             ))}
-                        </div>
+                        </ScrollArea>
                     </div>
                 )}
             </fieldset>

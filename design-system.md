@@ -215,9 +215,23 @@ Never reuse a Tailwind default's name unless the override is deliberate and docu
      heights of `Input`, the listbox look of `Select`, WAI-ARIA select-only combobox
      keys); a toolbar filter dropdown is `Select` (muted label + value). No native
      `<select>` outside the dark-island fallback rules in `globals.css`.
+   - **Scroll areas** (`ScrollArea`, #10): a dialog body and any inline list that scrolls
+     use `ScrollArea`, which themes the bar and keeps its rail painted (`persistentRail`,
+     the default), so content never shifts by the bar's width when it starts to overflow.
+     No layout shift wins over hiding the bar until it is needed. The one exception is a
+     horizontal strip that hides its bar on purpose (`hscroll-strip`).
    - **Filter chips** (`FilterChip`, CT-2): one fixed 28px height on every list page; a
      touch sheet may raise it with `min-h-*`. An "Add …" chip passes lucide `Plus` through
      `icon`, never a typed "+". A filter toolbar has no visible "Filter" eyebrow.
+     - **Two kinds, told apart by glyph, never by colour or shape** (#11, decided
+       2026-11-13). An **include/exclude** chip (People's tri-state filters,
+       `TriFilterChip`) cycles off → matches → does not match, and shows `Plus` when off
+       and `⊘` when excluding, with no glyph while it matches. An **on/off** chip
+       (Families, Cases, Library, Audit) shows no glyph in either state. So a chip that
+       can exclude must show the glyphs, and an on/off chip must not.
+     - The glyphs are decoration (`aria-hidden`). Each tri-state chip's visible label
+       names its state ("Has parents", "No parents"), so the accessible name carries
+       the state too, alongside `aria-pressed`.
    - **Tags** (`Badge`; audit §13 addendum, 2026-09-23) are small square tags (4px radius,
      ~20px, no hover), never placed in a row of controls, and **quiet**: a faint fill with
      no edge. The round shape belongs to clickable chips; `shape="pill"` is only for a

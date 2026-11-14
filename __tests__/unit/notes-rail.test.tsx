@@ -50,31 +50,33 @@ async function openComposer(user: ReturnType<typeof userEvent.setup>) {
 }
 
 /**
- * A row's actions (#760) are named after its OWN note — five rows must not present
- * five identically-named buttons — so tests find them by their visible label, which
- * each action carries as its `title`, inside the row being worked on.
+ * A note row is one button that opens the note's edit panel (#30). The button is
+ * named after its OWN note, so five rows don't present five identical buttons; the
+ * panel then holds Save, Cancel, Delete and the preferred choice.
  */
 const EDIT_PREFIX = en.notes.edit_for.split('{')[0];
 let currentRow: HTMLElement | null = null;
 
-/** The action focus returns to on a row: its first (Make preferred, else Edit). */
+/** The row's opener, where focus returns once its panel closes or it remounts. */
 function triggerFor(row: HTMLElement): HTMLButtonElement {
-    const trigger = row.querySelector<HTMLButtonElement>('.ev-act');
-    if (!trigger) throw new Error('no row actions on that row');
+    const trigger = row.querySelector<HTMLButtonElement>('[data-note-open]');
+    if (!trigger) throw new Error('no opener on that row');
     return trigger;
 }
 
-/** Selects the row whose text matches as the one `rowAction` looks in, and returns it. */
-async function openMenu(_user: ReturnType<typeof userEvent.setup>, text: string) {
+/** Opens the row whose text matches into its edit panel, and returns the row. */
+async function openMenu(user: ReturnType<typeof userEvent.setup>, text: string) {
     const rows = await screen.findAllByTestId('note-row');
     const row = rows.find((r) => r.textContent?.includes(text));
     if (!row) throw new Error(`no note row containing "${text}"`);
     currentRow = row;
+    await user.click(triggerFor(row));
     return row;
 }
 
-const rowAction = (label: string) => within(currentRow!).getByTitle(label);
-const queryRowAction = (label: string) => within(currentRow!).queryByTitle(label);
+/** An action inside the open panel: a button, or the preferred choice's link. */
+const rowAction = (label: string) => within(currentRow!).getByRole('button', { name: label });
+const queryRowAction = (label: string) => within(currentRow!).queryByRole('button', { name: label });
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -284,13 +286,13 @@ describe('person biography rules (#902)', () => {
     });
 });
 
-describe('notes rail — row actions', () => {
+describe('notes rail — the edit panel\'s actions', () => {
     it('offers make/unset preferred, edit and delete', async () => {
         const user = userEvent.setup();
         renderCard([n({ Id: 1, Text: 'Alpha' })]);
         await openMenu(user, 'Alpha');
         expect(rowAction(en.notes.make_primary)).toBeInTheDocument();
-        expect(rowAction(en.common.edit)).toBeInTheDocument();
+        expect(within(currentRow!).getByRole('textbox', { name: en.common.edit })).toBeInTheDocument();
         expect(rowAction(en.common.delete)).toBeInTheDocument();
     });
 
@@ -309,11 +311,11 @@ describe('notes rail — row actions', () => {
  * arrow keys must walk the items and every close must land focus somewhere a
  * keyboard user can carry on from — never on <body>.
  */
-describe('notes rail — row action names and focus', () => {
+describe('notes rail — row names and focus', () => {
     const row = async (text: string) =>
         (await screen.findAllByTestId('note-row')).find((r) => r.textContent?.includes(text))!;
 
-    it('names each action after its own note, so a list of them is not five identical buttons', async () => {
+    it('names each row after its own note, so a list of them is not five identical buttons', async () => {
         renderCard([n({ Id: 1, Text: 'Alpha' }), n({ Id: 2, Text: 'Beta' })]);
         await screen.findByText('Alpha');
         const a = triggerFor(await row('Alpha')).getAttribute('aria-label');
@@ -333,7 +335,7 @@ describe('notes rail — row action names and focus', () => {
         expect(label.endsWith('…')).toBe(true);
     });
 
-    it('returns focus to the ⋯ after promoting, which remounts the row', async () => {
+    it('returns focus to the row after promoting, which remounts it', async () => {
         const user = userEvent.setup();
         renderCard([n({ Id: 1, Text: 'Alpha' }), n({ Id: 2, Text: 'Beta' })]);
         await openMenu(user, 'Beta');
@@ -352,7 +354,7 @@ describe('notes rail — row action names and focus', () => {
         renderCard([n({ Id: 1, Text: 'Alpha' })]);
         await openMenu(user, 'Alpha');
         await user.click(rowAction(en.common.delete));
-        await user.click(screen.getByRole('button', { name: en.common.cancel }));
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: en.common.cancel }));
         await waitFor(() => expect(rowAction(en.common.delete)).toHaveFocus());
     });
 
@@ -367,7 +369,7 @@ describe('notes rail — row action names and focus', () => {
         renderCard([n({ Id: 1, Text: 'Alpha' }), n({ Id: 2, Text: 'Beta' })]);
         await openMenu(user, 'Alpha');
         await user.click(rowAction(en.common.delete));
-        await user.click(screen.getByRole('button', { name: en.common.delete }));
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: en.common.delete }));
 
         await waitFor(() => expect(remove).toHaveBeenCalledWith(1, 'People', 7, 1));
         await waitFor(() => expect(screen.queryByText('Alpha')).not.toBeInTheDocument());
@@ -379,7 +381,7 @@ describe('notes rail — row action names and focus', () => {
         renderCard([n({ Id: 1, Text: 'Alpha' }), n({ Id: 2, Text: 'Beta' })]);
         await openMenu(user, 'Beta');
         await user.click(rowAction(en.common.delete));
-        await user.click(screen.getByRole('button', { name: en.common.delete }));
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: en.common.delete }));
 
         await waitFor(() => expect(screen.queryByText('Beta')).not.toBeInTheDocument());
         await waitFor(async () => expect(triggerFor(await row('Alpha'))).toHaveFocus());
@@ -390,7 +392,7 @@ describe('notes rail — row action names and focus', () => {
         renderCard([n({ Id: 1, Text: 'Alpha' })]);
         await openMenu(user, 'Alpha');
         await user.click(rowAction(en.common.delete));
-        await user.click(screen.getByRole('button', { name: en.common.delete }));
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: en.common.delete }));
 
         await waitFor(() => expect(screen.getByText(en.notes.empty_edit)).toBeInTheDocument());
         await waitFor(() => expect(screen.getByRole('button', { name: en.notes.add_button })).toHaveFocus());
@@ -400,7 +402,7 @@ describe('notes rail — row action names and focus', () => {
      * The same defect class on the error paths: the menu item the user activated is
      * unmounted before the request resolves, so a FAILURE has to hand focus back too.
      */
-    it('returns focus to the ⋯ when a promote fails', async () => {
+    it('returns focus to the row when a promote fails', async () => {
         const user = userEvent.setup();
         setPrimary.mockRejectedValue(new Error('nope'));
         renderCard([n({ Id: 1, Text: 'Alpha' }), n({ Id: 2, Text: 'Beta' })]);
@@ -424,7 +426,7 @@ describe('notes rail — row action names and focus', () => {
         renderCard([n({ Id: 1, Text: 'Alpha' })]);
         await openMenu(user, 'Alpha');
         await user.click(rowAction(en.common.delete));
-        const confirm = screen.getByRole('button', { name: en.common.delete });
+        const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: en.common.delete });
         await user.click(confirm);
 
         await waitFor(() => expect(remove).toHaveBeenCalled());
@@ -440,8 +442,8 @@ describe('notes rail — row action names and focus', () => {
         await user.click(rowAction(en.common.delete));
 
         const dialog = screen.getByRole('dialog');
-        const cancel = screen.getByRole('button', { name: en.common.cancel });
-        const confirm = screen.getByRole('button', { name: en.common.delete });
+        const cancel = within(screen.getByRole('dialog')).getByRole('button', { name: en.common.cancel });
+        const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: en.common.delete });
         expect(cancel).toHaveFocus();
         await user.tab();
         expect(confirm).toHaveFocus();
@@ -458,7 +460,6 @@ describe('notes rail — row action names and focus', () => {
 describe('notes rail — editing', () => {
     async function startEdit(user: ReturnType<typeof userEvent.setup>, text: string) {
         await openMenu(user, text);
-        await user.click(rowAction(en.common.edit));
         return screen.getByRole('textbox', { name: en.common.edit });
     }
 
@@ -479,8 +480,10 @@ describe('notes rail — editing', () => {
         await waitFor(() => expect(update).toHaveBeenCalledWith(1, 'People', 7, 'Alpha revised', 1));
     });
 
-    it('cancels on Escape without writing', async () => {
+    it('cancels on Escape without writing, after asking about the unsaved edit', async () => {
         const user = userEvent.setup();
+        const confirm = vi.fn(() => true);
+        window.confirm = confirm;
         renderCard([n({ Id: 1, Text: 'Alpha' })]);
         const box = await startEdit(user, 'Alpha');
         await user.type(box, ' more');
@@ -489,7 +492,7 @@ describe('notes rail — editing', () => {
         expect(update).not.toHaveBeenCalled();
     });
 
-    it('hands focus back to the row\'s ⋯ when the edit is cancelled', async () => {
+    it('hands focus back to the row when the edit is cancelled', async () => {
         const user = userEvent.setup();
         renderCard([n({ Id: 1, Text: 'Alpha' })]);
         await startEdit(user, 'Alpha');
@@ -606,7 +609,7 @@ describe('notes rail — delete', () => {
         const user = userEvent.setup();
         renderCard([n({ Id: 1, Text: 'Contributor note' })], true, { canDelete: false });
         await openMenu(user, 'Contributor note');
-        expect(rowAction(en.common.edit)).toBeInTheDocument();
+        expect(within(currentRow!).getByRole('textbox', { name: en.common.edit })).toBeInTheDocument();
         expect(queryRowAction(en.common.delete)).not.toBeInTheDocument();
     });
 
@@ -621,7 +624,7 @@ describe('notes rail — delete', () => {
         expect(screen.getByText('Alpha', { selector: 'blockquote' })).toBeInTheDocument();
         expect(remove).not.toHaveBeenCalled();
 
-        await user.click(screen.getByRole('button', { name: en.common.delete }));
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: en.common.delete }));
         await waitFor(() => expect(remove).toHaveBeenCalledWith(1, 'People', 7, 1));
     });
 
@@ -650,8 +653,8 @@ describe('notes rail — preferred hidden', () => {
         renderCard([n({ Id: 1, Text: 'Alpha' })], true, hidden);
         await openMenu(user, 'Alpha');
 
-        // Edit and Delete survive — proof the menu opened and the query is not vacuous.
-        expect(rowAction(en.common.edit)).toBeInTheDocument();
+        // The editor and Delete are there — proof the panel opened and the query is not vacuous.
+        expect(within(currentRow!).getByRole('textbox', { name: en.common.edit })).toBeInTheDocument();
         expect(rowAction(en.common.delete)).toBeInTheDocument();
         expect(queryRowAction(en.notes.make_primary)).not.toBeInTheDocument();
     });
@@ -788,13 +791,13 @@ describe('notes rail — fact scope', () => {
         renderCard(mixed, true, { factScope: 'Birth', showPreferred: false });
 
         const row = await screen.findByTestId('note-row');
+        currentRow = row;
         await user.click(triggerFor(row));
-        await user.click(rowAction(en.common.edit));
 
         const box = screen.getByRole('textbox', { name: en.common.edit });
         await user.clear(box);
         await user.type(box, 'Registered a fortnight late.');
-        await user.click(screen.getByRole('button', { name: en.common.save }));
+        await user.click(screen.getByRole('button', { name: en.common.save_changes }));
 
         await waitFor(() => expect(update).toHaveBeenCalled());
         expect(await screen.findByText('Registered a fortnight late.')).toBeInTheDocument();

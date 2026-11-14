@@ -94,7 +94,7 @@ the source of truth when this guide and the stylesheet disagree.
 **Shared UI helpers:**
 - `control-h` is the shared height for adjacent controls: 36px normally and 50px for coarse
   pointers so segmented-control buttons retain a 44px touch target.
-- Use `scroll-area` for themed scrollbar colors and `hscroll-strip` for a horizontal strip
+- A scrolling dialog body or inline list is the `ScrollArea` primitive (persistent rail, #10). Use `scroll-area` for themed scrollbar colors and `hscroll-strip` for a horizontal strip
   with hidden scrollbars. `list-filter-chips` wraps on desktop and scrolls horizontally on
   mobile inside `.mobile-sticky-filters`.
 - `fieldClass()` / `Input` add `.input-nozoom`; do not restore the retired `.input-field`

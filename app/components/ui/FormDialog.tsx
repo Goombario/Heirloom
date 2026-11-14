@@ -5,6 +5,7 @@ import Modal from '@/app/components/Modal';
 import { useUnsavedChangesGuard } from '@/app/components/UnsavedChangesProvider';
 import { DialogHeader } from './DialogHeader';
 import { cx } from './cx';
+import { ScrollArea } from './ScrollArea';
 
 export interface FormDialogProps {
   open: boolean;
@@ -55,7 +56,7 @@ export function FormDialog({ open, onClose, title, subtitle, children, footer, f
     <Modal open={open} onClose={requestClose} size="form" labelledBy={titleId} disableClose={busy}>
       <div className="form-dialog flex max-h-[calc(100dvh-64px)] flex-col overflow-hidden rounded-panel bg-card shadow-xl">
         <DialogHeader className="px-6 pt-5 pb-3" title={title} titleId={titleId} subtitle={subtitle} onClose={requestClose} closeDisabled={busy} />
-        <div ref={bodyRef} className="scroll-area min-h-0 flex-1 overflow-y-auto px-6 pb-6">{children}</div>
+        <ScrollArea ref={bodyRef} className="min-h-0 flex-1 px-6 pb-6">{children}</ScrollArea>
         <div className={cx('flex items-center gap-3 border-t border-border bg-card px-6 py-3.5', footerStart ? 'justify-between' : 'justify-end')}>
           {footerStart && <div className="flex items-center gap-2">{footerStart}</div>}
           <div className="flex items-center gap-2">{typeof footer === 'function' ? footer(requestClose) : footer}</div>

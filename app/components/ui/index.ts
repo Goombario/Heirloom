@@ -1,5 +1,6 @@
 export { Button, buttonClass } from './Button';
 export { Badge } from './Badge';
+export { TagField } from './TagField';
 export { Cite, citeClass } from './Cite';
 export { FilterChip } from './FilterChip';
 export { Input, fieldClass } from './Input';

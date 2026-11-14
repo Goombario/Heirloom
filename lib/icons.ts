@@ -59,8 +59,6 @@ export {
   Pencil,          // Edit / inline edit trigger
   Strikethrough,   // Strike out a journal entry (#1251)
   StickyNote,      // Show/hide an event row's attached notes (life-events timeline)
-  Bookmark,        // Make preferred (notes rail row menu)
-  BookmarkX,       // Unset preferred (notes rail row menu)
   Eye,             // Show names/boxes toggle
   EyeOff,          // Hide names/boxes toggle
   Lock,            // Locked / can't untag indicator
