@@ -93,6 +93,15 @@ async function drive(): Promise<string[]> {
   }
 }
 
+/**
+ * The snapshot without what a normal page load writes: What's new records the
+ * version a user has seen on their first load of it (#35), so the backup taken
+ * before that load and the one after it differ there by design.
+ */
+function withoutLoadWrites(s: Snapshot): Snapshot {
+  return { ...s, Users: s.Users?.map(({ LastSeenVersion: _seen, ...user }) => user) };
+}
+
 async function main(): Promise<void> {
   if (!reportDir) {
     console.error('Usage: static.ts <release out/> <candidate out/> <restore.hlbak> <report dir>');
@@ -110,7 +119,7 @@ async function main(): Promise<void> {
   console.log(`\nStatic: schema ${version(release)} → ${version(candidate)}, ${release.People?.length ?? 0} people, ${release.MediaBlob?.length ?? 0} photo blobs`);
   const c = compareSnapshots(release, candidate);
   printComparison('Static database (release backup → candidate backup)', c);
-  const stable = JSON.stringify(candidate) === JSON.stringify(reloaded);
+  const stable = JSON.stringify(withoutLoadWrites(candidate)) === JSON.stringify(withoutLoadWrites(reloaded));
   console.log(`  After a reload: ${stable ? 'identical' : 'DIFFERENT'}`);
   console.log(`  Page errors: ${errors.length ? errors.join('\n    ') : 'none'}`);
   if (c.lost.length || !stable || errors.length) process.exitCode = 1;

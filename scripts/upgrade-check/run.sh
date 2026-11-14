@@ -10,8 +10,10 @@
 #           checkout boots on it, which upgrades it. Compares every table and
 #           each tree's export zip, then imports the release's zips here.
 #   static  Builds both static apps (this checkout's into out/), then drives
-#           Chromium: the release restores test-fixtures/synthetic.hlbak, and the
-#           candidate opens the same IndexedDB on the same origin. Compares backups.
+#           Chromium: the release restores its own test-fixtures/synthetic.hlbak
+#           (this checkout's may be from a newer schema, which a release refuses),
+#           and the candidate opens the same IndexedDB on the same origin.
+#           Compares backups.
 #
 # Exits 1 if a row or table was lost, or the static run failed. "Changed" lines
 # are values a migration rewrote: read them against that release's migrations.
@@ -85,7 +87,9 @@ if [ "$what" = static ] || [ "$what" = all ]; then
   wait "$old_build" || { echo "release build failed: $work/build-release.log" >&2; exit 1; }
   wait "$new_build" || { echo "candidate build failed: $work/build-candidate.log" >&2; exit 1; }
   echo "== Static: driving Chromium"
-  "$tsx" scripts/upgrade-check/static.ts "$release/out" "$repo/out" "$repo/test-fixtures/synthetic.hlbak" "$work/static" || status=1
+  restore="$release/test-fixtures/synthetic.hlbak"
+  [ -f "$restore" ] || restore="$repo/test-fixtures/synthetic.hlbak"
+  "$tsx" scripts/upgrade-check/static.ts "$release/out" "$repo/out" "$restore" "$work/static" || status=1
 fi
 
 echo; [ "$status" = 0 ] && echo "Upgrade check passed. Files: $work" || echo "Upgrade check FAILED. Files: $work"
