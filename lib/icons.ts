@@ -57,7 +57,6 @@ export {
   ImageUp,         // Upload dropzone badge
   Copy,            // Upload tile: this file was picked twice in one batch (#592)
   Pencil,          // Edit / inline edit trigger
-  Strikethrough,   // Strike out a journal entry (#1251)
   StickyNote,      // Show/hide an event row's attached notes (life-events timeline)
   Bookmark,        // Make preferred (notes rail row menu)
   BookmarkX,       // Unset preferred (notes rail row menu)

@@ -10,11 +10,11 @@ import type { CaseComment, CaseLead } from '@/lib/db/schema';
 import type { CaseDetailState } from '../useCaseDetail';
 import { loggedEntryText } from '../case-detail-helpers';
 
-type EntryType = 'all' | 'notes' | 'findings' | 'searches' | 'status';
+export type EntryType = 'all' | 'notes' | 'findings' | 'searches' | 'status';
 /** Which leads the journal shows: the open lead, one lead, or the whole case. */
 type Showing = 'this' | 'case' | `${number}`;
 
-const TYPES: EntryType[] = ['all', 'notes', 'findings', 'searches', 'status'];
+export const TYPES: EntryType[] = ['all', 'notes', 'findings', 'searches', 'status'];
 
 /** The type filter an entry falls under. */
 function entryType(c: Pick<CaseComment, 'Kind'>): Exclude<EntryType, 'all'> {
@@ -31,7 +31,7 @@ function entryType(c: Pick<CaseComment, 'Kind'>): Exclude<EntryType, 'all'> {
  * lists the entry. A lead shows the entries filed under it and the case's
  * status changes, which concern every lead.
  */
-function entryShown(c: Pick<CaseComment, 'Kind' | 'leadIds'>, lead: number | null, type: EntryType): boolean {
+export function entryShown(c: Pick<CaseComment, 'Kind' | 'leadIds'>, lead: number | null, type: EntryType): boolean {
     if (type !== 'all' && entryType(c) !== type) return false;
     if (lead == null) return true;
     return c.Kind === 'status' || (c.leadIds ?? []).includes(lead);
