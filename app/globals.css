@@ -1489,6 +1489,11 @@ select:-webkit-autofill:focus {
   border-radius: 0.5rem;
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
+/* #63: bars on the dark band and on the cream sheet need their own tone, since
+   card-alt nearly matches both surfaces. */
+.hero-dark .skeleton { background: rgba(255, 255, 255, 0.16); }
+.detail-body--sheet > .detail-body__main .skeleton { background: var(--color-border); }
+.skeleton.skeleton--round { border-radius: 9999px; }
 
 /* Hide React Flow minimap on mobile */
 @media (max-width: 768px) {
