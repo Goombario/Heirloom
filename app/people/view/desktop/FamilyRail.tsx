@@ -15,6 +15,7 @@ import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { kindKey } from '@/app/families/view/mobile/model';
 import { ActionLink, AddRow, DetailRail, FamilyRecordRow, Lifespan, OpenInTreeRow, PersonRow, SectionHeader } from '@/app/components/ui';
 import { AddFamilyPanel } from './AddFamilyPanel';
+import { prefetchPerson } from '../personCache';
 import type { RunChange } from '../mobile/useChange';
 import { nameBarParts, type FamilyCard, type PortraitPerson } from '../mobile/model';
 import { desktopFamily, type ChildEntry, type ParentBlock, type PartnerBlock, type SiblingEntry } from './family';
@@ -203,6 +204,7 @@ function Row({ person, treeId, role, unlink }: { person: PortraitPerson; treeId:
       lifespan={person.BirthDate || person.DeathDate ? <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} /> : null}
       role={role}
       unlink={unlink}
+      onIntent={() => prefetchPerson(person.Id, treeId)}
     />
   );
 }

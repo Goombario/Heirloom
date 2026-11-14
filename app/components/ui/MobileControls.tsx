@@ -84,6 +84,8 @@ interface MobileRowProps {
   disabled?: boolean;
   className?: string;
   'aria-label'?: string;
+  /** Called on hover, focus or touch of a linked row, to prefetch its page (#65). */
+  onIntent?: () => void;
 }
 
 /**
@@ -96,7 +98,7 @@ interface MobileRowProps {
  */
 export function MobileRow({
   label, sub, icon, lead, end = 'none', suggestion = false, checked, tone = 'default',
-  divided = false, value, href, onClick, disabled, className, 'aria-label': ariaLabel,
+  divided = false, value, href, onClick, onIntent, disabled, className, 'aria-label': ariaLabel,
 }: MobileRowProps) {
   const multi = checked !== undefined;
   const cls = cx(
@@ -151,7 +153,7 @@ export function MobileRow({
     </>
   );
   if (href) {
-    return <GuardedLink href={href} className={cls} aria-label={ariaLabel}>{body}</GuardedLink>;
+    return <GuardedLink href={href} className={cls} aria-label={ariaLabel} onTouchStart={onIntent} onFocus={onIntent} onMouseEnter={onIntent}>{body}</GuardedLink>;
   }
   return (
     <button

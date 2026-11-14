@@ -11,7 +11,7 @@
  */
 import type { PersonWithRelations, PersonGalleryMedia } from '@/lib/db/schema';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
-import type { Citation } from '@/lib/data/types';
+import type { Citation, Note } from '@/lib/data/types';
 import { getDataClient } from '@/lib/data';
 import { dataCache } from '@/lib/data/cache';
 import { type NameVariant } from '@/app/components/person-form/NamesPanel';
@@ -22,6 +22,8 @@ export const personKey = (treeId: number | null, id: string | number) => `people
 export const mediaKey = (treeId: number | null, id: string | number) => `people:media:${scope(treeId)}:${id}`;
 export const citationsKey = (treeId: number | null, id: string | number) => `people:citations:${scope(treeId)}:${id}`;
 export const variantsKey = (treeId: number | null, id: string | number) => `people:variants:${scope(treeId)}:${id}`;
+/** Notes on a person (`People`) or on one of their events (`Events`), for the desktop Notes section (#65). */
+export const notesKey = (treeId: number | null, table: 'People' | 'Events', id: string | number) => `notes:${table}:${scope(treeId)}:${id}`;
 /** Lightweight identity summary (from the list/tree) for an instant hero paint (#2). */
 const personSummaryKey = (treeId: number | null, id: string | number) => `people:summary:${scope(treeId)}:${id}`;
 
@@ -76,11 +78,27 @@ export async function loadPersonVariants(id: number, treeId: number | null): Pro
     return mapped;
 }
 
+export async function loadOwnerNotes(table: 'People' | 'Events', id: number, treeId: number | null): Promise<Note[]> {
+    const client = await getDataClient();
+    const notes = await client.notes.listForOwner(table, id, treeId) as Note[];
+    dataCache.set(notesKey(treeId, table, id), notes);
+    return notes;
+}
+
+/** A person's notes and their events' notes, warmed once the person record names the events. */
+async function loadPersonNotes(person: PersonWithRelations, treeId: number | null): Promise<void> {
+    const events = (person.events ?? []).filter((e) => (e.noteCount ?? 0) > 0);
+    await Promise.allSettled([
+        loadOwnerNotes('People', person.Id, treeId),
+        ...events.map((e) => loadOwnerNotes('Events', e.Id, treeId)),
+    ]);
+}
+
 // Dedupe concurrent prefetches of the same person — hover/focus fire repeatedly.
 const inFlight = new Set<string>();
 
 /**
- * Warm the four profile caches for a person ahead of navigation (hover / focus /
+ * Warm the four profile caches, and the notes the desktop page lists, for a person ahead of navigation (hover / focus /
  * idle). No-op when the person record is already cached or a prefetch is already
  * in flight. Fire-and-forget: a failed prefetch is swallowed and the detail page
  * just loads normally.
@@ -92,7 +110,7 @@ export function prefetchPerson(id: number | null | undefined, treeId?: number | 
     if (dataCache.has(key) || inFlight.has(key)) return;
     inFlight.add(key);
     void Promise.allSettled([
-        loadPerson(id, tid),
+        loadPerson(id, tid).then((person) => loadPersonNotes(person, tid)),
         loadPersonMedia(id, tid),
         loadPersonCitations(id, tid),
         loadPersonVariants(id, tid),

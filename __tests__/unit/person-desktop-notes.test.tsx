@@ -11,6 +11,8 @@ import type { Note } from '@/lib/data/types';
 import type { CitationFactDescriptor } from '@/app/components/citations/types';
 import { NotesSection } from '@/app/people/view/desktop/NotesSection';
 import { SourcesSection } from '@/app/people/view/desktop/SourcesSection';
+import { dataCache } from '@/lib/data/cache';
+import { notesKey } from '@/app/people/view/personCache';
 
 const note = (Id: number, Text: string, extra: Partial<Note> = {}): Note =>
   ({ Id, Text, OwnerId: 1, GedcomXref: null, BackfilledFromPersonId: null, CreatedAt: '', IsPrimary: 0, OwnerFact: null, AddedInApp: 1, ...extra });
@@ -62,6 +64,16 @@ describe('desktop person Notes (#49)', () => {
     expect(move).toHaveBeenCalledWith(2,
       { ownerTable: 'People', ownerId: 10, ownerFact: null },
       { ownerTable: 'Events', ownerId: 50, ownerFact: null }, 1);
+  });
+
+  it('paints notes a hover prefetch already loaded, before any fetch (#65)', () => {
+    dataCache.set(notesKey(1, 'People', 10), peopleNotes);
+    dataCache.set(notesKey(1, 'Events', 50), censusNotes);
+    section();
+    // Synchronous: no findBy, so the rows came from the cache on first render.
+    expect(screen.getByText('Listed as a servant.')).toBeInTheDocument();
+    expect(screen.getByText('Ask aunt Maj about the photo.')).toBeInTheDocument();
+    dataCache.clear();
   });
 });
 
