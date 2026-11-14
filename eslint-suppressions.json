@@ -9,11 +9,6 @@
       "count": 8
     }
   },
-  "app/components/DiagOverlay.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 1
-    }
-  },
   "app/components/LocationJourneyModal.tsx": {
     "ds/no-inline-static-literal": {
       "count": 1
