@@ -4,7 +4,8 @@ import { newEmptyClusterDb } from '../setup/pglite-snapshot';
 import { query, __setTestDb } from '@/lib/db/connection.pglite';
 import { getMediaLinkOwners, linkMedia } from '@/lib/db/queries/media-links';
 import { getAllMediaWithPerson } from '@/lib/db/queries/media';
-import { listLinkOwnersForMediaService } from '@/lib/services/media-links';
+import { linkMediaForOwnerService, listLinkOwnersForMediaService, unlinkMediaForOwnerService } from '@/lib/services/media-links';
+import { getCitedByForSource } from '@/lib/db/queries/citations';
 import { NotFoundError } from '@/lib/data/errors';
 
 vi.mock('@/lib/db/connection', async () => await import('@/lib/db/connection.pglite'));
@@ -22,7 +23,7 @@ describe('media link owners', () => {
   });
 
   beforeEach(async () => {
-    await query('TRUNCATE "MediaTag", "MediaLink", "Media", "Events", "Sources", "FamilyPerson", "Families", "People", "Trees", "Users" RESTART IDENTITY CASCADE');
+    await query('TRUNCATE "Citation", "MediaTag", "MediaLink", "Media", "Events", "Sources", "FamilyPerson", "Families", "People", "Trees", "Users" RESTART IDENTITY CASCADE');
     await query(`INSERT INTO "Users" ("Id", "Email", "GoogleId") VALUES (1, 'doc@example.test', 'doc-g1')`);
     await query(`INSERT INTO "Trees" ("Id", "OwnerId", "Name") VALUES (1, 1, 'Doc tree'), (2, 1, 'Other tree')`);
     await query(`INSERT INTO "People" ("Id", "UserId", "TreeId", "FirstName", "LastName", "BirthDate") VALUES
@@ -64,6 +65,37 @@ describe('media link owners', () => {
     expect(owners[2]).toMatchObject({ Partner2FirstName: 'Bob', Partner2LastName: 'Arbor' });
     expect(owners[3].EventType).toBe('GRAD');
     expect(owners[4].SourceTitle).toBe('Parish register');
+  });
+
+  it('links a file to one citation, names it by its source and page, and shows it on the citation row (#47)', async () => {
+    const doc = await pdf();
+    const citationId = ((await query(
+      `INSERT INTO "Citation" ("OwnerId", "TreeId", "FactTable", "FactId", "SourceId", "Page") VALUES (1, 1, 'PersonBirth', 10, $1, 'p. 4') RETURNING "Id"`,
+      [sourceId],
+    )).rows[0] as { Id: number }).Id;
+    await linkMediaForOwnerService({ mediaId: doc, ownerTable: 'Citation', ownerId: citationId, requestedTreeId: 1, requestedOwnerId: null, currentUserId: 1 });
+
+    const owners = await getMediaLinkOwners(doc, 1);
+    expect(owners).toHaveLength(1);
+    expect(owners[0]).toMatchObject({ OwnerTable: 'Citation', OwnerId: citationId, SourceTitle: 'Parish register', CitationSourceId: sourceId, CitationPage: 'p. 4', PersonId: null });
+    const [row] = await getCitedByForSource(sourceId, 1);
+    expect(row).toMatchObject({ citationId, fileMediaId: doc, fileTitle: 'Birth register', fileContentType: 'application/pdf' });
+
+    await unlinkMediaForOwnerService({ mediaId: doc, ownerTable: 'Citation', ownerId: citationId, requestedTreeId: 1, requestedOwnerId: null, currentUserId: 1 });
+    expect(await getMediaLinkOwners(doc, 1)).toEqual([]);
+    expect((await getCitedByForSource(sourceId, 1))[0].fileMediaId).toBeNull();
+  });
+
+  it('refuses to link a file to a citation in another tree (#47)', async () => {
+    const doc = await pdf();
+    const otherSource = ((await query(`INSERT INTO "Sources" ("Title", "TreeId") VALUES ('Elsewhere', 2) RETURNING "Id"`)).rows[0] as { Id: number }).Id;
+    const otherCitation = ((await query(
+      `INSERT INTO "Citation" ("OwnerId", "TreeId", "FactTable", "FactId", "SourceId") VALUES (1, 2, 'People', 20, $1) RETURNING "Id"`,
+      [otherSource],
+    )).rows[0] as { Id: number }).Id;
+    await expect(linkMediaForOwnerService({ mediaId: doc, ownerTable: 'Citation', ownerId: otherCitation, requestedTreeId: 1, requestedOwnerId: null, currentUserId: 1 }))
+      .rejects.toBeInstanceOf(NotFoundError);
+    expect((await query('SELECT 1 FROM "MediaLink"')).rows).toEqual([]);
   });
 
   it('leaves out a link to a record in another tree', async () => {

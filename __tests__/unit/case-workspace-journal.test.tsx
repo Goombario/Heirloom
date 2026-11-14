@@ -29,11 +29,11 @@ const comments = [
 
 function journal(over: Partial<CaseDetailState> = {}) {
     const cd = {
-        caseData: { Id: 1, Status: 'in_progress', comments },
+        caseData: { Id: 1, Status: 'in_progress', comments, media: [{ Id: 70, Title: 'Baptism register page', ContentType: 'image/jpeg' }], people: [] },
         canEdit: true, activeTreeId: 1,
         commentBody: 'Checked St Florian too', setCommentBody: vi.fn(),
         postComment: vi.fn(async () => true), postingComment: false,
-        journalFile: null, setJournalFile: vi.fn(), pendingCommentCite: null, setPendingCommentCite: vi.fn(),
+        journalFile: null, setJournalFile: vi.fn(), journalMedia: null, setJournalMedia: vi.fn(), pendingCommentCite: null, setPendingCommentCite: vi.fn(),
         setShowComposerCite: vi.fn(), openCommentCitation: vi.fn(),
         canStrikeNote: (c: CaseComment) => c.Kind == null, setNoteStruck: vi.fn(async () => true),
         ...over,
@@ -96,5 +96,21 @@ describe('WorkspaceJournal (#58)', () => {
         journal({ canEdit: false, canStrikeNote: () => false } as Partial<CaseDetailState>);
         expect(screen.queryByRole('button', { name: /More actions/ })).not.toBeInTheDocument();
         expect(screen.queryByRole('textbox', { name: 'Add a note' })).not.toBeInTheDocument();
+    });
+
+    it("attaches the case's own media to the entry without uploading it (#34)", async () => {
+        const cd = journal();
+        fireEvent.click(screen.getByRole('button', { name: /Attach/ }));
+        fireEvent.click(await screen.findByRole('menuitem', { name: "From this case's media" }));
+        fireEvent.click(await screen.findByRole('button', { name: /Baptism register page/ }));
+        expect(cd.setJournalMedia).toHaveBeenCalledWith(expect.objectContaining({ Id: 70 }));
+        expect(cd.setJournalFile).not.toHaveBeenCalled();
+    });
+
+    it("offers the people's media only when the case has people (#34)", async () => {
+        journal();
+        fireEvent.click(screen.getByRole('button', { name: /Attach/ }));
+        const item = await screen.findByRole('menuitem', { name: /From the case's people's media/ });
+        expect(item).toHaveAttribute('aria-disabled', 'true');
     });
 });

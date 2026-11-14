@@ -21,6 +21,7 @@ import { showChangeToast } from '@/app/components/ui/Toast';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { MobileShareSheet } from '@/app/components/share/MobileShareSheet';
 import { NotMemberBanner } from '@/app/components/share/NotMemberBanner';
+import { ScrollArea } from '@/app/components/ui';
 
 interface Share {
   Id: number;
@@ -344,7 +345,7 @@ export default function ShareTreeButton({ forceOpen, onClose, elevated }: ShareT
           </div>
 
           {/* Body */}
-          <div className="p-5 overflow-y-auto flex-1">
+          <ScrollArea className="p-5 flex-1">
             {fallbackNote && (
               <p role="note" className="mb-4 p-3 rounded-lg bg-card-alt text-sm text-text-secondary flex gap-2 items-start">
                 <Info className="w-4 h-4 shrink-0 mt-0.5 text-text-muted" aria-hidden="true" />
@@ -446,7 +447,7 @@ export default function ShareTreeButton({ forceOpen, onClose, elevated }: ShareT
                 )}
               </div>
             </div>
-          </div>
+          </ScrollArea>
 
           {/* Footer */}
           <div className="flex items-center gap-2 p-4 border-t border-border bg-card-alt">

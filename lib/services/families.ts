@@ -1,3 +1,4 @@
+import { parseBodyId } from '@/lib/utils/parse-id';
 import {
   getAllFamiliesWithSpouses,
   createFamily,
@@ -101,8 +102,9 @@ export async function createFamilyService(params: CreateFamilyParams): Promise<A
 
   const type = body.Type && ALLOWED_TYPES.has(body.Type as string) ? (body.Type as string) : 'Marriage';
 
-  const partner1Id = (body.Partner1Id ?? body.HusbandId ?? null) as number | null;
-  const partner2Id = (body.Partner2Id ?? body.WifeId ?? null) as number | null;
+  // Normalised before the tree check AND the write, so what's checked is what's stored (#51, L-1).
+  const partner1Id = parseBodyId(body.Partner1Id ?? body.HusbandId ?? null, 'Partner1Id') ?? null;
+  const partner2Id = parseBodyId(body.Partner2Id ?? body.WifeId ?? null, 'Partner2Id') ?? null;
   await assertPartnersInTree([partner1Id, partner2Id], scope.treeId);
 
   const newFamilyData: NewFamily = {
@@ -192,10 +194,10 @@ export async function updateFamilyService(params: UpdateFamilyParams): Promise<A
   if (scope.permission === 'view') throw new AccessError('You only have view permission for this tree');
 
   const updateData: Partial<NewFamily> = {};
-  if (body.Partner1Id !== undefined) updateData.Partner1Id = body.Partner1Id as number | null;
-  if (body.Partner2Id !== undefined) updateData.Partner2Id = body.Partner2Id as number | null;
-  if (body.HusbandId !== undefined) updateData.Partner1Id = body.HusbandId as number | null;
-  if (body.WifeId !== undefined) updateData.Partner2Id = body.WifeId as number | null;
+  if (body.Partner1Id !== undefined) updateData.Partner1Id = parseBodyId(body.Partner1Id, 'Partner1Id');
+  if (body.Partner2Id !== undefined) updateData.Partner2Id = parseBodyId(body.Partner2Id, 'Partner2Id');
+  if (body.HusbandId !== undefined) updateData.Partner1Id = parseBodyId(body.HusbandId, 'HusbandId');
+  if (body.WifeId !== undefined) updateData.Partner2Id = parseBodyId(body.WifeId, 'WifeId');
   // Defense-in-depth: any partner being set must be a person in this tree.
   await assertPartnersInTree([updateData.Partner1Id, updateData.Partner2Id], scope.treeId);
   if (body.MarriageDate !== undefined) updateData.MarriageDate = validateDateField(body.MarriageDate, 'MarriageDate', 100);

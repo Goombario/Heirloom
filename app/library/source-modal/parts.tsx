@@ -21,6 +21,7 @@ import { ExternalLink as ExternalLinkIcon, ChevronRight, ChevronLeft, FolderSear
 import { ExternalLink } from '@/app/components/ExternalLink';
 import { Button } from '@/app/components/ui';
 import type { CitedByRow } from '@/lib/db/queries/citations';
+import { CitationFileLine } from '@/app/components/citations/CitationFileField';
 import type { Source } from '@/lib/data/types';
 
 type T = ReturnType<typeof useTranslations>;
@@ -377,6 +378,9 @@ function CitedByRowItem({ row, label, last, showChevron, treeId }: { row: CitedB
                     <span className={label ? 'text-text-muted' : 'font-semibold'}>{subject}</span>
                 </div>
                 {detail && <div className="text-xs text-text-muted">{detail}</div>}
+                {row.fileMediaId != null && (
+                    <CitationFileLine title={row.fileTitle} contentType={row.fileContentType} page={row.page} className="mt-1" />
+                )}
             </div>
 
             {date && <span className="date-mono text-meta shrink-0">{formatDateForDisplay(date, language, dateWords)}</span>}

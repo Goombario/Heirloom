@@ -38,7 +38,7 @@ export function TagSheet({ open, onClose, name, personId, canRemove, onRedraw, o
     );
 }
 
-/** Title and date taken; the date field carries its own qualifier chips. */
+/** Title and date taken; the date field carries its own Kind menu and About box. */
 export function EditPhotoSheet({ open, onClose, title, date, onSave }: {
     open: boolean;
     onClose: () => void;
@@ -79,7 +79,7 @@ export function EditPhotoSheet({ open, onClose, title, date, onSave }: {
                 </div>
                 <div className="grid gap-1.5">
                     <label htmlFor={`${ids}-date`} className="text-meta font-semibold text-text-secondary">{tl('date_label')}</label>
-                    <DateInput id={`${ids}-date`} value={formDate} onChange={setFormDate} qualifierChips className={cx(fieldClass(), 'min-h-11')} />
+                    <DateInput id={`${ids}-date`} value={formDate} onChange={setFormDate} touch className={cx(fieldClass(), 'min-h-11')} />
                 </div>
             </div>
         </Sheet>

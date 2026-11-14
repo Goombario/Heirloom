@@ -24,6 +24,13 @@ const OLD_BACKUPS = [
   'synthetic.hlbak',
 ];
 
+/**
+ * Tables an upgrade may add rows to: every boot gives a case with no lead its
+ * question as its first lead, with the case's people (v69). `synthetic.hlbak` seeds
+ * cases straight into SQL, so it has none until the first upgrade fills them.
+ */
+const BACKFILLED_ON_BOOT = new Set(['CaseLeads', 'CaseLeadPerson']);
+
 const TABLES_SQL = `SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename`;
 
 /** Columns, as a fresh install and an upgraded database must both have them. */
@@ -145,6 +152,10 @@ describe('upgrading an older release database (#811)', () => {
     const after = await rowCounts(db);
     for (const [table, n] of Object.entries(before)) {
       if (table === '_SchemaMeta') continue;
+      if (BACKFILLED_ON_BOOT.has(table)) {
+        expect(after[table], `${file}: ${table}`).toBeGreaterThanOrEqual(n);
+        continue;
+      }
       expect(after[table], `${file}: ${table}`).toBe(n);
     }
 

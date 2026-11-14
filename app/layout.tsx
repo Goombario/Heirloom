@@ -13,11 +13,11 @@ import LocalFirstRunNotice from "./components/LocalFirstRunNotice";
 import WhatsNewOnUpdate from "./components/whats-new/WhatsNewOnUpdate";
 import BackupNudge from "./components/backup/BackupNudge";
 import { PageNoticeProvider } from "./components/ui/PageNotice";
-import DiagOverlay from "./components/DiagOverlay";
 import DbWarmup from "./components/DbWarmup";
 import RegisterServiceWorker from "./components/RegisterServiceWorker";
 import DesktopWindowFit from "./components/DesktopWindowFit";
 import { AppToaster } from "./components/ui";
+import { BackgroundMediaStatus } from "./components/media/BackgroundMediaStatus";
 import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import { SkipLink } from '@/app/components/SkipLink';
 
@@ -114,10 +114,11 @@ export default function RootLayout({
     >
       <head>
         {/* Apply the saved theme before first paint so light-mode users on a
-            dark OS don't get a black flash before hydration. Mirrors ThemeProvider. */}
+            dark OS don't get a black flash before hydration. Mirrors ThemeProvider, and
+            resolves "system" too: the dark palette hangs off html.dark alone (#2). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;if(t==='dark'){d.classList.add('dark');}else if(t==='light'){d.classList.add('light');}if(localStorage.getItem('statusSymbols')==='true'){d.setAttribute('data-status-symbols','on');}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=document.documentElement;var k=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);d.classList.add(k?'dark':'light');if(localStorage.getItem('statusSymbols')==='true'){d.setAttribute('data-status-symbols','on');}}catch(e){}})();`,
           }}
         />
       </head>
@@ -146,7 +147,6 @@ export default function RootLayout({
                 </div>
                 {/* Safari 26's phone status-bar colour (#1099): see .top-edge-tint in globals.css. */}
                 <div className="top-edge-tint" aria-hidden="true" />
-                <DiagOverlay />
                 <DbWarmup />
                 <RegisterServiceWorker />
                 <DesktopWindowFit />
@@ -154,6 +154,7 @@ export default function RootLayout({
                 <LocalFirstRunNotice />
                 <WhatsNewOnUpdate />
                 <AppToaster />
+                <BackgroundMediaStatus />
               </UnsavedChangesProvider>
             </TreeProvider>
           </ThemeProvider>

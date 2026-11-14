@@ -44,6 +44,18 @@ describe('Local GEDCOM export (PGlite)', () => {
     expect(gedcom).not.toMatch(/^\d+ OBJE(?: |$)/m);
   });
 
+  it('writes FAMS for a family that only has Partner1Id/Partner2Id (#69)', async () => {
+    const client = new LocalDataClient();
+    const a = await client.people.create({ FirstName: 'Partner', LastName: 'One' });
+    const b = await client.people.create({ FirstName: 'Partner', LastName: 'Two' });
+    const family = await client.families.create({ Partner1Id: a.Id, Partner2Id: b.Id });
+    // A row as the old synthetic seed wrote it: no legacy HusbandId/WifeId.
+    await query('UPDATE "Families" SET "HusbandId" = NULL, "WifeId" = NULL WHERE "Id" = $1', [family.Id]);
+
+    const gedcom = await (await client.gedcom.exportGedcom!()).blob.text();
+    expect(gedcom.match(/^1 FAMS @F\d+@$/gm)).toHaveLength(2);
+  });
+
   it('packages ordinary local MediaBlob bytes and deterministic sidecars', async () => {
     const client = new LocalDataClient();
     const person = await client.people.create({ FirstName: 'Local', LastName: 'Photo' });

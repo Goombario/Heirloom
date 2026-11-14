@@ -17,6 +17,18 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Mark the page light or dark. The dark palette in globals.css hangs off
+ * `html.dark` alone, so "system" is resolved here (and in the layout's pre-paint
+ * script) rather than by a second copy of the palette in a media query (#2).
+ */
+function applyThemeClass(resolved: 'light' | 'dark') {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    root.classList.toggle('dark', resolved === 'dark');
+    root.classList.toggle('light', resolved === 'light');
+}
+
 function getResolvedTheme(theme: Theme): 'light' | 'dark' {
     if (theme === 'system') {
         if (typeof window !== 'undefined') {
@@ -58,24 +70,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setResolvedTheme(getResolvedTheme(theme));
     }, [theme]);
 
-    // Apply theme classes when theme changes
+    // Apply the resolved theme, including an OS change while on "system".
     useEffect(() => {
         if (!mounted) return;
-
-        if (typeof document !== 'undefined') {
-            const root = document.documentElement;
-            if (theme === 'system') {
-                // Remove all theme classes, let media query handle it
-                root.classList.remove('dark', 'light');
-            } else if (theme === 'dark') {
-                root.classList.add('dark');
-                root.classList.remove('light');
-            } else {
-                root.classList.add('light');
-                root.classList.remove('dark');
-            }
-        }
-    }, [theme, mounted]);
+        applyThemeClass(resolvedTheme);
+    }, [resolvedTheme, mounted]);
 
     // Apply theme when it changes
     const setTheme = (newTheme: Theme) => {
@@ -89,18 +88,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
 
         // Apply theme immediately
-        if (typeof document !== 'undefined') {
-            const root = document.documentElement;
-            if (newTheme === 'system') {
-                root.classList.remove('dark', 'light');
-            } else if (newTheme === 'dark') {
-                root.classList.add('dark');
-                root.classList.remove('light');
-            } else {
-                root.classList.add('light');
-                root.classList.remove('dark');
-            }
-        }
+        applyThemeClass(resolved);
     };
 
     // Listen for system theme changes

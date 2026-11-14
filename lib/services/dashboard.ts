@@ -1,6 +1,6 @@
 import { query } from '@/lib/db/connection';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
-import { getAuditLog } from '@/lib/db/queries/audit';
+import { getAuditLog, withoutEditorEmails } from '@/lib/db/queries/audit';
 import { effectiveFirstName, getPersonSourcing, primaryNickname } from '@/lib/db/queries/people';
 import { primaryPhotoJoin } from '@/lib/db/queries/media-tags';
 import { getTopPlacesByRecordCount } from '@/lib/db/queries/places';
@@ -74,7 +74,9 @@ export async function getDashboardService(params: GetDashboardParams): Promise<D
     getTreeYearSpan(treeId),
   ]);
 
-  const { entries: auditWindow, total: auditTotal } = auditLog;
+  const { total: auditTotal } = auditLog;
+  // View-only members see editors' display names, never their emails (#51, L-4).
+  const auditWindow = scope.permission === 'view' ? withoutEditorEmails(auditLog.entries) : auditLog.entries;
   const recentActivity = groupActivityRuns(auditWindow, 5, auditTotal > auditWindow.length);
 
   const stats = statsRows.rows[0] || { people: 0, families: 0, events: 0, sources: 0, casesInProgress: 0 };

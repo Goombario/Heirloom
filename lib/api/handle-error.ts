@@ -13,7 +13,10 @@ import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadInten
  *   - `StorageLimitError`         → 507
  *   - anything else               → 500 (logged with `fallback` as the label)
  *
- * `fallback` is both the 500 body message and the console.error label.
+ * `fallback` is both the 500 body message and the console.error label. A 500
+ * also carries a short random `errorId`, printed on the logged line too, so a
+ * reported failure can be found in the server log without leaking its cause
+ * (#8).
  */
 export function handleApiError(error: unknown, fallback = 'Internal server error'): NextResponse {
     if (error instanceof FileTooLargeError) {
@@ -66,6 +69,7 @@ export function handleApiError(error: unknown, fallback = 'Internal server error
     if (error instanceof Error && error.message.includes('Access denied')) {
         return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    console.error(fallback, error);
-    return NextResponse.json({ error: fallback }, { status: 500 });
+    const errorId = crypto.randomUUID().slice(0, 8);
+    console.error(`[error ${errorId}] ${fallback}`, error);
+    return NextResponse.json({ error: fallback, errorId }, { status: 500 });
 }
