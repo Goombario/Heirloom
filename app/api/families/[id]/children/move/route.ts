@@ -1,6 +1,7 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
-import { parseIdParam } from '@/lib/utils/parse-id';
+import { parseBodyId, parseIdParam } from '@/lib/utils/parse-id';
 import { moveChildService } from '@/lib/services/families';
 import { handleApiError } from '@/lib/api/handle-error';
 
@@ -15,9 +16,11 @@ export async function POST(
 
         const resolvedParams = await params;
         const familyId = parseIdParam(resolvedParams.id);
-        const { childId, toFamilyId } = await request.json();
+        const body = await readJsonObject(request);
+        const childId = parseBodyId(body.childId, 'childId');
+        const toFamilyId = parseBodyId(body.toFamilyId, 'toFamilyId');
 
-        if (!familyId || !Number.isInteger(childId) || !Number.isInteger(toFamilyId)) {
+        if (!familyId || !childId || !toFamilyId) {
             return NextResponse.json({ error: 'Family ID, child ID and target family ID are required' }, { status: 400 });
         }
 

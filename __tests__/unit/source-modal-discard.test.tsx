@@ -73,6 +73,9 @@ vi.mock('@/app/components/ui', () => ({
         <button type="button" onClick={onClick}>common.edit</button>
     ),
     InlineDataError: () => null,
+    ScrollArea: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+        <div className={className}>{children}</div>
+    ),
 }));
 vi.mock('@/lib/icons', () => {
     const Icon = () => null;

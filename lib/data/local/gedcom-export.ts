@@ -78,9 +78,12 @@ export async function exportGedcomLocalService(params: {
 
   const spouseFamiliesByHusband = new Map<number, ExportFamilyRow[]>();
   const spouseFamiliesByWife = new Map<number, ExportFamilyRow[]>();
+  // Legacy HusbandId/WifeId first, then Partner1Id/Partner2Id for a row that has only those (#69).
   for (const family of rawFamilies) {
-    if (family.HusbandId != null) bucket(spouseFamiliesByHusband, family.HusbandId, family);
-    if (family.WifeId != null) bucket(spouseFamiliesByWife, family.WifeId, family);
+    const husbandId = family.HusbandId ?? family.Partner1Id;
+    const wifeId = family.WifeId ?? family.Partner2Id;
+    if (husbandId != null) bucket(spouseFamiliesByHusband, husbandId, family);
+    if (wifeId != null) bucket(spouseFamiliesByWife, wifeId, family);
   }
   const familiesAsChildByPerson = new Map<number, Family[]>();
   for (const row of familyChildLinks) {

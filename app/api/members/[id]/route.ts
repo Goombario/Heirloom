@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isDesktopMode } from '@/lib/auth/get-user-from-request';
 import {
@@ -21,7 +22,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         const memberId = parseIdParam((await params).id);
         if (memberId === null) return NextResponse.json({ error: 'Invalid member ID' }, { status: 400 });
 
-        const body = await request.json().catch(() => ({})) as { role?: unknown; status?: unknown };
+        const body = await readJsonObject(request).catch(() => ({})) as { role?: unknown; status?: unknown };
         const hasRole = body.role !== undefined;
         const hasStatus = body.status !== undefined;
         if (hasRole === hasStatus) {

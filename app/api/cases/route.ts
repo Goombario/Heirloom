@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam, parseOptionalIdParam } from '@/lib/utils/parse-id';
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
         const user = await getUserFromRequest();
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const body = await request.json();
+        const body = await readJsonObject(request);
         const { searchParams } = new URL(request.url);
         const requestedTreeId = parseIdParam(searchParams.get('treeId'));
         const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));

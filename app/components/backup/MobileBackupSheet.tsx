@@ -14,6 +14,7 @@ import RestoreProgress from './RestoreProgress';
 import RestoreTotalsTable from './RestoreTotalsTable';
 import { useBackupOverdue } from './useBackupStatus';
 import { useFileBackup } from './useFileBackup';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /** "2 Sep", or "2 Sep 2025" outside this year. */
 function shortDate(date: Date, locale: string): string {
@@ -30,6 +31,7 @@ function shortDate(date: Date, locale: string): string {
 export function MobileBackupSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useTranslations('mobileBackup');
     const to = useTranslations('options');
+    const desktop = useIsDesktopApp();
     const locale = useLocale();
     const { timestamp } = useTimestamp();
     const { lastBackup, ageDays, overdue } = useBackupOverdue();
@@ -78,7 +80,7 @@ export function MobileBackupSheet({ open, onClose }: { open: boolean; onClose: (
                         {overdue && <span className="font-sans text-xs font-semibold text-warning-text px-2 py-0.5 rounded-full bg-warning-bg">{to('backup_overdue')}</span>}
                     </span>
                     <p className="m-0 text-sm leading-normal text-text-secondary">
-                        {lastBackup && !overdue ? t('body_fresh', { when: timestamp(lastBackup) }) : t('body_overdue')}
+                        {lastBackup && !overdue ? t('body_fresh', { when: timestamp(lastBackup) }) : t(desktop ? 'body_overdue_desktop' : 'body_overdue')}
                     </p>
                 </div>
 
@@ -100,13 +102,15 @@ export function MobileBackupSheet({ open, onClose }: { open: boolean; onClose: (
 
                 <input ref={file.fileInputRef} type="file" accept=".hlbak" className="hidden" onChange={file.onFileChange} />
                 <MobileRow divided icon={reading ? <Loader2 className="animate-spin" /> : <RotateCcw />} label={t('restore')}
-                    sub={reading ? to('restore_reading') : file.restoreError ?? t('restore_sub')}
+                    sub={reading ? to('restore_reading') : file.restoreError ?? t(desktop ? 'restore_sub_desktop' : 'restore_sub')}
                     disabled={reading || file.restoreStatus === 'restoring'} onClick={file.chooseFile} />
 
-                <MobileRow divided icon={<Lock />} label={t('persist')}
-                    sub={file.persistDenied ? to('storage_request_denied') : t('persist_sub')}
-                    value={file.isPersistent === true ? t('persist_on') : file.isPersistent === false ? t('persist_off') : t('persist_unknown')}
-                    onClick={file.isPersistent === false ? () => { void file.requestPersist(); } : undefined} />
+                {!desktop && (
+                    <MobileRow divided icon={<Lock />} label={t('persist')}
+                        sub={file.persistDenied ? to('storage_request_denied') : t('persist_sub')}
+                        value={file.isPersistent === true ? t('persist_on') : file.isPersistent === false ? t('persist_off') : t('persist_unknown')}
+                        onClick={file.isPersistent === false ? () => { void file.requestPersist(); } : undefined} />
+                )}
             </div>
 
             <ConfirmSheet
@@ -114,7 +118,7 @@ export function MobileBackupSheet({ open, onClose }: { open: boolean; onClose: (
                 title={to('restore_confirm_title')}
                 body={(
                     <>
-                        <p className="m-0 mb-1">{to('restore_confirm_body')}</p>
+                        <p className="m-0 mb-1">{to(desktop ? 'restore_confirm_body_desktop' : 'restore_confirm_body')}</p>
                         {file.pending && (
                             <>
                                 <p className="m-0 font-medium text-text">{file.pending.file.name}</p>

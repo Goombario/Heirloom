@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GlassButton, cx } from '@/app/components/ui';
-import { ArrowUpRight, Menu, Pencil } from '@/lib/icons';
+import { ArrowUpRight, Ellipsis, Menu, Pencil } from '@/lib/icons';
 import { openAppMenu } from '@/app/components/nav/appEvents';
 import { useHeroHeader } from '@/app/people/view/mobile/useHeroHeader';
 
@@ -15,13 +15,15 @@ import { useHeroHeader } from '@/app/people/view/mobile/useHeroHeader';
  * the top edge. The top-left button is always the menu, never Back (the owner's rule; the
  * phone's own Back goes back). Renders inside `.mp-root`, which owns the page.
  */
-export function RecordBand({ eyebrow, title, line, onEdit, editLabel, children }: {
+export function RecordBand({ eyebrow, title, line, onEdit, editLabel, editIcon = 'pencil', children }: {
     eyebrow: React.ReactNode;
     title: string;
     line?: React.ReactNode;
     /** The pencil; left out for viewers. */
     onEdit?: () => void;
     editLabel: string;
+    /** The right button's glyph: the pencil, or ⋯ for a page whose menu holds more than edits (the research case). */
+    editIcon?: 'pencil' | 'more';
     /** Extra content under the line (the case page's background). */
     children?: React.ReactNode;
 }) {
@@ -48,7 +50,7 @@ export function RecordBand({ eyebrow, title, line, onEdit, editLabel, children }
                 style={{ paddingTop: 'calc(8px + var(--mp-sat))' }}>
                 <div className="flex justify-between -ml-1">
                     <GlassButton label={tn('toggle_menu')} icon={<Menu />} onClick={openAppMenu} />
-                    {onEdit && <GlassButton label={editLabel} icon={<Pencil />} onClick={onEdit} />}
+                    {onEdit && <GlassButton label={editLabel} icon={editIcon === 'more' ? <Ellipsis /> : <Pencil />} onClick={onEdit} />}
                 </div>
                 <div className="eyebrow inline-flex items-center gap-[7px] !text-white/70 [&_svg]:w-3.5 [&_svg]:h-3.5">{eyebrow}</div>
                 <h1 className="m-0 serif font-semibold text-white text-2xl leading-[1.15] tracking-[-0.01em] text-balance [overflow-wrap:anywhere]">{title}</h1>
@@ -61,7 +63,7 @@ export function RecordBand({ eyebrow, title, line, onEdit, editLabel, children }
                 style={{ top: 'var(--nav-h)', minHeight: 'var(--mp-bar-h)', paddingTop: 'calc(7px + var(--mp-sat))' }}>
                 <BarIcon label={tn('toggle_menu')} onClick={openAppMenu}><Menu aria-hidden="true" /></BarIcon>
                 <span className="flex-1 min-w-0 truncate serif font-semibold text-md text-white">{title}</span>
-                {onEdit ? <BarIcon label={editLabel} onClick={onEdit}><Pencil aria-hidden="true" /></BarIcon> : <span className="w-[30px] shrink-0" />}
+                {onEdit ? <BarIcon label={editLabel} onClick={onEdit}>{editIcon === 'more' ? <Ellipsis aria-hidden="true" /> : <Pencil aria-hidden="true" />}</BarIcon> : <span className="w-[30px] shrink-0" />}
             </div>
         </>
     );

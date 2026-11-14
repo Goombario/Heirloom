@@ -7,6 +7,7 @@ import RestoreTotalsTable from './RestoreTotalsTable';
 import { useFileBackup } from './useFileBackup';
 import { Button } from '@/app/components/ui';
 import { AlertTriangle, CircleHelp, Lock } from '@/lib/icons';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /**
  * "This device" backup section: download a full snapshot file, restore from a
@@ -15,6 +16,7 @@ import { AlertTriangle, CircleHelp, Lock } from '@/lib/icons';
  */
 export default function FileBackupSection() {
   const t = useTranslations('options');
+  const desktop = useIsDesktopApp();
   const {
     isPersistent, persistDenied, requestPersist: handleRequestPersist,
     backup, backupBusy, backupError,
@@ -38,7 +40,7 @@ export default function FileBackupSection() {
           is read before the file picker opens, not only in the confirm (#941). */}
       <div className="border-t border-border pt-3 mb-3">
         <h4 className="text-sm font-semibold text-text mb-1">{t('restore_title')}</h4>
-        <p className="text-sm text-text-muted mb-3">{t('restore_desc')}</p>
+        <p className="text-sm text-text-muted mb-3">{t(desktop ? 'restore_desc_desktop' : 'restore_desc')}</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -58,8 +60,9 @@ export default function FileBackupSection() {
 
       {restoreError && <p className="text-sm text-error mb-3" role="alert">{restoreError}</p>}
 
-      {/* Storage persistence */}
-      {isPersistent === false ? (
+      {/* Storage persistence. The desktop app's storage is not a website's, so it
+          is never evicted and there is nothing to request (#61). */}
+      {desktop ? null : isPersistent === false ? (
         <div role="alert" className="flex items-start gap-2.5 rounded-lg p-3 bg-warning-bg border border-warning-text/30">
           <AlertTriangle className="w-[18px] h-[18px] shrink-0 mt-px text-warning-text" aria-hidden="true" />
           <div className="min-w-0 text-sm">
@@ -90,7 +93,7 @@ export default function FileBackupSection() {
         title={t('restore_confirm_title')}
         body={
           <>
-            <p className="text-sm text-text-muted mb-1">{t('restore_confirm_body')}</p>
+            <p className="text-sm text-text-muted mb-1">{t(desktop ? 'restore_confirm_body_desktop' : 'restore_confirm_body')}</p>
             {pending && (
               <>
                 <p className="text-sm font-medium text-text">{pending.file.name}</p>

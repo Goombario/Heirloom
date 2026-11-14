@@ -41,57 +41,51 @@ export function configureMapLibreWorker(maplibregl: MapLibreWorkerConfig): void 
 
 // Structural slice of the MapLibre Map we need — avoids importing the heavy,
 // client-only maplibre-gl module into this lib.
-interface CompactAttribMap {
-  getContainer(): HTMLElement;
+interface CreditControl {
+  onAdd(): HTMLElement;
+  onRemove(): void;
+}
+interface CreditMap {
+  addControl(control: CreditControl, position?: 'bottom-right'): unknown;
 }
 
-// MapLibre's compact attribution control renders EXPANDED — but NOT at
-// construction. On init the attribution HTML is still empty (sources haven't
-// loaded), so the control carries `maplibregl-attrib-empty` and `_updateCompact`
-// skips it. The `maplibregl-compact-show` + `open` are added asynchronously on
-// the first `sourcedata`/`styledata` event, once the attribution string
-// populates.
-//
-// The OSMF attribution guidelines let a map collapse its credit only after the
-// user interacts with the map or after five seconds, not on load (checked
-// 2026-10-13 for #740: osmfoundation.org/wiki/Licence/Attribution_Guidelines;
-// OpenFreeMap asks for the same OpenMapTiles/OpenStreetMap credit MapLibre shows).
-// So the credit opens as MapLibre shows it, then collapses to the ⓘ after five
-// seconds or on the first pointer or wheel input on the map, whichever comes first.
-// Clicking the ⓘ still expands it, so the licence stays one tap away. MapLibre
-// won't re-add the show class later: its `_updateCompact` short-circuits on the
-// now-present `maplibregl-compact` class.
-const ATTRIBUTION_VISIBLE_MS = 5000;
+export interface MapCreditLabels {
+  /** "© OpenStreetMap", linked to the ODbL copyright page. */
+  osm: string;
+  /** "OpenMapTiles", the schema OpenFreeMap's tiles are built on. */
+  tiles: string;
+}
 
-export function collapseCompactAttribution(map: CompactAttribMap): void {
-  const container = map.getContainer();
-  const attrib = container.querySelector('.maplibregl-ctrl-attrib');
-  if (!attrib) return;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const collapse = () => {
-    if (timer) clearTimeout(timer);
-    attrib.classList.remove('maplibregl-compact-show');
-    attrib.removeAttribute('open');
-    container.removeEventListener('pointerdown', onInput, true);
-    container.removeEventListener('wheel', onInput, true);
-  };
-  // Input on the credit itself is the user opening or reading it, not leaving it.
-  function onInput(e: Event) {
-    if ((e.target as Element | null)?.closest?.('.maplibregl-ctrl-attrib')) return;
-    collapse();
-  }
-  const arm = () => {
-    if (timer) return;
-    timer = setTimeout(collapse, ATTRIBUTION_VISIBLE_MS);
-    container.addEventListener('pointerdown', onInput, true);
-    container.addEventListener('wheel', onInput, true);
-  };
-  if (attrib.classList.contains('maplibregl-compact-show')) { arm(); return; }
-  const observer = new MutationObserver(() => {
-    if (attrib.classList.contains('maplibregl-compact-show')) {
-      observer.disconnect();
-      arm();
-    }
-  });
-  observer.observe(attrib, { attributes: true, attributeFilter: ['class'] });
+const OSM_COPYRIGHT_URL = 'https://www.openstreetmap.org/copyright';
+const OPENMAPTILES_URL = 'https://openmaptiles.org/';
+
+// The basemap credit, always shown as plain text in the map's corner (#42).
+// MapLibre's compact control collapsed it behind an ⓘ, and the OSMF attribution
+// guidelines only allow that after five seconds or on interaction
+// (osmfoundation.org/wiki/Licence/Attribution_Guidelines). A credit that never
+// collapses needs no ⓘ, so every map is built with `attributionControl: false`
+// and gets this control instead. OpenFreeMap asks for the OpenMapTiles and
+// OpenStreetMap credit; naming OpenFreeMap itself is optional.
+export function addMapCredit(map: CreditMap, labels: MapCreditLabels): void {
+  let el: HTMLElement | null = null;
+  map.addControl({
+    onAdd() {
+      el = document.createElement('div');
+      el.className = 'maplibregl-ctrl map-credit';
+      const link = (href: string, text: string) => {
+        const a = document.createElement('a');
+        a.href = href;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = text;
+        return a;
+      };
+      el.append(link(OSM_COPYRIGHT_URL, labels.osm), document.createTextNode(' · '), link(OPENMAPTILES_URL, labels.tiles));
+      return el;
+    },
+    onRemove() {
+      el?.remove();
+      el = null;
+    },
+  }, 'bottom-right');
 }

@@ -215,9 +215,23 @@ Never reuse a Tailwind default's name unless the override is deliberate and docu
      heights of `Input`, the listbox look of `Select`, WAI-ARIA select-only combobox
      keys); a toolbar filter dropdown is `Select` (muted label + value). No native
      `<select>` outside the dark-island fallback rules in `globals.css`.
+   - **Scroll areas** (`ScrollArea`, #10): a dialog body and any inline list that scrolls
+     use `ScrollArea`, which themes the bar and keeps its rail painted (`persistentRail`,
+     the default), so content never shifts by the bar's width when it starts to overflow.
+     No layout shift wins over hiding the bar until it is needed. The one exception is a
+     horizontal strip that hides its bar on purpose (`hscroll-strip`).
    - **Filter chips** (`FilterChip`, CT-2): one fixed 28px height on every list page; a
      touch sheet may raise it with `min-h-*`. An "Add …" chip passes lucide `Plus` through
      `icon`, never a typed "+". A filter toolbar has no visible "Filter" eyebrow.
+     - **Two kinds, told apart by glyph, never by colour or shape** (#11, decided
+       2026-11-13). An **include/exclude** chip (People's tri-state filters,
+       `TriFilterChip`) cycles off → matches → does not match, and shows `Plus` when off
+       and `⊘` when excluding, with no glyph while it matches. An **on/off** chip
+       (Families, Cases, Library, Audit) shows no glyph in either state. So a chip that
+       can exclude must show the glyphs, and an on/off chip must not.
+     - The glyphs are decoration (`aria-hidden`). Each tri-state chip's visible label
+       names its state ("Has parents", "No parents"), so the accessible name carries
+       the state too, alongside `aria-pressed`.
    - **Tags** (`Badge`; audit §13 addendum, 2026-09-23) are small square tags (4px radius,
      ~20px, no hover), never placed in a row of controls, and **quiet**: a faint fill with
      no edge. The round shape belongs to clickable chips; `shape="pill"` is only for a
@@ -640,7 +654,7 @@ A detail page edits in exactly two ways: the record's **identity** in its hero, 
    card-alt panel with an inset bar, no dashed border and no eyebrow, ending in
    `EditorActions` at `sm`. One panel is open at a time. `compact` drops the visible
    labels in a narrow rail (notes). Below `md` the event editor opens in a `Sheet`
-   instead (#797, M-2), with the date qualifier stacked above the date and the notes
+   instead (#797, M-2), with the date's Kind menu stacked above the date and the notes
    rail flattened (`.sheet-flat`) so no card nests inside the sheet. On the v1.1 desktop
    timelines (person and family) the row itself opens its editor (`LedgerItem.onOpen`:
    the whole row is the pointer target, the title the keyboard control) and Delete
@@ -797,8 +811,9 @@ full screen.
 - Every edit happens in a sheet. Typing sheets are full height, 40px below the top, above the
   keyboard. Header: Cancel, the title, Save as the copper pill, dim until something changes.
   This retires `MobileFormFooter` on the redesigned screens.
-- Return moves to the next field. Date qualifiers are chips under the Date field; places
-  suggest the tree's places as rows.
+- Return moves to the next field. A date is one row, Kind menu · date · About, as on the
+  desktop (`DateInput touch`, ADR 0048); a range's second box takes its own row with "and"/"to"
+  under the menu. Places suggest the tree's places as rows.
 - With unsaved changes, every way out (Cancel, Back, tapping outside, pulling down) springs
   back and asks "Discard your changes?". No drafts are kept.
 - Three deep at most. A sheet opened from a sheet sits on top, the one below shrinks and dims,

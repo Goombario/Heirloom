@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { DatabaseTotals } from '@/lib/db/connection.pglite';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 interface RestoreTotalsTableProps {
   /** This browser's totals now; null when they couldn't be read. */
@@ -18,6 +19,7 @@ interface RestoreTotalsTableProps {
  */
 export default function RestoreTotalsTable({ current, backup, backupDate }: RestoreTotalsTableProps) {
   const t = useTranslations('options');
+  const desktop = useIsDesktopApp();
   const { timestamp } = useTimestamp();
   const rows: Array<[keyof DatabaseTotals, string]> = [
     ['trees', t('restore_count_trees')],
@@ -30,7 +32,7 @@ export default function RestoreTotalsTable({ current, backup, backupDate }: Rest
       <thead>
         <tr className="text-left text-xs text-text-muted">
           <th scope="col" className="font-normal pb-1"><span className="sr-only">{t('restore_count_item')}</span></th>
-          <th scope="col" className="font-normal pb-1 text-right">{t('restore_column_current')}</th>
+          <th scope="col" className="font-normal pb-1 text-right">{t(desktop ? 'restore_column_current_desktop' : 'restore_column_current')}</th>
           <th scope="col" className="font-normal pb-1 text-right">
             {t('restore_column_backup', { date: timestamp(backupDate) })}
           </th>

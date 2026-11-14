@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { escapeHtml } from '@/lib/validation';
 import { useTheme } from '@/app/components/ThemeProvider';
-import { getMapStyleUrl, collapseCompactAttribution, configureMapLibreWorker } from '@/lib/geo/map-style';
+import { getMapStyleUrl, addMapCredit, configureMapLibreWorker } from '@/lib/geo/map-style';
 import { pinSvgHtml } from './map-pin';
 import { diffMarkers, highlightNamesOne, highlightTransition, keysForIds } from './markerRegistry';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -188,6 +188,8 @@ export default function LocationMap({
   refitOnResize = false,
 }: LocationMapProps) {
   const t = useTranslations('common');
+  const creditOsm = t('map_credit_osm');
+  const creditTiles = t('map_credit_tiles');
   const { resolvedTheme } = useTheme();
   const elRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
@@ -269,10 +271,10 @@ export default function LocationMap({
           style: getMapStyleUrl(resolvedTheme),
           center: [current[0].lng, current[0].lat],
           zoom: variant === 'mini' ? 9 : 11,
-          attributionControl: { compact: true },
+          attributionControl: false,
         });
         map.on('error', () => { if (!cancelled) setFailed(true); });
-        collapseCompactAttribution(map);
+        addMapCredit(map, { osm: creditOsm, tiles: creditTiles });
         if (insetsRef.current) map.setPadding(insetsRef.current);
 
         // Pins stop their own clicks, so this is only ever the map itself.
@@ -326,7 +328,7 @@ export default function LocationMap({
       map?.remove();
       map = null;
     };
-  }, [variant, resolvedTheme, hasMarkers, gestures]);
+  }, [variant, resolvedTheme, hasMarkers, gestures, creditOsm, creditTiles]);
 
   // Marker sync: add / remove / move individual markers on the live instance.
   useEffect(() => {
