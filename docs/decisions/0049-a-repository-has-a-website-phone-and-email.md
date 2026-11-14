@@ -15,7 +15,9 @@ nobody could see or change them. The maintainer chose to model them on 2026-10-1
    it. Later occurrences stay in the passthrough and are exported as before, so nothing is written
    twice. The backfill runs until it has finished once; the comment on `"Repository"."Website"` marks
    that, as `"Citation"."Url"`'s does for ADR 0025's link backfill.
-3. **A merge fills a field only where the repository has none,** as it fills the passthrough.
+3. **A merge fills a field only where the repository has none.** Where it has one, the file's line
+   is dropped if it says the same thing and otherwise kept as passthrough, so a merge neither loses a
+   different value nor writes the same one twice.
 4. **Export writes them after the address and before notes:** `1 PHON`, `1 EMAIL`, `1 WWW`, then the
    passthrough. GEDCOM 5.5.1 needs an `ADDR` whenever any of them is used, so a repository with
    contact details but no address writes an empty `1 ADDR`, as one with only structured address

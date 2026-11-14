@@ -1968,8 +1968,12 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
       if (repositoryId !== null) repoXrefToId.set(r.xref, repositoryId);
       if (repositoryId === null || (r.rawLines.length === 0 && r.addrRawLines.length === 0)) continue;
       // The first WWW, PHON and EMAIL are modeled (ADR 0049); a merge fills each
-      // only where the repository has none, as it does the passthrough.
-      const contacts = liftRepositoryContacts(r.rawLines);
+      // only where the repository has none, and keeps a different value raw.
+      const existing = (await client.query(
+        `SELECT "Website", "Phone", "Email" FROM "Repository" WHERE "Id" = $1 AND "TreeId" = $2`,
+        [repositoryId, scope.treeId],
+      )).rows[0] as { Website: string | null; Phone: string | null; Email: string | null } | undefined;
+      const contacts = liftRepositoryContacts(r.rawLines, existing);
       await client.query(
         `UPDATE "Repository" SET "RawGedcom" = COALESCE("RawGedcom", $2), "AddressRawGedcom" = COALESCE("AddressRawGedcom", $3),
                 "Website" = COALESCE("Website", $5), "Phone" = COALESCE("Phone", $6), "Email" = COALESCE("Email", $7)

@@ -9,7 +9,7 @@ export function contactHref(kind: 'Website' | 'Phone' | 'Email', value: string |
   const v = value?.trim();
   if (!v) return null;
   if (kind === 'Website') return isWebUrl(v) ? v : null;
-  if (kind === 'Email') return /^[^\s@:/?#]+@[^\s@:/?#]+$/.test(v) ? `mailto:${v}` : null;
+  if (kind === 'Email') return /^[^\s@:/?#,;<>%]+@[^\s@:/?#,;<>%]+$/.test(v) ? `mailto:${v}` : null;
   const dial = v.replace(/[^\d+]/g, '');
   return /\d/.test(dial) ? `tel:${dial}` : null;
 }
