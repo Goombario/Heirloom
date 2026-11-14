@@ -14,8 +14,9 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useCaseDetail } from './useCaseDetail';
+import { PhoneCaseSkeleton } from './phone/PhoneCaseSkeleton';
+import { PhoneWorkspace } from './phone/PhoneWorkspace';
 import { useJournalCitationPicks } from './useJournalCitationPicks';
-import MobileCasePage, { MobileCaseSkeleton } from './MobileCasePage';
 import { ResearchWorkspace } from './desktop/ResearchWorkspace';
 import { StartCase } from './desktop/StartCase';
 
@@ -57,7 +58,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
         // dropped a full layout in. Same DetailSkeleton the person and family detail
         // pages use — the shapes (hero, rail, body) match this page's layout.
         // A phone gets its own: the case page there is a band and tabs, not a hero and rail.
-        return isMobile ? <MobileCaseSkeleton /> : <WorkspaceSkeleton />;
+        return isMobile ? <PhoneCaseSkeleton /> : <WorkspaceSkeleton />;
     }
 
     if (notFound) return <RecordNotFound record="case" />;
@@ -77,7 +78,7 @@ export default function CaseDetailClient({ forceDraft = false }: { forceDraft?: 
 
     return (
         <>
-            {isMobile ? <MobileCasePage cd={cd} />
+            {isMobile ? <PhoneWorkspace cd={cd} />
                 // A new case starts from its kind of question; a saved one opens the research workspace (#58).
                 : cd.isDraft ? <StartCase treeId={activeTreeId} />
                     : <ResearchWorkspace cd={cd} />}

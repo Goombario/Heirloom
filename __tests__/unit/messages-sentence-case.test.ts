@@ -35,6 +35,9 @@ const ALLOWED_KEYS = new Set([
     'options.quoted_show',
     'options.quoted_exclude',
     'treeSidebar.place_placeholder',
+    // The phone case page's hints name its All evidence page (#135).
+    'caseResearch.add_note_hint',
+    'caseResearch.drop_lead_hint',
     // A record site's publisher, by its own name (#1026).
     'research.sites.trove.note',
     // "New Zealand": "New" is too common to allow as a word.
