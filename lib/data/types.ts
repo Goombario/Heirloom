@@ -1183,7 +1183,11 @@ export interface TreesClient {
 }
 
 // ---- Account (#35) ----
-/** Per-user app state that follows the account rather than a tree. */
+/**
+ * Per-user app state that follows the account rather than a tree. Its writes
+ * skip cache invalidation (`UNCACHED_SUB_CLIENTS`), so it must never hold a
+ * method that changes anything the data cache keeps.
+ */
 export interface AccountClient {
   /** The last version whose What's new this user has seen, or null before the first. */
   getLastSeenVersion(): Promise<string | null>;
