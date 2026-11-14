@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Modal from '@/app/components/Modal';
 import MediaImg from '@/app/components/MediaImg';
-import { Banner, Button, DialogHeader, EmptyState, InlineDataError, SegmentedControl, showSuccessToast, cx } from '@/app/components/ui';
+import { Banner, Button, DialogHeader, EmptyState, InlineDataError, ScrollArea, SegmentedControl, showSuccessToast, cx } from '@/app/components/ui';
 import { Input } from '@/app/components/ui/Input';
 import { withWriteBatch } from '@/lib/data';
 import { FileTooLargeError, RateLimitError, StorageLimitError } from '@/lib/data/errors';
@@ -494,8 +494,8 @@ export default function AddMediaModal({
                 {fileInput}
 
                 {/* A file dropped anywhere in the body joins the batch, not a new browser tab. */}
-                <div
-                    className="flex-1 min-h-0 overflow-y-auto scroll-area px-6 py-4 flex flex-col gap-4"
+                <ScrollArea
+                    className="flex-1 min-h-0 px-6 py-4 flex flex-col gap-4"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
                 >
@@ -596,7 +596,7 @@ export default function AddMediaModal({
                             </div>
                         </section>
                     ))}
-                </div>
+                </ScrollArea>
 
                 <div className="flex items-center gap-3 px-6 py-3.5 border-t border-border bg-card-alt">
                     {/* Clear sits at the far left so it never moves; nothing shows here

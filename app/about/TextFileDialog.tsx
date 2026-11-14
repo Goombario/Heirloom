@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/app/components/Modal';
-import { DialogHeader } from '@/app/components/ui';
+import { DialogHeader, ScrollArea } from '@/app/components/ui';
 
 /**
  * Shows a text file bundled with the app (the licence, third-party notices) in a
@@ -39,7 +39,7 @@ export default function TextFileDialog({ open, onClose, title, href }: {
         {current?.failed ? (
           <p className="m-0 text-sm text-text-secondary">{t('file_error')}</p>
         ) : current?.text != null ? (
-          <pre className="m-0 min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-words text-meta leading-relaxed text-text-secondary">{current.text}</pre>
+          <ScrollArea className="min-h-0 flex-1"><pre className="m-0 whitespace-pre-wrap break-words text-meta leading-relaxed text-text-secondary">{current.text}</pre></ScrollArea>
         ) : (
           <p className="m-0 text-sm text-text-muted" role="status">{t('file_loading')}</p>
         )}

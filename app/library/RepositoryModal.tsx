@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/app/components/Modal';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
-import { Button, fieldClass, InlineDataError } from '@/app/components/ui';
+import { Button, fieldClass, InlineDataError, ScrollArea } from '@/app/components/ui';
 import { getDataClient } from '@/lib/data';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { X } from '@/lib/icons';
@@ -172,7 +172,7 @@ export default function RepositoryModal({
                     </button>
                 </div>
 
-                <div className="p-4 overflow-y-auto flex-1 min-h-0 flex flex-col gap-[14px]">
+                <ScrollArea className="p-4 flex-1 min-h-0 flex flex-col gap-[14px]">
                     <div>
                         <label htmlFor={nameId} className="muted text-[10px] uppercase tracking-[0.06em] block mb-1">
                             {t('repo_field_name')}
@@ -246,7 +246,7 @@ export default function RepositoryModal({
                     )}
 
                     {error && <div role="alert" className="text-sm" style={{ color: 'var(--color-error)' }}>{error}</div>}
-                </div>
+                </ScrollArea>
 
                 {canEdit && (
                     <div className="p-3 border-t border-border bg-card-alt flex items-center gap-3">
