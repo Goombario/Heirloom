@@ -15,6 +15,7 @@ import RestoreProgress from '@/app/components/backup/RestoreProgress';
 import { Cloud, CloudUpload, CloudDownload, CloudOff } from '@/lib/icons';
 
 import { useTimestamp } from '@/app/hooks/useTimestamp';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 const LAST_DRIVE_BACKUP_KEY = 'heirloom_last_drive_backup';
 
@@ -27,6 +28,7 @@ const LAST_DRIVE_BACKUP_KEY = 'heirloom_last_drive_backup';
  */
 export default function DriveBackupSection() {
   const t = useTranslations('options');
+  const desktop = useIsDesktopApp();
   const { timestamp } = useTimestamp();
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -219,7 +221,7 @@ export default function DriveBackupSection() {
         title={t('restore_confirm_title')}
         body={
           <>
-            <p className="text-sm text-text-muted mb-1">{t('restore_confirm_body')}</p>
+            <p className="text-sm text-text-muted mb-1">{t(desktop ? 'restore_confirm_body_desktop' : 'restore_confirm_body')}</p>
             {pending && (
               <>
                 <p className="text-sm font-medium text-text">{pending.file.name}</p>

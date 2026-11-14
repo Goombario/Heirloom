@@ -13,6 +13,7 @@ import { AlertTriangle, ArrowUpRight, Check, CircleHelp, Download, FileText, Git
 import ImportProgress from './ImportProgress';
 import MediaImportRecovery, { type ImportResultSummary } from './MediaImportRecovery';
 import { ImportReport } from './ImportReport';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /*
  * Import and export on phones (#1120, v2: option A's hub with C's merge and restore
@@ -223,6 +224,7 @@ function ImportSheet({ p, restore, backedUp, onClose, onBackup, onSmall }: {
 }) {
     const t = useTranslations('mobileImport');
     const ti = useTranslations('importExport');
+    const desktop = useIsDesktopApp();
     const phase = p.result ? 'done' : p.loading ? 'running' : p.preview ? 'preview' : 'form';
     const saveLabel = phase === 'form' ? (p.previewing ? ti('previewing') : t('preview'))
         : phase === 'preview' ? (p.checkingTree ? ti('checking_tree') : restore ? t('replace') : t('import'))
@@ -290,7 +292,7 @@ function ImportSheet({ p, restore, backedUp, onClose, onBackup, onSmall }: {
                                 {p.previewSidecars.length > 0 ? ti('preview_sidecars', { files: p.previewSidecars.join(', ') }) : ti('preview_sidecars_none')}
                             </p>
                         )}
-                        {DATA_MODE === 'local' && pv.toImport.peopleCount >= 1000 && <p className="m-0 px-4 pb-3 text-meta text-text-muted">{ti('import_browser_note')}</p>}
+                        {DATA_MODE === 'local' && pv.toImport.peopleCount >= 1000 && <p className="m-0 px-4 pb-3 text-meta text-text-muted">{ti(desktop ? 'import_browser_note_desktop' : 'import_browser_note')}</p>}
                         {pv.skipped.length > 0 && (
                             <MobileRow divided icon={<AlertTriangle />} end="chevron" label={t('skipped_n', { count: pv.skipped.length })} sub={t('skipped_sub')} onClick={() => onSmall('skipped')} />
                         )}

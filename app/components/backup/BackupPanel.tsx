@@ -8,6 +8,7 @@ import { useBackupStatus } from '@/app/components/backup/useBackupStatus';
 import { AlertTriangle, CheckCircle2 } from '@/lib/icons';
 import { cx } from '@/app/components/ui';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /**
  * The shared backup panel body: status banner + Google Drive section (when
@@ -17,6 +18,7 @@ import { useTimestamp } from '@/app/hooks/useTimestamp';
  */
 export default function BackupPanel() {
   const t = useTranslations('options');
+  const desktop = useIsDesktopApp();
   const { timestamp } = useTimestamp();
   const { lastBackup, level } = useBackupStatus();
   const warn = level === 'stale' || level === 'never';
@@ -39,7 +41,7 @@ export default function BackupPanel() {
           <p className={cx('text-sm font-medium', warn ? 'text-warning-text' : 'text-text')}>
             {lastBackup ? t('backup_last', { date: timestamp(lastBackup) }) : t('backup_status_none')}
           </p>
-          {warn && <p className="text-xs text-warning-text/90 mt-0.5">{t('backup_status_warn')}</p>}
+          {warn && <p className="text-xs text-warning-text/90 mt-0.5">{t(desktop ? 'backup_status_warn_desktop' : 'backup_status_warn')}</p>}
         </div>
       </div>
 

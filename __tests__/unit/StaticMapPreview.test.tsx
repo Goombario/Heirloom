@@ -11,13 +11,15 @@ vi.mock('@/app/components/ThemeProvider', () => ({
 }));
 
 const setWorkerUrlMock = vi.fn();
+const mapAddControl = vi.fn();
 const markerSetLngLat = vi.fn().mockReturnThis();
 const markerAddTo = vi.fn().mockReturnThis();
-const MapMock = vi.fn(function(this: unknown) {
+const MapMock = vi.fn(function(this: unknown, _opts?: Record<string, unknown>) {
   return {
     on: vi.fn(),
     once: vi.fn(),
     getContainer: () => document.createElement('div'),
+    addControl: mapAddControl,
     setMissingStyleImageResolver: vi.fn(),
     remove: vi.fn(),
   };
@@ -33,6 +35,13 @@ const LNG = -0.1278;
 beforeEach(() => vi.clearAllMocks());
 
 describe('StaticMapPreview', () => {
+  it('shows the basemap credit as text instead of the collapsing ⓘ (#42)', async () => {
+    render(<StaticMapPreview lat={LAT} lng={LNG} label="London, England" />);
+    await waitFor(() => expect(MapMock).toHaveBeenCalledTimes(1));
+    expect(MapMock.mock.calls[0][0]).toMatchObject({ attributionControl: false });
+    expect(mapAddControl).toHaveBeenCalledWith(expect.objectContaining({ onAdd: expect.any(Function) }), 'bottom-right');
+  });
+
   it('labels the control for the journey and titles it with the place', () => {
     render(<StaticMapPreview lat={LAT} lng={LNG} label="London, England" onClick={vi.fn()} />);
     const button = screen.getByRole('button');
