@@ -23,7 +23,7 @@ const peopleNotes = [
   note(3, 'Born during the great frost.', { OwnerFact: 'Birth' }),
 ];
 const censusNotes = [note(4, 'Listed as a servant.')];
-const listForOwner = vi.fn(async (table: string) => (table === 'People' ? peopleNotes : censusNotes));
+const listForOwner = vi.fn(async (table: string, _id?: number) => (table === 'People' ? peopleNotes : censusNotes));
 const move = vi.fn(async () => ({ auditIds: [21, 22] }));
 const update = vi.fn(async () => ({ auditIds: [20] }));
 vi.mock('@/lib/data', () => ({ getDataClient: async () => ({ notes: { listForOwner, move, update } }) }));
@@ -75,6 +75,31 @@ describe('desktop person Notes (#49)', () => {
     expect(screen.getByText('Ask aunt Maj about the photo.')).toBeInTheDocument();
     dataCache.clear();
   });
+
+  it('puts Add note on the heading, not under the list (#157)', async () => {
+    section();
+    await screen.findByText('Listed as a servant.');
+    const heading = screen.getByRole('heading', { name: /Notes/ }).closest('.section-label');
+    expect(heading).toContainElement(screen.getByRole('button', { name: 'Add note' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(screen.getByRole('group', { name: 'New note' })).toBeInTheDocument();
+    expect(heading?.querySelector('.section-add')).toBeNull();
+  });
+
+  it('is one line, "None yet" with its Add, when the person has no notes (#157)', async () => {
+    listForOwner.mockImplementation(async () => []);
+    const empty = vi.fn();
+    const bare = { ...anna, events: [] } as unknown as PersonWithRelations;
+    wrap(<NotesSection person={bare} treeId={1} canEdit canDelete run={vi.fn()} refreshKey={0} onNotesChange={() => {}} onEmptyChange={empty} onEditBiography={() => {}} />);
+    await screen.findByText('None yet');
+    expect(document.querySelector('section#notes')).toHaveClass('is-empty');
+    expect(empty).toHaveBeenLastCalledWith(true);
+    // Adding switches the section back to its normal layout.
+    fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
+    expect(document.querySelector('section#notes')).not.toHaveClass('is-empty');
+    expect(screen.getByRole('group', { name: 'New note' })).toBeInTheDocument();
+    listForOwner.mockImplementation(async (table: string) => (table === 'People' ? peopleNotes : censusNotes));
+  });
 });
 
 describe('desktop Sources cited (#49, ADR 0044)', () => {
@@ -88,5 +113,12 @@ describe('desktop Sources cited (#49, ADR 0044)', () => {
       fact(1, 'Birth', '3 Mar 1868', c), fact(2, 'Census', '1880', c), fact(3, 'Residence', '1885', c), fact(4, 'Census', '1890', c),
     ]} />);
     expect(screen.getByRole('link', { name: /1880 census/ })).toHaveTextContent('Census · Cited for Birth 1868, Census 1880, Residence 1885 and 1 more');
+  });
+
+  it('is one line with no Add when nothing is cited (#157)', () => {
+    wrap(<SourcesSection title="Sources cited" facts={[]} />);
+    expect(document.querySelector('section#sources')).toHaveClass('is-empty');
+    expect(screen.getByText(en.personDesktop.sources_none)).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

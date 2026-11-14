@@ -16,7 +16,7 @@ import { personResearchSubject } from '@/lib/research/subject';
 import CitationPreview from '@/app/components/citations/CitationPreview';
 import { CiteSheets, type CiteSheetTarget, type CiteSheetsSlot } from '@/app/components/citations/CiteSheets';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
-import { citationFactFor, datedFactValue, describeCitationFact, numberSources, withFallbackCitationFacts } from '@/app/components/citations/factDescriptors';
+import { citationFactFor, datedFactValue, describeCitationFact, groupCitationFactsBySource, numberSources, withFallbackCitationFacts } from '@/app/components/citations/factDescriptors';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
 import InlineEventEditor from '@/app/components/InlineEventEditor';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
@@ -24,9 +24,8 @@ import { useLanguage } from '@/app/components/LanguageProvider';
 import LocationJourneyModal, { type JourneyStop } from '@/app/components/LocationJourneyModal';
 import AddMediaModal from '@/app/components/media/AddMediaModal';
 import { NamesPanel } from '@/app/components/person-form/NamesPanel';
-import { AddRow, DetailBody, PageShell, InlineDataError, SectionHeader, StatusMark } from '@/app/components/ui';
-import { canAddVitalEvent, compareTimelineItems, countDescendants, countSourcedFacts, countTotalFacts, fullName, hasDeathFact } from './derive';
-import { livingStatus } from '@/lib/living';
+import { DetailBody, PageShell, InlineDataError, SectionAdd, SectionEmpty, SectionHeader, cx } from '@/app/components/ui';
+import { canAddVitalEvent, compareTimelineItems, countDescendants, fullName } from './derive';
 import { usePersonDetail } from './usePersonDetail';
 import { PersonSummaryView } from './PersonSummaryView';
 import { LifeEventsPanel } from './LifeEventsPanel';
@@ -43,7 +42,7 @@ import { SourcesSection } from './desktop/SourcesSection';
 import { NotesSection } from './desktop/NotesSection';
 import { PersonGalleryCard } from './PersonGalleryCard';
 import { DescendantsPanel } from './DescendantsPanel';
-import { useReturnFocus } from '@/app/hooks/useReturnFocus';
+import { useReturnFocus, useReturnFocusTo } from '@/app/hooks/useReturnFocus';
 import { useDataCheckMarks } from '@/app/components/data-checks/marks';
 import { MobilePersonPage, MobilePersonSkeleton } from './mobile/MobilePersonPage';
 import { factPlaceEntry } from '@/lib/places/place-key';
@@ -57,6 +56,7 @@ export default function PersonDetailsClient() {
     const tNotes = useTranslations('notes');
     const tDesk = useTranslations('personDesktop');
     const tChecks = useTranslations('dataChecks');
+    const tKit = useTranslations('detailKit');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
     const d = usePersonDetail();
@@ -73,8 +73,16 @@ export default function PersonDetailsClient() {
     // This person's dates to check (#833), re-checked whenever the person reloads.
     const personId = Number(id);
     const marks = useDataCheckMarks({ personId: Number.isInteger(personId) && personId > 0 ? personId : undefined }, person);
-    // "+ Add event" unmounts while its panel is open; closing hands focus back (#690).
-    const addEventRef = useReturnFocus(showInlineEvent);
+    // The heading's "Add event" and the timeline's phantom row both open the add-event
+    // panel and unmount while it is open; closing hands focus back to the one used (#690, #157).
+    const eventOpeners = useReturnFocusTo<'head' | 'phantom'>(showInlineEvent);
+    const openAddEvent = (from: 'head' | 'phantom') => { eventOpeners.opened(from); setShowInlineEvent(true); };
+    // The heading's "Add name" opens NamesPanel's add panel (#157); the section is one
+    // line while the person has only the name on record and nothing is being added.
+    const [namesAddRequest, setNamesAddRequest] = useState(0);
+    const [namesAdding, setNamesAdding] = useState(false);
+    const addNameRef = useReturnFocus(namesAdding);
+    const [notesEmpty, setNotesEmpty] = useState(false);
     // Mirrored from NotesSection so the hero quote can render the preferred note
     // without a second fetch of the same rows (ADR 0010/0012). The hero writes
     // through its own client calls, so it bumps notesRefresh to pull the list back
@@ -383,6 +391,16 @@ export default function PersonDetailsClient() {
     // "11 also on the timeline": media that a Birth, Death or event row shows too.
     const onEvents = new Set((person.events ?? []).flatMap((e) => (e.media ?? []).map((m) => m.Id)));
     const timelineMediaCount = media.filter((m) => onEvents.has(m.Id) || (m.OwnerFacts?.length ?? 0) > 0).length;
+
+    // #157: each section's Add sits on its heading, and an empty section is one line.
+    const addEventShown = canEdit && !showInlineEvent;
+    const mediaEmpty = media.length === 0 && !mediaLoading && !mediaError;
+    const addMedia = canEdit ? <SectionAdd label={tDesk('add_media')} onClick={() => setShowUpload(true)} /> : null;
+    const namesEmpty = variants.length === 0 && !variantsLoading && !variantsError && !namesAdding;
+    const addName = canEdit && !namesAdding
+        ? <SectionAdd ref={addNameRef} label={t('add_name')} onClick={() => setNamesAddRequest((n) => n + 1)} disabled={variantsBusy} />
+        : null;
+    const sourcesEmpty = groupCitationFactsBySource(personCitationFacts).length === 0 && !citationsError;
     const toVital = (which: 'birth' | 'death') => {
         setEditOpen(false);
         // After the dialog has closed and handed focus back, go to the row.
@@ -426,12 +444,13 @@ export default function PersonDetailsClient() {
                 <DetailBody
                     divided
                     sheet
+                    ruled
                     index={[
                         { id: 'life-events', label: t('life_events') },
-                        { id: 'media', label: tDesk('media') },
+                        { id: 'media', label: tDesk('media'), empty: media.length === 0 && !mediaLoading && !mediaError },
                         { id: 'names', label: tDesk('names') },
-                        { id: 'notes', label: tNotes('section_title') },
-                        { id: 'sources', label: tDesk('sources') },
+                        { id: 'notes', label: tNotes('section_title'), empty: notesEmpty },
+                        { id: 'sources', label: tDesk('sources'), empty: sourcesEmpty },
                     ]}
                     rail={(
                         <FamilyRail
@@ -452,26 +471,16 @@ export default function PersonDetailsClient() {
                             level="label"
                             headingId="life-events-title"
                             title={t('life_events')}
+                            // Relatives' rows aren't counted here (#49).
                             count={lifeEventsCount}
-                            // Relatives' rows aren't counted here or in "N of N sourced" (#49).
-                            action={(marks.open.length > 0 || lifeEventsCount > 0) && (
-                                <span className="inline-flex items-center gap-3">
+                            // The dates to check stay beside Add event; "N of N sourced" is gone (#157).
+                            action={(marks.open.length > 0 || addEventShown) && (
+                                <>
                                     {marks.open.length > 0 && <span className="ledger-flag">{tChecks('flag_count', { count: marks.open.length })}</span>}
-                                    {lifeEventsCount > 0 && (
-                                        <span className="tabular-nums">
-                                            {tDesk('sourced_of', { sourced: countSourcedFacts(person, citationMap), total: countTotalFacts(person) })}
-                                        </span>
-                                    )}
-                                </span>
+                                    {addEventShown && <SectionAdd ref={eventOpeners.ref('head')} label={t('add_event')} onClick={() => openAddEvent('head')} />}
+                                </>
                             )}
                         />
-                        {/* With no death recorded, the status needs a home every role can see (#49). */}
-                        {!hasDeathFact(person) && (
-                            <p className="m-0 mb-3 inline-flex items-center gap-1.5 text-sm text-text-secondary">
-                                <StatusMark status={livingStatus(person)} />
-                                {livingStatus(person) === 'living' ? tDesk('status_living') : tDesk('status_unknown')}
-                            </p>
-                        )}
                         <LifeEventsPanel
                             person={person}
                             marks={marks}
@@ -485,7 +494,9 @@ export default function PersonDetailsClient() {
                             personNotes={notes}
                             personMedia={media}
                             onMediaChanged={fetchMedia}
-                            footer={canEdit && (showInlineEvent ? (
+                            addEvent={addEventShown ? { label: tKit('add_an_event'), onClick: () => openAddEvent('phantom') } : undefined}
+                            addEventRef={eventOpeners.ref('phantom')}
+                            footer={canEdit && showInlineEvent && (
                                 <div className="p-3">
                                     <InlineEventEditor
                                         target={{ kind: 'person', personId: parseInt(id, 10) }}
@@ -505,20 +516,27 @@ export default function PersonDetailsClient() {
                                         }}
                                     />
                                 </div>
-                            ) : (
-                                <AddRow ref={addEventRef} label={t('add_event')} onClick={() => setShowInlineEvent(true)} />
-                            ))}
+                            )}
                         />
                     </section>
 
-                    {(canEdit || media.length > 0 || mediaError) && (
+                    {(canEdit || media.length > 0 || mediaError) && (mediaEmpty ? (
+                    <section id="media" aria-labelledby="media-title" className="is-empty">
+                        <SectionEmpty headingId="media-title" title={tDesk('media')} action={addMedia}>{tDesk('none_yet')}</SectionEmpty>
+                    </section>
+                    ) : (
                     <section id="media" aria-labelledby="media-title">
                         <SectionHeader
                             level="label"
                             headingId="media-title"
                             title={tDesk('media')}
                             count={media.length}
-                            action={timelineMediaCount > 0 && tDesk('media_on_timeline', { count: timelineMediaCount })}
+                            action={(timelineMediaCount > 0 || addMedia) && (
+                                <>
+                                    {timelineMediaCount > 0 && <span>{tDesk('media_on_timeline', { count: timelineMediaCount })}</span>}
+                                    {addMedia}
+                                </>
+                            )}
                         />
                         {mediaError && (
                             <InlineDataError message={mediaError} retryLabel={tc('retry')} onRetry={fetchMedia} className="mb-3" />
@@ -535,12 +553,21 @@ export default function PersonDetailsClient() {
                                 onPrimaryChanged={fetchMedia}
                             />
                         )}
-                        {canEdit && <div className="ledger-foot mt-3.5"><AddRow label={tDesk('add_media')} onClick={() => setShowUpload(true)} /></div>}
                     </section>
-                    )}
+                    ))}
 
-                    <section id="names" aria-labelledby="names-title">
-                        <SectionHeader level="label" headingId="names-title" title={tDesk('names')} />
+                    <section id="names" aria-labelledby="names-title" className={cx(namesEmpty && 'is-empty')}>
+                        {namesEmpty ? (
+                            <SectionEmpty headingId="names-title" title={tDesk('names')} action={addName}>
+                                {/* The name keeps its cite pin, the only way to cite it. */}
+                                <span className="section-empty__lead">
+                                    <span className="section-empty__name serif">{fullName(person)}</span>
+                                    {renderNumberedCitePin(FACT_TABLES.PERSON_NAME, person.Id, t('col_name'))}
+                                </span>
+                                {' · '}{tDesk('name_on_record_lower')}
+                            </SectionEmpty>
+                        ) : (<>
+                        <SectionHeader level="label" headingId="names-title" title={tDesk('names')} action={addName} />
                         {variantsError && (
                             <InlineDataError message={variantsError} retryLabel={tc('retry')} onRetry={refreshVariants} className="mb-3" />
                         )}
@@ -558,15 +585,18 @@ export default function PersonDetailsClient() {
                                 onRemove={handleRemoveVariant}
                                 onSetPrimary={handleSetPrimaryVariant}
                                 busy={variantsBusy}
+                                addRow={false}
+                                addRequest={namesAddRequest}
+                                onAddingChange={setNamesAdding}
                             />
                         )}
+                        </>)}
                     </section>
 
                     {/* Notes: every note about the person, labelled by what it is about
                         (ADR 0043). It owns the fetch for the whole page: the biography and
                         the timeline's Birth/Death counts both read its report. */}
-                    <section id="notes" aria-labelledby="notes-title">
-                        <NotesSection
+                    <NotesSection
                             person={person}
                             treeId={activeTreeId}
                             canEdit={canEdit}
@@ -574,16 +604,17 @@ export default function PersonDetailsClient() {
                             run={run}
                             refreshKey={notesRefresh}
                             onNotesChange={setNotes}
+                            onEmptyChange={setNotesEmpty}
                             onEditBiography={() => setBioRequest((n) => n + 1)}
                         />
-                    </section>
 
-                    <section id="sources" aria-labelledby="sources-title">
-                        {citationsError && (
+                    <SourcesSection
+                        facts={personCitationFacts}
+                        title={t('sources_cited')}
+                        notice={citationsError && (
                             <InlineDataError message={citationsError} retryLabel={tc('retry')} onRetry={fetchCitations} className="mb-3" />
                         )}
-                        <SourcesSection facts={personCitationFacts} title={t('sources_cited')} />
-                    </section>
+                    />
                 </DetailBody>
             </PageShell>
 

@@ -7,7 +7,7 @@ import type { Note, NoteLinkEnd, NoteOwnerFact } from '@/lib/data/types';
 import type { PersonWithRelations } from '@/lib/db/schema';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
 import { sortableYear } from '@/lib/date-utils';
-import { ActionLink, AddRow, InlinePanel, SectionHeader, SelectField, cx, fieldClass } from '@/app/components/ui';
+import { ActionLink, InlinePanel, SectionAdd, SectionEmpty, SectionHeader, SelectField, cx, fieldClass } from '@/app/components/ui';
 import { biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
 import { hasBirthFact, hasDeathFact } from '../derive';
 import { dataCache } from '@/lib/data/cache';
@@ -40,9 +40,11 @@ const excerpt = (text: string) => (text.length > 40 ? `${text.slice(0, 40)}…` 
  * birth or death, one of their events). Opening a note edits it in place, and its
  * "About" select moves it to another of those (ADR 0043). It loads the person's
  * notes for the whole page and reports them, so the cover's biography and the
- * timeline's Birth/Death counts read the same rows.
+ * timeline's Birth/Death counts read the same rows. It renders the page's Notes
+ * section itself (#157): "Add note" on the heading, and with no notes one line,
+ * "None yet", marked `is-empty` so it groups with the empty lines around it.
  */
-export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshKey, onNotesChange, onEditBiography }: {
+export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshKey, onNotesChange, onEmptyChange, onEditBiography }: {
   person: PersonWithRelations;
   treeId: number | null;
   canEdit: boolean;
@@ -50,6 +52,8 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
   run: RunChange;
   refreshKey: number;
   onNotesChange: (notes: Note[]) => void;
+  /** Whether the section shows its one empty line, for the section index. */
+  onEmptyChange?: (empty: boolean) => void;
   onEditBiography: () => void;
 }) {
   const t = useTranslations('personDesktop');
@@ -59,6 +63,9 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
   const ids = useId();
   // Paint straight from a hover prefetch when there was one (#65); the effect below still re-reads.
   const [personNotes, setPersonNotes] = useState<Note[]>(() => dataCache.get<Note[]>(notesKey(treeId, 'People', person.Id)) ?? []);
+  // Until the first read lands the section keeps its heading, so a person with notes
+  // never flashes "None yet".
+  const [loaded, setLoaded] = useState(() => dataCache.get<Note[]>(notesKey(treeId, 'People', person.Id)) != null);
   const [eventNotes, setEventNotes] = useState<{ eventId: number; notes: Note[] }[]>(() => (person.events ?? [])
     .filter((e) => (e.noteCount ?? 0) > 0)
     .flatMap((e) => {
@@ -69,7 +76,7 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
   const [text, setText] = useState('');
   const [about, setAbout] = useState('');
   const [saving, setSaving] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
+  const wrap = useRef<HTMLElement>(null);
   const report = useRef(onNotesChange);
   useEffect(() => { report.current = onNotesChange; }, [onNotesChange]);
 
@@ -87,6 +94,7 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
       if (!live) return;
       setPersonNotes(own as Note[]);
       setEventNotes(byEvent as { eventId: number; notes: Note[] }[]);
+      setLoaded(true);
       report.current(own as Note[]);
     })().catch(() => { /* The page shows the person's own load errors; notes stay as they were. */ });
     return () => { live = false; };
@@ -238,14 +246,20 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
     </InlinePanel>
   );
 
+  const empty = loaded && rows.length === 0 && open !== 'new';
+  const reportEmpty = useRef(onEmptyChange);
+  useEffect(() => { reportEmpty.current = onEmptyChange; }, [onEmptyChange]);
+  useEffect(() => { reportEmpty.current?.(empty); }, [empty]);
+  const add = canEdit && open !== 'new' ? <SectionAdd data-note-add label={tn('add_button')} onClick={() => start(null)} /> : undefined;
+
   return (
-    <div ref={wrap}>
-      <SectionHeader level="label" headingId="notes-title" title={tn('section_title')} count={rows.length} />
-      {rows.length === 0 && !canEdit ? (
-        <p className="m-0 text-sm text-text-muted">{tn('empty')}</p>
+    <section id="notes" aria-labelledby="notes-title" ref={wrap} className={cx(empty && 'is-empty')}>
+      {empty ? (
+        <SectionEmpty headingId="notes-title" title={tn('section_title')} action={add}>{t('none_yet')}</SectionEmpty>
       ) : (
         <>
-          {/* Open rows with hairlines between (locked board), no card. */}
+          <SectionHeader level="label" headingId="notes-title" title={tn('section_title')} count={rows.length} action={add} />
+          {/* Open rows (#157): spacing between notes, no hairlines, no card. */}
           {rows.length > 0 && (
             <ul className="note-list">
               {rows.map((r) => {
@@ -270,11 +284,9 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
               })}
             </ul>
           )}
-          {canEdit && (open === 'new'
-            ? <div className="pt-3">{panel(null)}</div>
-            : <div className="ledger-foot ledger-foot--plain"><AddRow data-note-add label={tn('add_button')} onClick={() => start(null)} /></div>)}
+          {canEdit && open === 'new' && <div className={rows.length > 0 ? 'pt-3' : undefined}>{panel(null)}</div>}
         </>
       )}
-    </div>
+    </section>
   );
 }

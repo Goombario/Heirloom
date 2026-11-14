@@ -56,7 +56,7 @@ interface TimelineFamily {
 }
 
 export function FamilyTimeline({
-    family, childList, partners = [null, null], citationMap, sourceNumbers, canEdit, canDelete, isOpen, toggle, earlierPartner, onCitationClick, onChanged, relevantPersonIds, footer, marks, run, onRecordEnd,
+    family, childList, partners = [null, null], citationMap, sourceNumbers, canEdit, canDelete, isOpen, toggle, earlierPartner, onCitationClick, onChanged, relevantPersonIds, footer, addEvent, addEventRef, marks, run, onRecordEnd,
 }: {
     family: TimelineFamily;
     childList: PartnerPerson[];
@@ -76,8 +76,11 @@ export function FamilyTimeline({
     onChanged: () => void;
     /** Already-loaded family members for event-media picker suggestions. */
     relevantPersonIds?: readonly number[];
-    /** Under the list: the "Add event" row, or the inline panel it opened. */
+    /** Under the list: the add-event panel the heading's Add event or the phantom row opened (#157). */
     footer?: React.ReactNode;
+    /** The phantom "Add an event" row that ends the timeline (#157). */
+    addEvent?: { label: string; onClick: () => void };
+    addEventRef?: React.Ref<HTMLButtonElement>;
     /**
      * The family's dates to check (#833). Only the start and the family's own
      * events can carry a mark: a partner's death isn't a row here, and derived
@@ -413,8 +416,8 @@ export function FamilyTimeline({
 
     return (
         <div ref={eventsRef} tabIndex={-1} className="outline-none">
-            <LedgerTimeline items={ledger} keep={keep} />
-            {footer && <div className="ledger-foot">{footer}</div>}
+            <LedgerTimeline items={ledger} keep={keep} add={addEvent} addRef={addEventRef} />
+            {footer && <div className="ledger-foot ledger-foot--plain">{footer}</div>}
             {confirmDelete && (
                 <ConfirmDialog
                     open

@@ -5132,7 +5132,9 @@
     "ro_close": "Close",
     "edit_on_page": "Edit on {name}'s page",
     "edit_on_family": "Edit on the family page",
-    "pagination": "Pages"
+    "pagination": "Pages",
+    "index_none": "none",
+    "add_an_event": "Add an event"
   },
   "personDesktop": {
     "this_person": "this person",
@@ -5241,7 +5243,10 @@
     "married_year": "m. {year}",
     "n_of_total": "{n} of {m}",
     "name_on_record": "Name on record",
-    "name_shown": "shown"
+    "name_shown": "shown",
+    "none_yet": "None yet",
+    "sources_none": "None yet. Cite one from a fact’s source pin.",
+    "name_on_record_lower": "name on record"
   },
   "addPersonDialog": {
     "title": "New person",

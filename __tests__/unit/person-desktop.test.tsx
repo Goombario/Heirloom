@@ -111,6 +111,14 @@ describe('desktop person cover (#49)', () => {
     expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['Descendants']);
     expect(screen.queryByRole('button', { name: 'Add a biography' })).toBeNull();
   });
+
+  it('says the living status is unknown on the life line, for every role (#157)', () => {
+    wrap(
+      <PersonCover person={{ ...anna, DeathDate: null, IsDeceased: null }} media={[]} treeId={1} role="viewer" biography={null} run={vi.fn()}
+        onEdit={() => {}} onDescendants={() => {}} hasDescendants onDelete={() => {}} onAddPortrait={() => {}} onOpenPortrait={() => {}} />,
+    );
+    expect(document.querySelector('.cover-lifeline')).toHaveTextContent(en.personDesktop.status_unknown);
+  });
 });
 
 describe('desktop Edit person (#49)', () => {

@@ -27,6 +27,7 @@ export { PageShell, PAGE_COLUMN } from './PageShell';
 export { HeroEditButton } from './DetailHero';
 export { DetailRail } from './DetailRail';
 export { SectionHeader } from './SectionHeader';
+export { SectionAdd, SectionEmpty } from './SectionAdd';
 export { ScrollArea } from './ScrollArea';
 export { AvatarStack } from './AvatarStack';
 export { PersonIdentity } from './PersonIdentity';

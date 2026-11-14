@@ -4,7 +4,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { NextIntlClientProvider } from 'next-intl';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import en from '@/messages/en.json';
 import { LedgerTimeline, type LedgerItem } from '@/app/components/ui';
 
@@ -41,5 +41,21 @@ describe('LedgerTimeline (v1.1 person board)', () => {
     render(<NextIntlClientProvider locale="en" messages={en}><LedgerTimeline items={life.slice(0, 6)} /></NextIntlClientProvider>);
     expect(titles()).toHaveLength(6);
     expect(screen.queryByRole('button', { name: /more events/ })).toBeNull();
+  });
+
+  it('ends with the phantom "Add an event" row after the fold, opening the editor (#157)', () => {
+    const onClick = vi.fn();
+    render(<NextIntlClientProvider locale="en" messages={en}><LedgerTimeline items={life} keep={['Death', 'Occupation']} add={{ label: en.detailKit.add_an_event, onClick }} /></NextIntlClientProvider>);
+    const rows = [...document.querySelectorAll('.ledger__list > li')];
+    expect(rows[rows.length - 1]).toHaveClass('ledger__phantom');
+    expect(rows[rows.length - 2].querySelector('.ledger__title')).toHaveTextContent('Occupation');
+    expect(screen.getByRole('button', { name: /more events/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add an event' }));
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('has no phantom row without `add` (viewers)', () => {
+    ledger([]);
+    expect(document.querySelector('.ledger__phantom')).toBeNull();
   });
 });

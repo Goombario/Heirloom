@@ -38,7 +38,18 @@ export function OwnerNotesCard({
     shownElsewhereId = null,
     preferredIsBiography = false,
     look = 'card',
+    addRow = true,
+    addRequest = 0,
+    onAddingChange,
 }: {
+    /**
+     * A page that puts "Add note" on its section heading (#157, the desktop family
+     * page) hides the trailing row, bumps `addRequest` to open the add panel, and
+     * follows `onAddingChange` to know when it is open.
+     */
+    addRow?: boolean;
+    addRequest?: number;
+    onAddingChange?: (adding: boolean) => void;
     /**
      * `plain`: inside the desktop event panel (locked person board), with no card
      * chrome and no empty line: the label above it, the notes, and "Add a note".
@@ -119,6 +130,10 @@ export function OwnerNotesCard({
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editDraft, setEditDraft] = useState('');
     const [adding, setAdding] = useState(false);
+    const [seenAddRequest, setSeenAddRequest] = useState(addRequest);
+    const reportAdding = useRef(onAddingChange);
+    useEffect(() => { reportAdding.current = onAddingChange; }, [onAddingChange]);
+    useEffect(() => { reportAdding.current?.(adding); }, [adding]);
     const [draft, setDraft] = useState('');
     const [addPreferred, setAddPreferred] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<number | null>(null);
@@ -416,6 +431,14 @@ export function OwnerNotesCard({
     // the owner's whole list for the page's sake, while everything below renders the
     // `factScope` slice of it.
     const currentNotes = notesKey === scopeKey ? notes : null;
+
+    // A bump of `addRequest` opens the add panel, as the trailing row would
+    // (after `currentNotes`, which startAdd reads).
+    if (seenAddRequest !== addRequest) {
+        setSeenAddRequest(addRequest);
+        if (canEdit && !adding) startAdd();
+    }
+
     const visibleLoadError = loadErrorKey === scopeKey ? loadError : null;
     const list = visibleNotes(currentNotes ?? [], factScope).filter((n) => n.Id !== shownElsewhereId);
     // Split into the labelled sections only when the preferred affordance is on show.
@@ -586,7 +609,7 @@ export function OwnerNotesCard({
                 </div>
             )}
 
-            {canEdit && !adding && currentNotes !== null && (
+            {canEdit && addRow && !adding && currentNotes !== null && (
                 <AddRow data-note-add label={t('add_button')} onClick={startAdd} className="rounded-b-card border-t border-border-light px-[15px]" />
             )}
 

@@ -81,6 +81,8 @@ vi.mock('@/app/components/ui', () => ({
     Button: (props: Record<string, unknown>) => <button {...props} />,
     DatesToCheckFlag: () => null,
     AddRow: ({ label }: { label: string }) => <button>{label}</button>,
+    SectionAdd: ({ label }: { label: string }) => <button>{label}</button>,
+    SectionEmpty: ({ title, children }: { title: string; children: React.ReactNode }) => <div>{title}{children}</div>,
     PageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     DetailHero: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     HeroEditButton: (props: Record<string, unknown>) => <button {...props} />,
@@ -95,7 +97,7 @@ vi.mock('@/app/families/view/desktop/FamilyCover', () => ({ FamilyCover: () => <
 vi.mock('@/app/families/view/desktop/FamilyRail', () => ({ FamilyRail: () => <div /> }));
 vi.mock('@/app/people/view/desktop/SourcesSection', () => ({ SourcesSection: () => <div /> }));
 vi.mock('@/app/families/view/sections', () => ({
-    // The Add event row and its panel are the timeline's footer (#760).
+    // The add-event panel is the timeline's footer (#760, #157).
     FamilyTimeline: ({ footer }: { footer?: React.ReactNode }) => <div>{footer}</div>,
     ChildrenList: () => <div />,
     OtherPartnerships: () => <div />,

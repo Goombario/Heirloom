@@ -437,8 +437,23 @@ Phones don't use the kit: they keep `RecordBand` and their panes.
   tree panel's preferred note. An optional Edit link follows it.
 - **`DetailBody`** holds the body under the band:
   - an optional sticky section index ("On this page"), shown from 1180px;
-  - one main column, with sections separated by 40px of space and no dividers;
+  - one main column, with sections separated by 40px of space and no dividers, or with
+    `ruled` (the person and family pages, #157) by a full-width hairline with 24px above
+    and below it, the first section having no rule above it;
   - a right rail.
+
+  `ruled` reverses the prototype rule "main column sections have no dividers" (person page
+  decisions, 2026-10-29) for those two pages. Inside their sections there are no rules:
+  Names, Notes and Sources cited are **open rows**, separated by spacing only. Each
+  section's Add (`SectionAdd`) sits at the right end of its `SectionHeader`, beside any
+  flag ("2 dates to check"); Sources cited has none, since citations come from a fact's
+  pin. The timeline ends with a phantom row (`LedgerTimeline add`): a dashed dot on a
+  dashed rule and a dashed-outline "Add an event" row, after any fold, opening the same
+  editor as the heading's Add event. A section with nothing in it is one line
+  (`SectionEmpty`, the section element marked `is-empty`): its label, a muted value ("None
+  yet", or the one name on record) and its Add. Consecutive empty lines group under one
+  hairline, and the section index greys their entries ("Notes · none", `empty`). A
+  section returns to its normal layout as soon as it has an item.
 
   From 768px the rail stays beside the main column, behind a vertical hairline (280px of
   content from 1024, 56px from the main column), so it never drops to the bottom. `divided`
@@ -782,7 +797,8 @@ under `PageShell` above until their screen issue lands.
   leaving the page or opening the full-screen viewer. List pages are the exception: every row
   opens a page, so none carries ↗.
 - A plus for a one-tap suggestion; checkboxes only when picking several before one bulk action.
-- Each editable list ends in an "Add …" row (`AddRow`). Viewers don't see it.
+- Each editable list ends in an "Add …" row (`AddRow`). Viewers don't see it. The v1.1
+  desktop person and family pages put it on the section heading instead (`SectionAdd`, #157).
 - A second line only for a count, a consequence or a person's own facts. Person rows use a
   40px avatar in lists, 36 in sections, and the name in serif 16.
 
