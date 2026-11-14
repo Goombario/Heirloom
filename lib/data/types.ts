@@ -714,12 +714,18 @@ export interface CitationsClient {
 export interface UpdateRepositoryInput {
   Name?: string;
   Address?: string | null;
+  Website?: string | null;
+  Phone?: string | null;
+  Email?: string | null;
 }
 
 /** Input for creating a repository (archive). */
 export interface CreateRepositoryInput {
   Name: string;
   Address?: string | null;
+  Website?: string | null;
+  Phone?: string | null;
+  Email?: string | null;
 }
 
 /** Repositories (archives) that hold sources — one archive → many sources. */

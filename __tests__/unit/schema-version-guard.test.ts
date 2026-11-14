@@ -130,7 +130,9 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // entry of the citation an applied claim put on the tree, so Undo reverts it too. Additive.
 // v71 — the family photo (#119, ADR 0047): the MediaLink primary check also admits a
 // record-level Families link, under its new name "medialink_primary_record_level".
-const EXPECTED_FINGERPRINT = 'c5b160fb66734708a38eecbc1d28455ee24123bdbd2caf93d7d579c648396433';
+// v72 — a repository's website, phone and email (#40, ADR 0049): three nullable
+// columns and the one-time lift of the first WWW/PHON/EMAIL out of its passthrough.
+const EXPECTED_FINGERPRINT = 'f28ae424f4441dd1699020149c181baf71c9c2f0f8437180fc728dd6cfb6f8b1';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

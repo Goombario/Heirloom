@@ -122,3 +122,4 @@ What this makes easy, what it makes hard, and what invariant must now be maintai
 | [0045](0045-a-case-holds-leads-findings-and-claims.md) | A case holds leads, findings and claims; the tree changes only when the case closes | cases / data-integrity |
 | [0046](0046-answer-and-close-fills-gaps-and-adds-events.md) | Answer and close fills gaps and adds events, each change cited and undoable | cases / data-integrity |
 | [0047](0047-a-family-can-have-a-family-photo.md) | A family can have a family photo, chosen as a portrait is | media / families |
+| [0049](0049-a-repository-has-a-website-phone-and-email.md) | A repository has a website, phone and email, lifted from GEDCOM passthrough | sources / gedcom |

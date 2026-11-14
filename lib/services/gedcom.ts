@@ -48,6 +48,7 @@ import {
 } from '@/lib/db/queries/media-links';
 import type { ParsedSpreadsheetPerson, ParsedSpreadsheetFamily } from '@/lib/spreadsheet/parser';
 import { liftCitationLink } from '@/lib/gedcom/citation-link';
+import { liftRepositoryContacts } from '@/lib/gedcom/repository-contacts';
 
 /** Join captured passthrough lines into a single TEXT value for storage (null when empty). */
 function rawGedcom(lines: string[] | undefined): string | null {
@@ -1966,10 +1967,14 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
       const repositoryId = await findOrCreateRepository(client, scope, r.name, r.address, repoNameToId);
       if (repositoryId !== null) repoXrefToId.set(r.xref, repositoryId);
       if (repositoryId === null || (r.rawLines.length === 0 && r.addrRawLines.length === 0)) continue;
+      // The first WWW, PHON and EMAIL are modeled (ADR 0049); a merge fills each
+      // only where the repository has none, as it does the passthrough.
+      const contacts = liftRepositoryContacts(r.rawLines);
       await client.query(
-        `UPDATE "Repository" SET "RawGedcom" = COALESCE("RawGedcom", $2), "AddressRawGedcom" = COALESCE("AddressRawGedcom", $3)
+        `UPDATE "Repository" SET "RawGedcom" = COALESCE("RawGedcom", $2), "AddressRawGedcom" = COALESCE("AddressRawGedcom", $3),
+                "Website" = COALESCE("Website", $5), "Phone" = COALESCE("Phone", $6), "Email" = COALESCE("Email", $7)
           WHERE "Id" = $1 AND "TreeId" = $4`,
-        [repositoryId, rawGedcom(r.rawLines), rawGedcom(r.addrRawLines), scope.treeId],
+        [repositoryId, rawGedcom(contacts.rest), rawGedcom(r.addrRawLines), scope.treeId, contacts.Website, contacts.Phone, contacts.Email],
       );
     }
     // Repository mirror from the sidecar (fills fields the .ged lacked).

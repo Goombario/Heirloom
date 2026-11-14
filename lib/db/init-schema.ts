@@ -1,5 +1,6 @@
 import { backfillEventDates } from './backfill-event-dates';
 import { backfillCitationLinks } from './backfill-citation-links';
+import { backfillRepositoryContacts } from './backfill-repository-contacts';
 import { dropFactPlaceText, hasFactPlaceText } from './place-text-migration';
 import { FTM_VALUE_TO_CHILD_RELATIONSHIP } from '@/lib/child-relationship';
 
@@ -22,7 +23,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 71;
+export const SCHEMA_VERSION = 72;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -51,6 +52,9 @@ function stripFtmLine(tag: '_FREL' | '_MREL', sql: string): string {
 
 /** The comment on `Citation."Url"` once its backfill has finished (#1024). */
 const CITATION_URL_BACKFILLED = 'Record link; passthrough links lifted (#1024)';
+
+/** The comment on `Repository."Website"` once its contacts backfill has finished (#40). */
+const REPOSITORY_CONTACTS_BACKFILLED = 'Website; passthrough WWW/PHON/EMAIL lifted (#40)';
 
 /**
  * Initialize database schema. Fully idempotent and race-condition safe.
@@ -1158,6 +1162,20 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
   // ADDR's structured lines (ADR1, CITY, …), re-emitted on export.
   await pool.query(`ALTER TABLE "Repository" ADD COLUMN IF NOT EXISTS "RawGedcom" TEXT;`);
   await pool.query(`ALTER TABLE "Repository" ADD COLUMN IF NOT EXISTS "AddressRawGedcom" TEXT;`);
+  // #40 (ADR 0049): the first WWW, PHON and EMAIL are modeled; further ones stay in
+  // "RawGedcom". The backfill lifts them once, marked done by the column's comment as
+  // "Citation"."Url"'s backfill is.
+  await pool.query(`ALTER TABLE "Repository" ADD COLUMN IF NOT EXISTS "Website" TEXT;`);
+  await pool.query(`ALTER TABLE "Repository" ADD COLUMN IF NOT EXISTS "Phone" TEXT;`);
+  await pool.query(`ALTER TABLE "Repository" ADD COLUMN IF NOT EXISTS "Email" TEXT;`);
+  const repositoryWebsiteNote = await pool.query(`
+    SELECT col_description(a.attrelid, a.attnum) AS "Note" FROM pg_attribute a
+    WHERE a.attrelid = '"Repository"'::regclass AND a.attname = 'Website'
+  `);
+  if ((repositoryWebsiteNote.rows[0] as { Note: string | null } | undefined)?.Note !== REPOSITORY_CONTACTS_BACKFILLED) {
+    await backfillRepositoryContacts(pool);
+    await pool.query(`COMMENT ON COLUMN "Repository"."Website" IS '${REPOSITORY_CONTACTS_BACKFILLED}'`);
+  }
 
   // ── Slice 4: activate the Repository entity ────────────────────────────────
   // Sources previously carried a free-text "RepositoryName" with no shared
