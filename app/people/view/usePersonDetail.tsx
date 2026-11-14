@@ -21,7 +21,7 @@ import { type NameVariant } from '@/app/components/person-form/NamesPanel';
 import {
     personKey, mediaKey, citationsKey, variantsKey,
     loadPerson, loadPersonMedia, loadPersonCitations, loadPersonVariants,
-    getPersonSummary,
+    getPersonSummary, type PersonCitationMap,
 } from './personCache';
 import { fullName } from './derive';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
@@ -124,25 +124,28 @@ export function usePersonDetail() {
     // previous person's list until fetchMedia resolves; prefer the cached list for the
     // new id, else use an empty current-scope list. Cross-tree or cross-person media
     // must never remain actionable while the replacement read is pending.
-    const media = mediaState.treeId === activeTreeId && mediaState.id === id
-        ? mediaState.value
-        : (id ? dataCache.get<PersonGalleryMedia[]>(mediaKey(activeTreeId, id)) ?? [] : []);
+    // On a same-route jump to another person, state still holds the previous one
+    // until the load effect runs; until then a prefetched entry paints, so a
+    // hovered relative opens with no skeleton (#65).
+    const cachedCitations = id ? dataCache.get<PersonCitationMap>(citationsKey(activeTreeId, id)) : undefined;
+    const cachedVariants = id ? dataCache.get<NameVariant[]>(variantsKey(activeTreeId, id)) : undefined;
+    const cachedMedia = id ? dataCache.get<PersonGalleryMedia[]>(mediaKey(activeTreeId, id)) : undefined;
+    const media = mediaState.treeId === activeTreeId && mediaState.id === id ? mediaState.value : cachedMedia ?? [];
     const activeCitationMap = useMemo(
-        () => citationState.treeId === activeTreeId && citationState.id === id ? citationState.value : {},
-        [citationState, activeTreeId, id],
+        () => citationState.treeId === activeTreeId && citationState.id === id ? citationState.value : cachedCitations ?? {},
+        [citationState, activeTreeId, id, cachedCitations],
     );
     const activeVariants = useMemo(
-        () => variantsState.treeId === activeTreeId && variantsState.id === id ? variantsState.value : [],
-        [variantsState, activeTreeId, id],
+        () => variantsState.treeId === activeTreeId && variantsState.id === id ? variantsState.value : cachedVariants ?? [],
+        [variantsState, activeTreeId, id, cachedVariants],
     );
-    const mediaLoading = !(mediaStatus.treeId === activeTreeId && mediaStatus.id === id && mediaStatus.loaded);
-    const citationsLoading = !(citationStatus.treeId === activeTreeId && citationStatus.id === id && citationStatus.loaded);
-    const variantsLoading = !(variantsStatus.treeId === activeTreeId && variantsStatus.id === id && variantsStatus.loaded);
+    const settled = (status: ScopedStatus, cached: unknown) =>
+        status.treeId === activeTreeId && status.id === id ? status.loaded : cached !== undefined;
+    const mediaLoading = !settled(mediaStatus, cachedMedia);
+    const citationsLoading = !settled(citationStatus, cachedCitations);
+    const variantsLoading = !settled(variantsStatus, cachedVariants);
     const currentCitationsError = citationsErrorScope?.treeId === activeTreeId && citationsErrorScope.id === id ? citationsError : null;
-    const citationsReady = !currentCitationsError
-        && citationStatus.treeId === activeTreeId
-        && citationStatus.id === id
-        && citationStatus.loaded;
+    const citationsReady = !currentCitationsError && !citationsLoading;
     // Only show the skeleton when there is genuinely nothing to paint yet. A cache
     // hit (or a completed load) makes `activePerson` non-null, so no skeleton flashes
     // on back/related-person nav; the `loadedIdentity` term still lets a failed cold fetch
