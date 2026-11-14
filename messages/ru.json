@@ -1218,6 +1218,7 @@
     "place": "Место",
     "place_name": "Название места",
     "on_map_as": "На карте",
+    "kind_of_place": "Тип места",
     "latitude": "Широта",
     "longitude": "Долгота",
     "pin": "Метка",

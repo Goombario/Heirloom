@@ -257,6 +257,8 @@ export interface PlaceDetail {
   } | null;
   /** GEDCOM PLAC.FORM jurisdiction template, if recorded. */
   form?: string | null;
+  /** What kind of place it is ("City", "County"), from its own or a descendant's FORM (#45). */
+  kind?: string | null;
   /** Jurisdiction ancestors, root-first (breadcrumb). */
   parents?: PlaceRef[];
   /** Direct child places in the hierarchy, with the events and marriages recorded in each (itself and below). */
