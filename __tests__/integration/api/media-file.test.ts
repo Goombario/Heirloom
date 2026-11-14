@@ -151,6 +151,9 @@ describeIf('API /api/media/[id]/file', () => {
         vi.clearAllMocks();
     });
 
+    // An SVG upload must be SVG markup (#51, L-3), not zero bytes.
+    const SVG_BYTES = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>');
+
     async function createPersonWithMedia(
         fileName = 'portrait.jpg',
         type = 'image/jpeg',
@@ -289,7 +292,7 @@ describeIf('API /api/media/[id]/file', () => {
     });
 
     it('rejects a final symlink for direct originals and passthrough thumbnails', async () => {
-        const directId = await createPersonWithMedia('direct.svg', 'image/svg+xml');
+        const directId = await createPersonWithMedia('direct.svg', 'image/svg+xml', SVG_BYTES);
         const directPath = fsState.originalPath();
         expect(directPath).toBeDefined();
         fsState.symlinks.add(directPath!);
@@ -301,7 +304,7 @@ describeIf('API /api/media/[id]/file', () => {
         expect(direct.status).toBe(500);
 
         fsState.reset();
-        const thumbId = await createPersonWithMedia('thumb.svg', 'image/svg+xml');
+        const thumbId = await createPersonWithMedia('thumb.svg', 'image/svg+xml', SVG_BYTES);
         const thumbPath = fsState.originalPath();
         expect(thumbPath).toBeDefined();
         fsState.symlinks.add(thumbPath!);
@@ -325,7 +328,7 @@ describeIf('API /api/media/[id]/file', () => {
     });
 
     it('rejects a parent-directory identity replacement during an original read', async () => {
-        const mediaId = await createPersonWithMedia('race.svg', 'image/svg+xml');
+        const mediaId = await createPersonWithMedia('race.svg', 'image/svg+xml', SVG_BYTES);
         fsState.bumpDirectory();
 
         const res = await GET(
