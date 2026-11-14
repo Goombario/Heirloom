@@ -82,7 +82,7 @@ function personName(owner: MediaLinkOwner, unknown: string): string {
 export function linkedPeopleNames(links: MediaLinkOwner[], unknown: string): string[] {
     const seen = new Map<number, string>();
     for (const link of links) {
-        if (link.OwnerTable === 'Sources' || link.PersonId == null || seen.has(link.PersonId)) continue;
+        if (link.OwnerTable === 'Sources' || link.OwnerTable === 'Citation' || link.PersonId == null || seen.has(link.PersonId)) continue;
         seen.set(link.PersonId, personName(link, unknown));
     }
     return [...seen.values()];
@@ -105,6 +105,14 @@ function useLinkRow() {
         switch (owner.OwnerTable) {
             case 'Sources':
                 return { name: owner.SourceTitle || t('link_source'), detail: t('link_source'), href: librarySourceHref(owner.OwnerId), source: true };
+            case 'Citation':
+                // A citation's file (#47) names its source, with the page it cites.
+                return {
+                    name: owner.SourceTitle || t('link_source'),
+                    detail: owner.CitationPage ? <>{t('link_citation')} · {owner.CitationPage}</> : t('link_citation'),
+                    href: owner.CitationSourceId != null ? librarySourceHref(owner.CitationSourceId) : '#',
+                    source: true,
+                };
             case 'Families': {
                 const partner2 = displayFullName({ FirstName: owner.Partner2FirstName, LastName: owner.Partner2LastName });
                 const partner1 = owner.PersonId != null ? personName(owner, tc('unknown')) : '';

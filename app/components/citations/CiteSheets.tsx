@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { CitationFileField } from './CitationFileField';
 import { useTree } from '@/app/contexts/TreeContext';
 import { getDataClient } from '@/lib/data';
 import { errorToastKey } from '@/lib/utils/data-error';
@@ -545,6 +546,12 @@ export function CiteSheets({ target, subject, sourceNumbers, canCite, canDelete,
                             value={evidence.url} onChange={(e) => setEv({ url: e.target.value })} className="!min-h-11" />
                     </div>
                 ) : <MobileRow divided icon={<LinkIcon />} label={t('add_link')} end="chevron" onClick={() => setReveal((r) => ({ ...r, link: true }))} />}
+                {editing && citation && (
+                    <div className="px-4 py-3 border-t border-border">
+                        <CitationFileField citationId={citation.Id} treeId={activeTreeId} page={evidence.page} canEdit
+                            targetName={citation.sourceTitle} />
+                    </div>
+                )}
                 {editing && canDelete && (
                     <MobileRow divided tone="danger" label={t('remove')} onClick={() => setConfirming(true)} />
                 )}

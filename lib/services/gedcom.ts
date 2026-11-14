@@ -2,7 +2,7 @@ import { getClient, query } from '@/lib/db/connection';
 import { refreshPlannerStats } from '@/lib/db/queries/planner-stats';
 import { safeRollback } from '@/lib/db/rollback';
 import { parseGedcom, type ParsedMedia, type ParsedMediaRecord, type ParsedMediaRef, type ParsedFactCitation, type CitationPart, type ParsedPerson, type ParsedFamily, type ParsedSource, type ParsedRepository } from '@/lib/gedcom/parser';
-import { markRawPointers, maskRawPointers, maskRawPointersSql, RAW_POINTER_MARKER, resolveRawPointerMarkers, type RawPointerKind } from '@/lib/gedcom/raw-pointers';
+import { markRawPointers, maskRawPointers, maskRawPointersSql, RAW_POINTER_MARKER, resolveRawPointerMarkers, takeCitationMediaPointers, type RawPointerKind } from '@/lib/gedcom/raw-pointers';
 import { readGedcomText } from '@/lib/gedcom/charset';
 import { MAX_GEDCOM_BYTES, MAX_SPREADSHEET_BYTES, capInMegabytes } from '@/lib/import-limits';
 import { parseMediaSidecar } from '@/lib/gedcom/media-sidecar';
@@ -168,6 +168,61 @@ async function resolvePassthroughPointers(
     );
   }
   return dropped;
+}
+
+/**
+ * End of import, after the pointers resolve (#47): a citation's own file pointer
+ * (`3 OBJE @O1@` under a fact's `2 SOUR`) becomes a citation media link, and
+ * leaves the citation's passthrough. Reads every citation in the tree that still
+ * holds one, so merging a file into a tree imported before #47 moves its files
+ * too. A pointer to media outside the tree stays passthrough. A citation that
+ * already has files keeps just those, so a repeated merge adds no copies.
+ */
+async function promoteCitationMediaPointers(client: ImportClient, treeId: number): Promise<void> {
+  const rows = (await client.query(
+    `SELECT "Id" AS id, "RawGedcom" AS raw FROM "Citation"
+      WHERE "TreeId" = $1 AND POSITION($2 IN "RawGedcom") > 0`,
+    [treeId, 'OBJE @~O:'],
+  )).rows as Array<{ id: number; raw: string }>;
+  if (rows.length === 0) return;
+  const inTree = new Set(((await client.query(
+    `SELECT "Id" FROM "Media" WHERE "TreeId" = $1`,
+    [treeId],
+  )).rows as Array<{ Id: number }>).map((row) => row.Id));
+  // A merge fills only what a citation lacks (#1035): one that already has its
+  // files keeps them, and the copy this file brought is not added beside them.
+  const hasFiles = new Set(((await client.query(
+    `SELECT DISTINCT "OwnerId" FROM "MediaLink" WHERE "OwnerTable" = 'Citation' AND "OwnerId" = ANY($1::int[])`,
+    [rows.map((row) => row.id)],
+  )).rows as Array<{ OwnerId: number }>).map((row) => row.OwnerId));
+  const citationIds: number[] = [];
+  const raws: Array<string | null> = [];
+  const linkCitations: number[] = [];
+  const linkMedia: number[] = [];
+  for (const row of rows) {
+    const taken = takeCitationMediaPointers(row.raw);
+    const ids = taken.mediaIds.filter((id) => inTree.has(id));
+    if (ids.length === 0) continue;
+    // A pointer to media this tree doesn't hold goes back where it was.
+    const dropped = taken.mediaIds.filter((id) => !inTree.has(id)).map((id) => `1 OBJE @~O:${id}@`);
+    citationIds.push(row.id);
+    raws.push([taken.raw, ...dropped].filter(Boolean).join('\n') || null);
+    if (hasFiles.has(row.id)) continue;
+    for (const id of ids) { linkCitations.push(row.id); linkMedia.push(id); }
+  }
+  if (citationIds.length === 0) return;
+  await client.query(
+    `INSERT INTO "MediaLink" ("MediaId", "OwnerTable", "OwnerId")
+     SELECT v.media, 'Citation', v.citation FROM unnest($1::int[], $2::int[]) AS v(media, citation)
+     ON CONFLICT DO NOTHING`,
+    [linkMedia, linkCitations],
+  );
+  await client.query(
+    `UPDATE "Citation" c SET "RawGedcom" = v.raw
+       FROM unnest($1::int[], $2::text[]) AS v(id, raw)
+      WHERE c."Id" = v.id AND c."TreeId" = $3`,
+    [citationIds, raws, treeId],
+  );
 }
 
 /**
@@ -2747,6 +2802,7 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
       S: sourceXrefToId, N: noteIdByXref, O: mediaContext.mediaXrefToId, I: personIdMap, F: familyIdMap, R: repoXrefToId,
     };
     rawPointersDropped.push(...await resolvePassthroughPointers(client, scope.treeId, (kind, xref) => idMaps[kind].get(xref)));
+    await promoteCitationMediaPointers(client, scope.treeId);
 
     reportStep('places');
     // #402: restore the gazetteer from places.json FIRST — before the PLAC.MAP

@@ -4013,6 +4013,22 @@
     "change_status": "Change status",
     "add_entry": "Add entry"
   },
+  "citationFile": {
+    "label": "File",
+    "attach": "Attach a file",
+    "attach_another": "Attach another file",
+    "open": "Open",
+    "remove": "Remove",
+    "remove_aria": "Remove {title} from this citation",
+    "untitled": "Untitled file",
+    "kind_pdf": "PDF",
+    "kind_pdf_page": "PDF · page {page}",
+    "kind_image": "Image",
+    "opens_at_page": "Opens at this page from the citation.",
+    "load_failed": "Couldn't load this citation's files.",
+    "remove_failed": "Couldn't remove the file.",
+    "line_aria": "File: {title}"
+  },
   "citeSheet": {
     "cite_title": "Cite a source",
     "search_placeholder": "Search sources in this tree",
@@ -4979,6 +4995,7 @@
     "unlink": "Remove link",
     "unlink_named": "Remove link to {name}",
     "link_source": "Source",
+    "link_citation": "Citation",
     "link_family": "Family",
     "link_event": "Event",
     "sources_count": "{count, plural, one {# source} other {# sources}}",

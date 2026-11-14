@@ -4013,6 +4013,22 @@
     "change_status": "Изменить статус",
     "add_entry": "Добавить запись"
   },
+  "citationFile": {
+    "label": "Файл",
+    "attach": "Прикрепить файл",
+    "attach_another": "Прикрепить ещё файл",
+    "open": "Открыть",
+    "remove": "Убрать",
+    "remove_aria": "Убрать {title} из этой ссылки",
+    "untitled": "Файл без названия",
+    "kind_pdf": "PDF",
+    "kind_pdf_page": "PDF · стр. {page}",
+    "kind_image": "Изображение",
+    "opens_at_page": "Открывается на этой странице из ссылки.",
+    "load_failed": "Не удалось загрузить файлы этой ссылки.",
+    "remove_failed": "Не удалось убрать файл.",
+    "line_aria": "Файл: {title}"
+  },
   "citeSheet": {
     "cite_title": "Указать источник",
     "search_placeholder": "Искать источники в этом древе",
@@ -4979,6 +4995,7 @@
     "unlink": "Убрать связь",
     "unlink_named": "Убрать связь с {name}",
     "link_source": "Источник",
+    "link_citation": "Ссылка на источник",
     "link_family": "Семья",
     "link_event": "Событие",
     "sources_count": "{count, plural, one {# источник} few {# источника} many {# источников} other {# источника}}",

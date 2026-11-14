@@ -490,6 +490,9 @@ export interface MediaLinkOwner {
     SourceTitle: string | null;
     EventType: string | null;
     FactDate: string | null;
+    /** A citation link's source and page or line (#47); null for other owners. */
+    CitationSourceId?: number | null;
+    CitationPage?: string | null;
 }
 
 /** A person on a case or a lead, as the workspace shows them. */

@@ -4,16 +4,30 @@ import type { Media, MediaLinkOwner, OwnerGalleryMedia } from '@/lib/db/schema';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import { AccessError, NotFoundError } from '@/lib/data/errors';
 import { query } from '@/lib/db/connection';
-import { validatedOwner, assertOwnerInTree } from '@/lib/services/owner-links';
+import { ownerExistsInTree } from '@/lib/db/queries/owner-links';
 import { isMediaOwnerFactFor, isMediaOwnerTable, type MediaOwnerFact, type MediaOwnerTable } from '@/lib/db/fact-tables';
 import { ValidationError } from '@/lib/validation';
 
+/**
+ * Validate an untrusted ownerTable + ownerId against the media-owner vocabulary.
+ * Checked on its own, not through the note vocabulary: a citation can hold a file
+ * (#47) but not a note.
+ */
 function validatedMediaOwner(ownerTable: string, ownerId: number): MediaOwnerTable {
-  const table = validatedOwner(ownerTable, ownerId);
-  if (!isMediaOwnerTable(table)) {
+  if (!isMediaOwnerTable(ownerTable)) {
     throw new ValidationError(`Invalid media ownerTable: ${ownerTable}`);
   }
-  return table;
+  if (!Number.isFinite(ownerId) || ownerId <= 0) {
+    throw new ValidationError('A valid ownerId is required');
+  }
+  return ownerTable;
+}
+
+/** IDOR guard: the owner record is in the resolved tree. */
+async function assertOwnerInTree(ownerTable: MediaOwnerTable, ownerId: number, treeId: number): Promise<void> {
+  if (!(await ownerExistsInTree(ownerTable, ownerId, treeId))) {
+    throw new NotFoundError('Record not found in this tree');
+  }
 }
 
 /** An optional fact from untrusted input, checked against its owner table (ADR 0030). */

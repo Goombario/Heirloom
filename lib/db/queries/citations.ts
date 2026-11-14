@@ -340,6 +340,10 @@ export interface CitedByRow {
     factPlace: string | null;
     /** `"SortableYear"(factDate)`, the key the rows are ordered by (#911). */
     sortableYear: number | null;
+    /** The citation's own file (#47), the first one linked; null when it has none. */
+    fileMediaId: number | null;
+    fileTitle: string | null;
+    fileContentType: string | null;
 }
 
 /**
@@ -423,8 +427,17 @@ export async function getCitedByForSource(sourceId: number, treeId: number): Pro
              WHEN 'Families' THEN (SELECT ${placeText('MarriagePlace')} FROM "Families" f WHERE f."Id" = c."FactId")
              WHEN 'FamilyMarriage' THEN (SELECT ${placeText('MarriagePlace')} FROM "Families" f WHERE f."Id" = c."FactId")
              WHEN 'Events' THEN (SELECT ${placeText('Place')} FROM "Events" f WHERE f."Id" = c."FactId")
-           END AS "factPlace"
+           END AS "factPlace",
+           file."Id" AS "fileMediaId",
+           file."Title" AS "fileTitle",
+           file."ContentType" AS "fileContentType"
          FROM "Citation" c
+         LEFT JOIN LATERAL (
+             SELECT m."Id", m."Title", m."ContentType"
+               FROM "MediaLink" l JOIN "Media" m ON m."Id" = l."MediaId" AND m."TreeId" = c."TreeId"
+              WHERE l."OwnerTable" = 'Citation' AND l."OwnerId" = c."Id"
+              ORDER BY m."Id" LIMIT 1
+         ) file ON TRUE
          WHERE c."SourceId" = $1 AND c."TreeId" = $2
          -- By the fact's year, undated last, then by who it is about (#911). The
          -- browser groups these by fact type; each group keeps this order.

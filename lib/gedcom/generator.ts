@@ -24,6 +24,8 @@ export interface GedcomExportSource {
 }
 
 export interface GedcomExportCitation {
+    /** The row id, so the citation's own files (#47) can be found among `mediaLinks`. */
+    Id?: number;
     FactTable: string;
     FactId: number;
     SourceId: number;
@@ -42,6 +44,12 @@ export interface GedcomExportCitation {
     /** The link to the record, written as `_LINK` (ADR 0025). */
     Url?: string | null;
 }
+
+/** A citation with the files linked to it (#47), as the generator writes it. */
+type CitationWithMedia = GedcomExportCitation & {
+    /** Each file's media id and the xref of its top-level `OBJE` record. */
+    media?: Array<{ id: number; xref: string }>;
+};
 
 /** A first-class note exported as a shared `0 @N@ NOTE` record (Slice 1). */
 export interface GedcomExportNote {
@@ -325,6 +333,11 @@ function pushCitations(
         // and re-import lifts this one again (ADR 0025).
         const url = c.Url?.replace(/[\x00-\x1f\x7f\x85\u2028\u2029]+/g, ' ').trim();
         if (url) pushGedcomLine(lines, level + 1, '_LINK', url);
+        // The citation's own files (#47): a MULTIMEDIA_LINK under the SOURCE_CITATION.
+        // One a passthrough line still names (a tree imported before #47) goes out there.
+        for (const m of (c as CitationWithMedia).media ?? []) {
+            if (!c.RawGedcom?.includes(`OBJE @~O:${m.id}@`)) lines.push(`${level + 1} OBJE ${m.xref}`);
+        }
         pushRaw(lines, c.RawGedcom, level);
         if (c.Quay) pushGedcomLine(lines, level + 1, 'QUAY', c.Quay);
         if (c.Note) pushGedcomText(lines, level + 1, 'NOTE', c.Note);
@@ -614,7 +627,7 @@ export function generateGedcomWithReport(
     const primaryFamiliesByMedia = new Map<number, number[]>();
     for (const l of extras?.mediaLinks ?? []) {
         if (!mediaById.has(l.MediaId)) continue;
-        if (!['People', 'Families', 'Sources', 'Events'].includes(l.OwnerTable)) continue;
+        if (!['People', 'Families', 'Sources', 'Events', 'Citation'].includes(l.OwnerTable)) continue;
         // A fact's links are keyed by the fact too, as fact notes are, so they emit
         // under that fact's line and never as the record's own `1 OBJE`.
         const key = l.OwnerFact ? `${l.OwnerTable}:${l.OwnerId}:${l.OwnerFact}` : `${l.OwnerTable}:${l.OwnerId}`;
@@ -632,6 +645,18 @@ export function generateGedcomWithReport(
             families.push(l.OwnerId);
             primaryFamiliesByMedia.set(l.MediaId, families);
         }
+    }
+    // A citation's files ride on the citation, written under its SOUR line (#47).
+    for (const [key, list] of citationsByFact) {
+        citationsByFact.set(key, list.map((c): CitationWithMedia => {
+            const links = c.Id == null ? undefined : mediaByOwner.get(`Citation:${c.Id}`);
+            if (!links) return c;
+            const media = links.flatMap((l) => {
+                const xref = mediaXrefById.get(l.MediaId);
+                return xref ? [{ id: l.MediaId, xref }] : [];
+            });
+            return media.length ? { ...c, media } : c;
+        }));
     }
     // (replaces the inlined INDI_XREF / takenXrefs / nextFreeXref block)
     for (const [dbId, xref] of assignPersonXrefs(people)) {

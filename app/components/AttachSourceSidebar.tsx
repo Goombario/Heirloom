@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { useTranslations } from 'next-intl';
+import { CitationFileField } from '@/app/components/citations/CitationFileField';
 import { useTree } from '@/app/contexts/TreeContext';
 import { getDataClient } from '@/lib/data';
 import type { FactTableValue } from '@/lib/db/fact-tables';
@@ -597,6 +598,15 @@ export default function AttachSourceSidebar({
                         rows={4}
                         className={`${fieldClass('sm')} resize-y`}
                         placeholder={t('ph_transcription')}
+                    />
+                    {/* The citation's own file (#47): attached and removed at once, not on Save. */}
+                    <CitationFileField
+                        citationId={c.Id}
+                        treeId={activeTreeId}
+                        page={editPage}
+                        canEdit
+                        targetName={c.sourceTitle ?? t('untitled_source')}
+                        className="mt-3.5"
                     />
                 </div>
                 <div className="flex items-center justify-between py-3 px-4 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--card-alt)' }}>

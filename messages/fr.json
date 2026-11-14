@@ -4013,6 +4013,22 @@
     "change_status": "Changer le statut",
     "add_entry": "Ajouter une entrée"
   },
+  "citationFile": {
+    "label": "Fichier",
+    "attach": "Joindre un fichier",
+    "attach_another": "Joindre un autre fichier",
+    "open": "Ouvrir",
+    "remove": "Retirer",
+    "remove_aria": "Retirer {title} de cette citation",
+    "untitled": "Fichier sans titre",
+    "kind_pdf": "PDF",
+    "kind_pdf_page": "PDF · page {page}",
+    "kind_image": "Image",
+    "opens_at_page": "S'ouvre à cette page depuis la citation.",
+    "load_failed": "Impossible de charger les fichiers de cette citation.",
+    "remove_failed": "Impossible de retirer le fichier.",
+    "line_aria": "Fichier : {title}"
+  },
   "citeSheet": {
     "cite_title": "Citer une source",
     "search_placeholder": "Rechercher les sources de cet arbre",
@@ -4979,6 +4995,7 @@
     "unlink": "Retirer le lien",
     "unlink_named": "Retirer le lien avec {name}",
     "link_source": "Source",
+    "link_citation": "Citation",
     "link_family": "Famille",
     "link_event": "Événement",
     "sources_count": "{count, plural, one {# source} other {# sources}}",

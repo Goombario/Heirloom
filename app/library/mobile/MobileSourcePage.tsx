@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { CitationFileField, CitationFileLine } from '@/app/components/citations/CitationFileField';
 import { getDataClient } from '@/lib/data';
 import type { Note } from '@/lib/data/types';
 import type { CitedByRow } from '@/lib/db/queries/citations';
@@ -186,7 +187,7 @@ export function MobileSourcePage({ sourceId }: { sourceId: number }) {
                     onDeleted={() => { setSheet(null); router.replace(LIBRARY_SOURCES_HREF); }} />
                 <CiteOnSheets open={sheet === 'cite'} source={source} citedBy={citedBy} onClose={() => setSheet(null)}
                     onCited={() => { setSheet(null); reload(); }} />
-                <CitationSheet row={citation} onClose={() => setCitation(null)} canDelete={canDelete} run={run} />
+                <CitationSheet row={citation} onClose={() => setCitation(null)} canDelete={canDelete} run={run} onFilesChanged={reload} />
                 <MobileNoteSheet open={noteFlow != null} note={(noteFlow ?? lastNote).note} onClose={() => setNoteFlow(null)}
                     ownerTable="Sources" ownerId={source.Id} treeId={activeTreeId} canDelete={canDelete} run={run} />
             </div>
@@ -305,6 +306,9 @@ function FactRow({ row, label, divided = false, treeId, onOpen }: {
                         {row.page && <span title={row.page} className="max-w-[60%] shrink-0 truncate font-mono text-text-secondary">{row.page}</span>}
                     </span>
                 )}
+                {row.fileMediaId != null && (
+                    <CitationFileLine title={row.fileTitle} contentType={row.fileContentType} page={row.page} className="mt-0.5 justify-self-start" />
+                )}
             </span>
         </>
     );
@@ -330,11 +334,13 @@ function useFactLabel() {
 }
 
 /** One citation: page, certainty and transcription, then Remove citation with Undo. */
-function CitationSheet({ row, onClose, canDelete, run }: {
+function CitationSheet({ row, onClose, canDelete, run, onFilesChanged }: {
     row: CitedByRow | null;
     onClose: () => void;
     canDelete: boolean;
     run: ReturnType<typeof useChange>;
+    /** A file was attached or removed (#47), so the rows' paperclip lines refresh. */
+    onFilesChanged: () => void;
 }) {
     const [shown, setShown] = useState<CitedByRow | null>(row);
     const [shownId, setShownId] = useState<number | null>(row?.citationId ?? null);
@@ -402,6 +408,10 @@ function CitationSheet({ row, onClose, canDelete, run }: {
                     <textarea rows={3} value={dataText} onChange={(e) => setDataText(e.target.value)} placeholder={t('passage_ph')}
                         className={cx(field, 'py-2.5 leading-normal resize-none')} />
                 </label>
+                {r && (
+                    <CitationFileField citationId={r.citationId} treeId={activeTreeId} page={page} canEdit
+                        targetName={title} onChange={onFilesChanged} />
+                )}
             </div>
             {canDelete && (
                 <div className="-mx-4 mt-5 border-t border-border">

@@ -146,3 +146,29 @@ export function markStaleMediaPointers(lines: readonly string[]): string[] {
 export function countStaleMediaPointers(lines: readonly string[]): number {
   return lines.filter((line) => STALE_MEDIA_LINE.test(line)).length;
 }
+
+const CITATION_MEDIA_TOKEN = /^1 OBJE @~O:(\d+)@$/;
+
+/**
+ * End of import (#47): takes each file pointer out of a citation's passthrough so
+ * it can become a citation media link. Only a citation's own `1 OBJE @~O:<id>@`
+ * (levels relative to its SOUR) with no sub-lines is taken; a pointer carrying
+ * sub-lines, or an inline OBJE, stays passthrough and still exports as it came.
+ */
+export function takeCitationMediaPointers(raw: string): { raw: string | null; mediaIds: number[] } {
+  const lines = raw.split('\n');
+  const kept: string[] = [];
+  const mediaIds: number[] = [];
+  lines.forEach((line, i) => {
+    const match = CITATION_MEDIA_TOKEN.exec(line.trim());
+    const next = lines[i + 1];
+    const hasSubLines = next !== undefined && parseInt(next, 10) > 1;
+    if (match && !hasSubLines) {
+      const id = Number(match[1]);
+      if (!mediaIds.includes(id)) mediaIds.push(id);
+    } else {
+      kept.push(line);
+    }
+  });
+  return { raw: kept.length ? kept.join('\n') : null, mediaIds };
+}

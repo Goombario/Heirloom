@@ -26,7 +26,7 @@ function makeRow(overrides: Partial<CitedByRow> & Pick<CitedByRow, 'factTable' |
         familyPartner2Name: null,
         familyPartner2Sex: null,
         familyPartner2MediaId: null,
-        page: null, quay: null, dataText: null, factDate: null, factPlace: null, sortableYear: null,
+        page: null, quay: null, dataText: null, factDate: null, factPlace: null, sortableYear: null, fileMediaId: null, fileTitle: null, fileContentType: null,
         ...overrides,
     };
 }

@@ -20,7 +20,7 @@ function row(overrides: Partial<CitedByRow> & Pick<CitedByRow, 'citationId' | 'f
         personId: null, caseId: null, personSex: null, personMediaId: null, familyId: null,
         familyPartner1Name: null, familyPartner1Sex: null, familyPartner1MediaId: null,
         familyPartner2Name: null, familyPartner2Sex: null, familyPartner2MediaId: null,
-        page: null, quay: null, dataText: null, factDate: null, factPlace: null, sortableYear: null,
+        page: null, quay: null, dataText: null, factDate: null, factPlace: null, sortableYear: null, fileMediaId: null, fileTitle: null, fileContentType: null,
         ...overrides,
     };
 }
