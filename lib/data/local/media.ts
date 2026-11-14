@@ -150,7 +150,7 @@ export class LocalMediaClient implements MediaClient {
     );
   }
 
-  async listForOwner(ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<Media[]> {
+  async listForOwner(ownerTable: MediaOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<Media[]> {
     const currentUserId = await ensureLocalUser();
     return listMediaForOwnerService({ ownerTable, ownerId, ownerFact, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
@@ -160,12 +160,12 @@ export class LocalMediaClient implements MediaClient {
     return listGalleryForOwnerService({ ownerTable, ownerId, ownerFact, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 
-  async unlinkFromOwner(id: number, ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
+  async unlinkFromOwner(id: number, ownerTable: MediaOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
     const currentUserId = await ensureLocalUser();
     await unlinkMediaForOwnerService({ mediaId: id, ownerTable, ownerId, ownerFact, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 
-  async linkToOwner(mediaId: number, ownerTable: LinkOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
+  async linkToOwner(mediaId: number, ownerTable: MediaOwnerTable, ownerId: number, treeId?: number | null, ownerFact?: MediaOwnerFact): Promise<void> {
     const currentUserId = await ensureLocalUser();
     await linkMediaForOwnerService({ mediaId, ownerTable, ownerId, ownerFact, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }

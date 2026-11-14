@@ -94,6 +94,11 @@ export const MEDIA_OWNER_TABLES = {
     FAMILIES: 'Families',
     EVENTS: 'Events',
     SOURCES: 'Sources',
+    /**
+     * One citation (#47): a file that proves a single entry, such as one page of a
+     * register. GEDCOM's MULTIMEDIA_LINK under a SOURCE_CITATION (ged551-2.txt).
+     */
+    CITATIONS: 'Citation',
 } as const;
 
 export type MediaOwnerTable = (typeof MEDIA_OWNER_TABLES)[keyof typeof MEDIA_OWNER_TABLES];

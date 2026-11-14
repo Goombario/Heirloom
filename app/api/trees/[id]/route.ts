@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -43,7 +44,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid tree id' }, { status: 400 });
     }
 
-    const body = await request.json();
+    const body = await readJsonObject(request);
     const tree = await renameTreeService({ id: treeId, name: body.name, currentUserId: user.id });
     return NextResponse.json({ tree });
   } catch (error) {

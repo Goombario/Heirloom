@@ -449,8 +449,8 @@ export async function recordStatusChange(
 export async function updateCase(
     id: number,
     updates: Partial<Omit<NewCase, 'UserId'>>,
-    personIds: number[],
-    mediaIds: number[],
+    personIds: number[] | undefined,
+    mediaIds: number[] | undefined,
     treeId: number,
     actingUserId?: number,
     conclusion: string | null = null,
@@ -493,8 +493,10 @@ export async function updateCase(
         }
 
         // Re-sync people (tree-filtered so foreign person ids can't be attached).
-        await client.query(`DELETE FROM "CasePerson" WHERE "CaseId" = $1`, [id]);
-        if (personIds.length > 0) {
+        // Left alone when the caller didn't send a list (#51, L-5): an update
+        // that only changes a field must not unlink everyone.
+        if (personIds !== undefined) await client.query(`DELETE FROM "CasePerson" WHERE "CaseId" = $1`, [id]);
+        if (personIds !== undefined && personIds.length > 0) {
             await client.query(
                 `INSERT INTO "CasePerson" ("CaseId", "PersonId")
                  SELECT $1, p."Id" FROM "People" p WHERE p."Id" = ANY($2) AND p."TreeId" = $3
@@ -504,8 +506,8 @@ export async function updateCase(
         }
 
         // Re-sync media (tree-filtered so foreign media ids can't be attached).
-        await client.query(`DELETE FROM "CaseMedia" WHERE "CaseId" = $1`, [id]);
-        if (mediaIds.length > 0) {
+        if (mediaIds !== undefined) await client.query(`DELETE FROM "CaseMedia" WHERE "CaseId" = $1`, [id]);
+        if (mediaIds !== undefined && mediaIds.length > 0) {
             await client.query(
                 `INSERT INTO "CaseMedia" ("CaseId", "MediaId")
                  SELECT $1, m."Id" FROM "Media" m WHERE m."Id" = ANY($2) AND m."TreeId" = $3

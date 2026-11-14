@@ -177,14 +177,17 @@ describe('GEDCOM media identity and canonical links', () => {
     const fileRaw = '1 FORM jpg\n2 TYPE photo\n1 _DATE 5/20/2017 2:15:55 PM\n1 _TEXT Year: 1880; Census Place: District 14\n2 CONC ; Film: 1255258';
 
     await importGedcom(ged);
-    // The citation's OBJE is kept with the citation, not attached to the event.
+    // The citation's OBJE pointer becomes the citation's own file (#47), not the
+    // event's; an inline OBJE stays with the citation as passthrough.
     const media = await query('SELECT "Id", "Title", "FileRawGedcom" FROM "Media" WHERE "TreeId" = $1', [treeId]);
     expect(media.rows).toEqual([{ Id: expect.any(Number), Title: 'Census', FileRawGedcom: fileRaw }]);
-    expect((await query('SELECT 1 FROM "MediaLink"', [])).rows).toEqual([]);
-    const citations = await query('SELECT "FactTable", "Quay", "RawGedcom" FROM "Citation" WHERE "TreeId" = $1 ORDER BY "Id"', [treeId]);
+    const citations = await query('SELECT "Id", "FactTable", "Quay", "RawGedcom" FROM "Citation" WHERE "TreeId" = $1 ORDER BY "Id"', [treeId]);
     expect(citations.rows).toEqual([
-      { FactTable: 'PersonBirth', Quay: null, RawGedcom: `1 OBJE @~O:${media.rows[0].Id}@` },
-      { FactTable: 'Events', Quay: '2', RawGedcom: '1 OBJE\n2 FILE http://example.com/inline.jpg\n2 FORM jpg' },
+      { Id: expect.any(Number), FactTable: 'PersonBirth', Quay: null, RawGedcom: null },
+      { Id: expect.any(Number), FactTable: 'Events', Quay: '2', RawGedcom: '1 OBJE\n2 FILE http://example.com/inline.jpg\n2 FORM jpg' },
+    ]);
+    expect((await query('SELECT "MediaId", "OwnerTable", "OwnerId" FROM "MediaLink"', [])).rows).toEqual([
+      { MediaId: media.rows[0].Id, OwnerTable: 'Citation', OwnerId: citations.rows[0].Id },
     ]);
 
     const { exportGedcomService } = await import('@/lib/services/gedcom-export');
@@ -202,12 +205,33 @@ describe('GEDCOM media identity and canonical links', () => {
     await importGedcom(text);
     const again = await query('SELECT "Id", "FileRawGedcom" FROM "Media" WHERE "TreeId" = $1', [treeId]);
     expect(again.rows).toEqual([{ Id: expect.any(Number), FileRawGedcom: fileRaw }]);
-    const citedAgain = await query('SELECT "RawGedcom" FROM "Citation" WHERE "TreeId" = $1 ORDER BY "Id"', [treeId]);
-    expect(citedAgain.rows.map((row) => row.RawGedcom)).toEqual([`1 OBJE @~O:${again.rows[0].Id}@`, citations.rows[1].RawGedcom]);
+    const citedAgain = await query('SELECT "Id", "RawGedcom" FROM "Citation" WHERE "TreeId" = $1 ORDER BY "Id"', [treeId]);
+    expect(citedAgain.rows.map((row) => row.RawGedcom)).toEqual([null, citations.rows[1].RawGedcom]);
+    expect((await query('SELECT "MediaId", "OwnerTable", "OwnerId" FROM "MediaLink"', [])).rows).toEqual([
+      { MediaId: again.rows[0].Id, OwnerTable: 'Citation', OwnerId: citedAgain.rows[0].Id },
+    ]);
 
-    // A second merge of the same file adds no citations.
+    // A second merge of the same file adds no citations, and no second file to
+    // the one that has its file already.
     await importGedcom(text, 'merge');
     expect((await query('SELECT COUNT(*)::int AS n FROM "Citation" WHERE "TreeId" = $1', [treeId])).rows[0].n).toBe(2);
+    expect((await query(`SELECT COUNT(*)::int AS n FROM "MediaLink" WHERE "OwnerTable" = 'Citation'`, [])).rows[0].n).toBe(1);
+    expect((await query('SELECT "RawGedcom" FROM "Citation" WHERE "Id" = $1', [citedAgain.rows[0].Id])).rows[0].RawGedcom).toBeNull();
+  });
+
+  it('moves a file pointer an older import left in citation passthrough when a file merges in (#47)', async () => {
+    const ged = ['0 HEAD', '0 @I1@ INDI', '1 NAME Ann /Cite/', '1 BIRT', '2 DATE 1900', '2 SOUR @S1@', '3 PAGE p. 4',
+      '0 @S1@ SOUR', '1 TITL Register', '0 @O1@ OBJE', '1 FILE census.jpg', '2 FORM jpg', '0 TRLR'].join('\n');
+    await importGedcom(ged);
+    const media = (await query('SELECT "Id" FROM "Media" WHERE "TreeId" = $1', [treeId])).rows[0];
+    const citation = (await query('SELECT "Id" FROM "Citation" WHERE "TreeId" = $1', [treeId])).rows[0];
+    // As a tree imported before #47 holds it.
+    await query('UPDATE "Citation" SET "RawGedcom" = $1 WHERE "Id" = $2', [`1 OBJE @~O:${media.Id}@\n1 _X kept`, citation.Id]);
+
+    await importGedcom(ged, 'merge');
+    expect((await query('SELECT "RawGedcom" FROM "Citation" WHERE "Id" = $1', [citation.Id])).rows[0].RawGedcom).toBe('1 _X kept');
+    expect((await query(`SELECT "MediaId" FROM "MediaLink" WHERE "OwnerTable" = 'Citation' AND "OwnerId" = $1`, [citation.Id])).rows)
+      .toEqual([{ MediaId: media.Id }]);
   });
 
   it('drops a media pointer kept before #979 instead of pointing it at another image, and counts it (ADR 0030)', async () => {

@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -16,7 +17,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const requestedOwnerId = parseIdParam(searchParams.get('ownerId'));
 
   try {
-    const body = await request.json();
+    const body = await readJsonObject(request);
     const citation = await updateCitationService({
       id: citationId,
       input: { Page: body.Page, Quay: body.Quay, DataText: body.DataText, Url: body.Url },

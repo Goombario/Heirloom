@@ -31,7 +31,13 @@ const REQUESTED_PLACES_CTE = `requested AS (
      )`;
 
 /** The `$2` names and `$3` ids REQUESTED_PLACES_CTE reads, from a list of keys. */
+/** Most places one coords or pin-chains lookup may ask for, and the longest name (#51, L-6). */
+const MAX_LOOKUP_PLACES = 10000;
+const MAX_PLACE_NAME_LENGTH = 1000;
+
 function requestedPlaces(keys: readonly PlaceKey[]): [string[], number[]] {
+  if (keys.length > MAX_LOOKUP_PLACES) throw new ValidationError(`At most ${MAX_LOOKUP_PLACES} places can be looked up at once`);
+  if (keys.some((k) => typeof k === 'string' && k.length > MAX_PLACE_NAME_LENGTH)) throw new ValidationError('Place name too long');
   const names = new Set<string>();
   const ids = new Set<number>();
   for (const k of keys) {
@@ -558,6 +564,11 @@ export async function upsertPlaceGeocodeService(params: UpsertPlaceGeocodeParams
   // Number.isFinite: a string or NaN passes both comparisons and failed later in SQL (#867).
   if (latitude != null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90)) throw new ValidationError('latitude out of range');
   if (longitude != null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180)) throw new ValidationError('longitude out of range');
+  // The geocoder's own fields, typed and bounded before they're stored (#51, L-6).
+  if (displayName != null && (typeof displayName !== 'string' || displayName.length > MAX_PLACE_NAME_LENGTH)) throw new ValidationError('displayName must be text of at most 1000 characters');
+  if (osmType != null && !(['node', 'way', 'relation'] as unknown[]).includes(osmType)) throw new ValidationError('osmType must be node, way or relation');
+  if (osmId != null && (!Number.isSafeInteger(osmId) || osmId <= 0)) throw new ValidationError('osmId must be a positive integer');
+  if (pinSuppressed != null && typeof pinSuppressed !== 'boolean') throw new ValidationError('pinSuppressed must be true or false');
 
   const scope = await resolveTreeScope({ treeId: requestedTreeId, ownerId: requestedOwnerId }, currentUserId);
   if (scope.permission === 'view') throw new AccessError('You only have view permission for this tree');
@@ -767,6 +778,11 @@ export async function renamePlaceService(
       // Nothing references `from` and it has no gazetteer row — treat as not found
       // rather than silently writing an empty audit entry.
       throw new ValidationError(`No place named "${from}" was found`);
+    }
+    // A merge rewrites many records at once and `contribute` can't revert it, so
+    // it needs `edit`; renaming stays open to contributors (#51, L-7).
+    if (result.snapshot.wasMerge && scope.permission === 'contribute') {
+      throw new AccessError('Merging places needs edit permission for this tree');
     }
     const auditId = await auditPlaceRename(scope.ownerId, params.currentUserId, result.snapshot, result.survivingId, client, scope.treeId);
     await client.query('COMMIT');

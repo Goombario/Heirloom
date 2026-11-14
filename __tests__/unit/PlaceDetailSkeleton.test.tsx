@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-// #392 — /places/view rendered a centred "Loading" text line that reserved no
+// #392, #63 — /places/view rendered a centred "Loading" text line that reserved no
 // geometry, so a hard reload painted blank -> text -> data. These assert the
 // placeholder actually reserves the body, and that the load is not silent.
 import { describe, it, expect, vi } from 'vitest';
@@ -33,27 +33,23 @@ describe('PlaceDetailSkeleton', () => {
     expect(status).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('reserves the map box, which is the tallest thing on the page', () => {
-    const { container } = renderSkeleton();
+  it('reserves the v1.1 map cover at the loaded map height (#63)', () => {
+    const { getByTestId } = renderSkeleton();
 
-    // 280px matches the loaded LocationMap height in PlaceDetailView; if that
-    // changes and this does not, the page starts reflowing again.
-    expect(container.querySelector('.h-\\[280px\\]')).toBeInTheDocument();
+    // 340px matches the LocationMap height in PlaceCover; if that changes and
+    // this does not, the page starts reflowing again.
+    const cover = getByTestId('place-cover-skeleton');
+    expect(cover).toHaveClass('place-cover');
+    expect(cover.querySelector('.h-\\[340px\\]')).toBeInTheDocument();
+    expect(cover.querySelector('.place-cover__foot')).toHaveClass('hero-dark');
   });
 
-  it('reserves both body columns, not just the left one', () => {
+  it('reserves the sheet body and its rail, as the loaded DetailBody lays them out', () => {
     const { container } = renderSkeleton();
 
-    const grid = container.querySelector('[role="status"]');
-
-    expect(grid?.className).toContain('lg:grid-cols-[minmax(0,1.4fr)_1fr]');
-  });
-
-  it('reserves several person rows rather than a single bar', () => {
-    const { container } = renderSkeleton();
-
-    // A one-row placeholder would still let the card grow by hundreds of px.
-    expect(container.querySelectorAll('.rounded-full').length).toBeGreaterThanOrEqual(5);
+    const body = container.querySelector('.detail-body');
+    expect(body).toHaveClass('place-body', 'detail-body--sheet', 'detail-body--rail');
+    expect(body?.querySelector('.detail-body__rail')).toBeInTheDocument();
   });
 
   it('hides every decorative bar from assistive tech', () => {

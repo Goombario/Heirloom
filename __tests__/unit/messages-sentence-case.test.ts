@@ -10,7 +10,7 @@ import en from '@/messages/en.json';
  */
 const PROPER_NOUNS = new Set([
     // Products, services, formats
-    'Heirloom', 'GEDCOM', 'Google', 'Drive', 'Excel', 'OpenStreetMap', 'Photon', 'ScotlandsPeople',
+    'Heirloom', 'GEDCOM', 'Google', 'Drive', 'Excel', 'OpenStreetMap', 'OpenFreeMap', 'Photon', 'ScotlandsPeople',
     // Keys
     'Esc', 'Enter',
     // Page names referenced in running text ("from the Library", "in Options")

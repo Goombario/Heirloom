@@ -8,6 +8,7 @@ import BackupModal from '@/app/components/backup/BackupModal';
 import { Button } from '@/app/components/ui';
 import { AlertTriangle } from '@/lib/icons';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 const SNOOZE_KEY = 'heirloom_backup_nudge_snoozed_until';
 const SNOOZE_DAYS = 7;
@@ -25,6 +26,7 @@ const SNOOZE_DAYS = 7;
 export default function BackupNudge({ placement = 'app' }: { placement?: 'app' | 'page' }) {
   const t = useTranslations('options');
   const tm = useTranslations('mobileBackup');
+  const desktop = useIsDesktopApp();
   const { overdue, ageDays } = useBackupOverdue();
   const isMobile = useIsMobile();
   const [snoozed, setSnoozed] = useState<boolean | null>(null);
@@ -57,7 +59,7 @@ export default function BackupNudge({ placement = 'app' }: { placement?: 'app' |
           <b className="block font-semibold text-warning-text">
             {ageDays == null ? tm('nudge_never') : tm('nudge_weeks', { count: Math.max(2, Math.floor(ageDays / 7)) })}
           </b>
-          <span className="block">{tm('nudge_body')}</span>
+          <span className="block">{tm(desktop ? 'nudge_body_desktop' : 'nudge_body')}</span>
           <span className="flex gap-[18px]">
             <button type="button" onClick={() => setModalOpen(true)} className="min-h-11 font-semibold text-text cursor-pointer focus-ring">
               {t('chip_backup_now')}
@@ -77,7 +79,7 @@ export default function BackupNudge({ placement = 'app' }: { placement?: 'app' |
       <div role="alert" className="bg-warning-bg border-b border-warning-text/30 px-4 py-2.5">
         <div className="container mx-auto flex items-center gap-3 flex-wrap">
           <AlertTriangle className="w-[18px] h-[18px] text-warning-text shrink-0" aria-hidden="true" />
-          <span className="text-sm text-warning-text flex-1 min-w-[12rem]">{t('nudge_message')}</span>
+          <span className="text-sm text-warning-text flex-1 min-w-[12rem]">{t(desktop ? 'nudge_message_desktop' : 'nudge_message')}</span>
           <div className="flex items-center gap-2 shrink-0">
             {/* Outline: the page's own main action keeps the one colour fill (#693). */}
             <Button variant="outline" size="sm" onClick={() => setModalOpen(true)}>

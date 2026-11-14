@@ -231,7 +231,7 @@ function AddFamilyBody({ open, flow, onClose, person, portrait, treeId, canUndo,
                     {showStart ? (
                         <div className="grid gap-1.5 pt-3">
                             <label htmlFor={`${ids}-start`} className="text-meta font-medium text-text-secondary">{married === 'yes' ? t('married') : t('started')}</label>
-                            <DateInput id={`${ids}-start`} value={choice.startDate ?? ''} onChange={(startDate) => set({ startDate: startDate || null })} qualifierChips className={cx(fieldClass(), 'min-h-11')} />
+                            <DateInput id={`${ids}-start`} value={choice.startDate ?? ''} onChange={(startDate) => set({ startDate: startDate || null })} touch className={cx(fieldClass(), 'min-h-11')} />
                         </div>
                     ) : (
                         <div className="-mx-4 mt-2 border-t border-border">

@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam } from '@/lib/utils/parse-id';
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest, context: Params) {
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const note = await target(request, context);
         if (!note) return NextResponse.json({ error: 'Invalid case or note ID' }, { status: 400 });
-        const body = await request.json().catch(() => ({}));
+        const body = await readJsonObject(request).catch(() => ({}));
         const result = await strikeCaseNoteService({ ...note, reason: body?.reason, currentUserId: user.id });
         return NextResponse.json(result);
     } catch (error) {

@@ -14,6 +14,8 @@ import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import type { Citation } from '@/lib/data/types';
 import { getDataClient } from '@/lib/data';
 import { dataCache } from '@/lib/data/cache';
+import { sharedLoad } from '@/lib/data/shared-load';
+import { loadOwnerNotes } from '@/app/components/notes/ownerNotesCache';
 import { type NameVariant } from '@/app/components/person-form/NamesPanel';
 
 // null treeId = the current user's default tree — a legit, stable scope of its own.
@@ -47,40 +49,57 @@ export function getPersonSummary(id: string | number, treeId: number | null): Pe
 }
 
 export async function loadPerson(id: number, treeId: number | null): Promise<PersonWithRelations> {
-    const client = await getDataClient();
-    const person = await client.people.get(id, treeId);
-    dataCache.set(personKey(treeId, id), person);
-    return person;
+    return sharedLoad(personKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const person = await client.people.get(id, treeId);
+        dataCache.set(personKey(treeId, id), person);
+        return person;
+    });
 }
 
 export async function loadPersonMedia(id: number, treeId: number | null): Promise<PersonGalleryMedia[]> {
-    const client = await getDataClient();
-    const { media } = await client.media.list<PersonGalleryMedia>({ personId: id, treeId, includeTagged: true });
-    dataCache.set(mediaKey(treeId, id), media);
-    return media;
+    return sharedLoad(mediaKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const { media } = await client.media.list<PersonGalleryMedia>({ personId: id, treeId, includeTagged: true });
+        dataCache.set(mediaKey(treeId, id), media);
+        return media;
+    });
 }
 
 export async function loadPersonCitations(id: number, treeId: number | null): Promise<PersonCitationMap> {
-    const client = await getDataClient();
-    const citationMap = await client.citations.listForPerson(id, treeId);
-    const value = citationMap ?? {};
-    dataCache.set(citationsKey(treeId, id), value);
-    return value;
+    return sharedLoad(citationsKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const citationMap = await client.citations.listForPerson(id, treeId);
+        const value = citationMap ?? {};
+        dataCache.set(citationsKey(treeId, id), value);
+        return value;
+    });
 }
 
 export async function loadPersonVariants(id: number, treeId: number | null): Promise<NameVariant[]> {
-    const client = await getDataClient();
-    const variants = await client.people.listNameVariants(id, treeId);
-    const mapped = variants.map(v => ({ ...v, Type: v.Type as NameVariant['Type'], IsPrimary: v.IsPrimary ? 1 : 0 }));
-    dataCache.set(variantsKey(treeId, id), mapped);
-    return mapped;
+    return sharedLoad(variantsKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const variants = await client.people.listNameVariants(id, treeId);
+        const mapped = variants.map(v => ({ ...v, Type: v.Type as NameVariant['Type'], IsPrimary: v.IsPrimary ? 1 : 0 }));
+        dataCache.set(variantsKey(treeId, id), mapped);
+        return mapped;
+    });
+}
+
+/** A person's notes and their events' notes, warmed once the person record names the events. */
+async function loadPersonNotes(person: PersonWithRelations, treeId: number | null): Promise<void> {
+    const events = (person.events ?? []).filter((e) => (e.noteCount ?? 0) > 0);
+    await Promise.allSettled([
+        loadOwnerNotes('People', person.Id, treeId),
+        ...events.map((e) => loadOwnerNotes('Events', e.Id, treeId)),
+    ]);
 }
 
 // Dedupe concurrent prefetches of the same person — hover/focus fire repeatedly.
 const inFlight = new Set<string>();
 
 /**
- * Warm the four profile caches for a person ahead of navigation (hover / focus /
+ * Warm the four profile caches, and the notes the desktop page lists, for a person ahead of navigation (hover / focus /
  * idle). No-op when the person record is already cached or a prefetch is already
  * in flight. Fire-and-forget: a failed prefetch is swallowed and the detail page
  * just loads normally.
@@ -92,7 +111,7 @@ export function prefetchPerson(id: number | null | undefined, treeId?: number | 
     if (dataCache.has(key) || inFlight.has(key)) return;
     inFlight.add(key);
     void Promise.allSettled([
-        loadPerson(id, tid),
+        loadPerson(id, tid).then((person) => loadPersonNotes(person, tid)),
         loadPersonMedia(id, tid),
         loadPersonCitations(id, tid),
         loadPersonVariants(id, tid),

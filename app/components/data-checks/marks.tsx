@@ -33,12 +33,15 @@ export function useDataCheckMarks(filter: DataChecksFilter, reloadKey: unknown):
     const { activeTreeId } = useTree();
     const [result, setResult] = useState<DataChecksResult | null>(null);
     const { personId, familyId } = filter;
+    // By content, not identity: the page's background revalidation hands back an
+    // equal record, and asking again would check the whole tree a second time (#66).
+    const signature = useMemo(() => (reloadKey == null ? null : JSON.stringify(reloadKey)), [reloadKey]);
     useEffect(() => {
         // Never the whole tree's list: a page asks for its own person or family.
         if (personId == null && familyId == null) return;
         // Not before the record itself has loaded: the answer would be asked for
         // again the moment it does, and each ask checks the whole tree (#1270).
-        if (reloadKey == null) return;
+        if (signature == null) return;
         let cancelled = false;
         (async () => {
             try {
@@ -50,7 +53,7 @@ export function useDataCheckMarks(filter: DataChecksFilter, reloadKey: unknown):
             }
         })();
         return () => { cancelled = true; };
-    }, [activeTreeId, personId, familyId, reloadKey]);
+    }, [activeTreeId, personId, familyId, signature]);
 
     const text = useDataCheckText(result?.people ?? NO_PEOPLE);
     return useMemo(() => {

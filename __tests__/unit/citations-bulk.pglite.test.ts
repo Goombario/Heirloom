@@ -80,6 +80,21 @@ describe('bulk citation (PGlite)', () => {
         await expect(cite({ SourceId: foreign, facts: [{ FactTable: 'PersonBirth', FactId: father }] })).rejects.toThrow(/Source not found/);
     });
 
+    it('gives every created citation the shared record link (#41)', async () => {
+        const created = await cite({
+            Url: ' https://example.test/census/12 ',
+            facts: [{ FactTable: 'PersonBirth', FactId: father }, { FactTable: 'PersonBirth', FactId: children[0] }],
+        });
+        expect(created.map(c => c.Url)).toEqual(['https://example.test/census/12', 'https://example.test/census/12']);
+    });
+
+    it('writes nothing when the record link has a line break or is too long (#41)', async () => {
+        const facts = [{ FactTable: 'PersonBirth' as const, FactId: father }];
+        await expect(cite({ Url: 'https://example.test/a\nb', facts })).rejects.toThrow(/single line/);
+        await expect(cite({ Url: `https://example.test/${'x'.repeat(4096)}`, facts })).rejects.toThrow(/at most/);
+        expect(await count('Citation')).toBe(0);
+    });
+
     it('rejects case facts, a bad certainty, and an empty list', async () => {
         await expect(cite({ facts: [{ FactTable: 'Cases', FactId: 1 }] })).rejects.toThrow(/Invalid FactTable/);
         await expect(cite({ Quay: '7', facts: [{ FactTable: 'PersonBirth', FactId: father }] })).rejects.toThrow(/Invalid Quay/);
