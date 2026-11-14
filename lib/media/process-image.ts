@@ -6,8 +6,9 @@
  * / possibly-animated). BROWSER ONLY — never import from a route/server module.
  */
 
+import { encodeOnCanvas, type EncodeResponse } from './image-encode';
+
 const MAX_DIMENSION = 2048;
-const JPEG_QUALITY = 0.85;
 
 /** Content types returned unchanged (no canvas re-encode). */
 export const SKIP_COMPRESSION_TYPES: ReadonlySet<string> = new Set(['image/svg+xml', 'image/gif']);
@@ -32,42 +33,72 @@ export async function processForUpload(file: File): Promise<ProcessedImage> {
     return { bytes, contentType: file.type, format: formatFromContentType(file.type), width: 0, height: 0 };
   }
 
-  // createImageBitmap applies EXIF orientation and gives natural dimensions.
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const { bytes, width, height } = await encodeBitmapToJpeg(bitmap, MAX_DIMENSION);
+  const { bytes, width, height } = await encodeImage(file, MAX_DIMENSION);
   return { bytes, contentType: 'image/jpeg', format: 'JPG', width, height };
 }
 
-/**
- * Downscale an already-decoded bitmap so its longest edge is `maxDim` (never
- * upscales) and re-encode to JPEG q85. Closes the bitmap. Shared by
- * `processForUpload` and `downscaleToThumb`.
- */
-async function encodeBitmapToJpeg(
-  bitmap: ImageBitmap,
-  maxDim: number,
-): Promise<{ bytes: Uint8Array; width: number; height: number }> {
-  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
-  const width = Math.max(1, Math.round(bitmap.width * scale));
-  const height = Math.max(1, Math.round(bitmap.height * scale));
+// One worker for the page's photo work, started on first use (#62).
+let worker: Worker | null = null;
+let workerBroken = false;
+let nextId = 0;
+const waiting = new Map<number, { resolve: (r: { bytes: Uint8Array; width: number; height: number }) => void; reject: (e: Error) => void }>();
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    bitmap.close();
-    throw new Error('Canvas 2D context unavailable');
+function imageWorker(): Worker | null {
+  if (workerBroken || typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined') return null;
+  if (worker) return worker;
+  try {
+    worker = new Worker(new URL('./image-worker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    workerBroken = true;
+    return null;
   }
-  ctx.drawImage(bitmap, 0, 0, width, height);
-  bitmap.close();
+  worker.addEventListener('message', (event: MessageEvent<EncodeResponse>) => {
+    const reply = event.data;
+    const job = waiting.get(reply.id);
+    if (!job) return;
+    waiting.delete(reply.id);
+    if (reply.ok) job.resolve({ bytes: reply.bytes, width: reply.width, height: reply.height });
+    else job.reject(new Error(reply.error));
+  });
+  worker.addEventListener('error', () => {
+    // A worker that can't start (an old WebView without module workers) hands
+    // everything waiting, and everything after, back to the page.
+    workerBroken = true;
+    worker?.terminate();
+    worker = null;
+    for (const job of waiting.values()) job.reject(new WorkerUnavailable());
+    waiting.clear();
+  });
+  return worker;
+}
 
-  const blob: Blob | null = await new Promise((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY),
-  );
-  if (!blob) throw new Error('Image encoding failed');
+class WorkerUnavailable extends Error {}
 
-  return { bytes: new Uint8Array(await blob.arrayBuffer()), width, height };
+/**
+ * Decode, downscale and re-encode an image, in the image worker where the
+ * browser has one, else on the page. createImageBitmap applies EXIF
+ * orientation and gives natural dimensions.
+ */
+async function encodeImage(blob: Blob, maxDim: number): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+  const w = imageWorker();
+  if (w) {
+    try {
+      return await new Promise((resolve, reject) => {
+        const id = ++nextId;
+        waiting.set(id, { resolve, reject });
+        w.postMessage({ id, blob, maxDim });
+      });
+    } catch (err) {
+      if (!(err instanceof WorkerUnavailable)) throw err;
+    }
+  }
+  const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+  return encodeOnCanvas(bitmap, maxDim, (width, height) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+  });
 }
 
 /**
@@ -83,7 +114,6 @@ export async function downscaleToThumb(
 ): Promise<{ bytes: Uint8Array; contentType: 'image/jpeg' } | null> {
   if (SKIP_COMPRESSION_TYPES.has(contentType) || contentType === 'application/pdf') return null;
   const blob = new Blob([bytes as BlobPart], { type: contentType });
-  const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
-  const { bytes: thumbBytes } = await encodeBitmapToJpeg(bitmap, maxDim);
+  const { bytes: thumbBytes } = await encodeImage(blob, maxDim);
   return { bytes: thumbBytes, contentType: 'image/jpeg' };
 }

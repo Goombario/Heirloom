@@ -8,6 +8,8 @@ import MediaImg from '@/app/components/MediaImg';
 import { Banner, Button, DialogHeader, EmptyState, InlineDataError, SegmentedControl, showSuccessToast, cx } from '@/app/components/ui';
 import { Input } from '@/app/components/ui/Input';
 import { withWriteBatch } from '@/lib/data';
+import { DATA_MODE } from '@/lib/data/mode';
+import { addInBackground } from './backgroundMedia';
 import { FileTooLargeError, RateLimitError, StorageLimitError } from '@/lib/data/errors';
 import { errorToastKey } from '@/lib/utils/data-error';
 import { isPdfMedia } from '@/lib/media/allowed-extensions';
@@ -131,6 +133,8 @@ export default function AddMediaModal({
     const linkIds = [...new Set([...picked, ...swappedIds])];
     const pickedCount = linkIds.length + toUpload.length;
     const needsAttached = library.enabled && (picked.size > 0 || swappedIds.length > 0);
+    // Desktop, local build only: the hosted server does the photo work, and phone pages stay as built.
+    const inBackground = DATA_MODE === 'local' && !isMobile;
     const canAdd = pickedCount > 0 && !busy && !batch.scanning && (!needsAttached || attachedIds != null);
 
     const candidates = useMemo(() => {
@@ -209,11 +213,44 @@ export default function AddMediaModal({
         };
     }
 
+    /** A batch failure as the reader sees it. Raw errors can carry PGlite/IndexedDB
+     *  details; keep the surface on translated copy. */
+    function describeFailure(e: unknown, fileName: string | null): string {
+        if (e instanceof StorageLimitError) {
+            // The typed storage error keeps its specific wording.
+            return e.usedBytes != null && e.limitBytes != null && e.remainingBytes != null
+                ? tu('storage_limit_details', {
+                    used: formatMediaBytes(e.usedBytes, locale),
+                    limit: formatMediaBytes(e.limitBytes, locale),
+                    remaining: formatMediaBytes(e.remainingBytes, locale),
+                })
+                : tc('error_storage_full');
+        }
+        // The same limit the drop zone states (#1215).
+        if (e instanceof FileTooLargeError) {
+            return tu('file_too_large', { name: fileName ?? '', limit: formatMediaBytes(e.limitBytes ?? 10 * 1024 * 1024, locale) });
+        }
+        return e instanceof Error ? tc('error_generic') : tu('upload_failed');
+    }
+
+    /** Batch total, not one toast per photo (#487), and nothing when no photo carried face data. */
+    function announceFaces(facesFound: number) {
+        if (facesFound === 0) return;
+        showSuccessToast(tu('faces_found', { count: facesFound }), {
+            label: tu('faces_review'),
+            onClick: () => router.push('/library?tab=faces'),
+        });
+    }
+
     async function add() {
         if (!canAdd) return;
         if (draft) {
             onStage?.({ files: toUpload.map(r => r.file), mediaIds: linkIds });
             onClose();
+            return;
+        }
+        if (inBackground) {
+            addLater();
             return;
         }
         setBusy(true);
@@ -252,46 +289,76 @@ export default function AddMediaModal({
             });
             if (done > 0) onMediaChanged?.();
             onAdded();
-            // Batch total, not one toast per photo (#487), and nothing when no photo
-            // carried face data.
-            if (facesFound > 0) {
-                showSuccessToast(tu('faces_found', { count: facesFound }), {
-                    label: tu('faces_review'),
-                    onClick: () => router.push('/library?tab=faces'),
-                });
-            }
+            announceFaces(facesFound);
         } catch (e) {
             if (redirectIfUnauthorized(e)) return;
             // A batch that stops partway skips the faces toast: don't celebrate a
             // batch the user still sees as failed. The faces wait in the queue anyway.
             if (done > 0) onMediaChanged?.();
-            const storageMessage = e instanceof StorageLimitError
-                && e.usedBytes != null && e.limitBytes != null && e.remainingBytes != null
-                ? tu('storage_limit_details', {
-                    used: formatMediaBytes(e.usedBytes, locale),
-                    limit: formatMediaBytes(e.limitBytes, locale),
-                    remaining: formatMediaBytes(e.remainingBytes, locale),
-                })
-                : tc('error_storage_full');
             setFailure({
                 done,
                 rateLimited: e instanceof RateLimitError,
-                // Raw errors can carry PGlite/IndexedDB details; keep the surface on
-                // translated copy. The typed storage error keeps its specific wording.
-                message: e instanceof StorageLimitError
-                    ? storageMessage
-                    // The same limit the drop zone states (#1215).
-                    : e instanceof FileTooLargeError
-                    ? tu('file_too_large', {
-                        name: current.row?.file.name ?? '',
-                        limit: formatMediaBytes(e.limitBytes ?? 10 * 1024 * 1024, locale),
-                    })
-                    : e instanceof Error ? tc('error_generic') : tu('upload_failed'),
+                message: describeFailure(e, current.row?.file.name ?? null),
             });
         } finally {
             setBusy(false);
             setUploadingId(null);
         }
+    }
+
+    /**
+     * The local build saves each photo on this device, which takes a while for a big
+     * batch. On a desktop the batch carries on in the background and the dialog closes
+     * at once, so the reader can keep working (#62); `BackgroundMediaStatus` shows how
+     * far it has got. Galleries refresh as photos land, at most once a second.
+     */
+    function addLater() {
+        const rows = toUpload.map(row => ({ input: uploadInput(row), name: row.file.name }));
+        const links = linkIds;
+        const owner = target.kind === 'owner' && target.ownerId != null ? target : null;
+        const caseSource = target.kind === 'case' ? target.source : null;
+        let facesFound = 0;
+        let lastRefresh = 0;
+        let current: string | null = null;
+        const refresh = (force = false) => {
+            const now = Date.now();
+            if (!force && now - lastRefresh < 1000) return;
+            lastRefresh = now;
+            onMediaChanged?.();
+        };
+        void addInBackground({
+            total: rows.length + links.length,
+            describe: (e) => describeFailure(e, current),
+            run: async (added) => {
+                try {
+                    // One IndexedDB flush for the whole batch (#1259), which also asks
+                    // before the page is left while it runs.
+                    await withWriteBatch(async (client) => {
+                        for (const row of rows) {
+                            current = row.name;
+                            const media = await client.media.upload(row.input, treeId);
+                            facesFound += media.FacesFound ?? 0;
+                            added();
+                            refresh();
+                        }
+                        current = null;
+                        if (caseSource && links.length > 0) {
+                            await caseSource.attach(links);
+                            for (let i = 0; i < links.length; i++) added();
+                        } else if (owner) {
+                            for (const id of links) {
+                                await client.media.linkToOwner(id, owner.ownerTable, owner.ownerId!, treeId, owner.ownerFact);
+                                added();
+                            }
+                        }
+                    });
+                    announceFaces(facesFound);
+                } finally {
+                    refresh(true);
+                }
+            },
+        });
+        onAdded();
     }
 
     const quotaWarning = storageSummary?.quotaMode === 'tree'

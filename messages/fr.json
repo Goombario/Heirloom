@@ -183,7 +183,11 @@
     "scanning": "Vérification de votre bibliothèque…",
     "state_picked_twice": "Choisie deux fois",
     "faces_found": "{count, plural, one {# visage trouvé dans les métadonnées de la photo} other {# visages trouvés dans les métadonnées de la photo}}",
-    "faces_review": "Examiner"
+    "faces_review": "Examiner",
+    "background_adding": "Ajout des médias · {done} sur {total}",
+    "background_added": "{count, plural, one {# élément ajouté} other {# éléments ajoutés}}",
+    "background_stopped": "Arrêté après {done} sur {total}. {message}",
+    "background_dismiss": "Fermer"
   },
   "addMedia": {
     "title": "Ajouter des médias",
