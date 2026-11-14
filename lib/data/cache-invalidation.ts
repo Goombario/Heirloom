@@ -38,6 +38,11 @@ export function isReadMethod(name: string): boolean {
   return READ_EXACT.has(name) || READ_PREFIXES.some((p) => name.startsWith(p));
 }
 
+// Sub-clients whose writes change nothing the cache holds. `account` records the
+// last version a user's What's new showed (#35) on every first load after an
+// update; treating that as a write would throw the warm cache away at start-up.
+const UNCACHED_SUB_CLIENTS = new Set(['account']);
+
 /** Wraps each sub-client in a Proxy that clears the cache after any write resolves. */
 function wrapSubClient<T extends object>(sub: T): T {
   return new Proxy(sub, {
@@ -83,7 +88,7 @@ export function withCacheInvalidation(client: DataClient): DataClient {
   return new Proxy(client, {
     get(target, prop, receiver) {
       const sub = Reflect.get(target, prop, receiver);
-      if (sub && typeof sub === 'object') {
+      if (sub && typeof sub === 'object' && !(typeof prop === 'string' && UNCACHED_SUB_CLIENTS.has(prop))) {
         return wrapSubClient(sub as object);
       }
       return sub;

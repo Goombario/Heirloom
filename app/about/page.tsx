@@ -10,6 +10,8 @@ import { DATA_MODE } from '@/lib/data';
 import { isDesktopApp } from '@/lib/desktop';
 import { CREDITS_HREF, LICENSE_HREF, aboutInfo, runningAs, type RunningAs } from '@/lib/about';
 import TextFileDialog from './TextFileDialog';
+import WhatsNewDialog from '@/app/components/whats-new/WhatsNewDialog';
+import { entriesUpTo } from '@/lib/whats-new';
 
 const RUNNING_KEY: Record<RunningAs, string> = {
   hosted: 'running_hosted',
@@ -58,7 +60,7 @@ export default function AboutPage() {
   const legacyDesktop = useDesktopMode();
   // Read after hydration: the static export pre-renders without a window.
   const tauri = useSyncExternalStore(noSubscribe, isDesktopApp, () => false);
-  const [file, setFile] = useState<'licence' | 'credits' | null>(null);
+  const [file, setFile] = useState<'licence' | 'credits' | 'whats_new' | null>(null);
   useDocumentTitle(t('title'));
 
   const info = aboutInfo();
@@ -90,6 +92,9 @@ export default function AboutPage() {
               <button type="button" className={LINK} onClick={() => setFile('licence')}>{t('licence_name')}</button>
             </Row>
             <Row label={t('data')}>{t(DATA_KEY[kind])}</Row>
+            <Row label={t('whats_new')}>
+              <button type="button" className={LINK} onClick={() => setFile('whats_new')}>{t('whats_new_link')}</button>
+            </Row>
           </dl>
         </Card>
         <Card pad={false} className={`${PHONE_FLAT} max-md:mt-6`}>
@@ -102,6 +107,7 @@ export default function AboutPage() {
       </div>
 
       <TextFileDialog open={file === 'licence'} onClose={() => setFile(null)} title={t('licence_name')} href={LICENSE_HREF} />
+      <WhatsNewDialog open={file === 'whats_new'} onClose={() => setFile(null)} entries={entriesUpTo(info.version)} />
       <TextFileDialog open={file === 'credits'} onClose={() => setFile(null)} title={t('credits_link')} href={CREDITS_HREF} />
     </PageShell>
   );
