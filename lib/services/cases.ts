@@ -1,3 +1,5 @@
+import { parseBodyId } from '@/lib/utils/parse-id';
+import { getMediaById } from '@/lib/db/queries/media';
 import {
   getAllCases,
   getCaseById,
@@ -21,6 +23,18 @@ import { AccessError, NotFoundError } from '@/lib/data/errors';
 import type { Case, CaseComment, CaseOutcome, CaseWithRelations, MediaWithPerson, NewCase } from '@/lib/db/schema';
 
 // ── Param types ───────────────────────────────────────────────────────────────
+
+/** A case's person or media id list from a request body: undefined when not sent. */
+function linkIds(value: unknown, name: string): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new ValidationError(`${name} must be an array`);
+  if (value.length > 10000) throw new ValidationError(`${name} is too long`);
+  return value.map((v: unknown) => {
+    const id = parseBodyId(v, name);
+    if (id == null) throw new ValidationError(`Invalid ${name}`);
+    return id;
+  });
+}
 
 export interface ListCasesParams {
   requestedTreeId: number | null;
@@ -201,9 +215,7 @@ export async function createCaseService(params: CreateCaseParams): Promise<Case>
     ...scopeFields(body),
   };
 
-  const personIds: number[] = Array.isArray(body.personIds)
-    ? body.personIds.map((id: unknown) => parseInt(String(id), 10)).filter((n: number) => !isNaN(n))
-    : [];
+  const personIds = linkIds(body.personIds, 'personIds') ?? [];
 
   return createCase(newCase, personIds, currentUserId);
 }
@@ -239,13 +251,9 @@ export async function updateCaseService(params: UpdateCaseParams): Promise<Case>
   }
   Object.assign(updates, scopeFields(body));
 
-  const personIds: number[] = Array.isArray(body.personIds)
-    ? body.personIds.map((pid: unknown) => parseInt(String(pid), 10)).filter((n: number) => !isNaN(n))
-    : [];
-
-  const mediaIds: number[] = Array.isArray(body.mediaIds)
-    ? body.mediaIds.map((mid: unknown) => parseInt(String(mid), 10)).filter((n: number) => !isNaN(n))
-    : [];
+  // An absent list keeps the case's links; only a sent list re-syncs them (#51, L-5).
+  const personIds = linkIds(body.personIds, 'personIds');
+  const mediaIds = linkIds(body.mediaIds, 'mediaIds');
 
   // Closing an open case needs a conclusion (#801); updateCase rejects it without one.
   const conclusion = body.Conclusion !== undefined
@@ -302,6 +310,10 @@ export async function addCommentService(params: AddCommentParams): Promise<CaseC
   if (!body) throw new ValidationError('Comment body is required');
   const bodyText = validateStringField(body, 'body', 10000);
   if (!bodyText) throw new ValidationError('Comment body is required');
+  // The attached photo must be this tree's (#51, L-5).
+  if (mediaId != null && (parseBodyId(mediaId, 'mediaId') == null || !(await getMediaById(mediaId, scope.treeId)))) {
+    throw new ValidationError('That media file is not in this tree');
+  }
 
   // CaseComments.UserId is the comment AUTHOR (the acting user), not tree scope —
   // it stays keyed on currentUserId, never scope.ownerId.

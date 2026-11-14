@@ -1,4 +1,5 @@
 import { query } from '@/lib/db/connection';
+import { withTransaction } from '@/lib/db/rollback';
 import { FACT_TABLES, PERSON_KEYED_FACT_TABLES, type FactTableValue } from '@/lib/db/fact-tables';
 import { auditCreate, auditUpdate, auditDelete, withAuditIds, type Audited, type Queryable } from '@/lib/db/queries/audit-capture';
 import { integratedFullName } from '@/lib/db/queries/people';
@@ -253,42 +254,47 @@ export async function updateCitation(
     patch: { Page?: string | null; Quay?: string | null; DataText?: string | null; Url?: string | null },
     actingUserId?: number
 ): Promise<Audited<Citation> | null> {
-    const before = await query(
-        `SELECT * FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`,
-        [id, treeId]
-    );
-    const beforeRow = before.rows[0] as Citation | undefined;
-    if (!beforeRow) return null;
+    // The change and its audit entry land together (#51, L-14).
+    return withTransaction(async (client) => {
+        const before = await client.query(
+            `SELECT * FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`,
+            [id, treeId]
+        );
+        const beforeRow = before.rows[0] as Citation | undefined;
+        if (!beforeRow) return null;
 
-    const result = await query(
-        `UPDATE "Citation"
-         SET "Page" = $3, "Quay" = $4, "DataText" = $5, "Url" = $6
-         WHERE "Id" = $1 AND "TreeId" = $2
-         RETURNING *`,
-        [id, treeId, patch.Page ?? null, patch.Quay ?? null, patch.DataText ?? null, patch.Url === undefined ? beforeRow.Url ?? null : patch.Url]
-    );
-    const after = result.rows[0] as Citation;
-    const auditId = await auditUpdate('citation', beforeRow as unknown as Record<string, unknown>, after as unknown as Record<string, unknown>, ALLOWED_CITATION_FIELDS, beforeRow.OwnerId, actingUserId ?? beforeRow.OwnerId);
-    return withAuditIds(after, [auditId]);
+        const result = await client.query(
+            `UPDATE "Citation"
+             SET "Page" = $3, "Quay" = $4, "DataText" = $5, "Url" = $6
+             WHERE "Id" = $1 AND "TreeId" = $2
+             RETURNING *`,
+            [id, treeId, patch.Page ?? null, patch.Quay ?? null, patch.DataText ?? null, patch.Url === undefined ? beforeRow.Url ?? null : patch.Url]
+        );
+        const after = result.rows[0] as Citation;
+        const auditId = await auditUpdate('citation', beforeRow as unknown as Record<string, unknown>, after as unknown as Record<string, unknown>, ALLOWED_CITATION_FIELDS, beforeRow.OwnerId, actingUserId ?? beforeRow.OwnerId, client);
+        return withAuditIds(after, [auditId]);
+    });
 }
 
 export async function deleteCitation(id: number, treeId: number, actingUserId?: number): Promise<Audited<{ deleted: boolean }>> {
-    const before = await query(
-        `SELECT * FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`,
-        [id, treeId]
-    );
-    const beforeRow = before.rows[0] as Citation | undefined;
-    if (!beforeRow) return { deleted: false, auditIds: [] };
+    return withTransaction(async (client) => {
+        const before = await client.query(
+            `SELECT * FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`,
+            [id, treeId]
+        );
+        const beforeRow = before.rows[0] as Citation | undefined;
+        if (!beforeRow) return { deleted: false, auditIds: [] };
 
-    const result = await query(
-        `DELETE FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`,
-        [id, treeId]
-    );
-    const deleted = (result.rowCount ?? 0) > 0;
-    const auditId = deleted
-        ? await auditDelete('citation', beforeRow as unknown as Record<string, unknown>, beforeRow.OwnerId, actingUserId ?? beforeRow.OwnerId)
-        : null;
-    return withAuditIds({ deleted }, [auditId]);
+        const result = await client.query(
+            `DELETE FROM "Citation" WHERE "Id" = $1 AND "TreeId" = $2`,
+            [id, treeId]
+        );
+        const deleted = (result.rowCount ?? 0) > 0;
+        const auditId = deleted
+            ? await auditDelete('citation', beforeRow as unknown as Record<string, unknown>, beforeRow.OwnerId, actingUserId ?? beforeRow.OwnerId, client)
+            : null;
+        return withAuditIds({ deleted }, [auditId]);
+    });
 }
 
 /**
@@ -340,6 +346,10 @@ export interface CitedByRow {
     factPlace: string | null;
     /** `"SortableYear"(factDate)`, the key the rows are ordered by (#911). */
     sortableYear: number | null;
+    /** The citation's own file (#47), the first one linked; null when it has none. */
+    fileMediaId: number | null;
+    fileTitle: string | null;
+    fileContentType: string | null;
 }
 
 /**
@@ -423,8 +433,17 @@ export async function getCitedByForSource(sourceId: number, treeId: number): Pro
              WHEN 'Families' THEN (SELECT ${placeText('MarriagePlace')} FROM "Families" f WHERE f."Id" = c."FactId")
              WHEN 'FamilyMarriage' THEN (SELECT ${placeText('MarriagePlace')} FROM "Families" f WHERE f."Id" = c."FactId")
              WHEN 'Events' THEN (SELECT ${placeText('Place')} FROM "Events" f WHERE f."Id" = c."FactId")
-           END AS "factPlace"
+           END AS "factPlace",
+           file."Id" AS "fileMediaId",
+           file."Title" AS "fileTitle",
+           file."ContentType" AS "fileContentType"
          FROM "Citation" c
+         LEFT JOIN LATERAL (
+             SELECT m."Id", m."Title", m."ContentType"
+               FROM "MediaLink" l JOIN "Media" m ON m."Id" = l."MediaId" AND m."TreeId" = c."TreeId"
+              WHERE l."OwnerTable" = 'Citation' AND l."OwnerId" = c."Id"
+              ORDER BY m."Id" LIMIT 1
+         ) file ON TRUE
          WHERE c."SourceId" = $1 AND c."TreeId" = $2
          -- By the fact's year, undated last, then by who it is about (#911). The
          -- browser groups these by fact type; each group keeps this order.

@@ -16,6 +16,7 @@ import { useTimestamp } from '@/app/hooks/useTimestamp';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useDesktopMode } from '@/app/hooks/useDesktopMode';
 import type { Tree } from '@/lib/db/schema';
+import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION;
 
@@ -45,6 +46,7 @@ export function MobileOptions(p: {
     const t = useTranslations('options');
     const tm = useTranslations('mobileOptions');
     const ta = useTranslations('about');
+    const desktop = useIsDesktopApp();
     const [sheet, setSheet] = useState<'language' | 'dates' | 'zone' | 'erase' | null>(null);
     const [zoneQuery, setZoneQuery] = useState('');
     const languages: { value: Language; label: string }[] = [{ value: 'en', label: 'English' }, { value: 'fr', label: 'Français' }, { value: 'ru', label: 'Русский' }];
@@ -81,7 +83,7 @@ export function MobileOptions(p: {
             </Group>
 
             {DATA_MODE === 'local' && (
-                <Group title={t('local_data_title')} hint={t('local_data_desc')}>
+                <Group title={t('local_data_title')} hint={t(desktop ? 'local_data_desc_desktop' : 'local_data_desc')}>
                     <div className="px-4 py-4"><BackupPanel /></div>
                 </Group>
             )}

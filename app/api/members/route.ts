@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest, isDesktopMode } from '@/lib/auth/get-user-from-request';
 import { inviteMemberService, listMembersService } from '@/lib/services/members';
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     try {
         const user = await getUserFromRequest();
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        const body = await request.json().catch(() => ({})) as { email?: unknown; role?: unknown };
+        const body = await readJsonObject(request).catch(() => ({})) as { email?: unknown; role?: unknown };
         const member = await inviteMemberService({ caller: user, email: body.email, role: body.role });
         return NextResponse.json({ member }, { status: 201 });
     } catch (error) {

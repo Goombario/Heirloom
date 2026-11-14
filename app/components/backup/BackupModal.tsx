@@ -7,6 +7,7 @@ import BackupPanel from '@/app/components/backup/BackupPanel';
 import { Cloud, X } from '@/lib/icons';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { MobileBackupSheet } from './MobileBackupSheet';
+import { ScrollArea } from '@/app/components/ui';
 
 /**
  * Shared backup modal — opened by the desktop status chip, the overdue nudge,
@@ -23,7 +24,7 @@ export default function BackupModal({ open, onClose }: { open: boolean; onClose:
 
   return (
     <Modal open={open} onClose={onClose} size="md" labelledBy={titleId} elevated>
-      <div className="bg-card rounded-2xl shadow-xl max-h-[85vh] overflow-y-auto">
+      <ScrollArea className="bg-card rounded-2xl shadow-xl max-h-[85vh]">
         <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
           <div className="flex items-center gap-2">
             <Cloud className="w-5 h-5 text-text-muted" aria-hidden="true" />
@@ -42,7 +43,7 @@ export default function BackupModal({ open, onClose }: { open: boolean; onClose:
         <div className="p-5">
           <BackupPanel />
         </div>
-      </div>
+      </ScrollArea>
     </Modal>
   );
 }

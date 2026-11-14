@@ -13,7 +13,7 @@ vi.mock('@/app/components/PersonAvatar', () => ({ default: () => <span data-test
 const display: TreeDisplayProps = {
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
-    depth: 3, maxDepth: 3, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
+    depth: 3, maxDepth: 3, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(), showStatus: true, onShowStatusChange: vi.fn(),
 };
 
 function search(): ReturnType<typeof useTreeSearch> {

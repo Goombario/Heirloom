@@ -241,7 +241,9 @@ describe('event notes rail — editor', () => {
         await user.click(showNotesButton(1)[0]);
         const row = await screen.findByTestId('note-row');
 
-        await user.click(within(row).getByTitle(en.common.delete));
+        // A note opens into its edit panel (#30); Delete lives there.
+        await user.click(within(row).getByRole('button', { name: /^Edit note/ }));
+        await user.click(within(row).getByRole('button', { name: en.common.delete }));
 
         const dialog = await screen.findByRole('dialog');
         await user.click(within(dialog).getByRole('button', { name: en.common.delete }));
@@ -405,13 +407,16 @@ describe('vital notes rail — Birth and Death rows', () => {
         const editPrefix = en.eventEdit.edit_event_named.replace('{event}', '').trim();
         await user.click(screen.getAllByRole('button', { name: new RegExp(`^${editPrefix} `) })[0]);
         const row = await screen.findByTestId('note-row');
-        await user.click(within(row).getByTitle(en.common.delete));
+        // A note opens into its edit panel (#30); Delete lives there.
+        await user.click(within(row).getByRole('button', { name: /^Edit note/ }));
+        await user.click(within(row).getByRole('button', { name: en.common.delete }));
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
 
         await user.keyboard('{Escape}');
 
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-        expect(screen.getByRole('group', { name: /^Edit / })).toBeInTheDocument();
+        // Both the event editor and the note's own panel stay open.
+        expect(screen.getAllByRole('group', { name: /^Edit / })).toHaveLength(2);
         expect(removeNote).not.toHaveBeenCalled();
     });
 
@@ -423,9 +428,11 @@ describe('vital notes rail — Birth and Death rows', () => {
         await user.click(showNotesButton(1)[0]);
         const row = await screen.findByTestId('note-row');
 
-        // Edit and Delete are there; nothing offers to promote a birth note.
-        expect(within(row).getByTitle(en.common.edit)).toBeInTheDocument();
-        expect(within(row).queryByTitle(en.notes.make_primary)).not.toBeInTheDocument();
-        expect(within(row).queryByTitle(en.notes.clear_primary)).not.toBeInTheDocument();
+        // The note opens to its editor and Delete; nothing offers to promote a birth note.
+        await user.click(within(row).getByRole('button', { name: /^Edit note/ }));
+        expect(within(row).getByRole('textbox', { name: en.common.edit })).toBeInTheDocument();
+        expect(within(row).getByRole('button', { name: en.common.delete })).toBeInTheDocument();
+        expect(within(row).queryByRole('button', { name: en.notes.make_primary })).not.toBeInTheDocument();
+        expect(within(row).queryByRole('button', { name: en.notes.clear_primary })).not.toBeInTheDocument();
     });
 });

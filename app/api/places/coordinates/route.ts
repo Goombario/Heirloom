@@ -1,3 +1,4 @@
+import { readJsonObject } from '@/lib/api/read-json';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { parseIdParam, parseOptionalIdParam } from '@/lib/utils/parse-id';
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonObject(request).catch(() => ({}));
     const { auditIds } = await updatePlaceCoordinatesService({
       name: body?.name,
       placeId: parseOptionalIdParam(body?.placeId == null ? null : String(body.placeId), 'placeId'),

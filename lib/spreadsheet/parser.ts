@@ -178,8 +178,13 @@ export async function parseSpreadsheet(buffer: Buffer, slashOrder: 'MDY' | 'DMY'
     const workbook = new ExcelJS.Workbook();
     // ExcelJS 4.4.0 bundles @types/node@14 (non-generic Buffer); Node 20 uses Buffer<ArrayBufferLike>.
     // The types are structurally incompatible at the TS level but identical at runtime.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await workbook.xlsx.load(buffer as any);
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await workbook.xlsx.load(buffer as any);
+    } catch {
+        // A zip that isn't a readable workbook is bad input, not a server fault (#51, L-8).
+        throw new ValidationError('The uploaded file is not a valid .xlsx workbook.');
+    }
 
     const peopleSheet = workbook.getWorksheet('People');
     if (!peopleSheet) {
