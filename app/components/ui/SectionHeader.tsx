@@ -17,7 +17,8 @@ export interface SectionHeaderProps {
    * `as="h3"`, for a rail). This is the only way to render these headings.
    */
   level?: 'section' | 'rail' | 'eyebrow' | 'label';
-  /** `label` only: the heading element. Main-column sections are h2, rail sections h3. */
+  /** The heading element, for `label` (default h2), `rail` and `eyebrow` (default h3).
+   *  A heading right under the page's h1 is an h2 whatever it looks like (#19). */
   as?: 'h2' | 'h3';
   className?: string;
   /** Id on the heading, for a region's `aria-labelledby`. */
@@ -36,13 +37,13 @@ export interface SectionHeaderProps {
  * globals.css (`.section`, `.rail-title`, `.eyebrow`), the #687 type ramp. `rail` is the one rail-card
  * header anatomy: title left, action right, hairline under (#694).
  */
-export function SectionHeader({ title, count, action, subtitle, level = 'section', className = '', headingId, rule = true, as = 'h2' }: SectionHeaderProps) {
+export function SectionHeader({ title, count, action, subtitle, level = 'section', className = '', headingId, rule = true, as }: SectionHeaderProps) {
   const countSuffix =
     count != null && count > 0 ? (
       <span className="font-sans muted font-normal text-meta"> ({count})</span>
     ) : null;
   if (level === 'label') {
-    const Tag = as;
+    const Tag = as ?? 'h2';
     return (
       <div className={cx('section-label', className)}>
         <div className="min-w-0">
@@ -56,11 +57,12 @@ export function SectionHeader({ title, count, action, subtitle, level = 'section
       </div>
     );
   }
+  const Small = as ?? 'h3';
   const heading =
     level === 'eyebrow' ? (
-      <h3 id={headingId} className="eyebrow m-0">{title}{countSuffix}</h3>
+      <Small id={headingId} className="eyebrow m-0">{title}{countSuffix}</Small>
     ) : level === 'rail' ? (
-      <h3 id={headingId} className="rail-title m-0">{title}{countSuffix}</h3>
+      <Small id={headingId} className="rail-title m-0">{title}{countSuffix}</Small>
     ) : (
       <h2 id={headingId} className="section m-0">{title}{countSuffix}</h2>
     );
