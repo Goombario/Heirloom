@@ -210,7 +210,16 @@ describe('chainFromCandidate', () => {
         result: { name: 'Canada', displayName: 'Canada', lat: 56.1, lng: -106.3, osmType: 'relation', osmId: 1428125, countryCode: 'ca' } },
       'Canada',
     );
-    expect(chain).toEqual([{ name: 'Canada', latitude: 56.1, longitude: -106.3, displayName: 'Canada', osmType: 'relation', osmId: 1428125 }]);
+    expect(chain).toEqual([{ name: 'Canada', latitude: 56.1, longitude: -106.3, displayName: 'Canada', osmType: 'relation', osmId: 1428125, osmKind: 'place/country' }]);
+  });
+
+  it('keeps what kind each level is (#45)', () => {
+    const chain = chainFromCandidate(
+      { props: { name: 'Lakewood Cemetery', city: 'Minneapolis', state: 'Minnesota', country: 'United States', osm_key: 'landuse', osm_value: 'cemetery' },
+        result: { name: 'x', displayName: 'x', lat: 44.9, lng: -93.3, osmType: 'way', osmId: 1, countryCode: 'us' } },
+      'Lakewood Cemetery, Minneapolis',
+    );
+    expect(chain.map((l) => l.osmKind)).toEqual(['place/country', 'place/state', 'place/city', 'landuse/cemetery']);
   });
 
   it('leaves ancestor levels without a displayName — only the leaf carries the canonical name', () => {

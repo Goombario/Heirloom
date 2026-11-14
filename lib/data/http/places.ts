@@ -73,7 +73,7 @@ export class HttpPlacesClient implements PlacesClient {
     return { auditIds: ((await res.json()) as { auditIds?: number[] }).auditIds ?? [] };
   }
 
-  async geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited> {
+  async geocodeUpsertHierarchy(levels: { name: string; latitude?: number | null; longitude?: number | null; displayName?: string | null; osmType?: 'node' | 'way' | 'relation' | null; osmId?: number | null; osmKind?: string | null }[], treeId?: number | null, options?: { reparent?: boolean; leafId?: number | null }): Promise<Audited> {
     const res = await fetch(`/api/places/geocode-hierarchy${treeQuery(treeId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

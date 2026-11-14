@@ -132,7 +132,8 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // record-level Families link, under its new name "medialink_primary_record_level".
 // v72 — a repository's website, phone and email (#40, ADR 0049): three nullable
 // columns and the one-time lift of the first WWW/PHON/EMAIL out of its passthrough.
-const EXPECTED_FINGERPRINT = 'f28ae424f4441dd1699020149c181baf71c9c2f0f8437180fc728dd6cfb6f8b1';
+// v73 — a place's geocoder kind (#45, ADR 0050): "Places"."OsmKind".
+const EXPECTED_FINGERPRINT = 'd87a2419f5fa0cd422c7f9bccb843b2ff30a188d5d9230445b2a115a9083a0e9';
 
 function schemaFingerprint(): string {
   const src = readFileSync(
