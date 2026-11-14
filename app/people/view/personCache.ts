@@ -48,41 +48,66 @@ export function getPersonSummary(id: string | number, treeId: number | null): Pe
     return dataCache.get<PersonSummary>(personSummaryKey(treeId, id)) ?? null;
 }
 
+// One request per resource at a time: a page that mounts while a hover prefetch
+// of the same person is still running joins it instead of asking again (#65).
+const pending = new Map<string, Promise<unknown>>();
+// Keyed by cache generation too: a load that started before a write is never
+// joined after it, and none is shared while a write is still running.
+function shared<T>(cacheKey: string, load: () => Promise<T>): Promise<T> {
+    if (dataCache.writing()) return load();
+    const key = `${dataCache.generation()}:${cacheKey}`;
+    const running = pending.get(key) as Promise<T> | undefined;
+    if (running) return running;
+    const promise = load().finally(() => pending.delete(key));
+    pending.set(key, promise);
+    return promise;
+}
+
 export async function loadPerson(id: number, treeId: number | null): Promise<PersonWithRelations> {
-    const client = await getDataClient();
-    const person = await client.people.get(id, treeId);
-    dataCache.set(personKey(treeId, id), person);
-    return person;
+    return shared(personKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const person = await client.people.get(id, treeId);
+        dataCache.set(personKey(treeId, id), person);
+        return person;
+    });
 }
 
 export async function loadPersonMedia(id: number, treeId: number | null): Promise<PersonGalleryMedia[]> {
-    const client = await getDataClient();
-    const { media } = await client.media.list<PersonGalleryMedia>({ personId: id, treeId, includeTagged: true });
-    dataCache.set(mediaKey(treeId, id), media);
-    return media;
+    return shared(mediaKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const { media } = await client.media.list<PersonGalleryMedia>({ personId: id, treeId, includeTagged: true });
+        dataCache.set(mediaKey(treeId, id), media);
+        return media;
+    });
 }
 
 export async function loadPersonCitations(id: number, treeId: number | null): Promise<PersonCitationMap> {
-    const client = await getDataClient();
-    const citationMap = await client.citations.listForPerson(id, treeId);
-    const value = citationMap ?? {};
-    dataCache.set(citationsKey(treeId, id), value);
-    return value;
+    return shared(citationsKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const citationMap = await client.citations.listForPerson(id, treeId);
+        const value = citationMap ?? {};
+        dataCache.set(citationsKey(treeId, id), value);
+        return value;
+    });
 }
 
 export async function loadPersonVariants(id: number, treeId: number | null): Promise<NameVariant[]> {
-    const client = await getDataClient();
-    const variants = await client.people.listNameVariants(id, treeId);
-    const mapped = variants.map(v => ({ ...v, Type: v.Type as NameVariant['Type'], IsPrimary: v.IsPrimary ? 1 : 0 }));
-    dataCache.set(variantsKey(treeId, id), mapped);
-    return mapped;
+    return shared(variantsKey(treeId, id), async () => {
+        const client = await getDataClient();
+        const variants = await client.people.listNameVariants(id, treeId);
+        const mapped = variants.map(v => ({ ...v, Type: v.Type as NameVariant['Type'], IsPrimary: v.IsPrimary ? 1 : 0 }));
+        dataCache.set(variantsKey(treeId, id), mapped);
+        return mapped;
+    });
 }
 
 export async function loadOwnerNotes(table: 'People' | 'Events', id: number, treeId: number | null): Promise<Note[]> {
-    const client = await getDataClient();
-    const notes = await client.notes.listForOwner(table, id, treeId) as Note[];
-    dataCache.set(notesKey(treeId, table, id), notes);
-    return notes;
+    return shared(notesKey(treeId, table, id), async () => {
+        const client = await getDataClient();
+        const notes = await client.notes.listForOwner(table, id, treeId) as Note[];
+        dataCache.set(notesKey(treeId, table, id), notes);
+        return notes;
+    });
 }
 
 /** A person's notes and their events' notes, warmed once the person record names the events. */

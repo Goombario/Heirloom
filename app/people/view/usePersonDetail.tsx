@@ -25,7 +25,7 @@ import {
 } from './personCache';
 import { fullName } from './derive';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
-import { factPlaceKey, uniquePlaceKeys } from '@/lib/places/place-key';
+import { factPlaceKey, uniquePlaceKeys, type PlaceKey } from '@/lib/places/place-key';
 
 export type CitationRow = Citation;
 export type CitationMap = Record<string, Citation[]>;
@@ -206,8 +206,9 @@ export function usePersonDetail() {
         const request = ++mediaRequest.current;
         setMediaError(null);
         setMediaErrorScope(null);
-        setMediaStatus({ treeId: activeTreeId, id, loaded: false });
         const cached = dataCache.get<PersonGalleryMedia[]>(mediaKey(activeTreeId, id));
+        // A cached list paints as loaded while it revalidates: no skeleton over it (#65).
+        setMediaStatus({ treeId: activeTreeId, id, loaded: cached !== undefined });
         if (cached !== undefined) setMediaState({ treeId: activeTreeId, id, value: cached });
         try {
             const list = await loadPersonMedia(Number(id), activeTreeId);
@@ -254,8 +255,8 @@ export function usePersonDetail() {
         const request = ++variantsRequest.current;
         setVariantsError(null);
         setVariantsErrorScope(null);
-        setVariantsStatus({ treeId: activeTreeId, id, loaded: false });
         const cached = dataCache.get<NameVariant[]>(variantsKey(activeTreeId, id));
+        setVariantsStatus({ treeId: activeTreeId, id, loaded: cached !== undefined });
         if (cached) {
             setVariantsState({ treeId: activeTreeId, id, value: cached });
         }
@@ -297,13 +298,16 @@ export function usePersonDetail() {
 
     useDocumentTitle(activePerson ? fullName(activePerson, t('unknown')) : null);
 
+    // By place id where the fact has one: two places may share a name (#1186).
+    // Keyed by the places themselves, not the person object, so a background
+    // revalidation that returns the same places doesn't ask again (#66).
+    const placeKeysSig = JSON.stringify(uniquePlaceKeys([
+        factPlaceKey(activePerson?.BirthPlace, activePerson?.BirthPlaceId),
+        factPlaceKey(activePerson?.DeathPlace, activePerson?.DeathPlaceId),
+        ...((activePerson?.events ?? []).map(e => factPlaceKey(e.Place, e.PlaceId))),
+    ]));
     useEffect(() => {
-        // By place id where the fact has one: two places may share a name (#1186).
-        const keys = uniquePlaceKeys([
-            factPlaceKey(activePerson?.BirthPlace, activePerson?.BirthPlaceId),
-            factPlaceKey(activePerson?.DeathPlace, activePerson?.DeathPlaceId),
-            ...((activePerson?.events ?? []).map(e => factPlaceKey(e.Place, e.PlaceId))),
-        ]);
+        const keys = JSON.parse(placeKeysSig) as PlaceKey[];
         if (keys.length === 0) return;
         let active = true;
         (async () => {
@@ -320,7 +324,7 @@ export function usePersonDetail() {
         // fresh coords arrived. The next successful load overwrites them; coords
         // for places the current person no longer has are simply never rendered.
         return () => { active = false; };
-    }, [activePerson?.BirthPlace, activePerson?.BirthPlaceId, activePerson?.DeathPlace, activePerson?.DeathPlaceId, activePerson?.events, activeTreeId, id]);
+    }, [placeKeysSig, activeTreeId, id]);
 
     const placeCoords = placeCoordsState?.treeId === activeTreeId && placeCoordsState.id === id
         ? placeCoordsState.value
