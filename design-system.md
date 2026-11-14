@@ -640,7 +640,7 @@ A detail page edits in exactly two ways: the record's **identity** in its hero, 
    card-alt panel with an inset bar, no dashed border and no eyebrow, ending in
    `EditorActions` at `sm`. One panel is open at a time. `compact` drops the visible
    labels in a narrow rail (notes). Below `md` the event editor opens in a `Sheet`
-   instead (#797, M-2), with the date qualifier stacked above the date and the notes
+   instead (#797, M-2), with the date's Kind menu stacked above the date and the notes
    rail flattened (`.sheet-flat`) so no card nests inside the sheet. On the v1.1 desktop
    timelines (person and family) the row itself opens its editor (`LedgerItem.onOpen`:
    the whole row is the pointer target, the title the keyboard control) and Delete
@@ -797,8 +797,9 @@ full screen.
 - Every edit happens in a sheet. Typing sheets are full height, 40px below the top, above the
   keyboard. Header: Cancel, the title, Save as the copper pill, dim until something changes.
   This retires `MobileFormFooter` on the redesigned screens.
-- Return moves to the next field. Date qualifiers are chips under the Date field; places
-  suggest the tree's places as rows.
+- Return moves to the next field. A date is one row, Kind menu · date · About, as on the
+  desktop (`DateInput touch`, ADR 0048); a range's second box takes its own row with "and"/"to"
+  under the menu. Places suggest the tree's places as rows.
 - With unsaved changes, every way out (Cancel, Back, tapping outside, pulling down) springs
   back and asks "Discard your changes?". No drafts are kept.
 - Three deep at most. A sheet opened from a sheet sits on top, the one below shrinks and dims,

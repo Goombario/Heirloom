@@ -246,7 +246,7 @@ function NameBody({ variant, variants, open, onClose, person, treeId, canDelete,
                 {showFrom ? (
                     <div className="grid gap-1.5 pt-2 pb-3">
                         <label htmlFor={`${ids}-from`} className="text-meta font-medium text-text-secondary">{t('used_from')}</label>
-                        <DateInput id={`${ids}-from`} value={draft.from} onChange={(from) => setDraft((d) => ({ ...d, from }))} qualifierChips className={cx(fieldClass(), 'min-h-11')} />
+                        <DateInput id={`${ids}-from`} value={draft.from} onChange={(from) => setDraft((d) => ({ ...d, from }))} touch className={cx(fieldClass(), 'min-h-11')} />
                     </div>
                 ) : (
                     <MobileRow icon={<Plus />} label={t('add_used_from')} end="chevron" onClick={() => setShowFrom(true)} className="!px-0 border-t border-border" />

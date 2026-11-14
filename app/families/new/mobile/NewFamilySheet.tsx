@@ -340,7 +340,7 @@ function Form({ open, onClose, onCreated }: NewFamilySheetProps) {
         <Group>
             {head(startWord, citeLink('start', startWord))}
             {field(`${ids}-date`, te('field_date'),
-                <DateInput id={`${ids}-date`} value={date} onChange={setDate} qualifierChips className={cx(fieldClass(), 'min-h-11')} />)}
+                <DateInput id={`${ids}-date`} value={date} onChange={setDate} touch className={cx(fieldClass(), 'min-h-11')} />)}
             {field(`${ids}-place`, te('field_place'),
                 <LocationField id={`${ids}-place`} value={place} onChange={setPlace} onResolve={setPlaceRes} onRemove={() => setPlaceRes(null)}
                     placeId={placeId} onPlaceIdChange={setPlaceId} variant="sheet" label={te('field_place')}
@@ -365,7 +365,7 @@ function Form({ open, onClose, onCreated }: NewFamilySheetProps) {
                     {isReason(howNow) ? (
                         <>
                             {field(`${ids}-end-date`, te('field_date'),
-                                <DateInput id={`${ids}-end-date`} value={endDate} onChange={setEndDate} qualifierChips className={cx(fieldClass(), 'min-h-11')} />)}
+                                <DateInput id={`${ids}-end-date`} value={endDate} onChange={setEndDate} touch className={cx(fieldClass(), 'min-h-11')} />)}
                             {field(`${ids}-end-place`, te('field_place'),
                                 <LocationField id={`${ids}-end-place`} value={endPlace} onChange={setEndPlace} onResolve={setEndPlaceRes} onRemove={() => setEndPlaceRes(null)}
                                     placeId={endPlaceId} onPlaceIdChange={setEndPlaceId} variant="sheet" label={te('field_place')}

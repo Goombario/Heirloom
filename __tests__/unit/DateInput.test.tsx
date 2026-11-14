@@ -34,15 +34,30 @@ vi.mock('@/app/components/date-input/aliases', () => ({
 
 import DateInput from '@/app/components/DateInput';
 
-// The qualifier is a SelectField (a select-only combobox), not a native <select>:
-// its raw value is on `data-value`, and choosing opens the list and clicks an option.
-const qualifier = () => screen.getByRole('combobox', { name: 'qualifier_label' });
-const qualifierValue = () => qualifier().dataset.value;
-async function chooseQualifier(user: ReturnType<typeof userEvent.setup>, value: string) {
-    await user.click(qualifier());
+// The field is a Kind menu (a SelectField: a select-only combobox, raw value on
+// `data-value`) plus an About checkbox for an On date (ADR 0048). These helpers
+// read and set the pair as the stored mode it composes: On unticked is EXACT,
+// On ticked is ABT (or a kept EST/CAL, which still reads as ticked).
+const kindMenu = () => screen.getByRole('combobox', { name: 'kind_label' });
+const aboutBox = () => screen.queryByRole('checkbox', { name: 'about_label' }) as HTMLInputElement | null;
+const qualifierValue = () => {
+    const kind = kindMenu().dataset.value;
+    if (kind !== 'ON') return kind;
+    return aboutBox()?.checked ? 'ABT' : 'EXACT';
+};
+async function chooseKind(user: ReturnType<typeof userEvent.setup>, value: string) {
+    await user.click(kindMenu());
     const option = screen.getAllByRole('option').find((o) => o.dataset.value === value);
-    if (!option) throw new Error(`no qualifier option ${value}`);
+    if (!option) throw new Error(`no kind option ${value}`);
     await user.click(option);
+}
+async function chooseQualifier(user: ReturnType<typeof userEvent.setup>, value: string) {
+    if (value === 'EXACT' || value === 'ABT') {
+        if (kindMenu().dataset.value !== 'ON') await chooseKind(user, 'ON');
+        if (aboutBox()!.checked !== (value === 'ABT')) await user.click(aboutBox()!);
+        return;
+    }
+    await chooseKind(user, value);
 }
 const firstBox = () => screen.getByLabelText('first_label') as HTMLInputElement;
 const secondBox = () => screen.getByLabelText('second_label') as HTMLInputElement;
@@ -83,12 +98,12 @@ function renderControlled(initial: string, props: { className?: string } = {}) {
 }
 
 describe('DateInput — qualifier menu', () => {
-    it('defaults to Exact and offers no INT and no free-text option', () => {
+    it('defaults to On, unticked, and offers only the five kinds (ADR 0048)', () => {
         render(<DateInput value="" onChange={vi.fn()} />);
         expect(qualifierValue()).toBe('EXACT');
-        fireEvent.click(qualifier());
+        fireEvent.click(kindMenu());
         const values = screen.getAllByRole('option').map((o) => o.dataset.value);
-        expect(values).toEqual(['EXACT', 'ABT', 'EST', 'CAL', 'BEF', 'AFT', 'BET', 'FROM']);
+        expect(values).toEqual(['ON', 'BEF', 'AFT', 'BET', 'FROM']);
     });
 
     it('does not call onChange on mount', () => {
@@ -160,12 +175,12 @@ describe('DateInput — layout widths', () => {
 
     it('gives the select and the boxes their own widths, never two width utilities', () => {
         render(<DateInput value="BET 1877 AND 1880" onChange={vi.fn()} className={CALLER} />);
-        for (const el of [qualifier(), firstBox(), secondBox()]) {
+        for (const el of [kindMenu(), firstBox(), secondBox()]) {
             const classes = el.className.split(/\s+/);
             expect(classes).not.toContain('w-full');
             expect(classes.filter((c) => c.startsWith('w-')).length).toBeLessThanOrEqual(1);
         }
-        expect(qualifier().className).toContain('shrink-0');
+        expect(kindMenu().className).toContain('shrink-0');
         expect(firstBox().className).toContain('flex-1');
         // Chrome from the caller survives — only the width was swapped.
         expect(firstBox().className).toContain('rounded-lg');
@@ -343,7 +358,7 @@ describe('DateInput — unparseable input (#475, §4)', () => {
 describe('DateInput — phrase mode (§3)', () => {
     it('renders a stored phrase as a single free-text box with no qualifier menu', () => {
         render(<DateInput value="(harvest time)" onChange={vi.fn()} />);
-        expect(screen.queryByLabelText('qualifier_label')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('kind_label')).not.toBeInTheDocument();
         const box = screen.getByLabelText('phrase_label') as HTMLInputElement;
         expect(box.value).toBe('harvest time');
         expect(box.maxLength).toBe(35);
@@ -536,5 +551,64 @@ describe('DateInput — INT round-trips through the raw box', () => {
         await user.click(box);
         await user.tab();
         expect(onChange).not.toHaveBeenCalled();
+    });
+});
+
+describe('DateInput — About box (ADR 0048)', () => {
+    it('offers About only for an On date', async () => {
+        const user = userEvent.setup();
+        render(<DateInput value="1850" onChange={vi.fn()} />);
+        expect(aboutBox()).not.toBeNull();
+        for (const kind of ['BEF', 'AFT', 'BET', 'FROM']) {
+            await chooseKind(user, kind);
+            expect(aboutBox()).toBeNull();
+        }
+    });
+
+    it('ticking writes About and unticking clears it', async () => {
+        const user = userEvent.setup();
+        const { current } = renderControlled('1850');
+        await user.click(aboutBox()!);
+        expect(current()).toBe('ABT 1850');
+        await user.click(aboutBox()!);
+        expect(current()).toBe('1850');
+    });
+
+    it.each(['EST 1850', 'CAL 1850'])('an imported %s reads as ticked and is kept through a date edit', async (stored) => {
+        const user = userEvent.setup();
+        const { current } = renderControlled(stored);
+        expect(aboutBox()!.checked).toBe(true);
+        await user.clear(firstBox());
+        await user.type(firstBox(), '1851');
+        await user.tab();
+        expect(current()).toBe(`${stored.slice(0, 3)} 1851`);
+    });
+
+    it('unticking an imported Estimated clears it, and ticking again writes About', async () => {
+        const user = userEvent.setup();
+        const { current } = renderControlled('EST 1850');
+        await user.click(aboutBox()!);
+        expect(current()).toBe('1850');
+        await user.click(aboutBox()!);
+        expect(current()).toBe('ABT 1850');
+    });
+
+    it('moving to a range drops About, and back to On starts unticked', async () => {
+        const user = userEvent.setup();
+        const { current } = renderControlled('ABT 1850');
+        await chooseKind(user, 'BEF');
+        expect(current()).toBe('BEF 1850');
+        await chooseKind(user, 'ON');
+        expect(current()).toBe('1850');
+        expect(aboutBox()!.checked).toBe(false);
+    });
+
+    it('on a phone, a range puts the second box on its own row under the menu', () => {
+        render(<DateInput value="BET 1877 AND 1880" onChange={vi.fn()} touch />);
+        const firstRow = firstBox().parentElement!;
+        const secondRow = secondBox().parentElement!;
+        expect(firstRow).not.toBe(secondRow);
+        expect(firstRow.contains(kindMenu())).toBe(true);
+        expect(secondRow.textContent).toContain('conn_and');
     });
 });
