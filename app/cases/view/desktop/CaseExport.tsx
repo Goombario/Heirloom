@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { Button, FormDialog, SegmentedControl } from '@/app/components/ui';
+import { SegmentedControl } from '@/app/components/ui';
 import type { CaseWithRelations, CaseWorkspace } from '@/lib/db/schema';
 import { CaseReport } from './CaseReport';
 import { caseExportJson, caseExportName, saveBlob } from './case-export';
 import type { LeadSummary } from './useCaseWorkspace';
+import { CaseFormFrame } from './CaseFormFrame';
 
 type Format = 'pdf' | 'json';
 
@@ -15,15 +16,16 @@ type Format = 'pdf' | 'json';
  * Export the case (#58): a PDF to read, through the print dialog's Save as PDF,
  * or JSON with every record, downloaded.
  */
-export function ExportDialog({ caseData, workspace, onPrint, onClose }: {
+export function ExportDialog({ caseData, workspace, sheet = false, onPrint, onClose }: {
     caseData: CaseWithRelations;
     workspace: CaseWorkspace;
+    /** On a phone, a full sheet (#135). */
+    sheet?: boolean;
     /** Lay the case out to print. */
     onPrint: () => void;
     onClose: () => void;
 }) {
     const t = useTranslations('caseResearch');
-    const tc = useTranslations('common');
     const [format, setFormat] = useState<Format>('pdf');
 
     const go = () => {
@@ -37,18 +39,8 @@ export function ExportDialog({ caseData, workspace, onPrint, onClose }: {
     };
 
     return (
-        <FormDialog
-            open
-            onClose={onClose}
-            title={t('export_case')}
-            subtitle={caseData.Title}
-            footer={(requestClose) => (
-                <>
-                    <Button variant="outline" onClick={requestClose}>{tc('cancel')}</Button>
-                    <Button onClick={go}>{format === 'pdf' ? t('export_pdf_go') : t('export_json_go')}</Button>
-                </>
-            )}
-        >
+        <CaseFormFrame sheet={sheet} title={t('export_case')} subtitle={caseData.Title} ready saveWhenClean
+            saveLabel={format === 'pdf' ? t('export_pdf_go') : t('export_json_go')} onSave={go} onClose={onClose}>
             <div className="grid gap-3">
                 <SegmentedControl
                     aria-label={t('export_format')}
@@ -58,7 +50,7 @@ export function ExportDialog({ caseData, workspace, onPrint, onClose }: {
                 />
                 <p className="m-0 text-sm text-text-secondary">{format === 'pdf' ? t('export_pdf_hint') : t('export_json_hint')}</p>
             </div>
-        </FormDialog>
+        </CaseFormFrame>
     );
 }
 
