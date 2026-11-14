@@ -24,7 +24,7 @@ export function pdfPageOf(page: string | null | undefined): number | null {
 }
 
 /** "Birth register · PDF · page 4": what a citation's file is, for its line and field. */
-export function useCitationFileMeta() {
+function useCitationFileMeta() {
     const t = useTranslations('citationFile');
     return (file: { contentType: string | null }, page: string | null | undefined): string => {
         if (!isPdfMedia({ ContentType: file.contentType })) return t('kind_image');
