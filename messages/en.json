@@ -5029,7 +5029,9 @@
     "credits": "Credits",
     "credits_link": "Open-source parts and their licences",
     "file_loading": "Loading…",
-    "file_error": "This file couldn't be loaded. Try again later."
+    "file_error": "This file couldn't be loaded. Try again later.",
+    "whats_new": "What's new",
+    "whats_new_link": "See what changed"
   },
   "detailKit": {
     "read_all": "Read all",
@@ -5325,5 +5327,11 @@
     "hospital": "Hospital",
     "school": "School",
     "house": "House"
+  },
+  "whats_new": {
+    "title": "What's new",
+    "version": "Version {version}",
+    "empty": "Nothing to show yet.",
+    "done": "Done"
   }
 }

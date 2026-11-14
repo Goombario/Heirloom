@@ -1,4 +1,5 @@
 import type { DataClient } from '../types';
+import { HttpAccountClient } from './account';
 import { HttpPeopleClient } from './people';
 import { HttpRelationshipClient } from './relationship';
 import { HttpPlacesClient } from './places';
@@ -19,6 +20,7 @@ import { HttpCasesClient } from './cases';
 
 /** DataClient backed by the hosted REST API (`/api/*`). */
 export class HttpDataClient implements DataClient {
+  account = new HttpAccountClient();
   people = new HttpPeopleClient();
   relationship = new HttpRelationshipClient();
   places = new HttpPlacesClient();

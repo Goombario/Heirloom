@@ -5029,7 +5029,9 @@
     "credits": "Crédits",
     "credits_link": "Composants open source et leurs licences",
     "file_loading": "Chargement…",
-    "file_error": "Impossible de charger ce fichier. Réessayez plus tard."
+    "file_error": "Impossible de charger ce fichier. Réessayez plus tard.",
+    "whats_new": "Nouveautés",
+    "whats_new_link": "Voir ce qui a changé"
   },
   "detailKit": {
     "read_all": "Tout lire",
@@ -5325,5 +5327,11 @@
     "hospital": "Hôpital",
     "school": "École",
     "house": "Maison"
+  },
+  "whats_new": {
+    "title": "Nouveautés",
+    "version": "Version {version}",
+    "empty": "Rien à afficher pour le moment.",
+    "done": "Terminé"
   }
 }

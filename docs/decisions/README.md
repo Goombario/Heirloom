@@ -124,3 +124,4 @@ What this makes easy, what it makes hard, and what invariant must now be maintai
 | [0047](0047-a-family-can-have-a-family-photo.md) | A family can have a family photo, chosen as a portrait is | media / families |
 | [0049](0049-a-repository-has-a-website-phone-and-email.md) | A repository has a website, phone and email, lifted from GEDCOM passthrough | sources / gedcom |
 | [0050](0050-a-place-knows-what-kind-of-place-the-geocoder-matched.md) | A place knows what kind of place the geocoder matched | places |
+| [0051](0051-whats-new-shows-each-release-once-per-user.md) | What's new shows each release once per user | releases / accounts |

@@ -10,6 +10,7 @@ import { TreeProvider } from "./contexts/TreeContext";
 import SharedTreeBanner from "./components/SharedTreeBanner";
 import GlobalSearch from "./components/GlobalSearch";
 import LocalFirstRunNotice from "./components/LocalFirstRunNotice";
+import WhatsNewOnUpdate from "./components/whats-new/WhatsNewOnUpdate";
 import BackupNudge from "./components/backup/BackupNudge";
 import { PageNoticeProvider } from "./components/ui/PageNotice";
 import DiagOverlay from "./components/DiagOverlay";
@@ -151,6 +152,7 @@ export default function RootLayout({
                 <DesktopWindowFit />
                 <GlobalSearch />
                 <LocalFirstRunNotice />
+                <WhatsNewOnUpdate />
                 <AppToaster />
               </UnsavedChangesProvider>
             </TreeProvider>

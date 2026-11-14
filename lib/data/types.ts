@@ -1182,7 +1182,16 @@ export interface TreesClient {
   remove(id: number): Promise<{ cleanupWarningCount: number }>;
 }
 
+// ---- Account (#35) ----
+/** Per-user app state that follows the account rather than a tree. */
+export interface AccountClient {
+  /** The last version whose What's new this user has seen, or null before the first. */
+  getLastSeenVersion(): Promise<string | null>;
+  setLastSeenVersion(version: string): Promise<void>;
+}
+
 export interface DataClient {
+  account: AccountClient;
   people: PeopleClient;
   relationship: RelationshipClient;
   places: PlacesClient;

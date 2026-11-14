@@ -23,7 +23,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 73;
+export const SCHEMA_VERSION = 74;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -73,6 +73,9 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
       "UpdatedAt" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
   `);
+  // #35 (ADR 0051): the last app version whose What's new this user has seen.
+  // NULL until the app first records one, which it does silently.
+  await pool.query(`ALTER TABLE "Users" ADD COLUMN IF NOT EXISTS "LastSeenVersion" TEXT;`);
 
   // Multi-tree: a user account can hold several separate trees; every
   // owner-bearing table below carries a "TreeId" scope column (backfilled at
