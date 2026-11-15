@@ -147,3 +147,6 @@ GEDCOM Specs/*
 
 # Third-party licence notices are written before each build (#1256); generated, not source.
 /public/third-party-licenses.txt
+
+# Build-time PGlite starting database (scripts/build-pglite-seed.ts); generated, not source.
+/lib/db/generated/

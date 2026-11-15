@@ -14,13 +14,22 @@ async function resolveLocalUserId(): Promise<number> {
     return existing.Id;
   }
 
-  const inserted = await insertUser({
-    email: LOCAL_EMAIL,
-    name: 'Local User',
-    image: null,
-    googleId: LOCAL_GOOGLE_ID,
-  });
-  return inserted.Id;
+  try {
+    const inserted = await insertUser({
+      email: LOCAL_EMAIL,
+      name: 'Local User',
+      image: null,
+      googleId: LOCAL_GOOGLE_ID,
+    });
+    return inserted.Id;
+  } catch (err) {
+    // Two tabs opened on a first visit can both find no user and both insert;
+    // the memoized promise only covers one tab. The loser reads the winner's row.
+    if ((err as { code?: unknown }).code !== '23505') throw err;
+    const winner = await getUserSummaryByGoogleId(LOCAL_GOOGLE_ID);
+    if (!winner) throw err;
+    return winner.Id;
+  }
 }
 
 /**
