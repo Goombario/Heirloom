@@ -19,6 +19,9 @@
  * `canEdit === false` renders byte-identical to the pre-Task-7 read-only
  * table (no behavior change for shared 'view' trees).
  *
+ * The person page's rows open in place (as the timeline and notes do): a
+ * variant's name is the click target and Remove lives in its panel.
+ *
  * #898: a variant's "dates used" range is edited in the add and edit panels and
  * shown with the app's date formatting; each name's cite pin sits beside it, as
  * the timeline's does beside its title, so there is no Source column.
@@ -30,7 +33,7 @@ import type { PersonWithRelations } from '@/lib/db/schema';
 import type { NameVariantDates } from '@/lib/data/types';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
 import { formatDateForDisplay } from '@/lib/date-utils';
-import { AddRow, Button, EditorActions, Input, RowActions, Select, cx } from '@/app/components/ui';
+import { AddRow, Button, EditorActions, Input, Select, cx } from '@/app/components/ui';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import DateInput from '@/app/components/date-input/DateInput';
@@ -127,8 +130,9 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
     const givenName = `${person.FirstName ?? ''} ${person.LastName ?? ''}`.trim() || t('unnamed');
     const hasPrimaryVariant = variants.some((v) => v.IsPrimary);
 
-    // The collections pattern (#760): a row's Edit opens its inline panel; the
-    // trailing "Add name" row opens the add panel. One panel at a time.
+    // As on the timeline and notes: clicking a name opens its inline panel, which
+    // holds Remove on the left of its actions. The trailing "Add name" row opens
+    // the add panel. One panel at a time.
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editingName, setEditingName] = useState('');
     const [editingDates, setEditingDates] = useState<NameVariantDates>(NO_DATES);
@@ -158,7 +162,13 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
         setEditingName(v.Name);
         setEditingDates({ FromDate: v.FromDate, ToDate: v.ToDate });
     };
-    const cancelEditVariant = () => { setEditingId(null); setEditingName(''); setEditingDates(NO_DATES); };
+    const listRef = useRef<HTMLUListElement>(null);
+    const cancelEditVariant = () => {
+        const was = editingId;
+        setEditingId(null); setEditingName(''); setEditingDates(NO_DATES);
+        // Focus goes back to the name that opened the panel.
+        if (was !== null) requestAnimationFrame(() => listRef.current?.querySelector<HTMLElement>(`[data-name-open="${was}"]`)?.focus());
+    };
     const commitEditVariant = () => {
         if (editingId === null) return;
         const trimmed = editingName.trim();
@@ -206,7 +216,6 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
         }
     };
 
-    const hasActions = canEdit || canDelete;
     const displayName = (v: NameVariant) => (v.Type === 'Nickname' ? `“${v.Name}”` : v.Name);
 
     /** The right-hand facts: the type, the dates used, and "shown" on the name the page uses. */
@@ -222,7 +231,7 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
         <div>
             {/* The v1.1 board's names list: each name in serif with its cite pin, its
                 type and dates muted on the right, hairlines between. */}
-            <ul className="name-list">
+            <ul ref={listRef} className="name-list">
                 <li className="name-list__row">
                     <span className="name-list__name">
                         <span className="serif">{givenName}</span>
@@ -237,7 +246,6 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
                             disabled={busy}
                         />
                     )}
-                    {hasActions && <span />}
                 </li>
                 {variants.map(v => editingId === v.Id ? (
                     <li key={v.Id} className="name-list__editor">
@@ -258,13 +266,41 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
                                 />
                             </div>
                             <DatesUsedFields value={editingDates} onChange={setEditingDates} />
-                            <EditorActions size="sm" onSave={commitEditVariant} onCancel={cancelEditVariant} saving={busy} saveDisabled={!editingName.trim()} />
+                            <EditorActions
+                                size="sm"
+                                onSave={commitEditVariant}
+                                onCancel={cancelEditVariant}
+                                saving={busy}
+                                saveDisabled={!editingName.trim()}
+                                onDelete={canDelete ? () => setConfirmRemove(v) : undefined}
+                                deleteLabel={tc('remove')}
+                            />
                         </div>
                     </li>
                 ) : (
-                    <li key={v.Id} className={cx('name-list__row', hasActions && 'row-host')}>
+                    <li
+                        key={v.Id}
+                        className={cx('name-list__row', canEdit && 'is-click')}
+                        // A click anywhere on the row opens it, except on its own controls
+                        // (the cite pin, the star), which keep their own action.
+                        onClick={canEdit ? (e) => {
+                            if (busy || (e.target as Element).closest('a, button, input, select, textarea, [role="button"], [role="dialog"]')) return;
+                            startEditVariant(v);
+                        } : undefined}
+                    >
                         <span className="name-list__name">
-                            <span className="serif">{displayName(v)}</span>
+                            {canEdit ? (
+                                <button
+                                    type="button"
+                                    data-name-open={v.Id}
+                                    className="name-list__open serif focus-ring rounded-sm"
+                                    aria-label={tc('edit_named', { name: v.Name })}
+                                    onClick={() => startEditVariant(v)}
+                                    disabled={busy}
+                                >
+                                    {displayName(v)}
+                                </button>
+                            ) : <span className="serif">{displayName(v)}</span>}
                             {renderCitePin(FACT_TABLES.NAME_VARIANT, v.Id, vtypeLabel(v.Type))}
                         </span>
                         {meta(vtypeLabel(v.Type), datesUsed(v), !!v.IsPrimary)}
@@ -273,16 +309,6 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
                                 active={!!v.IsPrimary}
                                 onClick={() => onSetPrimary(v.Id)}
                                 label={v.IsPrimary ? t('unset_primary') : t('set_primary')}
-                                disabled={busy}
-                            />
-                        )}
-                        {hasActions && (
-                            <RowActions
-                                editLabel={tc('edit_named', { name: v.Name })}
-                                onEdit={canEdit ? () => startEditVariant(v) : undefined}
-                                deleteText={tc('remove')}
-                                deleteLabel={tc('remove_named', { name: v.Name })}
-                                onDelete={canDelete ? () => setConfirmRemove(v) : undefined}
                                 disabled={busy}
                             />
                         )}
