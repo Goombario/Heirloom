@@ -91,12 +91,35 @@ async function listIdbDatabases(): Promise<Set<string> | null> {
  */
 async function resolveLiveDataDir(): Promise<DataDir> {
   const pointer = readPointer();
-  const { open, leftover } = resolveDataDir(pointer, await listIdbDatabases());
+  const existing = await listIdbDatabases();
+  const { open, leftover } = resolveDataDir(pointer, existing);
+  // The same test the worker makes before it loads the seed database.
+  noteFirstSetup(existing !== null && !existing.has(idbDatabaseName(open)));
   if (open !== pointer) {
     try { writePointer(open); } catch { /* resolved again on the next load */ }
   }
   if (leftover) void deleteIdbDatabase(idbDatabaseName(leftover)).catch(() => {});
   return open;
+}
+
+/**
+ * Whether this page is creating the database: a first visit, with nothing in
+ * IndexedDB yet. Known once the open has listed the databases; the first open
+ * of the page settles it, and a later reopen (after a restore) doesn't change it.
+ */
+let noteFirstSetup!: (fresh: boolean) => void;
+const firstSetup = new Promise<boolean>((resolve) => { noteFirstSetup = resolve; });
+
+/**
+ * Open the database if it isn't already, and say whether this is its first
+ * setup. `ready` settles when queries can run. The page uses it to say it is
+ * setting up rather than looking stuck on a first visit.
+ */
+export async function databaseSetup(): Promise<{ firstSetup: boolean; ready: Promise<void> }> {
+  const ready = getDb().then(() => undefined);
+  // An open that fails, or an injected test database, never lists the databases.
+  const settled = ready.then(() => false, () => false);
+  return { firstSetup: await Promise.race([firstSetup, settled]), ready };
 }
 
 async function createDb(): Promise<PGliteInterface> {

@@ -6,6 +6,8 @@ import { DATA_MODE } from '@/lib/data';
 import { isDesktopApp } from '@/lib/desktop';
 import Modal from '@/app/components/Modal';
 import { Button, Card } from '@/app/components/ui';
+import { Check, Loader2 } from '@/lib/icons';
+import { useDatabaseSetup } from '@/app/components/useDatabaseSetup';
 
 const SEEN_KEY = 'heirloom_local_first_run_seen';
 
@@ -26,6 +28,9 @@ export default function LocalFirstRunNotice() {
   const [visible, setVisible] = useState(false);
   const titleId = useId();
   const bodyId = useId();
+  // A first visit creates the database while this notice is up; say so, so the
+  // page behind it doesn't look stuck.
+  const setup = useDatabaseSetup();
 
   useEffect(() => {
     if (DATA_MODE !== 'local' || isDesktopApp()) return;
@@ -51,7 +56,15 @@ export default function LocalFirstRunNotice() {
       <Card pad={false} className="shadow-xl p-6">
         <h2 id={titleId} className="title-dialog mb-3">{t('first_run_title')}</h2>
         <p id={bodyId} className="text-sm text-text-secondary mb-3">{t('first_run_body')}</p>
-        <p className="text-sm text-text-muted mb-5">{t('first_run_persist')}</p>
+        <p className={setup ? 'text-sm text-text-muted mb-3' : 'text-sm text-text-muted mb-5'}>{t('first_run_persist')}</p>
+        {setup && (
+          <p role="status" className="text-sm text-text-secondary mb-5 flex items-center gap-2">
+            {setup === 'setting-up'
+              ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden="true" />
+              : <Check className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />}
+            {setup === 'setting-up' ? t('first_run_setting_up') : t('first_run_set_up')}
+          </p>
+        )}
         <Button variant="primary" className="w-full" onClick={handleDismiss}>
           {t('first_run_ok')}
         </Button>

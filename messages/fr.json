@@ -647,7 +647,8 @@
     "all_clear": "Rien à signaler",
     "all_clear_body": "Aucune date à vérifier ni doublon probable",
     "quiet_places_title": "Aucun lieu pour l’instant",
-    "quiet_places_body": "Indiquez un lieu de naissance ou de résidence et les lieux les plus fréquents s’afficheront ici."
+    "quiet_places_body": "Indiquez un lieu de naissance ou de résidence et les lieux les plus fréquents s’afficheront ici.",
+    "setting_up": "Préparation sur cet appareil…"
   },
   "people": {
     "toggle_details": "Afficher les détails de {name}",
@@ -1468,6 +1469,8 @@
     "first_run_title": "Vos données restent sur cet appareil",
     "first_run_body": "Il s'agit d'une application locale — votre arbre est stocké entièrement dans votre navigateur et n'est jamais envoyé à un serveur.",
     "first_run_persist": "L'application demandera un stockage persistant pour que le navigateur ne supprime pas vos données.",
+    "first_run_setting_up": "Préparation de votre arbre sur cet appareil…",
+    "first_run_set_up": "C’est prêt : votre arbre est installé sur cet appareil.",
     "first_run_ok": "Compris",
     "cite_pins_tab": "Prioriser les épingles de citation lors de la tabulation",
     "cite_pins_tab_desc": "Lorsque activé, les épingles « + » de citation apparaissent dans l'ordre de tabulation normal juste après chaque champ. Lorsque désactivé (par défaut), les épingles sont ignorées lors de la tabulation pour parcourir tous les champs sans interruption.",

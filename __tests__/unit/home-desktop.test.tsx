@@ -51,6 +51,13 @@ const data: DashboardData = {
 const wrap = (ui: ReactNode) => render(<NextIntlClientProvider locale="en" messages={en}>{ui}</NextIntlClientProvider>);
 
 describe('DesktopHome (#53)', () => {
+  it('says it is setting up while a first visit creates the database, instead of a bare skeleton', () => {
+    const { rerender } = wrap(<DesktopHome data={null} phase="loading" settingUp datesToCheck={0} duplicates={0} canEdit canRestore treeId={null} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Setting up on this device…');
+    rerender(<NextIntlClientProvider locale="en" messages={en}><DesktopHome data={null} phase="loading" datesToCheck={0} duplicates={0} canEdit canRestore treeId={null} /></NextIntlClientProvider>);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('names the tree with its counts and years in the band', () => {
     wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Lindqvist family' })).toBeInTheDocument();
