@@ -398,7 +398,12 @@ export default function PersonDetailsClient() {
     const addMedia = canEdit ? <SectionAdd label={tDesk('add_media')} onClick={() => setShowUpload(true)} /> : null;
     const namesEmpty = variants.length === 0 && !variantsLoading && !variantsError && !namesAdding;
     const addName = canEdit && !namesAdding
-        ? <SectionAdd ref={addNameRef} label={t('add_name')} onClick={() => setNamesAddRequest((n) => n + 1)} disabled={variantsBusy} />
+        ? <SectionAdd ref={addNameRef} label={t('add_name')} onClick={() => {
+            // With no names yet the section is a one-line empty state and NamesPanel
+            // isn't mounted; marking it as adding mounts the panel with its form open.
+            if (namesEmpty) setNamesAdding(true);
+            else setNamesAddRequest((n) => n + 1);
+        }} disabled={variantsBusy} />
         : null;
     const sourcesEmpty = groupCitationFactsBySource(personCitationFacts).length === 0 && !citationsError;
     const toVital = (which: 'birth' | 'death') => {
@@ -587,6 +592,7 @@ export default function PersonDetailsClient() {
                                 busy={variantsBusy}
                                 addRow={false}
                                 addRequest={namesAddRequest}
+                                startAdding={namesAdding}
                                 onAddingChange={setNamesAdding}
                             />
                         )}

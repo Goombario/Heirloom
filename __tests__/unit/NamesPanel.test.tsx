@@ -200,4 +200,28 @@ describe('NamesPanel with Add name on the section heading (#157)', () => {
         fireEvent.click(screen.getByRole('button', { name: en.common.cancel }));
         expect(onAddingChange).toHaveBeenLastCalledWith(false);
     });
+
+    it('mounts with the add panel open when the page asks (no names yet)', () => {
+        const onAddingChange = vi.fn();
+        render(
+            <NextIntlClientProvider locale="en" messages={en}>
+                <NamesPanel
+                    person={{ Id: 3, FirstName: 'Ada', LastName: 'Lovelace', DeathDate: null } as PersonWithRelations}
+                    variants={[]}
+                    renderCitePin={() => null}
+                    canEdit
+                    canDelete
+                    onAdd={vi.fn(async () => {})}
+                    onRename={vi.fn(async () => {})}
+                    onRemove={vi.fn(async () => {})}
+                    onSetPrimary={vi.fn(async () => {})}
+                    addRow={false}
+                    startAdding
+                    onAddingChange={onAddingChange}
+                />
+            </NextIntlClientProvider>,
+        );
+        expect(screen.getByRole('textbox', { name: en.personDetail.variant_add_name })).toBeTruthy();
+        expect(onAddingChange).toHaveBeenLastCalledWith(true);
+    });
 });
