@@ -89,8 +89,10 @@
   /* The family record row's tint (S6): a soft step off the page. */
   --color-family-row: #E2DFD8;
   --color-family-row-hover: #D6D3CC;
-  /* The rail's journey sketch: the boards' --surface-2 tint. */
+  /* The rail's journey map: the boards' --surface-2 tint is the sea; land a lighter step. */
   --color-map-tint: #E2DFD8;
+  --color-map-land: #F5F3EF;
+  --color-map-border: #CFC9BF;
   /* The detail pages' main column (#131): a cream sheet between the section list and the rail. */
   --color-column: #F7F5F0;
 
@@ -455,8 +457,11 @@ html.dark {
   --color-surface-2: #0C0A09;
   --color-family-row: #2E2925;
   --color-family-row-hover: #3A3430;
-  /* The rail's journey sketch: a lifted step off the page, as the boards' dark --surface-2. */
+  /* The rail's journey map: the sea a lifted step off the page (the boards' dark
+     --surface-2), land one step lighter again. */
   --color-map-tint: #2E2925;
+  --color-map-land: #3D3632;
+  --color-map-border: #5A524C;
   --color-column: #24211F;
   --color-toast-bg: #F3ECE5;
   --color-toast-fg: #231B16;
@@ -3120,11 +3125,13 @@ th:hover > span > .data-table__sort-idle, th:focus-visible > span > .data-table_
 .pager__num.is-current { background: var(--color-segment-on); color: var(--color-on-segment); }
 .pager__gap { min-width: 22px; text-align: center; color: var(--text-muted); }
 
-/* Fix 13: the person and family rails' journey sketch. Its own tint: dark mode's
-   --color-surface-2 is the sunken near-black, which drew the sketch as a black box. */
+/* Fix 13: the person and family rails' journey map. The sea is the box's tint (dark
+   mode's --color-surface-2 is the sunken near-black, which drew it as a black box);
+   land is a lighter step with hairline borders, and labels carry a land-coloured halo. */
 .journey-sketch { background: var(--color-map-tint); }
-.journey-sketch__land { stroke: var(--color-border); }
+.journey-sketch__land { fill: var(--color-map-land); }
+.journey-sketch__border { stroke: var(--color-map-border); }
 .journey-sketch__line { stroke: var(--color-primary); }
 .journey-sketch__stop { fill: var(--color-card); stroke: var(--color-primary); }
 .journey-sketch__end { fill: var(--color-primary); stroke: var(--color-card); }
-.journey-sketch__label { font: 500 10px var(--font-sans); fill: var(--color-text-secondary); }
+.journey-sketch__label { font: 500 10px var(--font-sans); fill: var(--color-text-secondary); paint-order: stroke; stroke: var(--color-map-land); stroke-width: 3px; stroke-linejoin: round; }
