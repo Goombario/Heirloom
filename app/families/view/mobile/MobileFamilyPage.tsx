@@ -66,13 +66,6 @@ function useWidth<T extends HTMLElement>() {
 }
 
 /** One half of the hero: the partner's photo or monogram, or the hatched unknown half. */
-/**
- * How much wider than the face crop each hero half shows. The crop's circle spans the
- * half's full height, so a tall half was all face; the owner's phone review asked for a
- * little less zoom.
- */
-const HALF_ZOOM_OUT = 1.25;
-
 function HeroHalf({ person, width, height, treeId, side, onAdd }: {
     person: PartnerPerson | null; width: number; height: number; treeId: number | null; side: 'left' | 'right';
     onAdd?: () => void;
@@ -101,7 +94,7 @@ function HeroHalf({ person, width, height, treeId, side, onAdd }: {
             {person.PrimaryMediaId != null ? (
                 width > 0 && (
                     <ProfileImage mediaId={person.PrimaryMediaId} treeId={treeId} alt="" focalX={person.FocalX ?? 50} focalY={person.FocalY ?? 50}
-                        focalRadius={person.FocalRadius != null ? person.FocalRadius * HALF_ZOOM_OUT : null} containerWidth={width} containerHeight={height} circular={false} loading="eager" />
+                        focalRadius={person.FocalRadius ?? null} containerWidth={width} containerHeight={height} circular={false} loading="eager" />
                 )
             ) : (
                 <span aria-hidden="true" className="absolute inset-0 grid place-items-center pb-[22%]">

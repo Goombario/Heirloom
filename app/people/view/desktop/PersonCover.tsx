@@ -111,12 +111,13 @@ function Portrait({ person, media, treeId, canEdit, onAdd, onOpen }: {
   const hydrated = useSyncExternalStore(noSubscribe, () => true, () => false);
   if (photo) {
     const focal = photo.TagRegionW != null && photo.TagRegionH != null
-      ? { x: (photo.TagRegionX ?? 0) + photo.TagRegionW / 2, y: (photo.TagRegionY ?? 0) + photo.TagRegionH / 2, r: Math.max(photo.TagRegionW, photo.TagRegionH) }
-      : { x: photo.FocalX ?? 50, y: photo.FocalY ?? 50, r: photo.FocalRadius ?? null };
+      ? { x: (photo.TagRegionX ?? 0) + photo.TagRegionW / 2, y: (photo.TagRegionY ?? 0) + photo.TagRegionH / 2, r: Math.max(photo.TagRegionW, photo.TagRegionH), w: photo.TagRegionW, h: photo.TagRegionH }
+      : { x: photo.FocalX ?? 50, y: photo.FocalY ?? 50, r: photo.FocalRadius ?? null, w: null, h: null };
     return (
       <button type="button" onClick={() => onOpen(photo)} aria-label={t('open_portrait', { name })}
         className="block rounded-card overflow-hidden cursor-zoom-in focus-ring">
         <ProfileImage mediaId={photo.Id} treeId={treeId} alt={name} focalX={focal.x} focalY={focal.y} focalRadius={focal.r}
+          regionW={focal.w} regionH={focal.h} fillParent
           containerWidth={320} containerHeight={240} thumbSize={2048} circular={false}
           loading={hydrated && !isMobile ? 'eager' : 'lazy'} />
       </button>

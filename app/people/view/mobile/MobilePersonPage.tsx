@@ -107,15 +107,15 @@ function CascadeName({ given, surname }: { given: string; surname: string }) {
 /** The name bar's round portrait: this person's face tag, else the photo's own crop. */
 function portraitFocal(photo: PersonGalleryMedia) {
     return photo.TagRegionW != null && photo.TagRegionH != null
-        ? { x: (photo.TagRegionX ?? 0) + photo.TagRegionW / 2, y: (photo.TagRegionY ?? 0) + photo.TagRegionH / 2, r: Math.max(photo.TagRegionW, photo.TagRegionH) }
-        : { x: photo.FocalX ?? 50, y: photo.FocalY ?? 50, r: photo.FocalRadius ?? null };
+        ? { x: (photo.TagRegionX ?? 0) + photo.TagRegionW / 2, y: (photo.TagRegionY ?? 0) + photo.TagRegionH / 2, r: Math.max(photo.TagRegionW, photo.TagRegionH), w: photo.TagRegionW, h: photo.TagRegionH }
+        : { x: photo.FocalX ?? 50, y: photo.FocalY ?? 50, r: photo.FocalRadius ?? null, w: null, h: null };
 }
 
 function Thumb({ person, photo, treeId }: { person: PersonWithRelations; photo: PersonGalleryMedia; treeId: number | null }) {
     const focal = portraitFocal(photo);
     return (
         <ProfileImage mediaId={photo.Id} treeId={treeId} alt={displayFullName(person)} focalX={focal.x} focalY={focal.y} focalRadius={focal.r}
-            containerWidth={30} containerHeight={30} circular loading="eager" />
+            regionW={focal.w} regionH={focal.h} containerWidth={30} containerHeight={30} circular loading="eager" />
     );
 }
 
