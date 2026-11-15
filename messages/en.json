@@ -647,7 +647,8 @@
     "all_clear": "All clear",
     "all_clear_body": "No dates to check or likely duplicates",
     "quiet_places_title": "No places yet",
-    "quiet_places_body": "Give someone a birthplace or a residence and the most common places show here."
+    "quiet_places_body": "Give someone a birthplace or a residence and the most common places show here.",
+    "setting_up": "Setting up on this device…"
   },
   "people": {
     "toggle_details": "Show details for {name}",
@@ -1468,6 +1469,8 @@
     "first_run_title": "Your data stays on this device",
     "first_run_body": "This is a local-only app — your family tree is stored entirely in your browser and never sent to a server. That means no account is required, but you must back up regularly. If you clear your browser data, your tree will be gone.",
     "first_run_persist": "The app will request persistent storage so the browser does not evict your data.",
+    "first_run_setting_up": "Setting up your tree on this device…",
+    "first_run_set_up": "Ready. Your tree is set up on this device.",
     "first_run_ok": "Got it",
     "cite_pins_tab": "Prioritize citation pins when tabbing",
     "cite_pins_tab_desc": "When enabled, citation “+” pins appear in the normal tab order right after each field. When disabled (default), pins are skipped during tabbing so you can move through all fields without interruption.",

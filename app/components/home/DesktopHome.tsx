@@ -10,6 +10,7 @@ import { ActionLink, Button, CoverBand, DetailBody, DetailRail, Lifespan, OpenIn
 import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 import { useTimestamp } from '@/app/hooks/useTimestamp';
 import type { LoadPhase } from '@/app/components/useLoadPhase';
+import { SettingUpLine } from './SettingUpLine';
 import type { CardPerson, DashboardData, OpenCase, RecentPerson, ResumedPerson } from '@/lib/data/types';
 import type { NextStep } from '@/lib/db/queries/home';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
@@ -32,6 +33,8 @@ import { useCountUp } from '@/app/hooks/useCountUp';
 export interface DesktopHomeProps {
     data: DashboardData | null;
     phase: LoadPhase;
+    /** A first visit is creating the database; the loading meta line says so. */
+    settingUp?: boolean;
     datesToCheck: number;
     duplicates: number;
     /** Editors and contributors. Viewers get no Next steps, Quick add or data-check rows. */
@@ -86,7 +89,7 @@ function useStepText() {
     };
 }
 
-export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, canRestore, treeId }: DesktopHomeProps) {
+export function DesktopHome({ data, phase, settingUp = false, datesToCheck, duplicates, canEdit, canRestore, treeId }: DesktopHomeProps) {
     const t = useTranslations('home');
     const router = useRouter();
     const treeName = useActiveTreeName();
@@ -112,7 +115,7 @@ export function DesktopHome({ data, phase, datesToCheck, duplicates, canEdit, ca
                     last: span?.last ?? 0,
                     y: (chunks) => <span className="date-mono">{chunks}</span>,
                 })
-            ) : <span className="skeleton inline-block w-48 h-3 rounded-[4px] align-middle opacity-40" aria-hidden="true" />}
+            ) : settingUp ? <SettingUpLine /> : <span className="skeleton inline-block w-48 h-3 rounded-[4px] align-middle opacity-40" aria-hidden="true" />}
         />
     );
 

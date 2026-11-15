@@ -5,10 +5,17 @@ import '@testing-library/jest-dom';
 
 vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
 vi.mock('@/lib/data', () => ({ DATA_MODE: 'local' }));
+// The database open, controlled per test: by default an existing database.
+const setup = vi.hoisted(() => ({ firstSetup: false, ready: Promise.resolve() as Promise<void> }));
+vi.mock('@/lib/db/connection.pglite', () => ({ databaseSetup: async () => ({ ...setup }) }));
 
 import LocalFirstRunNotice from '@/app/components/LocalFirstRunNotice';
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  setup.firstSetup = false;
+  setup.ready = Promise.resolve();
+});
 
 describe('LocalFirstRunNotice (#731)', () => {
   it('is a labelled modal dialog with focus inside it', async () => {
@@ -41,5 +48,22 @@ describe('LocalFirstRunNotice (#731)', () => {
     } finally {
       delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     }
+  });
+
+  it('says it is setting up on a first visit, then that it is ready', async () => {
+    let finish!: () => void;
+    setup.firstSetup = true;
+    setup.ready = new Promise<void>((resolve) => { finish = resolve; });
+    render(<LocalFirstRunNotice />);
+    expect(await screen.findByRole('status')).toHaveTextContent('first_run_setting_up');
+    finish();
+    expect(await screen.findByText('first_run_set_up')).toBeInTheDocument();
+  });
+
+  it('says nothing about setup when the database already exists', async () => {
+    render(<LocalFirstRunNotice />);
+    await screen.findByRole('dialog');
+    await Promise.resolve();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import { PageShell } from '@/app/components/ui';
 import { getDataClient } from '@/lib/data';
 import { useCachedResource } from '@/app/components/useCachedResource';
 import { useLoadPhase } from '@/app/components/useLoadPhase';
+import { useDatabaseSetup } from '@/app/components/useDatabaseSetup';
 import { MobileHome } from '@/app/components/home/MobileHome';
 import { DesktopHome } from '@/app/components/home/DesktopHome';
 
@@ -42,17 +43,21 @@ export default function Home() {
     // skeletons instead of an empty dashboard. (delay 0 = skeleton-first.)
     const phase = useLoadPhase(currentUserId === null || loading, { delay: 0 });
 
+    // A first visit creates the database before the dashboard can load: the
+    // skeleton says so instead of looking stuck.
+    const settingUp = useDatabaseSetup() === 'setting-up';
+
     const datesToCheck = checks.data?.openCount ?? 0;
     const duplicates = suggestions.find(s => s.type === 'duplicates')?.count ?? 0;
 
     // Phones get their own page (#1061); the desktop column below hides under `md`.
     const phonePage = (
-        <MobileHome data={data} phase={phase} datesToCheck={datesToCheck} duplicates={duplicates} canEdit={canEdit} treeId={activeTreeId} />
+        <MobileHome data={data} phase={phase} settingUp={settingUp} datesToCheck={datesToCheck} duplicates={duplicates} canEdit={canEdit} treeId={activeTreeId} />
     );
 
     return (
         <PageShell topBar={phonePage} contentClassName="max-md:hidden">
-            <DesktopHome data={data} phase={phase} datesToCheck={datesToCheck} duplicates={duplicates} canEdit={canEdit} canRestore={canRestore} treeId={activeTreeId} />
+            <DesktopHome data={data} phase={phase} settingUp={settingUp} datesToCheck={datesToCheck} duplicates={duplicates} canEdit={canEdit} canRestore={canRestore} treeId={activeTreeId} />
         </PageShell>
     );
 }

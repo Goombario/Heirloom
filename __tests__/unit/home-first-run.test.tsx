@@ -26,7 +26,7 @@ vi.mock('@/app/components/useCachedResource', () => ({
   }),
 }));
 vi.mock('@/app/components/useLoadPhase', () => ({ useLoadPhase: () => 'ready' }));
-vi.mock('@/lib/data', () => ({ getDataClient: vi.fn() }));
+vi.mock('@/lib/data', () => ({ getDataClient: vi.fn(), DATA_MODE: 'hosted' }));
 vi.mock('@/app/components/PersonAvatar', () => ({ default: () => null }));
 // The phone page has its own suite (home-mobile.test.tsx).
 vi.mock('@/app/components/home/MobileHome', () => ({ MobileHome: () => null }));

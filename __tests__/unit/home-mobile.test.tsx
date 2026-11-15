@@ -57,6 +57,11 @@ describe('MobileHome (#1061)', () => {
     document.documentElement.removeAttribute('data-own-header');
   });
 
+  it('says it is setting up while a first visit creates the database', () => {
+    renderHome({ data: null, phase: 'loading', settingUp: true, treeId: null });
+    expect(screen.getByRole('status')).toHaveTextContent('setting_up');
+  });
+
   it('hides the app top bar while mounted', () => {
     const { unmount } = renderHome();
     expect(document.documentElement).toHaveAttribute('data-own-header');

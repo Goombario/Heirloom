@@ -10,6 +10,7 @@ import { openAppMenu, openGlobalSearch } from '@/app/components/nav/appEvents';
 import { CopperPill, GlassButton, Lifespan, MobileRow, SectionHeader, cx } from '@/app/components/ui';
 import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 import type { LoadPhase } from '@/app/components/useLoadPhase';
+import { SettingUpLine } from './SettingUpLine';
 import type { DashboardData, RecentPerson, ResumedPerson } from '@/lib/data/types';
 import { livingStatus } from '@/lib/living';
 import { ArrowUpRight, CalendarDays, FolderSearch, Menu, Network, Plus, Search, Upload, Users } from '@/lib/icons';
@@ -33,6 +34,8 @@ const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION;
 export interface MobileHomeProps {
     data: DashboardData | null;
     phase: LoadPhase;
+    /** A first visit is creating the database; the loading meta line says so. */
+    settingUp?: boolean;
     /** Open "Dates to check" entries. */
     datesToCheck: number;
     /** Likely duplicate pairs (#822). */
@@ -42,7 +45,7 @@ export interface MobileHomeProps {
     treeId: number | null;
 }
 
-export function MobileHome({ data, phase, datesToCheck, duplicates, canEdit, treeId }: MobileHomeProps) {
+export function MobileHome({ data, phase, settingUp = false, datesToCheck, duplicates, canEdit, treeId }: MobileHomeProps) {
     const t = useTranslations('home');
     const tn = useTranslations('nav');
     const tc = useTranslations('common');
@@ -102,7 +105,7 @@ export function MobileHome({ data, phase, datesToCheck, duplicates, canEdit, tre
                                     people: stats.people,
                                     families: stats.families,
                                     b: (chunks) => <span className={amber}>{chunks}</span>,
-                                }) : <span className="skeleton inline-block w-40 h-3 rounded-[4px] align-middle opacity-40" aria-hidden="true" />}
+                                }) : settingUp ? <SettingUpLine /> : <span className="skeleton inline-block w-40 h-3 rounded-[4px] align-middle opacity-40" aria-hidden="true" />}
                             </p>
                         )}
                     </div>

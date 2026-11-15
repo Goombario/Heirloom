@@ -18,7 +18,7 @@ vi.mock('@/app/components/useCachedResource', () => ({
   useCachedResource: () => ({ data: null, loading: false }),
 }));
 vi.mock('@/app/components/useLoadPhase', () => ({ useLoadPhase: () => 'ready' }));
-vi.mock('@/lib/data', () => ({ getDataClient: vi.fn() }));
+vi.mock('@/lib/data', () => ({ getDataClient: vi.fn(), DATA_MODE: 'hosted' }));
 vi.mock('@/app/components/PersonAvatar', () => ({ default: () => null }));
 
 import Home from '@/app/page';
