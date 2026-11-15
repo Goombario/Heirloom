@@ -2918,7 +2918,7 @@ html.dark .react-flow__minimap-mask {
   border: 1px dashed var(--color-border); border-radius: 10px; background: transparent;
   font: inherit; font-size: var(--text-base); font-weight: 500; color: var(--color-link); cursor: pointer;
 }
-.ledger__phantom-btn:hover { background: var(--color-surface-2); text-decoration: underline; }
+.ledger__phantom-btn:hover { background: var(--color-hover-surface); text-decoration: underline; }
 .ledger__dot {
   position: absolute; left: 5px; top: 20px; width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box;
   background: var(--color-surface); border: 1.5px solid var(--color-text-muted);
@@ -2941,7 +2941,7 @@ html.dark .react-flow__minimap-mask {
 .lead-rail-current__sub { color: rgba(255, 255, 255, 0.72); }
 /* A row that opens its editor (locked person board): the whole row is the target. */
 .ledger__body.is-click { cursor: pointer; }
-.ledger__body.is-click:hover { background: var(--color-surface-2); }
+.ledger__body.is-click:hover { background: var(--color-hover-surface); }
 .ledger__ev.is-flagged .ledger__body.is-click:hover { background: var(--color-warning-bg); }
 .ledger__title-btn { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--color-text); text-align: left; cursor: pointer; }
 .ledger__age { font-size: var(--text-sm); color: var(--color-text-muted); }
@@ -2957,7 +2957,7 @@ html.dark .react-flow__minimap-mask {
 .ledger__ev.is-editing > div:last-child { padding: 8px 0 12px; }
 .ledger__fold { width: 100%; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
 .ledger__fold-body { display: flex; align-items: center; gap: 10px; padding: 12px 10px; margin-right: -10px; border-radius: 8px; color: var(--color-link); font-size: var(--text-sm); }
-.ledger__fold:hover .ledger__fold-body { background: var(--color-surface-2); }
+.ledger__fold:hover .ledger__fold-body { background: var(--color-hover-surface); }
 .ledger__fold:hover .ledger__fold-label { text-decoration: underline; }
 .ledger__fold-dots { font-weight: 600; font-size: 15px; letter-spacing: 0.2em; color: var(--color-text-muted); }
 .ledger__fold-range { font-family: var(--font-mono); font-size: var(--text-meta); color: var(--color-text-muted); }
@@ -3013,8 +3013,12 @@ html.dark .react-flow__minimap-mask {
 /* Names (locked board): serif name and cite pin, the type and dates muted on the right. */
 /* Open rows (#157): spacing only between names, no hairlines and no bottom rule. */
 .name-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.name-list__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; min-height: 38px; padding: 3px 0; }
+.name-list__row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 38px; padding: 3px 0; }
 .name-list__editor { padding: 8px 0; }
+/* A name that opens its editor: the whole row is the target, washed like a note. */
+.name-list__row.is-click { margin-inline: -8px; padding-inline: 8px; border-radius: 8px; cursor: pointer; }
+.name-list__row.is-click:hover { background: var(--color-hover-surface); }
+.name-list__open { padding: 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .name-list__name { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; font-size: 17px; font-weight: 600; color: var(--text); }
 .name-list__meta { font-size: var(--text-meta); color: var(--text-muted); white-space: nowrap; }
 .name-list__meta .date-mono { font-size: var(--text-meta); }

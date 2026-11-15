@@ -105,6 +105,31 @@ describe('NamesPanel collections pattern (#760)', () => {
     });
 });
 
+describe('NamesPanel rows open in place', () => {
+    it('opens a name from a click on its row, with Remove in the panel rather than on the row', () => {
+        render(
+            <NextIntlClientProvider locale="en" messages={en}>
+                <NamesPanel
+                    person={{ Id: 3, FirstName: 'Ada', LastName: 'Lovelace', DeathDate: null } as PersonWithRelations}
+                    variants={[{ Id: 4, PersonId: 3, Type: 'Alias', Name: 'Augusta', FromDate: null, ToDate: null }]}
+                    renderCitePin={() => null}
+                    canEdit
+                    canDelete
+                    onAdd={vi.fn(async () => {})}
+                    onRename={vi.fn(async () => {})}
+                    onRemove={vi.fn(async () => {})}
+                    onSetPrimary={vi.fn(async () => {})}
+                />
+            </NextIntlClientProvider>,
+        );
+        expect(screen.queryByRole('button', { name: en.common.remove })).toBeNull();
+        fireEvent.click(document.querySelector('.name-list__row.is-click .name-list__meta')!);
+        expect(screen.getByRole('textbox', { name: en.personDetail.variant_edit_name })).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: en.common.remove }));
+        expect(screen.getByRole('dialog')).toBeTruthy();
+    });
+});
+
 describe('NamesPanel display (#898)', () => {
     function renderRead(variants: Array<{ FromDate: string | null; ToDate: string | null }>) {
         render(
