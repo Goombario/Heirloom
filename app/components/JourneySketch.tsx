@@ -1,7 +1,7 @@
 import { cx } from '@/app/components/ui/cx';
 
 /** One stop on the sketch: where, and the year it was recorded there (if any). */
-interface SketchStop {
+export interface SketchStop {
   lat: number;
   lng: number;
   label: string;
@@ -16,10 +16,11 @@ const PAD_Y = 26;
 const LABEL_ALL_UP_TO = 4;
 
 /**
- * The family rail's journey sketch (fix 13): the family's places in date order,
- * drawn as a dashed copper line through dots on a plain tint. It needs no map
- * tiles, so it reads the same offline. The last stop is filled. It is a picture:
- * the caller wraps it in the button that opens the full journey map.
+ * The rail's journey sketch on the person and family pages (fix 13): the places in
+ * date order, drawn as a dashed copper line through dots over a faint map tint with
+ * two land strokes, as the locked boards draw it. It needs no map tiles, so it reads
+ * the same offline. The last stop is filled. It is a picture: the caller wraps it
+ * in the button that opens the full journey map.
  */
 export default function JourneySketch({ stops, className }: { stops: SketchStop[]; className?: string }) {
   // Consecutive records at the same place are one stop.
@@ -46,6 +47,9 @@ export default function JourneySketch({ stops, className }: { stops: SketchStop[
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" className={cx('journey-sketch block rounded-card', className)} aria-hidden="true">
+      {/* Decoration only: the boards' two soft land strokes, so the tint reads as a map. */}
+      <path d="M0 103 C52 71 78 124 130 92 S208 49 260 71" className="journey-sketch__land" fill="none" strokeWidth="14" />
+      <path d="M0 41 C43 30 69 57 113 46" className="journey-sketch__land" fill="none" strokeWidth="9" />
       {pts.length > 1 && <path d={d} className="journey-sketch__line" fill="none" strokeWidth="2" strokeDasharray="4 4" strokeLinejoin="round" />}
       {pts.map((p, i) => {
         const last = i === pts.length - 1;
