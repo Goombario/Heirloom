@@ -118,10 +118,16 @@ interface NamesPanelProps {
      */
     addRow?: boolean;
     addRequest?: number;
+    /**
+     * Mount with the add panel open. The page shows a one-line empty state instead of
+     * this panel while there are no names, so its "Add name" mounts the panel already
+     * adding rather than bumping a request nothing is listening to.
+     */
+    startAdding?: boolean;
     onAddingChange?: (adding: boolean) => void;
 }
 
-export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete, onAdd, onRename, onRemove, onSetPrimary, busy = false, addRow = true, addRequest = 0, onAddingChange }: NamesPanelProps) {
+export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete, onAdd, onRename, onRemove, onSetPrimary, busy = false, addRow = true, addRequest = 0, startAdding = false, onAddingChange }: NamesPanelProps) {
     const t = useTranslations('personDetail');
     const tDesk = useTranslations('personDesktop');
     const tc = useTranslations('common');
@@ -136,7 +142,7 @@ export function NamesPanel({ person, variants, renderCitePin, canEdit, canDelete
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editingName, setEditingName] = useState('');
     const [editingDates, setEditingDates] = useState<NameVariantDates>(NO_DATES);
-    const [adding, setAdding] = useState(false);
+    const [adding, setAdding] = useState(canEdit && startAdding);
     const addRef = useReturnFocus(adding);
     // A bump of `addRequest` opens the add panel, as the trailing row would.
     const [seenRequest, setSeenRequest] = useState(addRequest);
