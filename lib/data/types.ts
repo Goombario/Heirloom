@@ -843,6 +843,8 @@ export interface CardPerson {
   Nickname: string | null; Sex: string | null; BirthDate: string | null; BirthPlace: string | null;
   DeathDate: string | null; DeathPlace: string | null; IsDeceased: number | null; PrimaryMediaId: number | null;
   FocalX: number | null; FocalY: number | null; FocalRadius: number | null;
+  /** The face tag's box (percent of the photo), null without a tag: frames the portrait like the person page. */
+  RegionW: number | null; RegionH: number | null;
   partnershipCount: number; childrenCount: number;
   /** Same rules as the person hero's "X/Y sourced" tag: birth, death and each event. */
   totalFacts: number; sourcedFacts: number;

@@ -47,6 +47,9 @@ export function regionToFocal(r: FaceRegion): { focalX: number; focalY: number; 
  * an optional tag for that same person only overrides the media focal geometry
  * and exposes columns "Id"/"FocalX"/"FocalY"/"FocalRadius" under `outAlias`, so
  * the surrounding SELECT (which reads those four columns) needs no change.
+ * It also exposes the tag's "RegionW"/"RegionH" (null without a tag) for
+ * rectangular portraits: `FocalRadius` alone loses the face's shape, so a card
+ * framed from it zooms tighter than the person page's cover does.
  *
  * `personAlias`/`ownerExpr` are SQL identifiers controlled by callers, never user
  * input (e.g. `primaryPhotoJoin('p', 'p."TreeId"', 'm')`). `ownerExpr` is compared
@@ -59,7 +62,9 @@ export function primaryPhotoJoin(personAlias: string, ownerExpr: string, outAlia
         SELECT pm."Id",
                CASE WHEN pmt."Id" IS NOT NULL THEN pmt."RegionX" + pmt."RegionW" / 2.0 ELSE pm."FocalX" END AS "FocalX",
                CASE WHEN pmt."Id" IS NOT NULL THEN pmt."RegionY" + pmt."RegionH" / 2.0 ELSE pm."FocalY" END AS "FocalY",
-               CASE WHEN pmt."Id" IS NOT NULL THEN GREATEST(pmt."RegionW", pmt."RegionH") ELSE pm."FocalRadius" END AS "FocalRadius"
+               CASE WHEN pmt."Id" IS NOT NULL THEN GREATEST(pmt."RegionW", pmt."RegionH") ELSE pm."FocalRadius" END AS "FocalRadius",
+               pmt."RegionW" AS "RegionW",
+               pmt."RegionH" AS "RegionH"
         FROM "MediaLink" pml
         JOIN "Media" pm ON pm."Id" = pml."MediaId" AND pm."TreeId" = ${ownerExpr}
         LEFT JOIN "MediaTag" pmt ON pmt."MediaId" = pm."Id" AND pmt."PersonId" = ${personAlias}."Id"

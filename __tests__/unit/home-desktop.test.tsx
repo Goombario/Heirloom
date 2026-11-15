@@ -24,7 +24,7 @@ const change = { Action: 'update', Changes: { fields: {} }, CreatedAt: '2026-11-
 const anna: ResumedPerson = {
   Id: 1, FirstName: 'Anna', LastName: 'Lindqvist', EffectiveFirstName: 'Anna', Nickname: null, Sex: 'F',
   BirthDate: '1868', BirthPlace: null, DeathDate: '1931', DeathPlace: null, IsDeceased: 1, PrimaryMediaId: null,
-  FocalX: null, FocalY: null, FocalRadius: null, partnershipCount: 1, childrenCount: 2, totalFacts: 3, sourcedFacts: 1,
+  FocalX: null, FocalY: null, FocalRadius: null, RegionW: null, RegionH: null, partnershipCount: 1, childrenCount: 2, totalFacts: 3, sourcedFacts: 1,
   nextSteps: {
     total: 5,
     steps: [

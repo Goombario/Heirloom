@@ -25,6 +25,7 @@ describe('desktop home data (#53)', () => {
   let mother: { Id: number };
   let father: { Id: number };
   let occupation: { Id: number };
+  let grandmaId: number;
 
   beforeAll(async () => {
     db = await newEmptyClusterDb();
@@ -34,6 +35,7 @@ describe('desktop home data (#53)', () => {
     treeId = await resolveDefaultTree(USER_ID);
 
     const grandma = await createPersonService({ ...ctx(), body: { FirstName: 'Elsa', LastName: 'Berg', Sex: 'F' } });
+    grandmaId = grandma.Id;
     const grandpa = await createPersonService({ ...ctx(), body: { FirstName: 'Per', LastName: 'Berg', Sex: 'M' } });
     father = await createPersonService({ ...ctx(), body: { FirstName: 'Johan', LastName: 'Lind', Sex: 'M', BirthDate: '1838' } });
     mother = await createPersonService({ ...ctx(), body: { FirstName: 'Kristina', LastName: 'Berg', Sex: 'F', BirthDate: '1840' } });
@@ -99,5 +101,16 @@ describe('desktop home data (#53)', () => {
     // Elsa and Per both head three generations; the tie goes to the first one added.
     expect(dash.startPerson).toMatchObject({ FirstName: 'Elsa', LastName: 'Berg' });
     expect(dash.startPerson?.nextSteps.steps.length).toBeGreaterThan(0);
+  });
+
+  it("frames the card's portrait from the face tag's box, not only its radius", async () => {
+    const photo = (await query(
+      `INSERT INTO "Media" ("UserId", "TreeId", "Title", "FilePath") VALUES ($1, $2, 'Portrait', 'portrait.jpg') RETURNING "Id"`,
+      [USER_ID, treeId],
+    )).rows[0] as { Id: number };
+    await query(`INSERT INTO "MediaLink" ("MediaId", "OwnerTable", "OwnerId", "IsPrimary") VALUES ($1, 'People', $2, 1)`, [photo.Id, grandmaId]);
+    await query(`INSERT INTO "MediaTag" ("MediaId", "PersonId", "RegionX", "RegionY", "RegionW", "RegionH") VALUES ($1, $2, 10, 20, 30, 40)`, [photo.Id, grandmaId]);
+    const card = (await getDashboardService(ctx())).startPerson;
+    expect(card).toMatchObject({ PrimaryMediaId: photo.Id, FocalX: 25, FocalY: 40, FocalRadius: 40, RegionW: 30, RegionH: 40 });
   });
 });

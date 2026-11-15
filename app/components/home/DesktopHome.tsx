@@ -166,6 +166,7 @@ function Portrait({ person, treeId }: { person: CardPerson; treeId: number | nul
                 <span className="absolute inset-0">
                     <ProfileImage mediaId={person.PrimaryMediaId} treeId={treeId} alt=""
                         focalX={person.FocalX ?? 50} focalY={person.FocalY ?? 50} focalRadius={person.FocalRadius ?? null}
+                        regionW={person.RegionW} regionH={person.RegionH}
                         containerWidth={240} containerHeight={180} circular={false} />
                 </span>
             )}

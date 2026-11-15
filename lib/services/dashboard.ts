@@ -143,7 +143,7 @@ async function getCardPerson(personId: number, treeId: number): Promise<CardPers
         ${effectiveFirstName('p')} AS "EffectiveFirstName",
         ${primaryNickname('p')} AS "Nickname",
         p."BirthDate", p."DeathDate", p."IsDeceased", ${factPlaceTextColumns('people', 'p')},
-        m."Id" AS "PrimaryMediaId", m."FocalX", m."FocalY", m."FocalRadius",
+        m."Id" AS "PrimaryMediaId", m."FocalX", m."FocalY", m."FocalRadius", m."RegionW", m."RegionH",
         (
             SELECT COUNT(*) FROM "Families" f
             WHERE f."TreeId" = $2
