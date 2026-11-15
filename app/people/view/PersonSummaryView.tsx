@@ -43,6 +43,7 @@ export function PersonSummaryView({ summary, treeId }: { summary: PersonSummary;
                                     focalX={summary.FocalX ?? 50}
                                     focalY={summary.FocalY ?? 50}
                                     focalRadius={summary.FocalRadius ?? null}
+                                    fillParent
                                     containerWidth={320}
                                     containerHeight={240}
                                     circular={false}

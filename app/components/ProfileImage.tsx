@@ -1,8 +1,27 @@
 'use client';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { focalThumbWidth, withThumbWidth } from '@/lib/media-url';
 import { useMediaUrl } from '@/lib/media/useMediaUrl';
+import { PORTRAIT_FRAMING, framePhoto } from '@/lib/media/framing';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
+
+// One ResizeObserver for every portrait on the page (a tree can hold hundreds).
+type BoxListener = (w: number, h: number) => void;
+const boxListeners = new Map<Element, BoxListener>();
+let boxObserver: ResizeObserver | null = null;
+function observeBox(el: Element, listener: BoxListener): () => void {
+    if (typeof ResizeObserver === 'undefined') return () => {};
+    boxObserver ??= new ResizeObserver((entries) => {
+        for (const e of entries) {
+            const el = e.target as HTMLElement;
+            boxListeners.get(el)?.(el.clientWidth, el.clientHeight);
+        }
+    });
+    boxListeners.set(el, listener);
+    boxObserver.observe(el);
+    return () => { boxListeners.delete(el); boxObserver?.unobserve(el); };
+}
 
 // Off-screen 1×1 loader: loads + decodes the next blob without painting or
 // affecting layout, then promotes it to the visible layer (decode-before-swap).
@@ -17,8 +36,17 @@ interface ProfileImageProps {
     focalX?: number;
     focalY?: number;
     focalRadius?: number | null; // % of min(nW,nH)/2; null = no crop, use object-cover
+    /** The face tag's width and height in percent of the photo, when known: frames the
+     *  tag's true shape instead of a square of `focalRadius`. */
+    regionW?: number | null;
+    regionH?: number | null;
+    /** The frame's design size: sizes the box (unless `fillParent`) and picks the thumbnail.
+     *  The crop itself is computed from the box as measured on screen. */
     containerWidth: number;
     containerHeight: number;
+    /** Fill the parent (100% × 100%) instead of a fixed `containerWidth` × `containerHeight`
+     *  box, for frames the stylesheet resizes (the desktop covers narrow below 1024px). */
+    fillParent?: boolean;
     circular?: boolean;
     className?: string;
     /** Override the auto-derived thumbnail width (in CSS pixels). */
@@ -28,18 +56,20 @@ interface ProfileImageProps {
 }
 
 /**
- * Profile image with zoom-crop based on focal point and radius.
+ * Profile image framed on the person's face.
  *
- * FocalX/FocalY: 0-100, center of the selected crop area as % of image dimensions.
+ * FocalX/FocalY: 0-100, center of the face as % of image dimensions.
  * FocalRadius: percentage (0-100+) of the image's min-dimension half-radius.
  *   - null / undefined = no crop set; falls back to object-cover + objectPosition
- *   - 100 = crop circle radius equals min(nW, nH) / 2 (full short-side half-radius)
+ *   - 100 = the face box's side equals min(nW, nH)
  *
- * For circular containers: the crop circle fills the container circle (use Math.min).
- * For rectangular containers: the crop fills the full container (use Math.max).
+ * The framing rule (how much of the frame the face fills, how high it sits) lives in
+ * `lib/media/framing.ts` (`PORTRAIT_FRAMING`), with one set of numbers for phone pages
+ * and one for desktop. The crop is computed for the box as measured on screen, so a
+ * frame the stylesheet resizes, or a ring drawn on the box, stays centred.
  *
- * Rendering strategy: image at natural dimensions + CSS transform: translate() scale()
- * to center the focal point and zoom. GPU-composited, avoids object-position clamping.
+ * Rendering strategy: image at natural dimensions + CSS transform: translate() scale().
+ * GPU-composited, avoids object-position clamping.
  */
 export default function ProfileImage({
     mediaId,
@@ -48,8 +78,11 @@ export default function ProfileImage({
     focalX = 50,
     focalY = 50,
     focalRadius,
+    regionW,
+    regionH,
     containerWidth,
     containerHeight,
+    fillParent = false,
     circular = true,
     className = '',
     thumbSize,
@@ -74,6 +107,21 @@ export default function ProfileImage({
         () => (src ? withThumbWidth(src, snapped) : null),
         [src, snapped],
     );
+    // The box as laid out (inside any border), so the crop follows the real frame.
+    // Until it is measured (and where layout reports 0, as in tests) the design size stands in.
+    const boxRef = useRef<HTMLDivElement>(null);
+    const [measured, setMeasured] = useState<{ w: number; h: number } | null>(null);
+    useLayoutEffect(() => {
+        const el = boxRef.current;
+        if (!el) return;
+        const set = (w: number, h: number) => setMeasured((m) => (w > 0 && h > 0 && (m?.w !== w || m?.h !== h) ? { w, h } : m));
+        set(el.clientWidth, el.clientHeight);
+        return observeBox(el, set);
+    }, []);
+    const boxW = measured?.w ?? containerWidth;
+    const boxH = measured?.h ?? containerHeight;
+    const shares = useIsMobile() ? PORTRAIT_FRAMING.phone : PORTRAIT_FRAMING.desktop;
+
     // Pure focal → CSS style, computed from the image's natural dimensions. Kept
     // side-effect-free so it can run at decode time (before the image is shown),
     // eliminating the cover→focal snap the old onLoad-driven version produced.
@@ -85,32 +133,13 @@ export default function ProfileImage({
             return { width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${focalX}% ${focalY}%` };
         }
 
-        // The inner container is sized exactly to these props (no border/padding), so
-        // they equal its clientWidth/Height — using them keeps computeStyle pure (no
-        // ref read) so it's safe to call from useMemo during render.
-        const contentW = containerWidth;
-        const contentH = containerHeight;
-
-        // Crop radius in natural image pixels
-        const radiusPx = Math.max(1, (focalRadius / 100) * Math.min(nW, nH) / 2);
-        const containerRadius = (circular
-            ? Math.min(contentW, contentH)
-            : Math.max(contentW, contentH)) / 2;
-
-        // Scale: display pixels per natural pixel
-        const desiredScale = containerRadius / radiusPx;
-
-        // Ensure image covers the container with focal point centered.
-        // Clamp focal fractions to avoid division by zero near edges.
-        const fx = Math.max(0.01, Math.min(0.99, focalX / 100));
-        const fy = Math.max(0.01, Math.min(0.99, focalY / 100));
-        const minCoverScale = Math.max(
-            contentW / (2 * fx * nW),
-            contentW / (2 * (1 - fx) * nW),
-            contentH / (2 * fy * nH),
-            contentH / (2 * (1 - fy) * nH),
-        );
-        let scale = Math.max(desiredScale, minCoverScale);
+        const contentW = boxW;
+        const contentH = boxH;
+        const at = framePhoto({
+            photo: { w: nW, h: nH }, frame: { w: contentW, h: contentH },
+            focalX, focalY, focalRadius, regionW, regionH, circular, shares,
+        });
+        let scale = at.scale;
 
         // Cap the rendered element size to 4× the container dimensions.
         // Without this, a 4000×3000 photo in a 96×64 tree card creates a huge GPU texture
@@ -126,9 +155,9 @@ export default function ProfileImage({
             nH = Math.round(nH * downFactor);
         }
 
-        // Position: place the focal point at the container center
-        const tx = contentW / 2 - fx * nW * scale;
-        const ty = contentH / 2 - fy * nH * scale;
+        // The offset is in frame px, so the downscale above leaves it unchanged.
+        const tx = at.left;
+        const ty = at.top;
 
         return {
             position: 'absolute',
@@ -140,7 +169,7 @@ export default function ProfileImage({
             transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
             maxWidth: 'none',
         };
-    }, [focalX, focalY, focalRadius, containerWidth, containerHeight, circular]);
+    }, [focalX, focalY, focalRadius, regionW, regionH, boxW, boxH, circular, shares]);
 
     // Load-before-swap via a hidden loader layer. The painted image (`display`) only
     // advances to a new `effectiveSrc` after an off-screen <img> has loaded AND decoded
@@ -172,10 +201,11 @@ export default function ProfileImage({
 
     return (
         <div
+            ref={boxRef}
             className={className}
             style={{
-                width: containerWidth,
-                height: containerHeight,
+                width: fillParent ? '100%' : containerWidth,
+                height: fillParent ? '100%' : containerHeight,
                 borderRadius: circular ? '50%' : undefined,
                 overflow: 'hidden',
                 position: 'relative',

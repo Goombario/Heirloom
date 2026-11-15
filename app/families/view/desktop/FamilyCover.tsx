@@ -80,7 +80,7 @@ export function FamilyCover({ familyId, type, partner1, partner2, began, ended, 
         <span className="block rounded-card overflow-hidden">
           <ProfileImage mediaId={photo.Id} treeId={treeId} alt={t('family_photo_alt', { family: title })}
             focalX={photo.FocalX ?? 50} focalY={photo.FocalY ?? 50} focalRadius={photo.FocalRadius ?? null}
-            containerWidth={320} containerHeight={240} thumbSize={2048} circular={false} loading="eager" />
+            containerWidth={320} containerHeight={240} fillParent thumbSize={2048} circular={false} loading="eager" />
         </span>
       ) : <SplitPortrait halves={[partnerHalf(partner1, tc('unknown')), partnerHalf(partner2, tc('unknown'))]} treeId={treeId}
         addPartner={canWrite ? (slot, trigger) => (
@@ -158,7 +158,7 @@ export function SplitPortrait({ halves, treeId, addPartner }: {
           <GuardedLink key={i} href={`/people/view?id=${h.id}`} className="split-portrait__half focus-ring" aria-label={tk('open_person', { name: h.name })}>
             {h.mediaId ? (
               <ProfileImage mediaId={h.mediaId} treeId={treeId} alt="" focalX={h.focalX ?? 50} focalY={h.focalY ?? 50} focalRadius={h.focalRadius ?? null}
-                containerWidth={160} containerHeight={240} thumbSize={512} circular={false} />
+                containerWidth={160} containerHeight={240} fillParent thumbSize={512} circular={false} />
             ) : (
               <span className={cx('split-portrait__initials', avatarClass(h.sex))} aria-hidden="true">
                 <span className="serif">{h.initials}</span>
