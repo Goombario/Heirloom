@@ -25,7 +25,7 @@ const change = { Action: 'update', Changes: { fields: {} }, CreatedAt: '2026-10-
 const resumed = {
   Id: 1, FirstName: 'Greta', LastName: 'Lindqvist', EffectiveFirstName: 'Greta', Nickname: null, Sex: 'F',
   BirthDate: '1871', BirthPlace: null, DeathDate: '1948', DeathPlace: null, IsDeceased: 1, PrimaryMediaId: null,
-  FocalX: null, FocalY: null, FocalRadius: null, partnershipCount: 0, childrenCount: 0, totalFacts: 0, sourcedFacts: 0,
+  FocalX: null, FocalY: null, FocalRadius: null, RegionW: null, RegionH: null, partnershipCount: 0, childrenCount: 0, totalFacts: 0, sourcedFacts: 0,
   nextSteps: { steps: [], total: 0 },
   lastChange: { ...change, EntityLabel: 'Greta Lindqvist' },
 } satisfies ResumedPerson;

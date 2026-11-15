@@ -21,9 +21,9 @@ interface FramingShares {
 
 export const PORTRAIT_FRAMING = {
     /** Pages wider than the phone breakpoint (768px and up). */
-    desktop: { rect: 0.55, circle: 0.72 } satisfies FramingShares,
+    desktop: { rect: 0.70, circle: 0.85 } satisfies FramingShares,
     /** Phone pages (below 768px). */
-    phone: { rect: 0.55, circle: 0.72 } satisfies FramingShares,
+    phone: { rect: 0.70, circle: 0.85 } satisfies FramingShares,
     /** Where the face centre sits down a rectangle, as a share of its height. Circles centre it. */
     faceTop: 0.45,
 } as const;

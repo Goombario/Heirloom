@@ -48,7 +48,13 @@ private repository that receives released tags, the same route as the hosted ser
    **Root directory:** blank.
 4. **Build variables:** `AUTH_SECRET=unused-in-static-build` (NextAuth reads it at build;
    the static build has no auth server). `NEXT_PUBLIC_BASE_PATH` only if you serve from a
-   subpath.
+   subpath. `NEXT_PUBLIC_GOOGLE_DRIVE_CLIENT_ID` only if you want Google Drive backup
+   (see [drive-backup-setup.md](drive-backup-setup.md)); without it the Drive section never
+   renders.
+
+   These go under **Settings → Variables & Secrets → Build**, not the runtime variables:
+   the site has no Worker script, so only values present when `next build` runs reach it.
+   A new or renamed Worker starts with none of them; re-add them and rebuild.
 
    > **Node version.** The root `.node-version` file pins Node **24** for Cloudflare's
    > build. It must stay ≥ the `engines.node` floor in `package.json`: `.npmrc` sets
@@ -56,8 +62,10 @@ private repository that receives released tags, the same route as the hosted ser
    > runs. If the floor is bumped, bump `.node-version` in the same change.
 
 The site serves at `https://heirloom.<your-subdomain>.workers.dev`. Add a custom domain
-under the Worker's **Domains & Routes**; no rebuild is needed (base path is empty). To
-redeploy, use **Retry deployment** in the dashboard.
+under the Worker's **Domains & Routes**; no rebuild is needed (base path is empty). If
+Drive backup is on, add every new address to the Google client's **Authorized JavaScript
+origins** too, or connecting fails with `origin_mismatch`. To redeploy, use **Retry
+deployment** in the dashboard.
 
 ## Local verification
 

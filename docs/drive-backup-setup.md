@@ -47,6 +47,11 @@ assessment (CASA) and no verification fee are required.
      add as *Test users* can connect — add yourself. For a personal self-host
      you can stay in Testing forever; **Publish** only if other people will use
      your deployment.
+   - In Testing, Google shows a **"Google hasn't verified this app"** screen;
+     test users can click *Continue*. Publishing removes the screen because
+     `drive.file` is non-sensitive, so no verification review is needed. Showing
+     your app name and logo on the consent screen is a separate *brand
+     verification*, which needs a domain you own (not `*.workers.dev`).
 4. **Create the client ID** (*APIs & Services → Credentials → Create
    credentials → OAuth client ID*):
    - Application type: **Web application**.
@@ -55,7 +60,13 @@ assessment (CASA) and no verification fee are required.
      URIs** to configure):
      - `http://localhost:3010` (local `npm run dev:static`)
      - your Cloudflare URL, e.g. `https://your-app.your-subdomain.workers.dev`
+     - any custom domain you add later. Whenever the site's address changes,
+       add the new origin here; Google can take a few minutes to apply it.
    - Copy the generated client ID (`…apps.googleusercontent.com`).
+   - You can reuse the hosted build's NextAuth client instead, but a separate
+     client is simpler to reason about: the Drive one is public and listed in
+     the static bundle, while the NextAuth one carries a secret, so each can be
+     rotated or deleted without breaking the other.
 5. **Set the env var and build**:
 
    ```bash
@@ -66,6 +77,13 @@ assessment (CASA) and no verification fee are required.
    Because the variable is inlined at **build time**, it must be present when
    `npm run build:static` (or `dev:static`) runs — setting it on a running
    deployment does nothing until the next build.
+
+   - **Locally:** restart `dev:static` after editing `.env.local`.
+   - **Cloudflare:** add it as a *Build* variable (Settings → Variables &
+     Secrets → Build), not a runtime one, then rebuild.
+   - **After a deploy:** the service worker can keep serving the previous
+     bundle. Reload twice, or test in a private window, before concluding the
+     variable didn't take.
 
 ## Verifying it works
 
