@@ -7,7 +7,7 @@ import { compareSortableYears, formatDateForDisplay, formatYearOrEmpty, sortable
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import type { JourneyStop } from '@/app/components/LocationJourneyModal';
-import JourneySketch from './JourneySketch';
+import JourneySketch from '@/app/components/JourneySketch';
 import { livingStatus } from '@/lib/living';
 import { getInitials } from '@/lib/utils/initials';
 import { factPlaceEntry } from '@/lib/places/place-key';

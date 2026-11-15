@@ -13,7 +13,9 @@ import { useErrorToast } from '@/app/components/useErrorToast';
 import { useUndoRemoval } from '@/app/hooks/useUndoRemoval';
 import { useReturnFocus } from '@/app/hooks/useReturnFocus';
 import { kindKey } from '@/app/families/view/mobile/model';
-import { ActionLink, AddRow, DetailRail, FamilyRecordRow, Lifespan, OpenInTreeRow, PersonRow, SectionHeader } from '@/app/components/ui';
+import { ArrowUpRight } from '@/lib/icons';
+import JourneySketch, { type SketchStop } from '@/app/components/JourneySketch';
+import { AddRow, DetailRail, FamilyRecordRow, Lifespan, OpenInTreeRow, PersonRow, SectionHeader } from '@/app/components/ui';
 import { AddFamilyPanel } from './AddFamilyPanel';
 import { prefetchPerson } from '../personCache';
 import type { RunChange } from '../mobile/useChange';
@@ -26,7 +28,7 @@ import { desktopFamily, type ChildEntry, type ParentBlock, type PartnerBlock, ty
  * per partnership (its record row, the partner, their children), Add family and the
  * journey. Unlinks act at once and offer Undo (editors only).
  */
-export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journeyCount, onShowJourney, onChanged, run }: {
+export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journey, onShowJourney, onChanged, run }: {
   person: PersonWithRelations;
   portrait?: PersonGalleryMedia;
   treeId: number | null;
@@ -34,8 +36,8 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
   canEdit: boolean;
   /** Unlinks: editors only (the services refuse contributors, #848). */
   canDelete: boolean;
-  /** Places on the journey map; the section shows only when there is one. */
-  journeyCount: number;
+  /** The journey map's geocoded stops, oldest first; the section shows only when there is one. */
+  journey: SketchStop[];
   onShowJourney: () => void;
   onChanged: () => void;
   /** Add family's writes: reload, then the Undo toast. */
@@ -151,11 +153,18 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
         </section>
       )}
 
-      {journeyCount > 0 && (
+      {journey.length > 0 && (
         <section aria-labelledby="rail-journey">
           <SectionHeader level="label" as="h3" headingId="rail-journey" title={t('journey')} />
-          <p className="m-0 mb-1.5 text-sm text-text-secondary">{t('journey_places', { count: journeyCount })}</p>
-          <ActionLink kind="leave" onClick={onShowJourney}>{t('journey_open')}</ActionLink>
+          {/* The whole block opens the full journey map, as the family rail's Where they lived. */}
+          <button type="button" onClick={onShowJourney} aria-label={t('journey_open')}
+            className="block w-full p-0 text-left bg-transparent border-0 cursor-pointer rounded-card focus-ring">
+            <JourneySketch stops={journey} />
+            <span className="flex items-center gap-2 mt-2">
+              <span className="flex-1 text-sm text-text-secondary">{t('journey_places', { count: journey.length })}</span>
+              <ArrowUpRight className="w-3.5 h-3.5 text-link" aria-hidden="true" />
+            </span>
+          </button>
         </section>
       )}
     </DetailRail>

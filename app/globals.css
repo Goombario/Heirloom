@@ -89,6 +89,8 @@
   /* The family record row's tint (S6): a soft step off the page. */
   --color-family-row: #E2DFD8;
   --color-family-row-hover: #D6D3CC;
+  /* The rail's journey sketch: the boards' --surface-2 tint. */
+  --color-map-tint: #E2DFD8;
   /* The detail pages' main column (#131): a cream sheet between the section list and the rail. */
   --color-column: #F7F5F0;
 
@@ -453,6 +455,8 @@ html.dark {
   --color-surface-2: #0C0A09;
   --color-family-row: #2E2925;
   --color-family-row-hover: #3A3430;
+  /* The rail's journey sketch: a lifted step off the page, as the boards' dark --surface-2. */
+  --color-map-tint: #2E2925;
   --color-column: #24211F;
   --color-toast-bg: #F3ECE5;
   --color-toast-fg: #231B16;
@@ -3116,8 +3120,10 @@ th:hover > span > .data-table__sort-idle, th:focus-visible > span > .data-table_
 .pager__num.is-current { background: var(--color-segment-on); color: var(--color-on-segment); }
 .pager__gap { min-width: 22px; text-align: center; color: var(--text-muted); }
 
-/* Fix 13: the family rail's journey sketch. */
-.journey-sketch { background: var(--color-surface-2); }
+/* Fix 13: the person and family rails' journey sketch. Its own tint: dark mode's
+   --color-surface-2 is the sunken near-black, which drew the sketch as a black box. */
+.journey-sketch { background: var(--color-map-tint); }
+.journey-sketch__land { stroke: var(--color-border); }
 .journey-sketch__line { stroke: var(--color-primary); }
 .journey-sketch__stop { fill: var(--color-card); stroke: var(--color-primary); }
 .journey-sketch__end { fill: var(--color-primary); stroke: var(--color-card); }

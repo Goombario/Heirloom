@@ -266,7 +266,8 @@ export default function PersonDetailsClient() {
 
     // Ordered, geocoded stops for the journey modal: Birth, events, Death — in
     // chronological order, only those with resolved coordinates.
-    const journeyStops: JourneyStop[] = (() => {
+    // The rail's sketch draws the same stops, each labelled with its year.
+    const journey = (() => {
         const raw: { year: number | null; place: string; placeId: number | null; title: string; date: string | null }[] = [];
         if (person.BirthPlace) raw.push({ year: sortableYear(person.BirthDate), place: person.BirthPlace, placeId: person.BirthPlaceId ?? null, title: t('fact_birth'), date: person.BirthDate });
         for (const ev of person.events ?? []) {
@@ -277,10 +278,13 @@ export default function PersonDetailsClient() {
         return raw
             .map(r => {
                 const c = factPlaceEntry(placeCoords, r.place, r.placeId);
-                return c ? { lat: c.lat, lng: c.lng, label: r.place, title: r.title, date: r.date ? formatDateForDisplay(r.date, language, dateWords) : null } : null;
+                if (!c) return null;
+                const stop: JourneyStop = { lat: c.lat, lng: c.lng, label: r.place, title: r.title, date: r.date ? formatDateForDisplay(r.date, language, dateWords) : null };
+                return { stop, sketch: { lat: c.lat, lng: c.lng, label: r.place, year: r.date?.match(/\d{4}/)?.[0] ?? null } };
             })
-            .filter((s): s is JourneyStop => s !== null);
+            .filter((s) => s !== null);
     })();
+    const journeyStops: JourneyStop[] = journey.map((j) => j.stop);
 
     const factValue = (date: string | null | undefined, place: string | null | undefined) =>
         datedFactValue(date ? formatDateForDisplay(date, language, dateWords) : null, place, tc('unknown'));
@@ -464,7 +468,7 @@ export default function PersonDetailsClient() {
                             treeId={activeTreeId}
                             canEdit={canEdit}
                             canDelete={canDelete}
-                            journeyCount={journeyStops.length}
+                            journey={journey.map((j) => j.sketch)}
                             onShowJourney={() => setShowJourney(true)}
                             onChanged={fetchPerson}
                             run={run}

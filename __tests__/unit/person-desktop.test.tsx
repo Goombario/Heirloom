@@ -51,9 +51,15 @@ const anna = {
 
 const wrap = (ui: ReactNode) => render(<NextIntlClientProvider locale="en" messages={en}>{ui}</NextIntlClientProvider>);
 
+const journey = [
+  { lat: 59.86, lng: 17.64, label: 'Uppsala, Sweden', year: '1866' },
+  { lat: 55.7, lng: 13.19, label: 'Lund, Sweden', year: '1890' },
+  { lat: 44.98, lng: -93.27, label: 'Minneapolis, Minnesota', year: '1902' },
+];
+
 describe('desktop person rail (#49)', () => {
   const rail = (canDelete: boolean) => wrap(
-    <FamilyRail person={anna} treeId={1} canEdit canDelete={canDelete} journeyCount={3} onShowJourney={() => {}} onChanged={() => {}} run={vi.fn()} />,
+    <FamilyRail person={anna} treeId={1} canEdit canDelete={canDelete} journey={journey} onShowJourney={() => {}} onChanged={() => {}} run={vi.fn()} />,
   );
 
   it('opens with Open in tree, then parents with siblings inside, then each partnership', () => {
@@ -70,7 +76,10 @@ describe('desktop person rail (#49)', () => {
     expect(partners).toHaveTextContent('m. 1890');
     expect(within(partners).getByRole('link', { name: /Nils Lind/ })).toHaveTextContent('adopted');
     expect(partners).toHaveTextContent('Partner unknown');
-    expect(screen.getByRole('button', { name: /See the journey/ })).toBeInTheDocument();
+    // The Journey section is the family page's map sketch, one button to the full map.
+    const journeyButton = screen.getByRole('button', { name: /See the journey/ });
+    expect(journeyButton.querySelector('svg.journey-sketch')).not.toBeNull();
+    expect(journeyButton).toHaveTextContent('3 places on the map');
   });
 
   it('gives editors the unlinks, and an unlink acts at once', async () => {
