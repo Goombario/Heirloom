@@ -1,4 +1,4 @@
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import path from 'path';
 import fs from 'fs';
 import { assignFamilyXrefs, assignPersonXrefs } from '@/lib/gedcom/generator';
@@ -277,7 +277,7 @@ export async function exportGedcomService(params: ExportGedcomParams): Promise<E
     }
 
     // --- Zip bundle --------------------------------------------------------
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = new ZipArchive({ zlib: { level: 9 } });
     const archiveDate = new Date(0);
     const chunks: Buffer[] = [];
     const archivePromise = new Promise<Buffer>((resolve, reject) => {

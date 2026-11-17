@@ -151,7 +151,6 @@ function Biography({ person, biography, treeId, canEdit, canDelete, run, request
       labels={{
         heading: tp('biography'),
         add: t('add_biography'),
-        hint: t('bio_hint', { name: given }),
         edit: t('edit_biography'),
         remove: t('delete_biography'),
         placeholder: tp('bio_placeholder', { name: given }),

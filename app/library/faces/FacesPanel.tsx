@@ -42,7 +42,7 @@ function FacesSkeleton() {
  * alone writes nothing. Splitting a face off ("Not {person}") or a shared name into
  * one row per face ("Choose for each face") is page state too, each with Undo.
  */
-export interface FacesPanelProps {
+interface FacesPanelProps {
   treeId: number | null;
   canEdit: boolean;
   onPendingCountChange?: (count: number) => void;

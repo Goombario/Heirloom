@@ -1,6 +1,10 @@
 # Third-party actions in .github/workflows are pinned to a commit, so a moved
 # tag cannot change what builds the desktop installers. This keeps those pins
 # current: one grouped pull request a month.
+#
+# npm: one grouped pull request a month for minor and patch updates, and one per
+# major so a breaking upgrade lands on its own. Security fixes arrive as soon as
+# an advisory is published, outside the schedule.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -10,3 +14,21 @@ updates:
     groups:
       actions:
         patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 10
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # The JS side of Tauri moves with the Rust crate in src-tauri/Cargo.lock;
+      # bump both together by hand.
+      - dependency-name: '@tauri-apps/*'
+        update-types: [version-update:semver-minor, version-update:semver-major]
+      # pg 8.21+ requires 'util/types', which breaks the browser bundle that
+      # reaches lib/db/connection.ts through the local data client.
+      - dependency-name: pg
+        versions: ['>8.20.0']

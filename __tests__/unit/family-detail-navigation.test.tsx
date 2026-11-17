@@ -50,7 +50,7 @@ const h = vi.hoisted(() => {
     const peopleGet = vi.fn();
     const citationsListForFamily = vi.fn();
     const placesCoords = vi.fn();
-    const translate = (key: string) => key;
+    const translate = Object.assign((key: string) => key, { rich: (key: string) => key });
     const redirectIfUnauthorized = vi.fn().mockReturnValue(false);
     const reportError = vi.fn();
     let activeTreeId = 7;
