@@ -183,7 +183,7 @@ export function SourceFields({ value, onChange, disabled = false, idPrefix = 'sf
 
     return (
         <>
-            <Section title={t('section_identity')} hint={t('hint_identity')}>
+            <Section title={t('section_identity')}>
                 <Input
                     id={pid('title')}
                     label={
@@ -235,7 +235,7 @@ export function SourceFields({ value, onChange, disabled = false, idPrefix = 'sf
                 </div>
             </Section>
 
-            <Section title={t('section_repository')} hint={t('hint_repository_section')}>
+            <Section title={t('section_repository')}>
                 <RepositoryPicker
                     id={pid('repository')}
                     label={t('field_repository')}
@@ -270,7 +270,6 @@ export function SourceFields({ value, onChange, disabled = false, idPrefix = 'sf
                     <Input
                         id={pid('publication')}
                         label={t('field_publication')}
-                        hint={t('hint_publication')}
                         placeholder={t('ph_publication')}
                         value={value.PublicationInfo}
                         onChange={onInput('PublicationInfo')}

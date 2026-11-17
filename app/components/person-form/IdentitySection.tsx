@@ -81,7 +81,7 @@ export default function IdentitySection({ fm, mobile = false }: { fm: UsePersonF
     };
 
     return (
-        <FormSection title={t('section_identity')} hint={t('section_identity_hint')} mobile={mobile}>
+        <FormSection title={t('section_identity')} mobile={mobile}>
             <FactGroupLabel label={t('section_name')} cite={cite('Name', t('section_name'))} />
             <div className={`grid ${mobile ? 'gap-[13px]' : 'gap-3.5'}`} style={{ gridTemplateColumns: mobile ? '1fr' : '1fr 1fr' }}>
                 <FieldLabel label={t('first_name')} required htmlFor={`${fieldId}-first`}>

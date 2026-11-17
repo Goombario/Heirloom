@@ -30,9 +30,11 @@ export function FamilySummaryView({ summary, treeId }: { summary: FamilySummary;
     const a = shortNameFromDisplay(summary.husbandName);
     const b = shortNameFromDisplay(summary.wifeName);
     const shared = summary.partner1LastName && summary.partner1LastName === summary.partner2LastName ? summary.partner1LastName : null;
-    // The same title rule as the cover: "Johan & Kristina Lindqvist", else both full names.
+    // The same title rule as the cover: "Johan & / Kristina Lindqvist", else both full
+    // names, one partner to a line.
+    const br = () => <br />;
     const title = a && b
-        ? (shared ? t('cover_title_shared', { a, b, last: shared }) : t('hero_title_both', { a: summary.husbandName ?? a, b: summary.wifeName ?? b }))
+        ? (shared ? t.rich('cover_title_shared_lines', { a, b, last: shared, br }) : t.rich('cover_title_both_lines', { a: summary.husbandName ?? a, b: summary.wifeName ?? b, br }))
         : summary.husbandName || summary.wifeName || t('family_fallback');
     const began = yearOnly(summary.MarriageDate);
     const ended = computeEndedYear(

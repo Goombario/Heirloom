@@ -82,7 +82,7 @@
     "@swc/helpers": "^0.5.20",
     "@tauri-apps/api": "~2.11.0",
     "@tauri-apps/plugin-opener": "^2.7.0",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "d3-hierarchy": "^3.1.2",
     "embla-carousel-react": "^8.6.0",
     "exceljs": "^4.4.0",
@@ -94,10 +94,10 @@
     "next-auth": "^5.0.0-beta.30",
     "next-intl": "^4.8.3",
     "pdfjs-dist": "^6.4.299",
-    "pg": "^8.13.0",
-    "react": "19.2.3",
+    "pg": "8.20.0",
+    "react": "19.3.1",
     "react-day-picker": "^10.0.1",
-    "react-dom": "19.2.3",
+    "react-dom": "19.3.1",
     "reactflow": "^11.11.4",
     "serwist": "^9.5.13",
     "sharp": "^0.35.5",
@@ -106,11 +106,11 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tauri-apps/cli": "^2.11.3",
+    "@tauri-apps/cli": "~2.11.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/archiver": "^7.0.0",
+    "@types/archiver": "^8.0.0",
     "@types/node": "^24",
     "@types/pg": "^8.11.0",
     "@types/react": "^19",
@@ -118,7 +118,7 @@
     "axe-core": "^4.12.1",
     "cross-env": "^10.1.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.3",
+    "eslint-config-next": "16.4.6",
     "happy-dom": "^21.0.4",
     "jsdom": "^29.0.0",
     "knip": "^6.17.1",
@@ -130,11 +130,11 @@
     "vitest": "^4.0.18"
   },
   "allowScripts": {
-    "@parcel/watcher@2.5.6": true,
     "sharp@0.35.4": true,
     "unrs-resolver@1.11.1": true,
-    "@swc/core@1.16.2": true,
-    "esbuild@0.27.2": true
+    "@parcel/watcher@2.6.0": true,
+    "@swc/core@1.16.22": true,
+    "esbuild@0.28.2": true
   },
   "overrides": {
     "browserslist": "4.28.7",
@@ -142,6 +142,9 @@
     "exceljs": {
       "unzipper": "^0.12.5"
     },
-    "zod": "^4.6.6"
+    "zod": "^4.6.6",
+    "minimatch@>=7.0.0 <11.0.1": "^11.0.8",
+    "glob@>=9.0.0 <14.0.2": "^14.0.6",
+    "eslint-plugin-react-hooks": "7.0.1"
   }
 }

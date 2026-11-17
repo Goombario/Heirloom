@@ -124,7 +124,6 @@ function Body({ open, source, initialRepository, onClose, onSaved, canDelete = f
                     {label(t('field_title_label'), false)}
                     <input id={`${ids}-title`} value={form.Title} onChange={(e) => set({ Title: e.target.value })} autoComplete="off"
                         placeholder={t('ph_title')} className={field} aria-required="true" />
-                    <span className="text-meta text-text-muted">{tm('title_hint')}</span>
                 </label>
                 {input('Author', t('field_author'), { hint: t('hint_author') })}
                 <div className="grid gap-1.5">

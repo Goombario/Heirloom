@@ -519,7 +519,7 @@ export function CiteSheets({ target, subject, sourceNumbers, canCite, canDelete,
             </div>
             <section className="grid gap-2.5 py-4 border-t border-border">
                 <h3 className="eyebrow m-0">{t('where')}</h3>
-                <Input id={`${ids}-page`} label={t('page_label')} placeholder={t('page_ph')} hint={t('page_hint')} value={evidence.page}
+                <Input id={`${ids}-page`} label={t('page_label')} placeholder={t('page_ph')} value={evidence.page}
                     onChange={(e) => setEv({ page: e.target.value })} className="!min-h-11" />
             </section>
             <section className="grid gap-2.5 py-4 border-t border-border">

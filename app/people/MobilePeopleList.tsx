@@ -212,12 +212,12 @@ function useSortColumns() {
     const years: [string, string] = [t('order_oldest'), t('order_newest')];
     return [
         { key: 'name', label: t('col_name_label'), hint: t('sort_hint_name'), orders: az },
-        { key: 'birth', label: t('col_born'), hint: t('sort_hint_birth'), orders: years },
-        { key: 'death', label: t('col_died'), hint: t('sort_hint_death'), orders: years },
+        { key: 'birth', label: t('col_born'), orders: years },
+        { key: 'death', label: t('col_died'), orders: years },
         { key: 'place', label: t('col_birthplace'), hint: t('sort_hint_place'), orders: az },
         { key: 'sources', label: t('col_sources'), hint: t('sort_hint_sources'), orders: [t('order_least'), t('order_most')] as [string, string] },
         { key: 'updated', label: t('sort_recently_updated'), hint: t('sort_hint_updated'), orders: years },
-    ] satisfies { key: PeopleSortColumn; label: string; hint: string; orders: [string, string] }[];
+    ] satisfies { key: PeopleSortColumn; label: string; hint?: string; orders: [string, string] }[];
 }
 
 /** What a row's divider says under this sort: a letter, a decade, a town, or nothing. */

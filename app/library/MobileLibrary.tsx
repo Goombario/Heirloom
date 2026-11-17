@@ -198,7 +198,7 @@ function SourcesView({ sources, sourceError, retrySources, canEdit, uncited, set
     const anyChip = uncited || typeFilter != null || repoFilter != null;
     const clearAll = () => { setUncited(false); setTypeFilter(null); setRepoFilter(null); };
     const columns = [
-        { key: 'title', label: tm('sort_title'), hint: tm('sort_title_hint'), orders: [tm('order_az'), tm('order_za')] as [string, string] },
+        { key: 'title', label: tm('sort_title'), orders: [tm('order_az'), tm('order_za')] as [string, string] },
         { key: 'type', label: tm('sort_type'), hint: tm('sort_type_hint'), orders: [tm('order_az'), tm('order_za')] as [string, string] },
         { key: 'cites', label: tm('sort_cites'), hint: tm('sort_cites_hint'), orders: [tm('order_most'), tm('order_fewest')] as [string, string] },
         { key: 'added', label: tm('sort_added'), hint: tm('sort_added_hint'), orders: [tm('order_newest'), tm('order_oldest')] as [string, string] },
