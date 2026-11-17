@@ -3,15 +3,14 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Note } from '@/lib/data/types';
 import { getDataClient } from '@/lib/data';
-import { ActionLink, InlinePanel, LeadText, cx, fieldClass } from '@/app/components/ui';
+import { Pencil } from '@/lib/icons';
+import { ActionLink, IconButton, InlinePanel, LeadText, cx, fieldClass } from '@/app/components/ui';
 import type { RunChange } from '@/app/people/view/mobile/useChange';
 
 export interface LeadNoteLabels {
   /** The eyebrow over it: "Biography", "About this family". */
   heading: string;
   add: string;
-  /** A line under "Add …" saying what goes here. */
-  hint?: string;
   edit: string;
   remove: string;
   placeholder: string;
@@ -48,7 +47,8 @@ export function LeadNote({ ownerTable, ownerId, note, treeId, canEdit, canDelete
 
   const close = () => {
     setEditing(false);
-    requestAnimationFrame(() => Array.from(wrap.current?.querySelectorAll<HTMLElement>('button') ?? []).pop()?.focus());
+    requestAnimationFrame(() => (wrap.current?.querySelector<HTMLElement>('[data-lead-open]')
+      ?? Array.from(wrap.current?.querySelectorAll<HTMLElement>('button') ?? []).pop())?.focus());
   };
   const open = () => { setText(saved); setEditing(true); };
   // A request from elsewhere opens the editor during render (no effect round-trip),
@@ -123,20 +123,24 @@ export function LeadNote({ ownerTable, ownerId, note, treeId, canEdit, canDelete
       </InlinePanel>
     );
   } else if (!note) {
-    body = canEdit ? (
-      <>
-        <span><ActionLink onClick={open}>{labels.add}</ActionLink></span>
-        {labels.hint && <p className="m-0 text-meta text-text-muted">{labels.hint}</p>}
-      </>
-    ) : null;
+    body = canEdit ? <span><ActionLink onClick={open}>{labels.add}</ActionLink></span> : null;
   } else {
-    body = <LeadText onEdit={canEdit ? open : undefined} editLabel={labels.edit}>{note.Text}</LeadText>;
+    body = <LeadText>{note.Text}</LeadText>;
   }
 
-  // The board labels the lead whenever there is one, or an editor can write one.
+  // The board labels the lead whenever there is one, or an editor can write one. An
+  // existing note's Edit is the pencil beside that label.
   return (
     <div ref={wrap} className="grid gap-1.5">
-      {(note || canEdit) && <h2 className="eyebrow m-0">{labels.heading}</h2>}
+      {(note || canEdit) && (
+        <div className="flex items-center gap-1">
+          <h2 className="eyebrow m-0">{labels.heading}</h2>
+          {note && canEdit && !editing && (
+            <IconButton data-lead-open label={labels.edit} onClick={open} size="sm" className="-my-1"
+              icon={<Pencil className="w-3.5 h-3.5" aria-hidden="true" />} />
+          )}
+        </div>
+      )}
       {body}
     </div>
   );

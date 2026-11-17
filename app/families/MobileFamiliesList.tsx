@@ -133,10 +133,10 @@ function useSortColumns() {
         { key: 'type', label: t('col_type'), hint: t('list_sort_hint_type'), orders: az },
         { key: 'began', label: t('col_began'), hint: t('list_sort_hint_began'), orders: years },
         { key: 'ended', label: t('col_ended'), hint: t('list_sort_hint_ended'), orders: years },
-        { key: 'children', label: t('col_children'), hint: t('list_sort_hint_children'), orders: [t('list_order_fewest'), tp('order_most')] as [string, string] },
+        { key: 'children', label: t('col_children'), orders: [t('list_order_fewest'), tp('order_most')] as [string, string] },
         { key: 'place', label: t('col_place'), hint: t('list_sort_hint_place'), orders: az },
         { key: 'sources', label: t('col_sources'), hint: tp('sort_hint_sources'), orders: [tp('order_least'), tp('order_most')] as [string, string] },
-    ] satisfies { key: FamilySortKey; label: string; hint: string; orders: [string, string] }[];
+    ] satisfies { key: FamilySortKey; label: string; hint?: string; orders: [string, string] }[];
 }
 
 /** What a row's divider says under this sort: a letter, a kind, a decade, a town, or nothing. */

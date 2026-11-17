@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
+import { toast } from 'sonner';
 
 const { createUploadPreviewMock } = vi.hoisted(() => ({ createUploadPreviewMock: vi.fn() }));
 
@@ -53,6 +54,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 beforeEach(() => {
+  // sonner keeps its toast store between renders, so the last test's toast would
+  // reappear in the next test's <Toaster>.
+  toast.dismiss();
   uploadMock.mockClear();
   uploadMock.mockResolvedValue({ Id: 1 });
   findDuplicatesMock.mockClear();

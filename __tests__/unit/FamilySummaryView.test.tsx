@@ -9,7 +9,9 @@ import React from 'react';
 vi.mock('next-intl', () => {
     const t = (key: string, args?: Record<string, unknown>) =>
         args ? `${key}(${Object.entries(args).map(([k, v]) => `${k}=${v}`).join(',')})` : key;
-    return { useTranslations: () => Object.assign(t, { rich: (key: string, args?: Record<string, unknown>) => `${key} ${args?.date ?? ''}` }) };
+    const rich = (key: string, args?: Record<string, unknown>) =>
+        args?.date != null ? `${key} ${args.date}` : t(key, Object.fromEntries(Object.entries(args ?? {}).filter(([, v]) => typeof v !== 'function')));
+    return { useTranslations: () => Object.assign(t, { rich }) };
 });
 vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en' }) }));
 vi.mock('@/app/components/date-input/aliases', () => ({ useDateQualifierWords: () => ({}) }));
@@ -43,7 +45,7 @@ describe('FamilySummaryView', () => {
     it('paints the v1.1 cover from the summary, plus body skeletons (#119)', () => {
         const { container } = render(<FamilySummaryView summary={summary} treeId={1} />);
         // Both partners the summary knows, in the title and on the split portrait.
-        expect(container.querySelector('h1')).toHaveTextContent('hero_title_both(a=John Smith,b=Jane Doe)');
+        expect(container.querySelector('h1')).toHaveTextContent('cover_title_both_lines(a=John Smith,b=Jane Doe)');
         expect(container.querySelectorAll('.split-portrait__half')).toHaveLength(2);
         // The years and the short place.
         expect(container.textContent).toContain('1860 – 1890');
@@ -71,7 +73,7 @@ describe('FamilySummaryView', () => {
     it('names a couple who share a surname once: "Johan & Kristina Lindqvist"', () => {
         const shared = { ...summary, husbandName: 'Johan Lindqvist', wifeName: 'Kristina Lindqvist', partner1LastName: 'Lindqvist', partner2LastName: 'Lindqvist' } as unknown as FamilySummary;
         const { container } = render(<FamilySummaryView summary={shared} treeId={1} />);
-        expect(container.querySelector('h1')).toHaveTextContent('cover_title_shared(a=Johan,b=Kristina,last=Lindqvist)');
+        expect(container.querySelector('h1')).toHaveTextContent('cover_title_shared_lines(a=Johan,b=Kristina,last=Lindqvist)');
     });
 
     it('titles a family with one known partner by that name, and hatches the other half', () => {

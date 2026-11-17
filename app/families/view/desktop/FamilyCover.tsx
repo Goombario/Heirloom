@@ -55,6 +55,11 @@ export function FamilyCover({ familyId, type, partner1, partner2, began, ended, 
   const title = a && b
     ? (shared ? t('cover_title_shared', { a, b, last: shared }) : t('hero_title_both', { a: partnerName(partner1), b: partnerName(partner2) }))
     : partnerName(partner1) || partnerName(partner2) || t('family_fallback');
+  // On the cover the couple breaks after the "&", one partner to a line.
+  const br = () => <br />;
+  const heading = a && b
+    ? (shared ? t.rich('cover_title_shared_lines', { a, b, last: shared, br }) : t.rich('cover_title_both_lines', { a: partnerName(partner1), b: partnerName(partner2), br }))
+    : title;
 
   const items: RecordMenuItem[] = [
     ...(canWrite ? [{ label: tk('edit_family'), onSelect: onEditFamily }] : []),
@@ -70,7 +75,7 @@ export function FamilyCover({ familyId, type, partner1, partner2, began, ended, 
   return (
     <CoverBand
       eyebrow={tk(`kind_${kindKey(type)}`)}
-      title={title}
+      title={heading}
       titleSize="hero"
       meta={meta}
       titleAside={items.length > 0 ? <RecordMenu tone="island" recordName={title} items={items} /> : undefined}
@@ -92,7 +97,6 @@ export function FamilyCover({ familyId, type, partner1, partner2, began, ended, 
           labels={{
             heading: t('about_heading'),
             add: t('about_add'),
-            hint: t('about_hint'),
             edit: t('about_edit'),
             remove: t('about_remove'),
             placeholder: t('about_placeholder'),
