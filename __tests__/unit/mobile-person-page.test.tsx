@@ -527,6 +527,8 @@ describe('phone tab swipe (#1053)', () => {
     const scrollTo = vi.fn((o: ScrollToOptions) => { window.scrollY = o.top ?? 0; });
     vi.stubGlobal('scrollTo', scrollTo);
     const tabTo = (name: RegExp) => fireEvent.click(screen.getByRole('tab', { name }));
+    // happy-dom's scrollY is a getter; shadow it with a writable own property for the test.
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
     try {
       window.scrollY = 1000;
       tabTo(/tab_events/);
@@ -543,7 +545,7 @@ describe('phone tab swipe (#1053)', () => {
       expect(scrollTo).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllGlobals();
-      window.scrollY = 0;
+      delete (window as { scrollY?: number }).scrollY;
     }
   });
 
