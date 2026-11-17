@@ -120,7 +120,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "happy-dom": "^21.0.4",
-    "jsdom": "^29.0.0",
+    "jsdom": "^31.0.1",
     "knip": "^6.17.1",
     "playwright": "^1.61.1",
     "tailwindcss": "^4.1.18",
