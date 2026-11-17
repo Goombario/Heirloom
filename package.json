@@ -127,7 +127,7 @@
     "tsx": "^4.21.0",
     "typescript": "^5",
     "vite": "^8.0.2",
-    "vitest": "^4.0.18"
+    "vitest": "^5.1.0"
   },
   "allowScripts": {
     "sharp@0.35.4": true,
