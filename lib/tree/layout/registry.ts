@@ -20,6 +20,9 @@ export interface TreeLayoutInput {
   focusTrees?: FocusTrees | null;
   /** Card orientation. Applies to descendants/ancestors; focus ignores it. */
   orientation?: 'vertical' | 'horizontal';
+  /** Portrait cards carry the Display menu's second name line (taller cards,
+   *  generations further apart). Vertical cards only; bars ignore it. */
+  secondName?: boolean;
 }
 
 export interface TreeLayoutMode {
@@ -30,19 +33,19 @@ export interface TreeLayoutMode {
 const MODES: Record<string, TreeLayoutMode> = {
   descendants: {
     id: 'descendants',
-    compute: ({ tree, orientation }) => computeStandardLayout(tree ?? null, 'descendants', orientation),
+    compute: ({ tree, orientation, secondName }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName),
   },
   ancestors: {
     id: 'ancestors',
-    compute: ({ tree, orientation }) => computeStandardLayout(tree ?? null, 'ancestors', orientation),
+    compute: ({ tree, orientation, secondName }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName),
   },
   focus: {
     id: 'focus',
     // Focus is vertical-only (Phase 1) — it ignores `orientation`. Focus without
     // focusTrees (shouldn't happen — the API populates them for mode=focus)
     // falls back to a descendants layout of whatever tree we have.
-    compute: ({ tree, focusTrees }) =>
-      focusTrees ? computeFocusLayout(focusTrees) : computeStandardLayout(tree ?? null, 'descendants'),
+    compute: ({ tree, focusTrees, secondName }) =>
+      focusTrees ? computeFocusLayout(focusTrees, secondName) : computeStandardLayout(tree ?? null, 'descendants', 'vertical', secondName),
   },
 };
 

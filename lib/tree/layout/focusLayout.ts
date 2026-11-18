@@ -20,6 +20,9 @@ import {
   FOCUS_Y,
   CENTER_X,
   INNER_GAP,
+  DEFAULT_LAYOUT_GEOMETRY,
+  SECOND_NAME_LAYOUT_GEOMETRY,
+  personCardHeight,
 } from '@/lib/tree/geometry';
 import { nodeKeyToId, canonicalNodeId } from '@/lib/tree/keys';
 import { computeColumnLayout, layoutBounds } from './columnEngine';
@@ -35,10 +38,15 @@ const RIGHT_X = CENTER_X + PERSON_CARD_WIDTH + INNER_GAP;  // = +108
 // mother-as-spouse inside CENTER against the mother-as-leaf inside RIGHT.
 const toCanonical = canonicalNodeId;
 
-export function computeFocusLayout(focusTrees: FocusTrees | null): LayoutOutput {
+export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = false): LayoutOutput {
   if (!focusTrees) {
     return { nodes: [], edges: [], bounds: null, anchor: null };
   }
+
+  // The second name line makes every card taller and every generation further
+  // apart; all three passes share it so their rows still line up.
+  const geometry = secondName ? SECOND_NAME_LAYOUT_GEOMETRY : DEFAULT_LAYOUT_GEOMETRY;
+  const dims = { width: PERSON_CARD_WIDTH, height: personCardHeight(secondName) };
 
   const focusId = focusTrees.focusPersonId;
   const isStageD = focusTrees.stage === 'D';
@@ -56,6 +64,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null): LayoutOutput 
     focusPersonId: focusId,
     shift: { targetX: CENTER_X, targetY: FOCUS_Y },
     lineageOrder: isStageD ? 'last' : 'first',
+    geometry,
   });
 
   if (!isStageD) {
@@ -63,7 +72,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null): LayoutOutput 
     // (Node IDs keep their 'center-' prefix here — Stage A never runs dedup.)
     return {
       ...centerResult,
-      bounds: layoutBounds(centerResult.nodes),
+      bounds: layoutBounds(centerResult.nodes, dims),
       anchor: { nodeId: nodeKeyToId({ personId: focusId, role: 'person', cluster: 'center' }), placement: 'center' },
     };
   }
@@ -100,6 +109,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null): LayoutOutput 
         cluster: 'left',
         mirrorX: true,
         focusPersonId: focusId,
+        geometry,
         shift: { targetX: leftAnchorX, targetY: leftAnchorY, anchorPersonId: leftParentId },
       })
     : { nodes: [] as FlowNode[], edges: [] as FlowEdge[] };
@@ -128,6 +138,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null): LayoutOutput 
     ? computeColumnLayout(trimmedRight, {
         cluster: 'right',
         focusPersonId: focusId,
+        geometry,
         shift: { targetX: rightAnchorX, targetY: rightAnchorY, anchorPersonId: rightParentId },
       })
     : { nodes: [] as FlowNode[], edges: [] as FlowEdge[] };
@@ -290,7 +301,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null): LayoutOutput 
   return {
     nodes,
     edges,
-    bounds: layoutBounds(nodes),
+    bounds: layoutBounds(nodes, dims),
     // Post-dedup IDs are canonical, so the focus card is `person-<id>`.
     anchor: { nodeId: nodeKeyToId({ personId: focusId, role: 'person' }), placement: 'center' },
   };

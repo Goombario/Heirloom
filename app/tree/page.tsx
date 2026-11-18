@@ -65,7 +65,10 @@ function TreePageContent() {
   }, [guardNavigation, handlePersonClick]);
   const search = useTreeSearch(treeData?.allPeople, guardedPersonSelect);
   const { setShowDropdown } = search;
-  const { colorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark } = useTreeDisplayPrefs();
+  const {
+    colorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
+    secondNameType, setSecondNameType,
+  } = useTreeDisplayPrefs();
 
   const phase = useLoadPhase(loading);
 
@@ -114,6 +117,8 @@ function TreePageContent() {
     onShowAgesChange: setShowAgeIndicator,
     showStatus: showStatusMark,
     onShowStatusChange: setShowStatusMark,
+    secondNameType,
+    onSecondNameTypeChange: setSecondNameType,
   };
 
   return (
@@ -202,6 +207,8 @@ function TreePageContent() {
               colorblindMode={colorblindMode}
               showAgeIndicator={showAgeIndicator}
               showStatusMark={showStatusMark}
+              secondNameType={secondNameType}
+              cardNames={treeData.cardNames}
               barZoomThreshold={barZoomThreshold}
               fitViewVersion={fitViewVersion}
               isExporting={isExporting}

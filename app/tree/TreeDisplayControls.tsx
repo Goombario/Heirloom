@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SegmentedControl } from '@/app/components/ui/SegmentedControl';
+import { SelectField } from '@/app/components/ui/Select';
+import { TREE_SECOND_NAME_TYPES, type TreeSecondNameType } from '@/app/components/tree/types';
 import { cx } from '@/app/components/ui/cx';
 
 /** Mini pedigree glyph flowing downward — the vertical (portrait-card) layout. */
@@ -50,7 +52,20 @@ export interface TreeDisplayProps {
     /** The living-status mark on the cards (#68). Off hides only the mark. */
     showStatus: boolean;
     onShowStatusChange: (v: boolean) => void;
+    /** The name type shown as a second line on vertical cards, or null for none. */
+    secondNameType: TreeSecondNameType | null;
+    onSecondNameTypeChange: (v: TreeSecondNameType | null) => void;
 }
+
+/** Each "Second name" choice's label: the person page's own name-type words. */
+const SECOND_NAME_LABEL = {
+    Nickname: 'vtype_nickname',
+    Maiden: 'vtype_maiden',
+    Married: 'vtype_married',
+    Anglicized: 'vtype_anglicized',
+    Alias: 'vtype_alias',
+    Given: 'vtype_given',
+} as const satisfies Record<TreeSecondNameType, string>;
 
 /**
  * The tree's display settings: orientation, depth, ages and the dev-only bar aids.
@@ -61,8 +76,10 @@ export function TreeDisplayControls({
     orientation, onOrientationChange, orientationDisabled,
     barZoomThreshold, onBarZoomThresholdChange,
     depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
+    secondNameType, onSecondNameTypeChange,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
+    const tNames = useTranslations('personDetail');
 
     // Live slider position while dragging. The applied depth only changes on
     // release (commit) so a large tree isn't re-laid-out on every tick.
@@ -73,6 +90,14 @@ export function TreeDisplayControls({
     const showDepth = maxDepth >= 2;
     const atMax = live >= maxDepth;
     const commit = () => { if (live !== depth) onDepthCommit(live); };
+
+    // Bars (horizontal) don't draw the second line yet; the choice is kept for vertical.
+    const secondNameId = useId();
+    const secondNameDisabled = orientation === 'horizontal';
+    const secondNameOptions = [
+        { value: 'none', label: t('second_name_none') },
+        ...TREE_SECOND_NAME_TYPES.map((type) => ({ value: type, label: tNames(SECOND_NAME_LABEL[type]) })),
+    ];
 
     return (
         <>
@@ -122,6 +147,20 @@ export function TreeDisplayControls({
                     </div>
                 </div>
             )}
+
+            <div>
+                <label htmlFor={secondNameId} className="eyebrow mb-2 block">{t('second_name')}</label>
+                <SelectField
+                    id={secondNameId}
+                    value={secondNameType ?? 'none'}
+                    onChange={(v) => onSecondNameTypeChange(v === 'none' ? null : v as TreeSecondNameType)}
+                    options={secondNameOptions}
+                    disabled={secondNameDisabled}
+                />
+                <div className="muted text-xs mt-1">
+                    {secondNameDisabled ? t('second_name_vertical_only') : t('second_name_help')}
+                </div>
+            </div>
 
             <DisplaySwitch label={t('show_ages')} checked={showAges} onChange={onShowAgesChange} />
             <DisplaySwitch label={t('show_living_status')} checked={showStatus} onChange={onShowStatusChange} />

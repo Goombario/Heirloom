@@ -3,6 +3,7 @@ import { GET } from '@/app/api/tree/route';
 import { POST as CREATE_PERSON } from '@/app/api/people/route';
 import { POST as CREATE_FAMILY } from '@/app/api/families/route';
 import { POST as ADD_CHILD } from '@/app/api/families/[id]/children/route';
+import { POST as CREATE_VARIANT } from '@/app/api/people/[id]/name-variants/route';
 import { createRequest, parseResponse } from '../../setup/test-helpers';
 import { cleanupTestData, hasTestDatabase } from '../../setup/db-helpers';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
@@ -205,6 +206,33 @@ describeIf('API /api/tree', () => {
     // A living person's card reads "b. 1954" (Lifespan with no status), which fits
     // the card; so the payload doesn't mark them deceased (#808).
     expect(data.tree.lifespan).toEqual({ birth: '1954', death: null, deceased: false });
+  });
+
+  // The Display menu's "Second name" line: names per type, and the original name
+  // for a person whose preferred name is a nickname.
+  it('sends each person\'s other names for the card\'s second line', async () => {
+    const wei = await createPerson('Wei', 'Chen');
+    const bill = await createPerson('William', 'Hartley');
+    const plain = await createPerson('Thomas', 'Hartley');
+    const addVariant = (personId: number, Type: string, Name: string) => CREATE_VARIANT(
+      createRequest(`http://localhost:3000/api/people/${personId}/name-variants`, { method: 'POST', body: { Type, Name } }),
+      { params: Promise.resolve({ id: String(personId) }) },
+    );
+    await addVariant(wei.Id, 'Alias', '陈伟');
+    await addVariant(wei.Id, 'Alias', 'Second alias');
+    // The first nickname becomes the preferred name (#436): William “Bill” Hartley.
+    await addVariant(bill.Id, 'Nickname', 'Bill');
+
+    const res = await GET(createRequest(`http://localhost:3000/api/tree?id=${bill.Id}`));
+    expect(res.status).toBe(200);
+    const data = await parseResponse<{ tree: { name: string }; cardNames: Record<string, { original?: string; byType: Record<string, string> }> }>(res);
+
+    expect(data.tree.name).toBe('William “Bill” Hartley');
+    expect(data.cardNames[String(bill.Id)]).toEqual({ original: 'William Hartley', byType: { Nickname: 'Bill' } });
+    // The first recorded name of a type wins; no original without a preferred nickname.
+    expect(data.cardNames[String(wei.Id)]).toEqual({ byType: { Alias: '陈伟' } });
+    // Nobody is listed without a name to show.
+    expect(data.cardNames[String(plain.Id)]).toBeUndefined();
   });
 
   it('returns 401 when unauthenticated', async () => {
