@@ -20,7 +20,7 @@ This document maps the complete tree visualization system. **Keep it up to date 
 | File | Role |
 |------|------|
 | `app/components/tree/TreeVisualization.tsx` | React Flow wrapper — renders nodes/edges, handles fit-view. `nodeTypes` registers `person` + `personBar`. |
-| `app/components/tree/PersonNode.tsx` | 96×145px portrait card (vertical orientation) with photo, status mark, name, dates (anatomy below) |
+| `app/components/tree/PersonNode.tsx` | 96×145px portrait card (96×161 with the Display menu's second name line) (vertical orientation) with photo, status mark, name, dates (anatomy below) |
 | `app/components/tree/PersonBarNode.tsx` | 188×44px compact bar card (horizontal orientation) — avatar chip + name + dates, then the age (when on) and status mark at the right end |
 | `app/components/tree/personCardModel.ts` | Shared derivation (name abbreviation, initials, living status, shown age) consumed by both `PersonNode` and `PersonBarNode` so the two cards never drift |
 | `app/components/tree/TreeCardLifespan.tsx` | Both cards' (and the descendants panel's) life span: the payload's `lifespan` through the shared `Lifespan` (#808). The standard card's lifespan line is 11px mono, like the bar card, and borrows 3px of side padding, so the widest case ("~1796 – ~1819", 77px; 86px if the mono font falls back and draws thin spaces full width) fits its 88px without an ellipsis (#934, #1215) |
@@ -56,6 +56,7 @@ All geometry constants live in **one module**, `lib/tree/geometry.ts`, imported 
 ```
 PERSON_CARD_WIDTH  = 96     // px — portrait card width  (matches PersonNode inline style)
 PERSON_CARD_HEIGHT = 145    // px — portrait card height (matches PersonNode inline style)
+SECOND_NAME_LINE_HEIGHT = 16 // px — added to the card and to VERTICAL_SPACING by the second name line
 BAR_CARD_WIDTH     = 188    // px — horizontal bar card width  (matches PersonBarNode)
 BAR_CARD_HEIGHT    = 44     // px — horizontal bar card height (≥44 tap target)
 SPOUSE_GAP        = 20      // px — gap between person and spouse card(s)
@@ -345,12 +346,22 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 | `treeColorblindMode` | Shape markers on branch edges |
 | `treeShowAgeIndicator` | "Show ages" in the Display controls (the desktop Display menu and the Display sheet below lg, #271): the age beside each card's status mark |
 | `tree:orientation` | `vertical` (portrait cards) or `horizontal` (bar cards); descendants/ancestors only. Unlike the others, this is a **layout input**, not a post-layout decoration. |
+| `treeSecondName` | "Second name" in the Display controls: a NameVariant type (`Nickname`, `Maiden`, `Married`, `Anglicized`, `Alias`, `Given`) shown as a 12px second line under the portrait card's name; absent = None (today's cards). Vertical cards only (focus included); the dropdown is disabled in horizontal. Also a **layout input**: on, every portrait card is 161px (`personCardHeight(true)`) and generations are 236px apart (`SECOND_NAME_LAYOUT_GEOMETRY`), so the gap between rows is unchanged. |
 
 Node names use each person's **primary name** (the `NameVariant` marked
 `IsPrimary`, else `FirstName`), resolved server-side in `GET /api/tree` via
 `EffectiveFirstName` and rendered through `displayFullName` (`lib/utils/names.ts`).
 The shared `personCardModel` only abbreviates long middle names; the older
 quoted-nickname preference (`treeQuotedNames`) was removed.
+
+The second line's names come from `TreeData.cardNames` (built in `lib/services/tree.ts`
+from every NameVariant in the tree): per person, the name for each type (the preferred
+one, else the first recorded, skipping one that is already the main line's first name),
+plus `original` ("First Last" without the merged nickname) when the preferred name is a
+nickname. With Nickname chosen, `TreeVisualization` passes `original` as the card's
+`mainName`, so the nickname appears once, on its own line. A person with no name of the
+chosen type keeps an empty line so a row stays level. The portrait card's dates sit on
+its bottom edge (`.tree-card-dates`, margin-top auto) whether the name takes one line or two.
 
 The debug-only `treeRoundedPhotos` and `treeGreyscaleMode` prefs were removed (#271);
 `useTreeDisplayPrefs` clears their stale keys.

@@ -4,7 +4,7 @@ import { Handle, Position, NodeProps, useStore } from 'reactflow';
 import { FlowNodeData } from './types';
 import ProfileImage from '../ProfileImage';
 import { useTree } from '@/app/contexts/TreeContext';
-import { PERSON_CARD_WIDTH, PERSON_CARD_HEIGHT } from '@/lib/tree/geometry';
+import { PERSON_CARD_WIDTH, personCardHeight } from '@/lib/tree/geometry';
 import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
@@ -19,7 +19,9 @@ const PHOTO_HEIGHT = 64;
  * - Photo area (64px): profile photo or initials, with the 14px status mark
  *   raised in its bottom-right corner and, when ages are on, the age at the
  *   left on a soft fade (#736 B7)
- * - Info strip: abbreviated name + dates
+ * - Info strip: abbreviated name, the optional second name line (the Display
+ *   menu's "Second name", which makes the card 16px taller), and the dates,
+ *   which always sit on the card's bottom edge
  *
  * Name/initials/status/age derivation and zoomed-out font sizing are shared
  * with PersonBarNode via `personCardModel` (see personCardModel.ts). This
@@ -36,7 +38,9 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
   const person = data.person;
   const personId = 'id' in person ? person.id : 0;
   const tc = useTranslations('common');
-  const { displayName, initials, status, age } = personCardModel(person);
+  // With Nickname as the second name, the main line is the original name.
+  const { displayName, initials, status, age } = personCardModel(data.mainName ? { ...person, name: data.mainName } : person);
+  const secondNameOn = !!data.secondNameOn;
   const shownAge = data.showAgeIndicator ? age : null;
   const statusLabel = tc(status);
   const { lifespan } = person;
@@ -71,7 +75,7 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
         className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all overflow-hidden border border-border ${
           data.isSidebarSelected ? 'tree-card--picked' : ''
         }`}
-        style={{ width: `${PERSON_CARD_WIDTH}px`, height: `${PERSON_CARD_HEIGHT}px`, display: 'flex', flexDirection: 'column', position: 'relative' }}
+        style={{ width: `${PERSON_CARD_WIDTH}px`, height: `${personCardHeight(secondNameOn)}px`, display: 'flex', flexDirection: 'column', position: 'relative' }}
       >
         {/* Photo Area */}
         <div
@@ -112,7 +116,9 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
         </div>
 
         {/* Info Strip */}
-        <div style={{ padding: '6px 6px 6px', textAlign: 'center', }}>
+        {/* A column filling the rest of the card, so the dates can sit on its
+            bottom edge whether the name takes one line or two. */}
+        <div style={{ flex: 1, minHeight: 0, padding: '6px 6px 6px', textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
           <p
             className="text-text"
             style={{
@@ -128,14 +134,26 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
           >
             {displayName}
           </p>
+          {/* The second name line (vertical cards only). The line keeps its height
+              when this person has no name of the chosen type, so a row stays level. */}
+          {secondNameOn && !isZoomedOut && (
+            <p
+              className="tree-card-second-name"
+              lang={data.secondName ? secondNameLang(data.secondName) : undefined}
+              title={data.secondName ?? undefined}
+            >
+              {data.secondName}
+            </p>
+          )}
           {!isZoomedOut && lifespan && (lifespan.birth || lifespan.death) && (
             <p
               // 11px, like the bar card (#1215): at 12px the widest lifespan
               // ("~1796 – ~1819") fit in its 88px with only 4px to spare, and a fallback
               // mono font, which draws the thin spaces full width, cut it off. At 11px it
               // is 77px with the card's font and 86px with a fallback. The line still
-              // borrows 3px of the strip's side padding each side (#934).
-              style={{ fontSize: '11px', margin: '3px -3px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              // borrows 3px of the strip's side padding each side (#934). It sits on
+              // the card's bottom edge (.tree-card-dates).
+              className="tree-card-dates"
             >
               <TreeCardLifespan lifespan={lifespan} />
             </p>
@@ -145,5 +163,17 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
     </>
   );
 };
+
+/**
+ * A `lang` hint for a second name written in Chinese or Japanese script, so the
+ * browser picks a CJK face with the right glyph forms at the small size. Other
+ * scripts inherit the page language.
+ */
+function secondNameLang(name: string): string | undefined {
+  if (/[\u3040-\u30ff]/.test(name)) return 'ja';
+  if (/[\u3400-\u9fff\uf900-\ufaff]/.test(name)) return 'zh';
+  if (/[\uac00-\ud7af]/.test(name)) return 'ko';
+  return undefined;
+}
 
 export default memo(PersonNode);

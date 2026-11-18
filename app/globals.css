@@ -1579,6 +1579,31 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   font-variant-numeric: tabular-nums;
   user-select: none;
 }
+/* The portrait tree card's dates: 11px (#1215), borrowing 3px of the strip's side
+   padding (#934), and pinned to the card's bottom edge by margin-top auto, whether
+   the name above takes one line or two. */
+.tree-card-dates {
+  margin: auto -3px 0;
+  padding-top: 3px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The tree card's optional second name line (Display › Second name, vertical cards).
+   12px secondary text 4px under the name, one line, cut with an ellipsis. It borrows
+   3px of the strip's side padding like the dates. The fixed height keeps the line
+   when a person has no name of the chosen type, so a row of cards stays level. */
+.tree-card-second-name {
+  margin: 4px -3px 0;
+  height: 15px;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .tree-bar-age {
   flex: none;
   color: var(--color-text-secondary);
