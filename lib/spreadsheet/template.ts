@@ -110,7 +110,12 @@ function childrenPreviewFormula(row: number): string {
 
 // ── Template generator ────────────────────────────────────────────────────────
 
-export async function generateSpreadsheetTemplate(slashOrder: 'MDY' | 'DMY' = 'MDY'): Promise<Buffer> {
+/** The template's file name, the one the Download button names. */
+export const SPREADSHEET_TEMPLATE_NAME = 'heirloom-template.xlsx';
+
+export const SPREADSHEET_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+export async function generateSpreadsheetTemplate(slashOrder: 'MDY' | 'DMY' = 'MDY'): Promise<Uint8Array<ArrayBuffer>> {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Heirloom';
     workbook.created = new Date();
@@ -254,8 +259,10 @@ export async function generateSpreadsheetTemplate(slashOrder: 'MDY' | 'DMY' = 'M
         row.commit();
     });
 
+    // Plain bytes, not a Node Buffer: the static build and the desktop app make
+    // the template in the browser (#189).
     const buf = await workbook.xlsx.writeBuffer();
-    return Buffer.from(buf);
+    return new Uint8Array(buf);
 }
 
 // ── Style helpers ─────────────────────────────────────────────────────────────
