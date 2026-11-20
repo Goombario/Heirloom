@@ -54,7 +54,7 @@
   },
   "app/components/tree/PersonNode.tsx": {
     "ds/no-inline-static-literal": {
-      "count": 3
+      "count": 2
     }
   },
   "app/components/tree/PersonSidebar.tsx": {

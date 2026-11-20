@@ -53,7 +53,7 @@ describe('second name line geometry', () => {
     return ys[1] - ys[0];
   };
 
-  test('off keeps the 145px card and the 220px generation step', () => {
+  test('off keeps the 152px card and the 228px generation step (#184)', () => {
     expect(personCardHeight(false)).toBe(PERSON_CARD_HEIGHT);
     const off = computeStandardLayout(tree, 'descendants', 'vertical');
     const offDefault = computeStandardLayout(tree, 'descendants', 'vertical', false);
@@ -61,13 +61,13 @@ describe('second name line geometry', () => {
     expect(rowGap(off.nodes)).toBe(VERTICAL_SPACING);
   });
 
-  test('on: 161px cards, 236px generations, the same gap between rows', () => {
-    expect(personCardHeight(true)).toBe(161);
-    expect(SECOND_NAME_LAYOUT_GEOMETRY.generationSpacing).toBe(236);
+  test('on: 168px cards, 244px generations, the same gap between rows', () => {
+    expect(personCardHeight(true)).toBe(168);
+    expect(SECOND_NAME_LAYOUT_GEOMETRY.generationSpacing).toBe(244);
     const on = computeStandardLayout(tree, 'descendants', 'vertical', true);
-    expect(rowGap(on.nodes)).toBe(236);
-    expect(236 - personCardHeight(true)).toBe(VERTICAL_SPACING - PERSON_CARD_HEIGHT);
-    expect(on.bounds!.maxY - on.bounds!.minY).toBe(236 + 161);
+    expect(rowGap(on.nodes)).toBe(244);
+    expect(244 - personCardHeight(true)).toBe(VERTICAL_SPACING - PERSON_CARD_HEIGHT);
+    expect(on.bounds!.maxY - on.bounds!.minY).toBe(244 + 168);
   });
 
   test('horizontal bars ignore it', () => {
@@ -77,7 +77,7 @@ describe('second name line geometry', () => {
 
   test('focus view spaces all three clusters by the taller rows', () => {
     const focus = computeFocusLayout({ stage: 'A', center: tree, focusPersonId: 1 }, true);
-    expect(rowGap(focus.nodes)).toBe(236);
-    expect(focus.bounds!.maxY - focus.bounds!.minY).toBe(236 + 161);
+    expect(rowGap(focus.nodes)).toBe(244);
+    expect(focus.bounds!.maxY - focus.bounds!.minY).toBe(244 + 168);
   });
 });

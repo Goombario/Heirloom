@@ -41,10 +41,10 @@ describe('tree card living-status mark', () => {
 describe('portrait card second name line', () => {
     const card = (c: HTMLElement) => c.querySelector<HTMLElement>('.bg-card')!;
 
-    it('off: no line and the 145px card', () => {
+    it('off: no line and the 152px card', () => {
         const { container } = renderCard(PersonNode, {});
         expect(container.querySelector('.tree-card-second-name')).toBeNull();
-        expect(card(container).style.height).toBe('145px');
+        expect(card(container).style.height).toBe('152px');
     });
 
     it('on: shows the name in its own line, tagged with its script', () => {
@@ -52,13 +52,13 @@ describe('portrait card second name line', () => {
         const line = container.querySelector('.tree-card-second-name')!;
         expect(line.textContent).toBe('陈伟');
         expect(line.getAttribute('lang')).toBe('zh');
-        expect(card(container).style.height).toBe('161px');
+        expect(card(container).style.height).toBe('168px');
     });
 
     it('on with no name of that type: keeps an empty line so the row stays level', () => {
         const { container } = renderCard(PersonNode, { secondNameOn: true, secondName: null });
         expect(container.querySelector('.tree-card-second-name')!.textContent).toBe('');
-        expect(card(container).style.height).toBe('161px');
+        expect(card(container).style.height).toBe('168px');
     });
 
     it('Nickname: the main line is the original name', () => {

@@ -34,9 +34,9 @@ describe('useFocusTreeLayout constants', () => {
   it('LEFT_X and RIGHT_X are derived correctly from CENTER_X and INNER_GAP', () => {
     const LEFT_X = CENTER_X - INNER_GAP;
     const RIGHT_X = CENTER_X + PERSON_CARD_WIDTH + INNER_GAP;
-    // CENTER_X=-48, PERSON_CARD_WIDTH=96, INNER_GAP=60
-    expect(LEFT_X).toBe(-108);
-    expect(RIGHT_X).toBe(108);
+    // CENTER_X=-52, PERSON_CARD_WIDTH=104, INNER_GAP=60
+    expect(LEFT_X).toBe(-112);
+    expect(RIGHT_X).toBe(112);
   });
 
   it('FOCUS_Y is zero (focus person anchored at canvas origin)', () => {
@@ -44,7 +44,7 @@ describe('useFocusTreeLayout constants', () => {
   });
 
   it('CENTER_X is the negative half-width of the card', () => {
-    expect(CENTER_X).toBe(-48);
+    expect(CENTER_X).toBe(-52);
   });
 });
 
@@ -206,11 +206,11 @@ describe('Pass 3 overlap correction logic', () => {
   });
 
   it('detects overlap when left node encroaches on center', () => {
-    // Left node right edge at -48 + 96 = 48; center minX = 0 → overlap = 48 + MIN_BRANCH_GAP
+    // Left node right edge at -52 + 104 = 52; center minX = 0 → overlap = 52 + MIN_BRANCH_GAP
     const centerByY = new Map([[0, { minX: 0, maxX: 200 }]]);
-    const leftNodes = [{ x: -48, y: 0, id: 1 }]; // right edge = -48+96 = 48
+    const leftNodes = [{ x: -52, y: 0, id: 1 }]; // right edge = -52+104 = 52
     const overlap = computeOverlap(leftNodes, centerByY, 99, 'left');
-    expect(overlap).toBe(48 + MIN_BRANCH_GAP - 0);
+    expect(overlap).toBe(52 + MIN_BRANCH_GAP - 0);
   });
 
   it('skips the focus person node when computing overlap', () => {

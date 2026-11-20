@@ -20,7 +20,7 @@ This document maps the complete tree visualization system. **Keep it up to date 
 | File | Role |
 |------|------|
 | `app/components/tree/TreeVisualization.tsx` | React Flow wrapper — renders nodes/edges, handles fit-view. `nodeTypes` registers `person` + `personBar`. |
-| `app/components/tree/PersonNode.tsx` | 96×145px portrait card (96×161 with the Display menu's second name line) (vertical orientation) with photo, status mark, name, dates (anatomy below) |
+| `app/components/tree/PersonNode.tsx` | 104×152px portrait card with a 72px photo (104×168 with the Display menu's second name line; #184) (vertical orientation) with photo, status mark, name, dates (anatomy below) |
 | `app/components/tree/PersonBarNode.tsx` | 188×44px compact bar card (horizontal orientation) — avatar chip + name + dates, then the age (when on) and status mark at the right end |
 | `app/components/tree/personCardModel.ts` | Shared derivation (name abbreviation, initials, living status, shown age) consumed by both `PersonNode` and `PersonBarNode` so the two cards never drift |
 | `app/components/tree/TreeCardLifespan.tsx` | Both cards' (and the descendants panel's) life span: the payload's `lifespan` through the shared `Lifespan` (#808). The standard card's lifespan line is 11px mono, like the bar card, and borrows 3px of side padding, so the widest case ("~1796 – ~1819", 77px; 86px if the mono font falls back and draws thin spaces full width) fits its 88px without an ellipsis (#934, #1215) |
@@ -32,7 +32,7 @@ This document maps the complete tree visualization system. **Keep it up to date 
 
 | File | Role |
 |------|------|
-| `lib/tree/geometry.ts` | **Single source of truth** for card dimensions (portrait 96×145, bar 188×44), spacing constants, branch colors, focus canvas anchors, and the injectable `LayoutGeometry` (`DEFAULT_LAYOUT_GEOMETRY` = portrait, `HORIZONTAL_BAR_GEOMETRY` = bars). Everything that draws or measures cards imports from here. |
+| `lib/tree/geometry.ts` | **Single source of truth** for card dimensions (portrait 104×152, bar 188×44), spacing constants, branch colors, focus canvas anchors, and the injectable `LayoutGeometry` (`DEFAULT_LAYOUT_GEOMETRY` = portrait, `HORIZONTAL_BAR_GEOMETRY` = bars). Everything that draws or measures cards imports from here. |
 | `lib/tree/layout/columnEngine.ts` | `computeColumnLayout()` — THE one d3 column layout (widths, branch colors, birth-year sort, lineage splice, separation, mirror, anchor shift, node/edge emission). Parameterized by orientation/mirror/prefix and an injectable `geometry`; exports `columnSeparation()`, `mirrorLeftEdge()`, `layoutBounds(nodes, dims?)`, and `transposeToHorizontal()` (axis swap → bar layout). |
 | `lib/tree/layout/standardLayout.ts` | `computeStandardLayout(root, mode, orientation)` — descendants/ancestors: one engine pass + ancestor-mode sibling injection; when `orientation==='horizontal'` runs with bar geometry then transposes to a left-to-right bar layout |
 | `lib/tree/layout/focusLayout.ts` | `computeFocusLayout()` — focus view: three engine passes (left/right/center) + Pass 3/3b overlap correction + canonical-ID dedup + edge remapping |
@@ -54,26 +54,26 @@ This document maps the complete tree visualization system. **Keep it up to date 
 All geometry constants live in **one module**, `lib/tree/geometry.ts`, imported by the layout engine, `PersonNode`, `TreeVisualization`'s fit-view math, and `DebugOverlay`:
 
 ```
-PERSON_CARD_WIDTH  = 96     // px — portrait card width  (matches PersonNode inline style)
-PERSON_CARD_HEIGHT = 145    // px — portrait card height (matches PersonNode inline style)
+PERSON_CARD_WIDTH  = 104    // px — portrait card width  (matches PersonNode inline style)
+PERSON_CARD_HEIGHT = 152    // px — portrait card height (matches PersonNode inline style)
 SECOND_NAME_LINE_HEIGHT = 16 // px — added to the card and to VERTICAL_SPACING by the second name line
 BAR_CARD_WIDTH     = 188    // px — horizontal bar card width  (matches PersonBarNode)
 BAR_CARD_HEIGHT    = 44     // px — horizontal bar card height (≥44 tap target)
 SPOUSE_GAP        = 20      // px — gap between person and spouse card(s)
-VERTICAL_SPACING  = 220     // px — distance between generations
+VERTICAL_SPACING  = 228     // px — distance between generations
 MIN_SIBLING_GAP   = 60      // px — min space between siblings
 MIN_BRANCH_GAP    = 140     // px — min space between cousins; also the Pass 3 side-tree gap
 
 BRANCH_COLORS = ['#fb923c', '#34d399', '#a78bfa', '#2dd4bf', '#fbbf24']  // 5 rotating colors
 
 FOCUS_Y   = 0               // canvas Y of the focus person
-CENTER_X  = -48             // left edge of focus card in center tree (-(CARD_W/2))
+CENTER_X  = -52             // left edge of focus card in center tree (-(CARD_W/2))
 INNER_GAP = 60              // px — Stage A fallback gap between center and side trees
 ```
 
 `LEFT_X = CENTER_X - INNER_GAP = -108` and `RIGHT_X = CENTER_X + CARD_W + INNER_GAP = +108` are derived locally in `focusLayout.ts` as Stage A fallback anchors.
 
-In Stage D (`stage: 'D'`), `LEFT_X`/`RIGHT_X` are bypassed — side trees are anchored at the parent's canvas position inside CENTER. The parent's Y in CENTER is `FOCUS_Y - VERTICAL_SPACING = -220`, so ancestors fan further up the canvas at `y = -220 - (depth-1) * VERTICAL_SPACING`. Pass 3 enforces `MIN_BRANCH_GAP` per y-level (cross-cluster pairs are different branches by definition) and skips nodes whose canonical ID is already in CENTER (they are removed by dedup anyway).
+In Stage D (`stage: 'D'`), `LEFT_X`/`RIGHT_X` are bypassed — side trees are anchored at the parent's canvas position inside CENTER. The parent's Y in CENTER is `FOCUS_Y - VERTICAL_SPACING = -228`, so ancestors fan further up the canvas at `y = -228 - (depth-1) * VERTICAL_SPACING`. Pass 3 enforces `MIN_BRANCH_GAP` per y-level (cross-cluster pairs are different branches by definition) and skips nodes whose canonical ID is already in CENTER (they are removed by dedup anyway).
 
 Initial fit-view zoom (`lib/tree/fitView.ts`):
 
@@ -288,22 +288,22 @@ The focus view builds three d3 subtrees (Stage D architecture), positions them o
 | Subtree | Root | Mirror | Anchor person | Anchor canvas position |
 |---------|------|--------|---------------|------------------------|
 | Center | Father (focus's father) | No | Focus person | `(CENTER_X, FOCUS_Y) = (-48, 0)` |
-| Left (paternal) | Topmost paternal ancestor | Yes (X-flipped) | Father (leaf) | Father's position in CENTER `≈ (CENTER_X - sibling_offset, -220)` |
-| Right (maternal) | Topmost maternal ancestor | No | Mother (leaf) | Mother's position in CENTER `≈ (CENTER_X + 116, -220)` |
+| Left (paternal) | Topmost paternal ancestor | Yes (X-flipped) | Father (leaf) | Father's position in CENTER `≈ (CENTER_X - sibling_offset, -228)` |
+| Right (maternal) | Topmost maternal ancestor | No | Mother (leaf) | Mother's position in CENTER `≈ (CENTER_X + 124, -228)` |
 
 CENTER is a normal d3 descendants tree rooted at the **father**; the mother is the father's spouse; their children (focus + siblings) are d3 children. Focus + siblings + descendants all live in CENTER. With `lineageOrder='last'`, the focus child is sorted last in d3 so siblings land to the LEFT of the focus card.
 
 LEFT and RIGHT are **pure ancestor chains** terminating at each parent. They contain no focus person and no siblings. Each side tree's parent-leaf is deduplicated against CENTER (CENTER wins), so only the ancestor portion above the parent stays visible.
 
-**Trade-off:** Both parents end up on the side of focus where siblings landed in d3's natural sort, so the strict paternal-left / maternal-right symmetry is partially lost. With no siblings the parents flank focus normally as a couple at `y = -220`.
+**Trade-off:** Both parents end up on the side of focus where siblings landed in d3's natural sort, so the strict paternal-left / maternal-right symmetry is partially lost. With no siblings the parents flank focus normally as a couple at `y = -228`.
 
 ### Layout passes
 
 **Pass 1 — Center tree (`lineageOrder='last'`)**
-Run `computeColumnLayout` on CENTER. The shift anchor is the focus person, so focus lands at `(CENTER_X, FOCUS_Y)`. The father — being one d3 generation above focus — lands at `(some x, FOCUS_Y - VERTICAL_SPACING) = (?, -220)`. Mother lands one card-width + spouse-gap to the right of the father.
+Run `computeColumnLayout` on CENTER. The shift anchor is the focus person, so focus lands at `(CENTER_X, FOCUS_Y)`. The father — being one d3 generation above focus — lands at `(some x, FOCUS_Y - VERTICAL_SPACING) = (?, -228)`. Mother lands one card-width + spouse-gap to the right of the father.
 
 **Pass 2 — Side trees anchored at parent positions**
-After CENTER is laid out, find each parent's canvas position inside CENTER. Run `computeColumnLayout` on LEFT/RIGHT with the parent as the anchor person and the parent's CENTER position as the target. The parent-leaf overlaps its CENTER duplicate exactly, ready for dedup. Ancestors above each parent fan further up the canvas at `y = -220 - (depth-1) * VERTICAL_SPACING`.
+After CENTER is laid out, find each parent's canvas position inside CENTER. Run `computeColumnLayout` on LEFT/RIGHT with the parent as the anchor person and the parent's CENTER position as the target. The parent-leaf overlaps its CENTER duplicate exactly, ready for dedup. Ancestors above each parent fan further up the canvas at `y = -228 - (depth-1) * VERTICAL_SPACING`.
 
 **Pass 3 — Per-y-level overlap correction**
 For each side-tree node that shares a y-level with CENTER nodes, ensure ≥`MIN_BRANCH_GAP` horizontal separation; otherwise shift the offending side tree outward by the worst-case overlap. Side-tree nodes whose canonical ID already exists in CENTER (the parent leaves) are skipped — they are removed by dedup and counting them produces a false overlap.
@@ -346,7 +346,7 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 | `treeColorblindMode` | Shape markers on branch edges |
 | `treeShowAgeIndicator` | "Show ages" in the Display controls (the desktop Display menu and the Display sheet below lg, #271): the age beside each card's status mark |
 | `tree:orientation` | `vertical` (portrait cards) or `horizontal` (bar cards); descendants/ancestors only. Unlike the others, this is a **layout input**, not a post-layout decoration. |
-| `treeSecondName` | "Second name" in the Display controls: a NameVariant type (`Nickname`, `Maiden`, `Married`, `Anglicized`, `Alias`, `Given`) shown as a 12px second line under the portrait card's name; absent = None (today's cards). Vertical cards only (focus included); the dropdown is disabled in horizontal. Also a **layout input**: on, every portrait card is 161px (`personCardHeight(true)`) and generations are 236px apart (`SECOND_NAME_LAYOUT_GEOMETRY`), so the gap between rows is unchanged. |
+| `treeSecondName` | "Second name" in the Display controls: a NameVariant type (`Nickname`, `Maiden`, `Married`, `Anglicized`, `Alias`, `Given`) shown as a 12px second line under the portrait card's name; absent = None (today's cards). Vertical cards only (focus included); the dropdown is disabled in horizontal. Also a **layout input**: on, every portrait card is 168px (`personCardHeight(true)`) and generations are 244px apart (`SECOND_NAME_LAYOUT_GEOMETRY`), so the gap between rows is unchanged. |
 
 Node names use each person's **primary name** (the `NameVariant` marked
 `IsPrimary`, else `FirstName`), resolved server-side in `GET /api/tree` via
@@ -378,7 +378,7 @@ without growing the mark). Living is a plain dot; with symbols on, deceased carr
 `personCardModel` (`true` deceased, `false` living, anything else unknown), and the
 mark is labelled with the `common.living` / `deceased` / `unknown` word.
 
-- **Portrait card (`PersonNode`)**: the mark sits bottom-right inside the 64px photo
+- **Portrait card (`PersonNode`)**: the mark sits bottom-right inside the 72px photo
   area (`.status-tree`: 6px in from the right and up from the seam, so its centre is
   13px above the photo/name divider and its 2px card-colour ring clears it). With
   ages on, a 24px fade rises from the photo's foot (transparent to
@@ -551,7 +551,7 @@ Dev-only SVG overlay that renders positioning diagnostics on the tree canvas. **
 **Toggle:** Press `D` on the tree page (no-op inside text inputs).
 
 **What it renders (per node):**
-- Green bounding box (96×145px card footprint)
+- Green bounding box (104×152px card footprint)
 - Red center dot (React Flow edge anchor point)
 - Cyan label above card: `#<personId>  (<cx>, <cy>)` in canvas coordinates
 - Yellow `[S1]`/`[S2]` badge at bottom of spouse cards

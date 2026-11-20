@@ -10,13 +10,15 @@ import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
 import { StatusMark } from '../ui/StatusMark';
 
-const PHOTO_HEIGHT = 64;
+const PHOTO_HEIGHT = 72;
+/** The name line's width: the card less the info strip's 6px side padding. */
+const NAME_WIDTH = PERSON_CARD_WIDTH - 12;
 
 /**
  * PersonNode Component
  *
  * Compact portrait card with:
- * - Photo area (64px): profile photo or initials, with the 14px status mark
+ * - Photo area (72px, #184): profile photo or initials, with the 14px status mark
  *   raised in its bottom-right corner and, when ages are on, the age at the
  *   left on a soft fade (#736 B7)
  * - Info strip: abbreviated name, the optional second name line (the Display
@@ -90,7 +92,7 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
               focalX={'focalX' in person ? person.focalX : undefined}
               focalY={'focalY' in person ? person.focalY : undefined}
               focalRadius={'focalRadius' in person ? person.focalRadius : undefined}
-              containerWidth={96}
+              containerWidth={PERSON_CARD_WIDTH}
               containerHeight={PHOTO_HEIGHT}
               circular={false}
             />
@@ -122,10 +124,10 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
           <p
             className="text-text"
             style={{
-              fontSize: isZoomedOut ? `${getZoomedOutFontSize(displayName, 84, 18)}px` : '16px',
+              fontSize: isZoomedOut ? `${getZoomedOutFontSize(displayName, NAME_WIDTH, 18)}px` : '16px',
               // fontWeight: isZoomedOut ? 500 : undefined,
               overflow: 'hidden',
-              maxWidth: '84px',
+              maxWidth: `${NAME_WIDTH}px`,
               lineHeight: '1.3',
               display: '-webkit-box',
               WebkitLineClamp: isZoomedOut ? 3 : 2,
