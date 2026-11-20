@@ -1,6 +1,10 @@
 import type { TreeLifespan } from '@/app/components/tree/types';
 import type { Person, PersonWithRelations } from '@/lib/db/schema';
+import type { DisplayNameParts } from '@/lib/utils/names';
 import { displayFullName } from '@/lib/utils/names';
+
+/** The parts of a name variant the page heading reads. */
+interface HeadingVariant { Id: number; Type: string; Name: string; IsPrimary?: number | boolean }
 import { sortableYear } from '@/lib/date-utils';
 import { FACT_TABLES } from '@/lib/db/fact-tables';
 
@@ -12,6 +16,35 @@ export { avatarClass } from '@/lib/utils/avatar';
 export function fullName(p: Person | null, unknown = 'Unknown'): string {
     if (!p) return unknown;
     return displayFullName(p) || unknown;
+}
+
+/**
+ * The name a person's own page heads with. A starred nickname sits inside the
+ * given names, as before (an unstarred one is not shown); any other starred name
+ * is a whole name and replaces the first and last name outright. The loaded variants win, so a star shows as
+ * soon as the list refreshes; until they load, the person row's preferred-name
+ * fields say the same thing (a starred non-nickname is an EffectiveFirstName
+ * that is neither the stored first name nor the nickname).
+ */
+export function headingName(person: DisplayNameParts, variants?: readonly HeadingVariant[] | null): { whole: string | null; nickname: string | null } {
+    if (variants) {
+        const starred = variants.find((v) => v.IsPrimary);
+        if (starred && starred.Type !== 'Nickname') return { whole: starred.Name, nickname: null };
+        // Only a starred nickname heads the page; an unstarred one stays in Names.
+        return { whole: null, nickname: starred?.Name ?? null };
+    }
+    // The row's Nickname falls back to the earliest one, starred or not; it was
+    // starred only when it is also the effective first name.
+    const effective = person.EffectiveFirstName?.trim() || null;
+    const starredNickname = effective != null && effective === person.Nickname ? person.Nickname : null;
+    const whole = effective && effective !== (person.FirstName ?? '').trim() && !starredNickname ? effective : null;
+    return { whole, nickname: starredNickname };
+}
+
+/** headingName as one string: the whole name, or First “Nickname” Middle Last. */
+export function headingNameText(person: DisplayNameParts, variants?: readonly HeadingVariant[] | null, unknown = 'Unknown'): string {
+    const { whole, nickname } = headingName(person, variants);
+    return whole ?? (displayFullName({ FirstName: person.FirstName, LastName: person.LastName, Nickname: nickname }) || unknown);
 }
 
 export function eventIsBirth(type: string): boolean {

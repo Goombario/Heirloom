@@ -89,9 +89,13 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
   const parentSets = family.parentBlocks.length;
   const partners = family.partnerBlocks;
   const withChildren = partners.some((b) => b.children.length > 0);
-  const partnerHeading = withChildren
-    ? t('partners_children_heading', { count: partners.length })
-    : t('partners_heading', { count: Math.max(partners.length, 1) });
+  // Only real partners earn the word: a family with no partner in it heads as its
+  // children, and an editor with no family yet sees just "+ Add family".
+  const partnerCount = partners.filter((b) => b.partner).length;
+  const childCount = partners.reduce((n, b) => n + b.children.length, 0);
+  const partnerHeading = partnerCount > 0
+    ? t(withChildren ? 'partners_children_heading' : 'partners_heading', { count: partners.length })
+    : withChildren ? t('children', { count: childCount }) : null;
 
   return (
     // The locked board's rail: Open in tree, then PARENTS and PARTNER AND CHILDREN as
@@ -117,8 +121,8 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
       </section>
 
       {(partners.length > 0 || canEdit) && (
-        <section aria-labelledby="rail-partners">
-          <SectionHeader level="label" as="h3" headingId="rail-partners" title={partnerHeading} />
+        <section aria-labelledby={partnerHeading ? 'rail-partners' : undefined}>
+          {partnerHeading && <SectionHeader level="label" as="h3" headingId="rail-partners" title={partnerHeading} />}
           {partners.map((b, i) => (
             <PartnerBlockView
               key={b.familyId}

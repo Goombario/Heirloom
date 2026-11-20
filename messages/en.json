@@ -5244,8 +5244,7 @@
     "name_on_record": "Name on record",
     "name_shown": "shown",
     "none_yet": "None yet",
-    "sources_none": "None yet. Cite one from a fact’s source pin.",
-    "name_on_record_lower": "name on record"
+    "sources_none": "None yet. Cite one from a fact’s source pin."
   },
   "addPersonDialog": {
     "title": "New person",

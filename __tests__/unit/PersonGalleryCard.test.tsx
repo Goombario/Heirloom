@@ -41,7 +41,8 @@ describe('PersonGalleryCard', () => {
     expect(screen.getByTestId('media-gallery-grid')).toBeInTheDocument();
     expect(screen.queryByLabelText('previous')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('next')).not.toBeInTheDocument();
-    expect(screen.getByText('Primary')).toBeInTheDocument();
+    expect(screen.getByTitle('Primary')).toBeInTheDocument();
+    expect(screen.queryByText('Primary')).not.toBeInTheDocument();
     expect(screen.getByText('Tagged')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Portrait, Primary' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Photo, Tagged' })).toBeInTheDocument();

@@ -104,7 +104,7 @@
   },
   "app/people/view/PersonGalleryCard.tsx": {
     "ds/no-inline-static-literal": {
-      "count": 2
+      "count": 1
     }
   },
   "app/tree/TreeOverlays.tsx": {
