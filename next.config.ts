@@ -37,8 +37,6 @@ const browserNodeStubs = {
   // bundle (breaks the whole app with "Can't resolve 'module'"); the browser
   // path never calls createRequire, so stub it out. See lib/empty.ts.
   module: { browser: './lib/empty.ts' },
-  // PGlite 0.5+ imports the same builtin with its `node:` scheme.
-  'node:module': { browser: './lib/empty.ts' },
 };
 
 // Origins the map may contact, derived from the configurable style URLs so a
@@ -136,15 +134,6 @@ const nextConfig: NextConfig = {
       );
     }
     if (!isServer) {
-      // PGlite 0.5+ imports `node:module` (scheme included). Webpack rejects the
-      // `node:` scheme before resolve.fallback is consulted ("UnhandledSchemeError"),
-      // so strip the prefix in the browser bundle and let the bare-name stubs
-      // below take over. The server build keeps real `node:` imports.
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: { request: string }) => {
-          resource.request = resource.request.replace(/^node:/, '');
-        }),
-      );
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,

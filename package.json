@@ -76,8 +76,8 @@
   },
   "dependencies": {
     "@auth/core": "^0.41.0",
-    "@electric-sql/pglite": "^0.5.16",
-    "@electric-sql/pglite-tools": "^0.4.16",
+    "@electric-sql/pglite": "^0.4.6",
+    "@electric-sql/pglite-tools": "^0.3.6",
     "@serwist/next": "^9.5.13",
     "@swc/helpers": "^0.5.20",
     "@tauri-apps/api": "~2.11.0",

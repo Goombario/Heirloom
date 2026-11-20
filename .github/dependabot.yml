@@ -32,3 +32,10 @@ updates:
       # reaches lib/db/connection.ts through the local data client.
       - dependency-name: pg
         versions: ['>8.20.0']
+      # PGlite 0.5 evals Emscripten EM_ASM/EM_JS glue at startup, which the
+      # static and desktop CSPs block (no 'unsafe-eval'), so the local database
+      # never initializes. Stay on 0.4 until that changes; pglite-tools pairs.
+      - dependency-name: '@electric-sql/pglite'
+        versions: ['>=0.5.0']
+      - dependency-name: '@electric-sql/pglite-tools'
+        versions: ['>=0.4.0']
