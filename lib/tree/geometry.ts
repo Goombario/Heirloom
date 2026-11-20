@@ -7,14 +7,15 @@
  * TreeVisualization, and the dev DebugOverlay. Before this module existed the
  * same numbers were declared independently in five files and had already
  * drifted (a stale "152px tall" comment survived a card resize to 145px).
+ * #184 widened the card to 104 × 152 with a 72px photo, generations 228 apart.
  */
 
 /** Rendered card footprint — must match PersonNode's inline width/height. */
-export const PERSON_CARD_WIDTH = 96;
-export const PERSON_CARD_HEIGHT = 145;
+export const PERSON_CARD_WIDTH = 104;
+export const PERSON_CARD_HEIGHT = 152;
 
 /** Extra height when the Display menu's "Second name" shows a second, smaller
- *  name line under the main one (vertical layout only). None keeps 145. */
+ *  name line under the main one (vertical layout only). None keeps 152. */
 const SECOND_NAME_LINE_HEIGHT = 16;
 
 /** The portrait card's height, with or without the second name line. */
@@ -31,7 +32,7 @@ export const BAR_CARD_HEIGHT = 44;
 export const SPOUSE_GAP = 20;
 
 /** Vertical distance between generations (d3 row height). */
-export const VERTICAL_SPACING = 220;
+export const VERTICAL_SPACING = 228;
 
 /** Minimum horizontal gap between siblings (same parent). */
 export const MIN_SIBLING_GAP = 60;
