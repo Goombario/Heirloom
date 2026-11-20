@@ -9,7 +9,7 @@ import { DATA_MODE, getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useMyTrees } from '@/app/hooks/useMyTrees';
 import { Banner, Button, Card, CoverBand, PageShell, SegmentedControl, SelectField } from '@/app/components/ui';
-import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, FlaskConical, HardDrive, Languages, Monitor, Moon, Network, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
+import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, FlaskConical, HardDrive, Languages, Monitor, Moon, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
 import { readStatusSymbols, writeStatusSymbols } from '@/lib/utils/status-symbols';
 import LocalDataSection from '@/app/components/LocalDataSection';
 import TreesSection from '@/app/components/options/TreesSection';
@@ -29,7 +29,6 @@ const NAV: { href: string; key: string; Icon: LucideIcon; danger?: boolean }[] =
     { href: '#accessibility', key: 'nav_accessibility', Icon: Accessibility },
     { href: '#language', key: 'nav_language', Icon: Languages },
     { href: '#date-preferences', key: 'nav_date_format', Icon: CalendarDays },
-    { href: '#tree-preferences', key: 'nav_tree', Icon: Network },
     { href: '#trees', key: 'nav_trees', Icon: TreeDeciduous },
     { href: '#experimental', key: 'nav_experimental', Icon: FlaskConical },
     ...(DATA_MODE === 'local' ? [{ href: '#local-data', key: 'local_data_title', Icon: HardDrive }] : []),
@@ -128,7 +127,6 @@ export default function OptionsPage() {
     const [showEraseConfirm, setShowEraseConfirm] = useState(false);
     const [erasing, setErasing] = useState(false);
     const [eraseResult, setEraseResult] = useState<{ success: boolean; message: string } | null>(null);
-    const [colorblindMode, setColorblindMode] = useState(false);
     const [statusSymbols, setStatusSymbols] = useState(false);
     const [detectedTimezone, setDetectedTimezone] = useState('UTC');
     const [citePinsInTabOrder, setCitePinsInTabOrder] = useState(false);
@@ -142,7 +140,6 @@ export default function OptionsPage() {
         localStorage.removeItem('accentColor');
         const saved = localStorage.getItem('dateSlashFormat');
         if (saved === 'DMY') setSlashFormat('DMY');
-        setColorblindMode(localStorage.getItem('treeColorblindMode') === 'true');
         setDetectedTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
         // The Citation linter toggle was removed (#494): nothing read it, and cite
         // pins always show. Drop the orphaned preference.
@@ -165,11 +162,6 @@ export default function OptionsPage() {
     function handleSlashFormatChange(value: 'MDY' | 'DMY') {
         setSlashFormat(value);
         localStorage.setItem('dateSlashFormat', value);
-    }
-
-    function setColorblind(value: boolean) {
-        setColorblindMode(value);
-        localStorage.setItem('treeColorblindMode', String(value));
     }
 
     function handleTimezoneReset() {
@@ -221,7 +213,6 @@ export default function OptionsPage() {
                 slashFormat={slashFormat} onSlashFormat={handleSlashFormatChange}
                 timezone={timezone} timezoneLabel={zoneLabel} detectedTimezone={detectedTimezone} zoneGroups={zoneGroups}
                 onTimezone={(v) => { if (v === detectedTimezone) handleTimezoneReset(); else setTimezone(v); }}
-                colorblind={colorblindMode} onColorblind={setColorblind}
                 citePins={citePinsInTabOrder} onCitePins={handleCitePinsInTabOrderChange}
                 geocoding={geocoding} onGeocoding={(v) => { setGeocoding(v); setGeocodingEnabled(v); }}
                 erasing={erasing} eraseResult={eraseResult} onErase={handleErase}
@@ -363,27 +354,6 @@ export default function OptionsPage() {
                                     </Button>
                                 </div>
                                 <p className="mt-2 text-xs text-text-muted">{t('timezone_note')}</p>
-                            </div>
-                        </Card>
-
-                        <Card id="tree-preferences" pad={false} className="p-6">
-                            <h2 className="section text-text mb-4">{t('tree_title')}</h2>
-
-                            <div className="space-y-4">
-                                <label className="flex items-start gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={colorblindMode}
-                                        onChange={(e) => setColorblind(e.target.checked)}
-                                        className="rounded mt-0.5"
-                                    />
-                                    <div>
-                                        <span className="text-sm font-medium text-text">{t('colorblind_label')}</span>
-                                        <p className="text-xs text-text-muted mt-0.5">
-                                            {t('colorblind_desc')}
-                                        </p>
-                                    </div>
-                                </label>
                             </div>
                         </Card>
 

@@ -13,7 +13,7 @@ vi.mock('@/app/components/PersonAvatar', () => ({ default: () => <span data-test
 const display: TreeDisplayProps = {
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
-    depth: 3, maxDepth: 3, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(), showStatus: true, onShowStatusChange: vi.fn(),
+    depth: 3, maxDepth: 3, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(), showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
     secondNameType: null, onSecondNameTypeChange: vi.fn(),
 };
 

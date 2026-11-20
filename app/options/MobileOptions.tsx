@@ -38,7 +38,6 @@ export function MobileOptions(p: {
     language: Language; onLanguage: (v: Language) => void;
     slashFormat: 'MDY' | 'DMY'; onSlashFormat: (v: 'MDY' | 'DMY') => void;
     timezone: string; timezoneLabel: string; detectedTimezone: string; onTimezone: (v: string) => void; zoneGroups: ZoneGroup[];
-    colorblind: boolean; onColorblind: (v: boolean) => void;
     citePins: boolean; onCitePins: (v: boolean) => void;
     geocoding: boolean; onGeocoding: (v: boolean) => void;
     erasing: boolean; eraseResult: { success: boolean; message: string } | null; onErase: () => Promise<void>;
@@ -69,10 +68,6 @@ export function MobileOptions(p: {
                     value={p.slashFormat === 'MDY' ? tm('mdy_short') : tm('dmy_short')} end="chevron" onClick={() => setSheet('dates')} />
                 <MobileRow divided icon={<Clock aria-hidden="true" />} label={t('timezone_label')} value={p.timezoneLabel}
                     end="chevron" onClick={() => { setZoneQuery(''); setSheet('zone'); }} />
-            </Group>
-
-            <Group title={t('tree_title')}>
-                <SwitchRow label={t('colorblind_label')} description={t('colorblind_desc')} checked={p.colorblind} onChange={p.onColorblind} />
             </Group>
 
             <TreesGroup />
