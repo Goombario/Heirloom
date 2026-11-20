@@ -3717,6 +3717,7 @@
     "reopen_case": "Rouvrir le dossier",
     "copy_link": "Copier le lien",
     "link_copied": "Lien copié",
+    "link_copy_failed": "Impossible de copier le lien : le navigateur ou l’application a refusé l’accès au presse-papiers.",
     "delete_case": "Supprimer le dossier",
     "dismiss": "Fermer",
     "leads": "Pistes",

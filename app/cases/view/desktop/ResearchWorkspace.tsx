@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
 import { Banner, Button, CoverBand, PageShell, RecordMenu, cx, showSuccessToast, type RecordMenuItem } from '@/app/components/ui';
+import { copyCaseLink } from '../copyCaseLink';
 import { CheckCircle2, Search, X } from '@/lib/icons';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { getDataClient } from '@/lib/data';
@@ -125,7 +126,7 @@ export function ResearchWorkspace({ cd }: { cd: CaseDetailState }) {
         ...(manage && closed ? [{ label: t('reopen_case'), onSelect: () => { void cd.patchCase({ Status: 'in_progress' }); } }] : []),
         {
             label: t('copy_link'), separated: manage, onSelect: () => {
-                void navigator.clipboard?.writeText(window.location.href).then(() => showSuccessToast(t('link_copied')));
+                void copyCaseLink({ copied: t('link_copied'), failed: t('link_copy_failed') });
             },
         },
         ...(ws.workspace ? [{ label: t('export_case'), onSelect: () => setDialog({ kind: 'export' }) }] : []),

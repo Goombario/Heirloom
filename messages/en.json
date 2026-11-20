@@ -3717,6 +3717,7 @@
     "reopen_case": "Reopen the case",
     "copy_link": "Copy link",
     "link_copied": "Link copied",
+    "link_copy_failed": "Couldn’t copy the link. Your browser or the app refused access to the clipboard.",
     "delete_case": "Delete case",
     "dismiss": "Dismiss",
     "leads": "Leads",
