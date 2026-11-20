@@ -12,7 +12,8 @@ const state = vi.hoisted(() => ({
 
 vi.mock('next-intl', () => ({
   useTranslations: () => Object.assign((key: string) => key, { rich: (key: string) => key }),
-  useFormatter: () => ({ dateTime: (value: number) => String(value) }),
+  useFormatter: () => ({ dateTime: (value: number) => String(value), relativeTime: (value: number) => String(value) }),
+  useNow: () => new Date('2026-11-20T12:00:00Z'),
 }));
 vi.mock('@/app/contexts/TreeContext', () => ({ useTree: () => ({ activeTreeId: 9, activePermission: 'owner' }) }));
 vi.mock('@/lib/data', () => ({ DATA_MODE: 'http', getDataClient: vi.fn(async () => ({ gedcom: state, tree: state })) }));

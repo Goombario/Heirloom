@@ -19,7 +19,8 @@ function echo(key: string, values?: Record<string, unknown>) {
 }
 vi.mock('next-intl', () => ({
   useTranslations: () => Object.assign(echo, { rich: echo }),
-  useFormatter: () => ({ dateTime: (value: number) => String(value) }),
+  useFormatter: () => ({ dateTime: (value: number) => String(value), relativeTime: (value: number) => String(value) }),
+  useNow: () => new Date('2026-11-20T12:00:00Z'),
 }));
 vi.mock('@/app/contexts/TreeContext', () => ({ useTree: () => ({ activeTreeId: state.treeId, activePermission: 'owner' }) }));
 vi.mock('@/lib/data', () => ({
