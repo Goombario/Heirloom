@@ -50,6 +50,9 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
         placeChains, placeIds, setPlaceId, setBirthPlaceResolution, setDeathPlaceResolution,
         guardNavigation,
     } = editor;
+    // The previous person, held on screen while the next one loads: shown but inert
+    // (no clicks, focus or typing), so nothing is edited or saved under the wrong id.
+    const stale = loadedPersonId !== personId;
     // A read-only field is text, so its label points at no control.
     const forId = (name: string) => (isReadOnly ? undefined : `${fieldId}-${name}`);
     // Only mounted while expanded, so this is 0 until the user opens the section
@@ -148,8 +151,11 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                         // shows under Grace's place, the latched userTouched
                         // permanently blocks Grace's saved-chain badge, and an
                         // in-flight resolve for Ada lands as a pending write on
-                        // Grace. Remounting also aborts that resolve.
-                        key={personId}
+                        // Grace. Remounting also aborts that resolve. Keyed on the
+                        // loaded person, not the selected one, so it remounts once,
+                        // when the next person's data lands, not while the previous
+                        // person is still held on screen.
+                        key={loadedPersonId ?? personId}
                         id={forId('birth-place')}
                         value={form.BirthPlace}
                         onChange={(v) => setForm((f) => ({ ...f, BirthPlace: v }))}
@@ -202,7 +208,7 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                     <div className={readClass}>{form.DeathPlace || '-'}</div>
                 ) : (
                     <LocationField
-                        key={personId} // see the birth-place field
+                        key={loadedPersonId ?? personId} // see the birth-place field
                         id={forId('death-place')}
                         value={form.DeathPlace}
                         onChange={(v) => setForm((f) => ({ ...f, DeathPlace: v }))}
@@ -275,7 +281,7 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
     // Below lg (and the phone sheet): the layout as it was before #71.
     if (!panel) {
         return (
-            <div className={`flex flex-col ${loadedPersonId !== personId ? 'pointer-events-none' : ''}`}>
+            <div className="flex flex-col" inert={stale} aria-busy={stale || undefined}>
                 <div className="p-5 flex-1">
                     {/* Avatar */}
                     <div className="flex justify-center mb-3">
@@ -344,7 +350,7 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
     // the quick edit two to a row, and a pinned footer.
     const sexValue = form.Sex === 'M' || form.Sex === 'F' || form.Sex === 'X' ? form.Sex : '';
     return (
-        <div className={`flex flex-col min-h-full ${loadedPersonId !== personId ? 'pointer-events-none' : ''}`}>
+        <div className="flex flex-col min-h-full" inert={stale} aria-busy={stale || undefined}>
             {/* Avatar on the left, the name and years beside it (fix 09). */}
             <div className="dark-island tree-panel-head relative flex items-center gap-3.5 pl-5 pr-12 pt-5 pb-5 text-left bg-[color:var(--color-hero-bg)]">
                 {onClose && (

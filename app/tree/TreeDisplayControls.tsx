@@ -52,6 +52,9 @@ export interface TreeDisplayProps {
     /** The living-status mark on the cards (#68). Off hides only the mark. */
     showStatus: boolean;
     onShowStatusChange: (v: boolean) => void;
+    /** Shape markers on branch edges, so multi-spouse families don't rely on colour alone. */
+    colorblind: boolean;
+    onColorblindChange: (v: boolean) => void;
     /** The name type shown as a second line on vertical cards, or null for none. */
     secondNameType: TreeSecondNameType | null;
     onSecondNameTypeChange: (v: TreeSecondNameType | null) => void;
@@ -76,7 +79,7 @@ export function TreeDisplayControls({
     orientation, onOrientationChange, orientationDisabled,
     barZoomThreshold, onBarZoomThresholdChange,
     depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
-    secondNameType, onSecondNameTypeChange,
+    colorblind, onColorblindChange, secondNameType, onSecondNameTypeChange,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
     const tNames = useTranslations('personDetail');
@@ -164,6 +167,7 @@ export function TreeDisplayControls({
 
             <DisplaySwitch label={t('show_ages')} checked={showAges} onChange={onShowAgesChange} />
             <DisplaySwitch label={t('show_living_status')} checked={showStatus} onChange={onShowStatusChange} />
+            <DisplaySwitch label={t('colorblind_mode')} description={t('colorblind_mode_help')} checked={colorblind} onChange={onColorblindChange} />
 
             {/* DEBUG — horizontal-bar review aid. Dev-only; not shipped. Tunes the
                 zoom-out threshold live. */}
@@ -192,16 +196,24 @@ export function TreeDisplayControls({
 }
 
 /** One on/off row in the Display controls. */
-function DisplaySwitch({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+function DisplaySwitch({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) {
+    const labelId = useId();
+    const descriptionId = useId();
     return (
         <button
             type="button"
             role="switch"
             aria-checked={checked}
+            // Named by the label alone; the description is read as a description.
+            aria-labelledby={labelId}
+            aria-describedby={description ? descriptionId : undefined}
             onClick={() => onChange(!checked)}
             className="flex w-full items-center gap-3 text-left cursor-pointer rounded-[6px] focus-ring"
         >
-            <span className="flex-1 min-w-0 text-sm font-medium text-text">{label}</span>
+            <span className="flex-1 min-w-0">
+                <span id={labelId} className="block text-sm font-medium text-text">{label}</span>
+                {description && <span id={descriptionId} className="block muted text-xs mt-0.5">{description}</span>}
+            </span>
             <span
                 aria-hidden="true"
                 className={cx(

@@ -9,7 +9,7 @@ const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
-    showStatus: true, onShowStatusChange: vi.fn(),
+    showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
     secondNameType: null, onSecondNameTypeChange: vi.fn(), ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
@@ -53,6 +53,16 @@ describe('TreeDisplayControls', () => {
         expect(sw.getAttribute('aria-checked')).toBe('true');
         fireEvent.click(sw);
         expect(p.onShowStatusChange).toHaveBeenCalledWith(false);
+    });
+
+    // Colorblind mode moved here from Options › Tree display.
+    it('toggles Colorblind mode, off by default', () => {
+        const p = props();
+        renderControls(p);
+        const sw = screen.getByRole('switch', { name: en.treeView.colorblind_mode });
+        expect(sw.getAttribute('aria-checked')).toBe('false');
+        fireEvent.click(sw);
+        expect(p.onColorblindChange).toHaveBeenCalledWith(true);
     });
 
     // The second name line on vertical cards: None by default, then the name types.

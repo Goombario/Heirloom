@@ -10,7 +10,7 @@ function parseSecondNameType(value: string | null): TreeSecondNameType | null {
 
 /** Tree display preferences, loaded from localStorage on mount. */
 export function useTreeDisplayPrefs() {
-    const [colorblindMode, setColorblindMode] = useState(false);
+    const [colorblindMode, setColorblindModeState] = useState(false);
     const [showAgeIndicator, setShowAgeIndicatorState] = useState(false);
     const [showStatusMark, setShowStatusMarkState] = useState(true);
     const [secondNameType, setSecondNameTypeState] = useState<TreeSecondNameType | null>(null);
@@ -19,7 +19,7 @@ export function useTreeDisplayPrefs() {
     // defaults, so there is no hydration mismatch).
     useEffect(() => {
         function loadPrefs() {
-            setColorblindMode(localStorage.getItem('treeColorblindMode') === 'true');
+            setColorblindModeState(localStorage.getItem('treeColorblindMode') === 'true');
             setShowAgeIndicatorState(localStorage.getItem('treeShowAgeIndicator') === 'true');
             // On unless turned off (#68), so trees look as they did before the switch.
             setShowStatusMarkState(localStorage.getItem('treeShowStatusMark') !== 'false');
@@ -38,6 +38,12 @@ export function useTreeDisplayPrefs() {
         localStorage.setItem('treeShowAgeIndicator', String(value));
     }, []);
 
+    // Branch shape markers; moved here from Options › Tree display, same per-device key.
+    const setColorblindMode = useCallback((value: boolean) => {
+        setColorblindModeState(value);
+        localStorage.setItem('treeColorblindMode', String(value));
+    }, []);
+
     // The living-status mark on the cards (#68): off hides only the mark, never a card.
     const setShowStatusMark = useCallback((value: boolean) => {
         setShowStatusMarkState(value);
@@ -52,7 +58,7 @@ export function useTreeDisplayPrefs() {
     }, []);
 
     return {
-        colorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
+        colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
         secondNameType, setSecondNameType,
     };
 }

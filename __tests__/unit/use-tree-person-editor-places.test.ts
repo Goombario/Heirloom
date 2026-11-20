@@ -184,9 +184,10 @@ describe('useTreePersonEditor — place resolution plumbing (#461)', () => {
     });
 
     it('ignores a chain lookup that resolves after the user clicked to another person', async () => {
-        // 55 loads fully, but its chain lookup is held open. The user then clicks 56,
-        // whose lookup resolves. When 55's finally lands it must NOT replace 56's
-        // chains — that would silently drop 56's pin badge.
+        // 55's chain lookup is held open (so 55 is not applied yet: the person and
+        // their badges land together). The user then clicks 56, whose lookup
+        // resolves. When 55's lookup finally lands it must NOT replace 56's person
+        // or chains — that would silently drop 56's pin badge.
         let releaseStale: (v: Record<string, unknown>) => void = () => {};
         pinChains.mockImplementationOnce(() => new Promise((res) => { releaseStale = res; }));
 
@@ -194,7 +195,7 @@ describe('useTreePersonEditor — place resolution plumbing (#461)', () => {
             ({ id }) => useTreePersonEditor({ personId: id, onClose: () => {} }),
             { initialProps: { id: 55 } },
         );
-        await waitFor(() => expect(result.current.loadedPersonId).toBe(55));
+        await waitFor(() => expect(pinChains).toHaveBeenCalledTimes(1));
 
         peopleGet.mockResolvedValue({
             Id: 56, FirstName: 'Grace', LastName: 'Hopper', Sex: 'F',
@@ -207,6 +208,7 @@ describe('useTreePersonEditor — place resolution plumbing (#461)', () => {
 
         await act(async () => { releaseStale({ Dover: CHAIN }); });
         expect(result.current.placeChains).toEqual({ Deal: CHAIN });
+        expect(result.current.form.FirstName).toBe('Grace');
     });
 
     it('does not look up chains for a person with no places', async () => {
@@ -329,5 +331,47 @@ describe('useTreePersonEditor — Living or Unknown over a death (#895)', () => 
         expect(result.current.confirmClearDeath).toBe(false);
         expect(result.current.form).toMatchObject({ IsDeceased: 1, DeathDate: '1852', DeathPlace: 'London' });
         expect(peopleUpdate).not.toHaveBeenCalled();
+    });
+
+    it('applies the person and their portrait together, not one before the other', async () => {
+        let releaseMedia: (v: unknown) => void = () => {};
+        mediaList.mockImplementationOnce(() => new Promise((res) => { releaseMedia = res; }));
+        const { result } = renderEditor();
+        await waitFor(() => expect(peopleGet).toHaveBeenCalled());
+        await act(async () => { await Promise.resolve(); });
+        expect(result.current.person).toBeNull();
+
+        await act(async () => { releaseMedia({ media: [{ Id: 700, IsPersonPrimary: true }] }); });
+        await waitFor(() => expect(result.current.person?.FirstName).toBe('Ada'));
+        expect(result.current.primaryPhotoId).toBe(700);
+    });
+
+    it('holds the previous person, unsaveable, while the next one loads', async () => {
+        const { result, rerender } = renderHook(
+            ({ id }) => useTreePersonEditor({ personId: id, onClose: () => {} }),
+            { initialProps: { id: 55 } },
+        );
+        await loaded(result);
+
+        let releaseNext: (v: Record<string, unknown>) => void = () => {};
+        peopleGet.mockImplementationOnce(() => new Promise((res) => { releaseNext = res; }));
+        rerender({ id: 56 });
+
+        // No blank frame: Ada stays on screen until Grace arrives.
+        expect(result.current.person?.FirstName).toBe('Ada');
+        expect(result.current.loadedPersonId).toBe(55);
+        // Ada's form must never be written under Grace's id.
+        await act(async () => { await result.current.handleSave(); });
+        expect(peopleUpdate).not.toHaveBeenCalled();
+
+        await act(async () => {
+            releaseNext({
+                Id: 56, FirstName: 'Grace', LastName: 'Hopper', Sex: 'F',
+                BirthDate: '', BirthPlace: '', DeathDate: '', DeathPlace: '',
+                IsDeceased: null, familiesAsSpouse: [], familiesAsChild: [],
+            });
+        });
+        await waitFor(() => expect(result.current.person?.FirstName).toBe('Grace'));
+        expect(result.current.loadedPersonId).toBe(56);
     });
 });
