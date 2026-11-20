@@ -81,6 +81,8 @@ export interface MobileImportExportProps {
         onPreview: () => void;
         onConfirm: () => void;
         onCancel: () => void;
+        /** Saves the blank template: the hosted route, or built in the browser locally (#189). */
+        onDownloadTemplate: () => void;
         dateFormat: 'MDY' | 'DMY';
     };
     onSkipLog: (skipped: SkippedRecord[]) => void;
@@ -352,7 +354,7 @@ function SpreadsheetSheet({ p, onClose, onSmall }: { p: MobileImportExportProps;
                     <>
                         <Eyebrow>{t('step_template')}</Eyebrow>
                         <MobileRow icon={<Download />} label={ts('download_template')} sub={t('template_sub')}
-                            onClick={() => { window.location.href = `/api/import/spreadsheet/template?dateFormat=${x.dateFormat}`; }} />
+                            onClick={x.onDownloadTemplate} />
                         <p className="m-0 px-4 pt-1 pb-3 text-meta leading-snug text-text-muted">
                             {ts('date_format_note', { format: x.dateFormat === 'DMY' ? ts('format_dmy') : ts('format_mdy') })}
                         </p>

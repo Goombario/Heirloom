@@ -40,6 +40,13 @@ export interface EvidencePanelProps {
     onSetPrimary: () => void;
     setPrimaryLabel: string;
     downloadHref: string;
+    /** The photo's download file name, named after its title and file. */
+    downloadName: string;
+    /**
+     * Saves the photo itself, set where there is no file route to link to (the
+     * static build and the desktop app, #188). Hosted builds follow `downloadHref`.
+     */
+    onDownload?: () => void;
     onDelete: () => void;
     /** Hide destructive/unlink action for read-only or inferred owner rows. */
     showDeleteAction?: boolean;
@@ -60,7 +67,7 @@ export default function EvidencePanel(props: EvidencePanelProps) {
     const { canEdit = true, canDelete, title, date, editing, formTitle, formDate, onStartEdit, onChangeTitle, onChangeDate, onSaveEdit, onCancelEdit,
         tags, galleryPersonId, showNames, onToggleNames, onHoverTag, canRemoveTag, onStartRedraw, onRemoveTag,
         onStartTag, showPrimary, isPersonPrimary, onSetPrimary, setPrimaryLabel,
-        downloadHref, onDelete, showDeleteAction = canDelete, deleteLabel, busy, errorMessage, document, familyPhoto } = props;
+        downloadHref, downloadName, onDownload, onDelete, showDeleteAction = canDelete, deleteLabel, busy, errorMessage, document, familyPhoto } = props;
     const td = useTranslations('documents');
     const fallbackTitle = document ? td('pdf_document') : t('photo_alt');
 
@@ -229,7 +236,9 @@ export default function EvidencePanel(props: EvidencePanelProps) {
                             </a>
                         </>
                     ) : (
-                        <a href={downloadHref} download className="flex-1 justify-center inline-flex items-center gap-[6px] text-meta rounded-lg px-[11px] py-[7px] bg-white/10 border border-white/20 text-white">
+                        <a href={downloadHref} download={downloadName}
+                            onClick={onDownload ? (e) => { e.preventDefault(); onDownload(); } : undefined}
+                            className="flex-1 justify-center inline-flex items-center gap-[6px] text-meta rounded-lg px-[11px] py-[7px] bg-white/10 border border-white/20 text-white">
                             <Download className="w-[14px] h-[14px]" aria-hidden="true" />{tc('download')}
                         </a>
                     )}

@@ -126,16 +126,3 @@ export function caseExportName(caseData: Pick<CaseWithRelations, 'Id' | 'Title'>
         .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60).replace(/-+$/, '');
     return `case-${caseData.Id}${slug ? `-${slug}` : ''}${ext ? `.${ext}` : ''}`;
 }
-
-/** Saves a blob through a download link. */
-export function saveBlob(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    // Revoking at once can cancel the download before the browser reads it.
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}

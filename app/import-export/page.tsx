@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { getDataClient } from '@/lib/data';
+import { DATA_MODE, getDataClient } from '@/lib/data';
+import { saveBlob } from '@/lib/utils/save-blob';
 import { RateLimitError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
 import { useTree } from '@/app/contexts/TreeContext';
@@ -401,6 +402,25 @@ export default function ImportExportPage() {
         return t('error_generic');
     }
 
+    /** The blank template. Without a server there is no template route, so the
+     *  static build and the desktop app build it here and save it (#189). */
+    async function downloadXlsxTemplate() {
+        if (DATA_MODE === 'http') {
+            // A file route, not a page: a link click lets the browser save it.
+            const link = document.createElement('a');
+            link.href = `/api/import/spreadsheet/template?dateFormat=${dateFormat}`;
+            link.click();
+            return;
+        }
+        try {
+            const { generateSpreadsheetTemplate, SPREADSHEET_CONTENT_TYPE, SPREADSHEET_TEMPLATE_NAME } = await import('@/lib/spreadsheet/template');
+            const bytes = await generateSpreadsheetTemplate(dateFormat);
+            saveBlob(new Blob([bytes], { type: SPREADSHEET_CONTENT_TYPE }), SPREADSHEET_TEMPLATE_NAME);
+        } catch (caughtError) {
+            setXlsxError(xlsxErrorText(caughtError));
+        }
+    }
+
     async function handleXlsxPreview() {
         if (!xlsxFile) return;
         setXlsxPhase('previewing');
@@ -587,6 +607,7 @@ export default function ImportExportPage() {
             onPreview: () => { void handleXlsxPreview(); },
             onConfirm: () => { void handleXlsxConfirm(); },
             onCancel: () => { handleXlsxCancel(); setXlsxFile(null); setXlsxResult(null); },
+            onDownloadTemplate: () => { void downloadXlsxTemplate(); },
             dateFormat,
         },
         onSkipLog: downloadSkipLog,

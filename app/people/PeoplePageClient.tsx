@@ -10,7 +10,7 @@ import { compareText } from '@/lib/collation';
 import { Button, CopperPill, CoverBand, DataTable, EmptyState, ListToolbar, MobileListHeader, PageShell, TablePanel, type Column } from '@/app/components/ui';
 import { Plus } from '@/lib/icons';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
-import { formatDateForDisplay } from '@/lib/date-utils';
+import { formatDateForDisplay, timestampMs } from '@/lib/date-utils';
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { useTree } from '@/app/contexts/TreeContext';
@@ -270,9 +270,14 @@ export default function PeoplePageClient({
                     break;
                 }
                 case 'updated': {
-                    const ul = blankLast(a.UpdatedAt || '', b.UpdatedAt || '');
-                    if (ul !== null) return ul;
-                    cmp = (a.UpdatedAt || '').localeCompare(b.UpdatedAt || '');
+                    // PGlite hands timestamps back as Date objects, hosted JSON as
+                    // strings (#187), so compare instants rather than text.
+                    const at = timestampMs(a.UpdatedAt);
+                    const bt = timestampMs(b.UpdatedAt);
+                    if (at === null && bt === null) return 0;
+                    if (at === null) return 1;
+                    if (bt === null) return -1;
+                    cmp = at - bt;
                     break;
                 }
             }

@@ -65,7 +65,7 @@ vi.mock('embla-carousel-react', () => ({
     scrollPrev: vi.fn(), scrollNext: vi.fn(), scrollTo: vi.fn(), reInit: vi.fn(), on: vi.fn(), off: vi.fn(),
   }],
 }));
-vi.mock('@/lib/data', () => ({ getDataClient: vi.fn() }));
+vi.mock('@/lib/data', () => ({ DATA_MODE: 'http', getDataClient: vi.fn() }));
 const cropProps = vi.fn();
 vi.mock('@/app/people/view/mobile/PortraitSheets', () => ({
   CropScreen: (props: Record<string, unknown>) => { cropProps(props); return null; },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateSpreadsheetTemplate } from '@/lib/spreadsheet/template';
+import { generateSpreadsheetTemplate, SPREADSHEET_CONTENT_TYPE, SPREADSHEET_TEMPLATE_NAME } from '@/lib/spreadsheet/template';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 
 export async function GET(request: NextRequest) {
@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
 
     const buffer = await generateSpreadsheetTemplate(slashOrder);
 
-    return new NextResponse(new Uint8Array(buffer), {
+    return new NextResponse(buffer, {
         status: 200,
         headers: {
-            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition': 'attachment; filename="genealogy_template.xlsx"',
+            'Content-Type': SPREADSHEET_CONTENT_TYPE,
+            'Content-Disposition': `attachment; filename="${SPREADSHEET_TEMPLATE_NAME}"`,
             'Content-Length': String(buffer.length),
         },
     });

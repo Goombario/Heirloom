@@ -85,6 +85,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof EvidencePane
       onSetPrimary={vi.fn()}
       setPrimaryLabel="Set as profile picture"
       downloadHref="/download"
+      downloadName="photo.jpg"
       onDelete={vi.fn()}
       busy={false}
       {...overrides}
@@ -123,6 +124,7 @@ function renderMobile(overrides: Partial<React.ComponentProps<typeof MobileEvide
       onSetPrimary={vi.fn()}
       setPrimaryLabel="Set as profile picture"
       downloadHref="/download"
+      downloadName="photo.jpg"
       onDelete={vi.fn()}
       busy={false}
       faceIds={[]}

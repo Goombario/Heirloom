@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import { SegmentedControl } from '@/app/components/ui';
 import type { CaseWithRelations, CaseWorkspace } from '@/lib/db/schema';
 import { CaseReport } from './CaseReport';
-import { caseExportJson, caseExportName, saveBlob } from './case-export';
+import { caseExportJson, caseExportName } from './case-export';
+import { saveBlob } from '@/lib/utils/save-blob';
 import type { LeadSummary } from './useCaseWorkspace';
 import { CaseFormFrame } from './CaseFormFrame';
 

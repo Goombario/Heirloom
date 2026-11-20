@@ -82,7 +82,7 @@ export function SpreadsheetJob({ p, onLeave, onAnother }: { p: ImportViewProps; 
                         <h2 id="sheet-template" className="m-0 text-base font-semibold text-text">{tm('step_template')}</h2>
                         <p className="m-0 text-sm text-text-secondary">{tm('template_sub')}</p>
                         <Button variant="outline" className="justify-self-start" icon={<Download className="w-4 h-4" aria-hidden="true" />}
-                            onClick={() => { window.location.href = `/api/import/spreadsheet/template?dateFormat=${x.dateFormat}`; }}>
+                            onClick={x.onDownloadTemplate}>
                             {t('download_template')}
                         </Button>
                         <p className="m-0 text-sm text-text-muted">

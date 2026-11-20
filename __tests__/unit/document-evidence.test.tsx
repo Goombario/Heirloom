@@ -28,7 +28,7 @@ function props(document: Partial<DocumentRail> = {}): EvidencePanelProps {
     onStartEdit: vi.fn(), onChangeTitle: vi.fn(), onChangeDate: vi.fn(), onSaveEdit: vi.fn(), onCancelEdit: vi.fn(),
     tags: [], showNames: false, onToggleNames: vi.fn(), onHoverTag: vi.fn(), canRemoveTag: () => true,
     onStartRedraw: vi.fn(), onRemoveTag: vi.fn(), onStartTag: vi.fn(), showPrimary: true, isPersonPrimary: false,
-    onSetPrimary: vi.fn(), setPrimaryLabel: 'Set as profile picture', downloadHref: '/api/media/7/file',
+    onSetPrimary: vi.fn(), setPrimaryLabel: 'Set as profile picture', downloadHref: '/api/media/7/file', downloadName: 'photo.jpg',
     onDelete: vi.fn(), busy: false,
     document: {
       meta: 'PDF · 2 pages · 1.2 MB', links: LINKS, onLink: vi.fn(), onUnlink: vi.fn(),

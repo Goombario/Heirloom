@@ -4,6 +4,7 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { useFormatter, useTranslations } from 'next-intl';
 import MediaLightbox from '@/app/components/lightbox/MediaLightbox';
 import { CopperPill, PageShell, cx, showSuccessToast } from '@/app/components/ui';
+import { copyCaseLink } from '../copyCaseLink';
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
 import { RecordBand } from '@/app/components/mobile/RecordBand';
 import { CheckCircle2, ChevronDown, ClipboardList, Pencil, Search } from '@/lib/icons';
@@ -261,7 +262,7 @@ export function PhoneWorkspace({ cd }: { cd: CaseDetailState }) {
                     onEditQuestion={() => setSheet({ kind: 'edit-about' })}
                     onToggleHold={() => { void cd.patchCase({ Status: caseData.Status === 'on_hold' ? 'in_progress' : 'on_hold' }); }}
                     onReopen={() => { void cd.patchCase({ Status: 'in_progress' }).then((ok) => { if (ok) firstLead(); }); }}
-                    onCopyLink={() => { void navigator.clipboard?.writeText(window.location.href).then(() => showSuccessToast(t('link_copied'))); }}
+                    onCopyLink={() => { void copyCaseLink({ copied: t('link_copied'), failed: t('link_copy_failed') }); }}
                     onExport={() => setSheet({ kind: 'export' })}
                     onDelete={() => setSheet({ kind: 'delete' })} />
                 {sheet?.kind === 'which' && (

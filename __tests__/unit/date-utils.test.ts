@@ -11,6 +11,7 @@ import {
   sortableYear,
   compareSortableYears,
   isMonthWord,
+  timestampMs,
 } from '@/lib/date-utils';
 
 describe('parseDateComponents', () => {
@@ -596,5 +597,28 @@ describe('sorting places phrase-dated and undated events last', () => {
     const sorted = [...dates].sort(compareSortableYears);
     expect(sorted.slice(0, 4)).toEqual(['ABT 1850', 'BET 1877 AND 1880', 'TO 1880', '1920']);
     expect(new Set(sorted.slice(4))).toEqual(new Set([null, '(harvest time)']));
+  });
+});
+
+describe('timestampMs (#187)', () => {
+  it('reads a PGlite Date and a hosted ISO string as the same instant', () => {
+    const iso = '2026-11-18T12:34:56.000Z';
+    expect(timestampMs(new Date(iso))).toBe(Date.parse(iso));
+    expect(timestampMs(iso)).toBe(Date.parse(iso));
+  });
+
+  it('sorts a mix of Date and string values without throwing', () => {
+    const rows: Array<string | Date | null> = [new Date('2026-01-02T00:00:00Z'), '2026-03-01T00:00:00Z', null];
+    const sorted = [...rows].sort((a, b) => (timestampMs(a) ?? -Infinity) - (timestampMs(b) ?? -Infinity));
+    expect(sorted[0]).toBeNull();
+    expect(sorted[2]).toBe('2026-03-01T00:00:00Z');
+  });
+
+  it('returns null for missing or unreadable values', () => {
+    expect(timestampMs(null)).toBeNull();
+    expect(timestampMs(undefined)).toBeNull();
+    expect(timestampMs('')).toBeNull();
+    expect(timestampMs('not a date')).toBeNull();
+    expect(timestampMs(new Date('nope'))).toBeNull();
   });
 });

@@ -95,3 +95,35 @@ describe('Escape with a typed, unblurred date (#861)', () => {
         expect(onCancel).not.toHaveBeenCalled();
     });
 });
+
+describe('Escape in a SelectField inside the event editor (#190)', () => {
+    // In the app, Next roots React at `document`, so the SelectField's
+    // stopPropagation does not keep the editor's own document listener from
+    // running. These dispatch on the body, outside React, to model that.
+    function escape(prevented: boolean) {
+        const ev = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+        if (prevented) ev.preventDefault();
+        document.body.dispatchEvent(ev);
+    }
+
+    it('leaves the editor open when the Escape already closed a listbox', () => {
+        const onCancel = vi.fn();
+        render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} defaultType="RESI" onCancel={onCancel} onSaved={vi.fn()} />);
+        escape(true);
+        expect(onCancel).not.toHaveBeenCalled();
+        escape(false);
+        expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('opening the Kind of date list and pressing Escape closes only the list', () => {
+        const onCancel = vi.fn();
+        render(<InlineEventEditor target={{ kind: 'person', personId: 1 }} defaultType="RESI" onCancel={onCancel} onSaved={vi.fn()} />);
+        const triggers = screen.getAllByRole('combobox');
+        const kind = triggers[triggers.length - 1];
+        fireEvent.keyDown(kind, { key: 'ArrowDown' });
+        expect(screen.getByRole('listbox')).toBeInTheDocument();
+        fireEvent.keyDown(kind, { key: 'Escape' });
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+        expect(onCancel).not.toHaveBeenCalled();
+    });
+});

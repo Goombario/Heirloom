@@ -22,7 +22,7 @@ function props(over: Partial<MobileImportExportProps>): MobileImportExportProps 
     checksCount: null, duplicatesCount: null, onFinish: vi.fn(), confirmOpen: false, existingCounts: null,
     onConfirm: vi.fn(), onCancelConfirm: vi.fn(), exportBusy: false, exportError: null, onExport: vi.fn().mockResolvedValue(true),
     preflight: null, onPreflightClose: vi.fn(), onExportOmit: vi.fn(),
-    xlsx: { file: null, onFile: vi.fn(), phase: 'idle', dryRun: null, result: null, error: null, onPreview: vi.fn(), onConfirm: vi.fn(), onCancel: vi.fn(), dateFormat: 'MDY' },
+    xlsx: { file: null, onFile: vi.fn(), phase: 'idle', dryRun: null, result: null, error: null, onPreview: vi.fn(), onConfirm: vi.fn(), onCancel: vi.fn(), onDownloadTemplate: vi.fn(), dateFormat: 'MDY' },
     onSkipLog: vi.fn(),
     ...over,
   };
