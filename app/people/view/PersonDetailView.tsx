@@ -625,6 +625,10 @@ export default function PersonDetailsClient() {
                     <SourcesSection
                         facts={personCitationFacts}
                         title={t('sources_cited')}
+                        treeId={activeTreeId}
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        onChanged={() => { void fetchCitations(); }}
                         notice={citationsError && (
                             <InlineDataError message={citationsError} retryLabel={tc('retry')} onRetry={fetchCitations} className="mb-3" />
                         )}

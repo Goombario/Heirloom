@@ -102,21 +102,38 @@ describe('desktop person Notes (#49)', () => {
   });
 });
 
+// The source opens over the page; its own loading is SourceModal's concern.
+vi.mock('@/app/library/SourceModal', () => ({
+  default: ({ sourceId, onClose }: { sourceId: number; onClose: () => void }) => (
+    <div role="dialog" aria-label={`Source ${sourceId}`}><button type="button" onClick={onClose}>Close</button></div>
+  ),
+}));
+
 describe('desktop Sources cited (#49, ADR 0044)', () => {
+  const sectionProps = { treeId: 1, canEdit: true, canDelete: true, onChanged: () => {} };
   const cite = (SourceId: number, sourceTitle: string) => ({ SourceId, sourceTitle, sourceType: 'Census' }) as unknown as CitationFactDescriptor['citations'][number];
   const fact = (factId: number, label: string, date: string | undefined, citations: CitationFactDescriptor['citations']): CitationFactDescriptor =>
     ({ factTable: 'Events', factId, label, value: '', date, citations } as unknown as CitationFactDescriptor);
 
   it('names the facts each source is cited for, three then a count', () => {
     const c = [cite(7, '1880 census')];
-    wrap(<SourcesSection title="Sources cited" facts={[
+    wrap(<SourcesSection title="Sources cited" {...sectionProps} facts={[
       fact(1, 'Birth', '3 Mar 1868', c), fact(2, 'Census', '1880', c), fact(3, 'Residence', '1885', c), fact(4, 'Census', '1890', c),
     ]} />);
-    expect(screen.getByRole('link', { name: /1880 census/ })).toHaveTextContent('Census · Cited for Birth 1868, Census 1880, Residence 1885 and 1 more');
+    expect(screen.getByRole('button', { name: /1880 census/ })).toHaveTextContent('Census · Cited for Birth 1868, Census 1880, Residence 1885 and 1 more');
+  });
+
+  it('opens the source over the page instead of leaving for the Library', () => {
+    wrap(<SourcesSection title="Sources cited" {...sectionProps} facts={[fact(1, 'Birth', '1868', [cite(7, '1880 census')])]} />);
+    expect(screen.queryByRole('link')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /1880 census/ }));
+    expect(screen.getByRole('dialog', { name: 'Source 7' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('is one line with no Add when nothing is cited (#157)', () => {
-    wrap(<SourcesSection title="Sources cited" facts={[]} />);
+    wrap(<SourcesSection title="Sources cited" {...sectionProps} facts={[]} />);
     expect(document.querySelector('section#sources')).toHaveClass('is-empty');
     expect(screen.getByText(en.personDesktop.sources_none)).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
