@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -100,13 +101,18 @@ export function DesktopHome({ data, phase, settingUp = false, datesToCheck, dupl
     // The band's counts count up the first time this tab shows them (#20).
     const people = useCountUp(stats?.people ?? 0, `home-count:${treeId}:people`, ready);
     const families = useCountUp(stats?.families ?? 0, `home-count:${treeId}:families`, ready);
+    const resumed = data?.resumedPerson ?? null;
+    // Nothing edited yet: the card shows the person the tree opens at (Heirloom #127).
+    const cardPerson: CardPerson | null = resumed ?? data?.startPerson ?? null;
+    const portrait = usePortraitGate(ready && !firstRun ? cardPerson?.PrimaryMediaId ?? null : null);
 
     const band = (
+        // The same short band as the list pages, so Home's header matches their
+        // height and title size.
         <CoverBand
-            variant="cover"
+            variant="short"
             eyebrow={firstRun ? t('mobile_new_tree') : t('mobile_your_tree')}
             title={firstRun ? t('welcome_first_run') : treeName}
-            titleSize="hero"
             meta={firstRun ? (canEdit ? t('first_run_band_meta') : undefined) : ready && stats ? (
                 t.rich(span?.first != null && span.last != null ? 'desk_counts_span' : 'desk_counts', {
                     people,
@@ -134,9 +140,6 @@ export function DesktopHome({ data, phase, settingUp = false, datesToCheck, dupl
         );
     }
 
-    const resumed = data?.resumedPerson ?? null;
-    // Nothing edited yet: the card shows the person the tree opens at (Heirloom #127).
-    const cardPerson: CardPerson | null = resumed ?? data?.startPerson ?? null;
     const rail = (
         <DetailRail look="open">
             {canEdit && <QuickAdd />}
@@ -148,8 +151,14 @@ export function DesktopHome({ data, phase, settingUp = false, datesToCheck, dupl
     return (
         <div className="desktop-home grid">
             {band}
-            {phase === 'loading' && <PickUpSkeleton />}
-            {ready && cardPerson && <PickUp person={cardPerson} lastChange={resumed?.lastChange ?? null} treeId={treeId} viewer={!canEdit} />}
+            {(phase === 'loading' || (ready && cardPerson && !portrait.shown)) && <PickUpSkeleton />}
+            {ready && cardPerson && (
+                // Mounted (and loading its photo) behind the skeleton until the portrait
+                // paints, so a cold load never shows the initials placeholder first.
+                <div className={portrait.shown ? undefined : 'pointer-events-none invisible absolute'} aria-hidden={portrait.shown ? undefined : true}>
+                    <PickUp person={cardPerson} lastChange={resumed?.lastChange ?? null} treeId={treeId} viewer={!canEdit} onPortraitSettled={portrait.settle} />
+                </div>
+            )}
             <DetailBody divided rail={rail}>
                 <RecentlyEdited people={data?.recentPeople ?? []} treeId={treeId} canEdit={canEdit} loading={phase === 'loading'} />
                 <Research cases={data?.openCases ?? []} loading={phase === 'loading'} canEdit={canEdit} />
@@ -158,7 +167,23 @@ export function DesktopHome({ data, phase, settingUp = false, datesToCheck, dupl
     );
 }
 
-function Portrait({ person, treeId }: { person: CardPerson; treeId: number | null }) {
+// Longest the Pick up card waits behind its skeleton for the portrait, so a slow
+// or stuck photo read never holds the card back.
+const PORTRAIT_WAIT_MS = 800;
+
+/** Whether the Pick up card may show: its portrait painted, failed, or took too long. */
+function usePortraitGate(mediaId: number | null) {
+    const [settledFor, setSettledFor] = useState<number | null>(null);
+    const settle = useCallback(() => setSettledFor(mediaId), [mediaId]);
+    useEffect(() => {
+        if (mediaId == null) return;
+        const timer = setTimeout(() => setSettledFor(mediaId), PORTRAIT_WAIT_MS);
+        return () => clearTimeout(timer);
+    }, [mediaId]);
+    return { shown: mediaId == null || settledFor === mediaId, settle };
+}
+
+function Portrait({ person, treeId, onSettled }: { person: CardPerson; treeId: number | null; onSettled: () => void }) {
     return (
         <span className={cx('relative grid place-items-center w-[240px] h-[180px] shrink-0 rounded-card overflow-hidden', avatarClass(person.Sex))}>
             <span aria-hidden="true" className="serif text-4xl text-[color:var(--color-on-media)] opacity-70">{getInitials(person.FirstName, person.LastName)}</span>
@@ -167,7 +192,7 @@ function Portrait({ person, treeId }: { person: CardPerson; treeId: number | nul
                     <ProfileImage mediaId={person.PrimaryMediaId} treeId={treeId} alt=""
                         focalX={person.FocalX ?? 50} focalY={person.FocalY ?? 50} focalRadius={person.FocalRadius ?? null}
                         regionW={person.RegionW} regionH={person.RegionH}
-                        containerWidth={240} containerHeight={180} circular={false} />
+                        containerWidth={240} containerHeight={180} circular={false} loading="eager" onSettled={onSettled} />
                 </span>
             )}
         </span>
@@ -179,21 +204,21 @@ function Portrait({ person, treeId }: { person: CardPerson; treeId: number | nul
  * right column. With no `lastChange` (nothing edited yet) it shows the tree's
  * starting person with the same wording and no change line.
  */
-function PickUp({ person, lastChange, treeId, viewer }: { person: CardPerson; lastChange: ResumedPerson['lastChange'] | null; treeId: number | null; viewer: boolean }) {
+function PickUp({ person, lastChange, treeId, viewer, onPortraitSettled }: { person: CardPerson; lastChange: ResumedPerson['lastChange'] | null; treeId: number | null; viewer: boolean; onPortraitSettled: () => void }) {
     const t = useTranslations('home');
     const changeLine = useChangeLine();
     const stepText = useStepText();
     const name = displayFullName(person) || lastChange?.EntityLabel || t('person_fallback', { id: person.Id });
     const first = person.EffectiveFirstName || person.FirstName || name;
     const href = `/people/view?id=${person.Id}`;
-    const { steps, total } = person.nextSteps;
+    const { steps } = person.nextSteps;
     const showSteps = !viewer && steps.length > 0;
     return (
         <section aria-labelledby="home-pickup" className={cx('pick-up mb-7 grid overflow-hidden rounded-panel border border-border bg-card shadow-card', showSteps && 'min-[1100px]:grid-cols-[minmax(0,1fr)_340px]')}>
             <div className="flex flex-wrap items-start gap-6 p-6">
                 {/* The portrait repeats the name link, so it leaves the tab order. */}
                 <GuardedLink href={href} tabIndex={-1} aria-hidden="true" className="hover-lift shrink-0 rounded-card">
-                    <Portrait person={person} treeId={treeId} />
+                    <Portrait person={person} treeId={treeId} onSettled={onPortraitSettled} />
                 </GuardedLink>
                 <div className="grid min-w-[220px] flex-1 content-start gap-1.5">
                     <span className="eyebrow" id="home-pickup">{viewer && lastChange ? t('mobile_last_updated') : t('mobile_pick_up')}</span>
@@ -211,10 +236,7 @@ function PickUp({ person, lastChange, treeId, viewer }: { person: CardPerson; la
             </div>
             {showSteps && (
                 <div className="next-steps grid content-start gap-1 border-l border-border-light bg-card-alt p-5">
-                    <div className="flex items-baseline justify-between gap-3 pb-1">
-                        <h3 className="m-0 eyebrow">{t('next_for', { name: first })}</h3>
-                        <span className="font-mono text-meta text-text-muted">{t('steps_open', { count: total })}</span>
-                    </div>
+                    <h3 className="m-0 pb-1 eyebrow">{t('next_for', { name: first })}</h3>
                     <ul className="m-0 grid list-none p-0">
                         {steps.map((step, i) => {
                             const { title, reason } = stepText(step);

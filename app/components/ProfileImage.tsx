@@ -29,6 +29,24 @@ const HIDDEN_LOADER_STYLE: CSSProperties = {
     position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none',
 };
 
+// Natural sizes of the sources this page has already loaded and decoded. A
+// portrait that remounts on a source it has shown (Home on a revisit, now that
+// the dashboard comes from the cache) paints it on its first render instead of
+// starting blank and waiting a frame or more for the hidden loader. Only the
+// size is kept; the browser's image cache holds the decoded pixels. Bounded,
+// oldest first; a revoked blob URL never comes back, so it just ages out.
+const DECODED_CAP = 500;
+const decodedSizes = new Map<string, { nW: number; nH: number }>();
+function rememberDecoded(src: string, nW: number, nH: number) {
+    decodedSizes.delete(src);
+    decodedSizes.set(src, { nW, nH });
+    if (decodedSizes.size > DECODED_CAP) decodedSizes.delete(decodedSizes.keys().next().value!);
+}
+/** Test-only: forget every decoded source. */
+export function __resetDecodedSizes() {
+    decodedSizes.clear();
+}
+
 interface ProfileImageProps {
     mediaId: number;
     treeId?: number | null;
@@ -53,6 +71,11 @@ interface ProfileImageProps {
     thumbSize?: number;
     /** Defaults to 'lazy'. Pass 'eager' for above-the-fold heroes. */
     loading?: 'lazy' | 'eager';
+    /**
+     * Called before paint once the current photo is on screen or has failed, so a
+     * caller can keep its skeleton up until then instead of showing the empty frame.
+     */
+    onSettled?: () => void;
 }
 
 /**
@@ -87,6 +110,7 @@ export default function ProfileImage({
     className = '',
     thumbSize,
     loading = 'lazy',
+    onSettled,
 }: ProfileImageProps) {
     // Target thumbnail width, computed independent of `src` so it can drive
     // useMediaUrl's local thumb-vs-full selection. The rule lives in
@@ -181,7 +205,10 @@ export default function ProfileImage({
     // is what a HELD frame keeps during a switch — otherwise the previous person's
     // photo would be re-cropped with the incoming person's focal point (a visible
     // "lag" where the old picture jumps to the wrong crop before the new one loads).
-    const [display, setDisplay] = useState<{ src: string; nW: number; nH: number; style: React.CSSProperties } | null>(null);
+    const [display, setDisplay] = useState<{ src: string; nW: number; nH: number; style: React.CSSProperties } | null>(() => {
+        const known = effectiveSrc ? decodedSizes.get(effectiveSrc) : undefined;
+        return known && effectiveSrc ? { src: effectiveSrc, ...known, style: computeStyle(known.nW, known.nH) } : null;
+    });
     const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
     // For the CURRENTLY-targeted image, derive the style live so editing its crop
@@ -198,6 +225,12 @@ export default function ProfileImage({
     // held previous frame (or nothing on a cold first load), never the glyph.
     const loadError = mediaError || (failedSrc != null && failedSrc === effectiveSrc);
     const needsLoad = !!effectiveSrc && effectiveSrc !== display?.src && effectiveSrc !== failedSrc;
+    const settled = loadError || (!!effectiveSrc && display?.src === effectiveSrc);
+    // A layout effect, so a caller's state update lands before the frame paints:
+    // a photo seeded from decodedSizes never shows the caller's skeleton at all.
+    useLayoutEffect(() => {
+        if (settled) onSettled?.();
+    }, [settled, onSettled]);
 
     return (
         <div
@@ -232,7 +265,10 @@ export default function ProfileImage({
                         // Promote only once the blob actually decodes; a load that can't
                         // decode (corrupt) surfaces the "?" glyph instead of painting blank.
                         el.decode().then(
-                            () => setDisplay({ src: effectiveSrc, nW, nH, style: computeStyle(nW, nH) }),
+                            () => {
+                                rememberDecoded(effectiveSrc, nW, nH);
+                                setDisplay({ src: effectiveSrc, nW, nH, style: computeStyle(nW, nH) });
+                            },
                             () => setFailedSrc(effectiveSrc),
                         );
                     }}
