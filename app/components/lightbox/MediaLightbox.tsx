@@ -12,7 +12,8 @@ import { showChangeToast } from '@/app/components/ui';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { useChange } from '@/app/people/view/mobile/useChange';
 import { CropScreen } from '@/app/people/view/mobile/PortraitSheets';
-import { getDataClient } from '@/lib/data';
+import { DATA_MODE, getDataClient } from '@/lib/data';
+import { saveBlob } from '@/lib/utils/save-blob';
 import PhotoStage from './PhotoStage';
 import EvidencePanel, { type EvidencePanelProps } from './EvidencePanel';
 import MobileLightbox from './MobileLightbox';
@@ -292,6 +293,21 @@ export default function MediaLightbox({
 
     const downloadHref = mediaFileUrl(media.Id, { treeId });
     const currentTitle = titleOverride ?? media.Title;
+    const downloadName = archiveMediaFilename({ Title: currentTitle, FilePath: media.FilePath || 'photo.jpg' });
+    // No /api/media route without a server: the static host answers it with the
+    // app shell, so a plain link saved `file.html` (#188). Read the original instead.
+    const downloadPhoto = DATA_MODE === 'http' ? undefined : () => {
+        const mediaId = media.Id;
+        void (async () => {
+            try {
+                const client = await getDataClient();
+                const { bytes, contentType } = await client.media.getFile(mediaId, treeId);
+                saveBlob(new Blob([bytes as BlobPart], { type: contentType }), downloadName);
+            } catch (e) {
+                reportError(e);
+            }
+        })();
+    };
     const currentDate = dateOverride !== undefined ? dateOverride : (media.Date ?? null);
 
     // Per-person primary status + ownership (person context only).
@@ -618,6 +634,8 @@ export default function MediaLightbox({
         onSetPrimary: isMobile && 'IsPersonPrimary' in media ? () => setCropOpen(true) : setPrimary,
         setPrimaryLabel: isMobile && personName ? t('set_primary_named', { name: personName }) : setPrimaryLabel,
         downloadHref,
+        downloadName,
+        onDownload: downloadPhoto,
         onDelete: () => setConfirmDelete(true),
         showDeleteAction: (onRemoveFromContext ? !!canRemoveFromContext : !!canDelete) && showDeleteAction,
         deleteLabel: removeActionLabel,

@@ -33,7 +33,7 @@ export default function MobileEvidence(props: EvidencePanelProps & PhoneEvidence
     const ft = useTranslations('faceTags');
     const tc = useTranslations('common');
     const { canEdit = true, canDelete, title, date, onStartEdit, tags, galleryPersonId, onStartTag,
-        showPrimary, isPersonPrimary, onSetPrimary, setPrimaryLabel, downloadHref, onDelete,
+        showPrimary, isPersonPrimary, onSetPrimary, setPrimaryLabel, downloadHref, downloadName, onDownload, onDelete,
         showDeleteAction = canDelete, deleteLabel, busy, errorMessage, faceIds, onNameFace, onOpenTag, portraitLabel, document } = props;
     const td = useTranslations('documents');
 
@@ -156,7 +156,9 @@ export default function MobileEvidence(props: EvidencePanelProps & PhoneEvidence
                             <Plus className="w-4 h-4 text-white/45" aria-hidden="true" />
                         </button>
                     )}
-                    <a href={downloadHref} download className={`${ROW} text-inherit ${canEdit ? 'border-t border-white/10' : ''}`}>
+                    <a href={downloadHref} download={downloadName}
+                        onClick={onDownload ? (e) => { e.preventDefault(); onDownload(); } : undefined}
+                        className={`${ROW} text-inherit ${canEdit ? 'border-t border-white/10' : ''}`}>
                         <span className={TILE}><Download className="w-[18px] h-[18px]" aria-hidden="true" /></span>
                         <span className="flex-1 font-semibold">{tc('download')}</span>
                     </a>

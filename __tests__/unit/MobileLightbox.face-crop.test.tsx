@@ -67,7 +67,7 @@ function makeEvidence(onStartRedraw = vi.fn()) {
     showNames: false, onToggleNames: vi.fn(), onHoverTag: vi.fn(), canRemoveTag: () => true,
     onStartRedraw, onRemoveTag: vi.fn(), onStartTag: vi.fn(), showPrimary: false,
     isPersonPrimary: false, onSetPrimary: vi.fn(), setPrimaryLabel: 'Set as primary',
-    downloadHref: '#', onDelete: vi.fn(), busy: false, errorMessage: null,
+    downloadHref: '#', downloadName: 'photo.jpg', onDelete: vi.fn(), busy: false, errorMessage: null,
   };
 }
 
