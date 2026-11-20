@@ -39,6 +39,11 @@ interface SidebarPlaceIds {
 
 const NO_PLACE_IDS: SidebarPlaceIds = { birth: null, death: null };
 
+/** One portrait read, applied with the person it belongs to. */
+type MediaRead =
+    | { ok: true; photoId: number | null; focal: { x: number; y: number; r: number | null } }
+    | { ok: false; error: string };
+
 
 /** How long the desktop panel waits before sliding in (#14); matched by the canvas panels in globals.css. */
 const SLIDE_IN_DELAY_MS = 220;
@@ -115,19 +120,78 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    /** One media read for this person, as a result to apply; never throws. Null when
+     *  the read was an auth failure that is already redirecting. */
+    const readMedia = useCallback(async (): Promise<MediaRead | null> => {
+        try {
+            const client = await getDataClient();
+            const { media } = await client.media.list<PersonGalleryMedia>({ personId, treeId: activeTreeId, includeTagged: true });
+            const primary = media.find((m) => m.IsPersonPrimary);
+            return {
+                ok: true,
+                photoId: primary?.Id || null,
+                focal: primary?.TagRegionW != null && primary.TagRegionH != null
+                    ? {
+                        x: (primary.TagRegionX ?? 0) + primary.TagRegionW / 2,
+                        y: (primary.TagRegionY ?? 0) + primary.TagRegionH / 2,
+                        r: Math.max(primary.TagRegionW, primary.TagRegionH),
+                    }
+                    : { x: primary?.FocalX ?? 50, y: primary?.FocalY ?? 50, r: primary?.FocalRadius ?? null },
+            };
+        } catch (e) {
+            if (redirectIfUnauthorized(e)) return null;
+            // A missing portrait is a valid empty state; a failed media read is
+            // separate so it cannot erase the owning person's form.
+            return { ok: false, error: tc(errorToastKey(e)) };
+        }
+    }, [personId, activeTreeId, redirectIfUnauthorized, tc]);
+
+    const applyMedia = useCallback((read: MediaRead | null) => {
+        if (!read) return;
+        if (read.ok) {
+            setMediaError(null);
+            setMediaErrorScope(null);
+            setPrimaryPhotoId(read.photoId);
+            setPrimaryPhotoFocal(read.focal);
+            setMediaScope({ treeId: activeTreeId, personId });
+        } else {
+            setMediaError(read.error);
+            setMediaErrorScope({ treeId: activeTreeId, personId });
+        }
+    }, [personId, activeTreeId]);
+
+    // The person, their portrait and their place badges are read together and
+    // applied in one go, so the panel never shows the new name beside the old
+    // photo, or a place before its pin badge.
     const fetchPerson = useCallback(async () => {
         setLoading(true);
         setLoadError(null);
         const seq = ++loadSeq.current;
+        // Supersedes any media retry still in flight for the previous person.
+        ++mediaSeq.current;
+        const mediaRead = readMedia();
         try {
             const client = await getDataClient();
             const p = await client.people.get(personId, activeTreeId);
             // The user has clicked to another person while this was in flight. Applying
             // it would clobber their form and blank the chains already painted for them.
             if (loadSeq.current !== seq) return;
+            const newForm = personToForm(p);
+            // Seed each field's pin badge from the already-saved chain — one cheap
+            // lookup, no Photon call, and it never triggers a write. Best-effort: a
+            // failure just means no badge this session. By the place each fact points
+            // at, as two places may share a name (#1186).
+            const keys = uniquePlaceKeys([factPlaceKey(newForm.BirthPlace, p.BirthPlaceId), factPlaceKey(newForm.DeathPlace, p.DeathPlaceId)]);
+            let chains: Record<string, PinChainRow[]> = {};
+            if (keys.length > 0) {
+                try {
+                    chains = await client.places.pinChains(keys, activeTreeId);
+                } catch { /* badge is optional */ }
+            }
+            const media = await mediaRead;
+            if (loadSeq.current !== seq) return;
             setPerson(p);
             setPersonScope({ treeId: activeTreeId, personId });
-            const newForm = personToForm(p);
             setForm(newForm);
             originalFormRef.current = newForm;
             setIsDirty(false);
@@ -140,18 +204,8 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
             const loadedIds = { birth: p.BirthPlaceId ?? null, death: p.DeathPlaceId ?? null };
             setSavedPlaceIds(loadedIds);
             setPlaceIds(loadedIds);
-            setPlaceChains({});
-            // Seed each field's pin badge from the already-saved chain — one cheap
-            // lookup, no Photon call, and it never triggers a write. Best-effort: a
-            // failure just means no badge this session. By the place each fact points
-            // at, as two places may share a name (#1186).
-            const keys = uniquePlaceKeys([factPlaceKey(newForm.BirthPlace, p.BirthPlaceId), factPlaceKey(newForm.DeathPlace, p.DeathPlaceId)]);
-            if (keys.length > 0) {
-                try {
-                    const chains = await client.places.pinChains(keys, activeTreeId);
-                    if (loadSeq.current === seq) setPlaceChains(chains);
-                } catch { /* badge is optional */ }
-            }
+            setPlaceChains(chains);
+            applyMedia(media);
         } catch (e) {
             if (redirectIfUnauthorized(e)) return;
             if (e instanceof NotFoundError) {
@@ -174,44 +228,32 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
         } finally {
             if (loadSeq.current === seq) setLoading(false);
         }
-    }, [personId, activeTreeId, redirectIfUnauthorized, tc]);
+    }, [personId, activeTreeId, redirectIfUnauthorized, tc, readMedia, applyMedia]);
 
+    // Retry for a failed portrait read alone (the person is already on screen).
     const fetchMedia = useCallback(async () => {
         const seq = ++mediaSeq.current;
         setMediaError(null);
         setMediaErrorScope(null);
-        try {
-            const client = await getDataClient();
-            const { media } = await client.media.list<PersonGalleryMedia>({ personId, treeId: activeTreeId, includeTagged: true });
-            if (mediaSeq.current !== seq) return;
-            const primary = media.find((m) => m.IsPersonPrimary);
-            setPrimaryPhotoId(primary?.Id || null);
-            setMediaScope({ treeId: activeTreeId, personId });
-            setPrimaryPhotoFocal(primary?.TagRegionW != null && primary.TagRegionH != null
-                ? {
-                    x: (primary.TagRegionX ?? 0) + primary.TagRegionW / 2,
-                    y: (primary.TagRegionY ?? 0) + primary.TagRegionH / 2,
-                    r: Math.max(primary.TagRegionW, primary.TagRegionH),
-                }
-                : { x: primary?.FocalX ?? 50, y: primary?.FocalY ?? 50, r: primary?.FocalRadius ?? null });
-        } catch (e) {
-            if (mediaSeq.current !== seq || redirectIfUnauthorized(e)) return;
-            // A missing portrait is a valid empty state; a failed media read is
-            // separate so it cannot erase the owning person's form.
-            setMediaError(tc(errorToastKey(e)));
-            setMediaErrorScope({ treeId: activeTreeId, personId });
-        }
-    }, [personId, activeTreeId, redirectIfUnauthorized, tc]);
+        const read = await readMedia();
+        if (mediaSeq.current === seq) applyMedia(read);
+    }, [readMedia, applyMedia]);
 
     useEffect(() => {
         fetchPerson();
-        fetchMedia();
-    }, [fetchPerson, fetchMedia]);
+    }, [fetchPerson]);
 
     // Only show loading overlay after 300ms to avoid flicker on fast responses
     const currentScope = personScope?.treeId === activeTreeId && personScope.personId === personId;
     const currentMediaScope = mediaScope?.treeId === activeTreeId && mediaScope.personId === personId;
     const isActuallyLoading = loading || loadedPersonId !== personId || loadedTreeId !== activeTreeId;
+    // Switching people with the panel open keeps the previous person on screen,
+    // inert, until the next one loads (the delayed overlay covers a slow load),
+    // instead of blanking the panel and redrawing it. A failed or missing read
+    // still drops it, so the error and not-found states show as before.
+    const holdingPrevious = !currentScope && isActuallyLoading && !loadError && person !== null
+        && personScope?.treeId === activeTreeId;
+    const showPerson = currentScope || holdingPrevious;
     useEffect(() => {
         if (!isActuallyLoading) {
             setShowLoadingOverlay(false);
@@ -251,7 +293,9 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
 
     // Batch-save all current form fields
     async function handleSave(clearDeath = false) {
-        if (isReadOnly) return;
+        // While the previous person is held on screen (see holdingPrevious), the form
+        // is theirs but personId is the next person's: never save it under that id.
+        if (isReadOnly || loadedPersonId !== personId || loadedTreeId !== activeTreeId) return;
         const original = originalFormRef.current;
         if (!clearDeath && form.IsDeceased !== original.IsDeceased
             && statusDropsDeath(form.IsDeceased, { DeathDate: original.DeathDate, DeathPlace: original.DeathPlace, DeathCause: person?.DeathCause })) {
@@ -327,15 +371,15 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
     const displayName = computeDisplayName(form.FirstName, form.LastName, t('unknown_person'));
 
     return {
-        person: currentScope ? person : null,
+        person: showPerson ? person : null,
         loading,
         loadError,
         retryLoad: fetchPerson,
         mediaError: mediaErrorScope?.treeId === activeTreeId && mediaErrorScope.personId === personId ? mediaError : null,
         retryMedia: fetchMedia,
         loadedPersonId: loadedTreeId === activeTreeId ? loadedPersonId : null,
-        primaryPhotoId: currentMediaScope ? primaryPhotoId : null,
-        primaryPhotoFocal: currentMediaScope ? primaryPhotoFocal : { x: 50, y: 50, r: null },
+        primaryPhotoId: currentMediaScope || holdingPrevious ? primaryPhotoId : null,
+        primaryPhotoFocal: currentMediaScope || holdingPrevious ? primaryPhotoFocal : { x: 50, y: 50, r: null },
         saving,
         visible,
         isMobile,
@@ -354,7 +398,7 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
         canDelete: activePermission === 'owner' || activePermission === 'edit',
         activeTreeId,
         initials,
-        displayName: currentScope ? displayName : t('unknown_person'),
+        displayName: showPerson ? displayName : t('unknown_person'),
         handleSave,
         confirmClearDeath,
         handleConfirmClearDeath: () => { void handleSave(true); },
