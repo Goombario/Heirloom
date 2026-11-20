@@ -1,14 +1,21 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { useDelayedFlag } from '@/app/hooks/useDelayedFlag';
+
+/** Saves that finish faster than this never show the overlay, so quick sidebar edits don't flash it. */
+const SAVING_OVERLAY_DELAY_MS = 400;
+/** Once shown, the overlay stays at least this long, so a save just past the delay doesn't blink it. */
+const SAVING_OVERLAY_MIN_VISIBLE_MS = 600;
 
 /** Full-screen saving + export overlays for the tree page. */
 export function TreeOverlays({ isSavingTree, isExporting }: { isSavingTree: boolean; isExporting: boolean }) {
     const t = useTranslations('treeView');
+    const showSaving = useDelayedFlag(isSavingTree, SAVING_OVERLAY_DELAY_MS, SAVING_OVERLAY_MIN_VISIBLE_MS);
     return (
         <>
-            {/* Saving overlay — shown during silent tree reload after sidebar save */}
-            {isSavingTree && (
+            {/* Saving overlay — shown during a silent tree reload after a sidebar save that outlasts the delay */}
+            {showSaving && (
                 <div
                     className="fixed inset-0 z-100 flex items-center justify-center pointer-events-none"
                     style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'var(--color-scrim)' }}
