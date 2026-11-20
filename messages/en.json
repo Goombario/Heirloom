@@ -975,6 +975,7 @@
     "not_geocoded": "Not geocoded",
     "geocoded": "Geocoded",
     "explore_all_places": "All places",
+    "explore_up": "Up to {parent}",
     "explore_subplaces": "{count, plural, one {# place inside} other {# places inside}}",
     "explore_places_in": "{count, plural, one {# place in {parent}} other {# places in {parent}}}",
     "explore_places_root": "{count, plural, one {# top-level place} other {# top-level places}}",

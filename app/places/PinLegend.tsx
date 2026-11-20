@@ -71,7 +71,7 @@ export function PinLegend({ className = '' }: { className?: string }) {
            island, and a panel inside it would inherit the island's translucent card.
            The positioning wrapper holds the ref because `Card` forwards none. */
         <div ref={boxRef} className="fixed z-50 w-[min(19rem,calc(100vw-2rem))]" style={{ top: pos.top, right: pos.right }}>
-          <Card pad={false} className="p-3">
+          <Card pad={false} className="p-3 shadow-[var(--shadow-float)]!">
             <div className="eyebrow mb-2">
               {t('pin_legend_title')}
             </div>

@@ -9,9 +9,10 @@
 // the pruned tree page.tsx builds).
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { ScrollArea } from '@/app/components/ui/ScrollArea';
-import { ArrowDown, ArrowUp, ChevronRight } from '@/lib/icons';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from '@/lib/icons';
 import { usePrefetchPlaceDetail } from '@/lib/places/prefetch';
 import { PinMark, FaceStack } from '../PinMark';
 import { flattenWithAncestry, label, levelRows, matchesQuery, type DrillRowData } from './drillRows';
@@ -113,6 +114,9 @@ export interface ExploreDrillProps {
   onRowHover?: (node: PlaceTreeNode | null) => void;
   /** Clears the bar's filter, from the "no matches" line. */
   onClearSearch?: () => void;
+  /** Where the breadcrumb renders. Omitted, it heads the rail; given, it is portalled
+   *  into that element (the Places bar) — null while the element has yet to mount. */
+  breadcrumbSlot?: HTMLElement | null;
 }
 
 function SortHead({ label: text, state, active, dir, onClick, align }: {
@@ -133,35 +137,54 @@ function SortHead({ label: text, state, active, dir, onClick, align }: {
 function CrumbFold({ crumbs, onPick }: { crumbs: PlaceTreeNode[]; onPick: (id: number | null) => void }) {
   const t = useTranslations('places');
   const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (!trigger.current?.contains(target) && !menu.current?.contains(target)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); trigger.current?.focus(); } };
+    const onResize = () => setOpen(false);
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('pointerdown', onDown); document.removeEventListener('keydown', onKey); };
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onResize);
+    };
   }, [open]);
   return (
-    <span ref={wrap} className="relative">
-      <button type="button" aria-expanded={open} aria-label={t('breadcrumb_more')} title={t('breadcrumb_more')}
-        onClick={() => setOpen((o) => !o)}
-        className="px-1 rounded bg-transparent border-0 cursor-pointer text-text hover:bg-hover-surface focus-ring">…</button>
-      {open && (
-        <span className="absolute left-0 top-full mt-1 z-30 flex flex-col min-w-44 p-1 rounded-lg border border-border bg-card shadow-[var(--shadow-lg)]">
+    <>
+      <button ref={trigger} type="button" aria-expanded={open} aria-label={t('breadcrumb_more')} title={t('breadcrumb_more')}
+        onClick={() => {
+          const r = trigger.current?.getBoundingClientRect();
+          if (r) setPos({ top: r.bottom + 4, left: r.left });
+          setOpen((o) => !o);
+        }}
+        className="px-1 rounded bg-transparent border-0 cursor-pointer text-text hover:bg-surface-2 focus-ring">…</button>
+      {/* Portalled to <body>, as the tree bar's menus are: in the Places bar the
+          breadcrumb sits on a dark island, whose card tone is translucent. */}
+      {open && pos && createPortal(
+        <span ref={menu} className="fixed z-50 flex flex-col min-w-44 p-1 rounded-lg border border-border bg-card shadow-[var(--shadow-lg)]"
+          style={{ top: pos.top, left: pos.left }}>
           {crumbs.map((c) => (
             <button key={c.id ?? c.name} type="button" onClick={() => { setOpen(false); onPick(c.id); }}
               className="text-left px-2.5 py-1.5 rounded-md text-sm text-text serif hover:bg-hover-surface cursor-pointer bg-transparent border-0 focus-ring-inset">
               {label(c.name)}
             </button>
           ))}
-        </span>
+        </span>,
+        document.body,
       )}
-    </span>
+    </>
   );
 }
 
-export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSearch }: ExploreDrillProps) {
+export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSearch, breadcrumbSlot }: ExploreDrillProps) {
   const t = useTranslations('places');
   const prefetch = usePrefetchPlaceDetail();
   const q = foldForSearch(search.trim());
@@ -195,6 +218,12 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
   const atRoot = !searching && state.crumbs.length === 0;
   const lastCrumbIndex = state.crumbs.length - 1;
   const isShown = (id: number | null) => id != null && state.selected?.id === id;
+  // A picked place that is not the level itself (a leaf in the list, or a pin) ends
+  // the trail, so the breadcrumb says what the card shows. It is text, not a button:
+  // a leaf has no level of its own to go to. The level crumb before it then reads as
+  // an ancestor, still the way back to the level's own detail.
+  const picked = !searching && state.selected && state.selected.id !== (state.currentNode?.id ?? null)
+    ? state.selected : null;
   // A deep path folds its middle levels into "…", which opens a menu of them (#56).
   const folded = state.crumbs.length > 3 ? state.crumbs.slice(1, -2) : [];
   const shownCrumbs = folded.length > 0
@@ -209,12 +238,15 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
       ? (sort === 'name-asc' ? t('sort_az') : sort === 'name-desc' ? t('sort_za') : undefined)
       : (sort === 'records-desc' ? t('sort_most') : sort === 'records-asc' ? t('sort_fewest') : undefined);
 
-  return (
-    <div className="flex flex-col h-full" style={{ '--explore-count-w': countWidth } as React.CSSProperties}>
-      {/* Header band — the breadcrumb. Pinned: the row list below scrolls, the
-          breadcrumb does not. The row count lives only in the labelled footer (#752). */}
+  // In the rail it is a header band: pinned, as the row list below scrolls and it does
+  // not. In the Places bar it is one unwrapped line beside the filter. The row count
+  // lives only in the labelled footer (#752).
+  const inBar = breadcrumbSlot !== undefined;
+  const breadcrumb = (
       <nav
-        className="flex items-center gap-1.5 flex-wrap px-4 pt-3.5 pb-3 border-b border-border-light text-xs text-text-muted"
+        className={inBar
+          ? 'flex items-center gap-1.5 min-w-0 text-sm text-text-muted'
+          : 'flex items-center gap-1.5 flex-wrap px-4 pt-3.5 pb-3 border-b border-border-light text-xs text-text-muted'}
         aria-label={t('breadcrumb')}
       >
         <button
@@ -222,7 +254,7 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
           onClick={() => state.goTo(null)}
           aria-current={atRoot && state.selected == null ? 'page' : undefined}
           className={`cursor-pointer rounded focus-ring ${
-            atRoot ? 'font-semibold text-text' : 'hover:text-text'
+            atRoot && !picked ? 'font-semibold text-text' : 'hover:text-text'
           }`}
         >
           {t('explore_all_places')}
@@ -239,7 +271,7 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
                 </>
               )}
               <span aria-hidden="true">›</span>
-              {i === lastCrumbIndex ? (
+              {i === lastCrumbIndex && !picked ? (
                 // The level you are in. Distinguished from its ancestors by its
                 // geocode PinMark and a step of weight — neither of them colour —
                 // while staying clickable, because this is the way back to the
@@ -257,7 +289,7 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
                 <button
                   type="button"
                   onClick={() => state.goTo(c.id)}
-                  className="serif font-semibold text-text underline decoration-border underline-offset-[3px] hover:decoration-current cursor-pointer truncate max-w-[120px] rounded focus-ring"
+                  className="hover:text-text cursor-pointer truncate max-w-[120px] rounded focus-ring"
                 >
                   {label(c.name)}
                 </button>
@@ -265,7 +297,41 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
             </span>
           ))
         )}
+        {picked && (
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span aria-hidden="true">›</span>
+            <span aria-current="page" title={picked.name}
+              className="inline-flex items-center gap-1.5 serif font-bold text-text truncate max-w-[200px]">
+              <PinMark state={picked.pinState} />
+              {label(picked.name)}
+            </span>
+          </span>
+        )}
       </nav>
+  );
+
+  // With the breadcrumb up in the bar, going back a level would mean leaving the list
+  // for it, so the list heads with one step up (gone at the root and while searching).
+  // The bar's breadcrumb stays for longer jumps.
+  const parent = state.crumbs.length > 1 ? state.crumbs[state.crumbs.length - 2]! : null;
+  const parentName = parent ? label(parent.name) : t('explore_all_places');
+  const backRow = inBar && !searching && state.currentNode && (
+    <button
+      type="button"
+      onClick={() => state.goTo(parent?.id ?? null)}
+      aria-label={t('explore_up', { parent: parentName })}
+      title={t('explore_up', { parent: parentName })}
+      className="flex items-center gap-1.5 px-3 py-2 border-b border-border-light text-sm text-text-secondary text-left cursor-pointer bg-transparent hover:bg-[color:var(--color-hover-surface)] hover:text-text transition-colors focus-ring-inset"
+    >
+      <ChevronLeft size={16} className="shrink-0" aria-hidden="true" />
+      <span className="serif font-semibold truncate">{parentName}</span>
+    </button>
+  );
+
+  return (
+    <div className="flex flex-col h-full" style={{ '--explore-count-w': countWidth } as React.CSSProperties}>
+      {inBar ? (breadcrumbSlot && createPortal(breadcrumb, breadcrumbSlot)) : breadcrumb}
+      {backRow}
 
       {/* The sortable column heads (#56). */}
       <div className="explore-row explore-row--head grid items-center gap-x-2.5 px-3 pt-2.5 pb-1.5 border-b border-border-light text-xs text-text-muted">

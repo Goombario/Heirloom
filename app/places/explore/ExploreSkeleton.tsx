@@ -11,7 +11,7 @@ import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/app/components/SkeletonLoader';
 
 /**
- * Rail placeholder — header band, rows, footer band.
+ * Rail placeholder — rows, footer band. The breadcrumb lives in the Places bar.
  *
  * Bars are `bg-card`, NOT `bg-border`: in dark mode `--color-border` and
  * `--color-card-alt` are the same `#44403c`, so border-toned bars on the
@@ -21,9 +21,6 @@ import { Skeleton } from '@/app/components/SkeletonLoader';
 function RailSkeleton() {
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 pt-3.5 pb-3 border-b border-border-light">
-        <div className="h-3.5 w-40 rounded bg-card animate-pulse" aria-hidden="true" />
-      </div>
       {/* Mirrors the loaded rail's scroll container, which since #467 is
           `flex-1 min-h-0` with no height cap — the grid row (floored by the detail
           column's min-h-[360px]) sets the height for both states, so the panel no

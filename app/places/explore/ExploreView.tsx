@@ -38,9 +38,11 @@ export interface ExploreViewProps {
   search: string;
   /** Clears the bar's filter (the rail's "no matches" line). */
   onClearSearch?: () => void;
+  /** The Places bar's breadcrumb slot (see ExploreDrill). */
+  breadcrumbSlot?: HTMLElement | null;
 }
 
-export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreViewProps) {
+export function ExploreView({ roots, treeId, search, onClearSearch, breadcrumbSlot }: ExploreViewProps) {
   const t = useTranslations('places');
   const router = useRouter();
   // Skip fact-less pass-through jurisdictions (e.g. New York with no own records) so the
@@ -232,6 +234,7 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
           onRowClick={onRailClick}
           onRowHover={onRowHover}
           onClearSearch={onClearSearch}
+          breadcrumbSlot={breadcrumbSlot}
         />
       </div>
       {map}

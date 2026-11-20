@@ -34,6 +34,8 @@ export default function PlacesPage() {
     const [error, setError] = useState<string | null>(null);
     const [errorTreeKey, setErrorTreeKey] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    // Explore portals its breadcrumb into the bar, beside the filter.
+    const [crumbSlot, setCrumbSlot] = useState<HTMLDivElement | null>(null);
     // Explore is the only view (#56 dropped Cards and List): a full-page workspace on
     // desktop, the phone's own drill below md (#1118).
     const isPhone = useIsMobile();
@@ -101,7 +103,7 @@ export default function PlacesPage() {
     }
 
     // Desktop (#56): a full-page workspace like the tree, with a slim Places bar (the filter
-    // and the pin legend, left-aligned like the tree bar's find field) over the three Explore panes.
+    // and the pin legend, left-aligned like the tree bar's find field, then the breadcrumb) over the three Explore panes.
     return (
         <PageShell variant="workspace" className="flex flex-col overflow-hidden" style={{ height: 'calc(100dvh - var(--nav-h))' }}>
             {/* The tree control bar's dark island, in both themes: the card tone sat
@@ -122,6 +124,8 @@ export default function PlacesPage() {
                     {/* The key to the geocode-state marks (#266). */}
                     <PinLegend className="shrink-0" />
                 </div>
+                {/* Empty (and so hidden, with its rule) until Explore has loaded. */}
+                <div ref={setCrumbSlot} className="flex min-w-0 flex-1 items-center gap-4 empty:hidden before:h-6 before:w-px before:shrink-0 before:bg-[color:var(--color-border)] before:content-['']" />
             </div>
             {currentError && currentPlaces.length > 0 && (
                 <InlineDataError className="m-3" message={currentError} retryLabel={tCommon('retry')} onRetry={fetchPlaces} />
@@ -143,7 +147,7 @@ export default function PlacesPage() {
                     </div>
                 </div>
             ) : (
-                <ExploreView roots={exploreTree} treeId={activeTreeId} search={search} onClearSearch={() => setSearch('')} />
+                <ExploreView roots={exploreTree} treeId={activeTreeId} search={search} onClearSearch={() => setSearch('')} breadcrumbSlot={crumbSlot} />
             )}
         </PageShell>
     );
