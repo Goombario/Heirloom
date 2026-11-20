@@ -23,6 +23,7 @@ import { getInitials } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
 import { useChangeLine, useChangeParts } from './useChangeLine';
 import { useCountUp } from '@/app/hooks/useCountUp';
+import { openQuickAdd } from '@/app/components/QuickAddHost';
 
 /*
  * The desktop home (#53, locked 2026-10-31): a cover band with the tree's name and
@@ -359,17 +360,22 @@ function Research({ cases, loading, canEdit }: { cases: OpenCase[]; loading: boo
 
 function QuickAdd() {
     const t = useTranslations('home');
-    const tiles = [
-        { href: '/people?add=1', label: t('new_person'), icon: <UserRound className="w-[18px] h-[18px]" /> },
-        { href: '/families?add=1', label: t('new_family'), icon: <Users className="w-[18px] h-[18px]" /> },
-        { href: '/cases/new', label: t('new_case'), icon: <FolderSearch className="w-[18px] h-[18px]" /> },
+    // New person and New family open over Home; a case has its own page.
+    const tiles: Array<{ key: string; label: string; icon: ReactNode } & ({ href: string } | { onClick: () => void })> = [
+        { key: 'person', onClick: () => openQuickAdd('person'), label: t('new_person'), icon: <UserRound className="w-[18px] h-[18px]" /> },
+        { key: 'family', onClick: () => openQuickAdd('family'), label: t('new_family'), icon: <Users className="w-[18px] h-[18px]" /> },
+        { key: 'case', href: '/cases/new', label: t('new_case'), icon: <FolderSearch className="w-[18px] h-[18px]" /> },
     ];
     return (
         <section aria-labelledby="home-quick-add">
             <SectionHeader level="label" as="h3" headingId="home-quick-add" title={t('quick_add')} />
             <ul className="m-0 grid list-none grid-cols-3 gap-2 p-0">
                 {tiles.map((tile) => (
-                    <li key={tile.href} className="grid"><TileLink href={tile.href} icon={tile.icon} label={tile.label} /></li>
+                    <li key={tile.key} className="grid">
+                        {'href' in tile
+                            ? <TileLink href={tile.href} icon={tile.icon} label={tile.label} />
+                            : <TileLink onClick={tile.onClick} icon={tile.icon} label={tile.label} />}
+                    </li>
                 ))}
             </ul>
         </section>
@@ -526,7 +532,7 @@ function FirstRunPaths({ canRestore, onGo }: { canRestore: boolean; onGo: (href:
                 <h2 className="m-0 serif text-lg font-semibold">{t('first_run_person_title')}</h2>
                 <p className="m-0 text-sm text-text-secondary">{t('first_run_person_body')}</p>
                 <div className="pt-2">
-                    <Button variant="outline" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => onGo('/people/new')}>{t('add_person_short')}</Button>
+                    <Button variant="outline" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => openQuickAdd('person')}>{t('add_person_short')}</Button>
                 </div>
             </div>
             {canRestore && (

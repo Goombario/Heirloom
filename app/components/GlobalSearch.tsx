@@ -20,6 +20,7 @@ import { getInitials, initialsFromName } from '@/lib/utils/initials';
 import { Search } from '@/lib/icons';
 import { personKin, type PersonKin } from '@/lib/utils/person-kin';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
+import { openQuickAdd } from '@/app/components/QuickAddHost';
 import { MobileGlobalSearch } from '@/app/components/search/MobileGlobalSearch';
 
 const LISTBOX_ID = 'global-search-listbox';
@@ -141,10 +142,10 @@ export default function GlobalSearch() {
                 e.preventDefault();
                 setIsOpen(true);
             }
-            // Alt+N: Navigate to new person form (client-side to avoid a full-reload black flash)
+            // Alt+N: New person, over the current page.
             if (e.altKey && e.key === 'n' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tagOf(e.target))) {
                 e.preventDefault();
-                if (guardNavigation()) router.push('/people/new');
+                openQuickAdd('person');
             }
             if (e.key === 'Escape') {
                 setIsOpen(false);

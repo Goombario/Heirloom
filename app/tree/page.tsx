@@ -21,6 +21,7 @@ import { TreeOverlays } from './TreeOverlays';
 import type { TreeRootFace } from './TreeControlBar';
 import type { TreeNode } from '@/app/components/tree/types';
 import { READABLE_ZOOM } from '@/lib/tree/fitView';
+import { openQuickAdd } from '@/app/components/QuickAddHost';
 
 const TreeVisualization = dynamic(() => import('@/app/components/tree/TreeVisualization'), {
   ssr: false,
@@ -177,7 +178,7 @@ function TreePageContent() {
               <Card pad={false} className="p-8 text-center max-w-[360px]" style={{ width: '100%' }}>
                 <h2 className="text-md font-bold mb-2" style={{ color: 'var(--text)' }}>{t('no_tree')}</h2>
                 <p className="muted text-sm mb-4">{t('no_tree_desc')}</p>
-                <Link href="/people/new"><Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />}>{t('add_first')}</Button></Link>
+                <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => openQuickAdd('person')}>{t('add_first')}</Button>
               </Card>
             </div>
           ) : !treeData ? (

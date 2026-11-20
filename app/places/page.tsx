@@ -21,6 +21,7 @@ import { buildPlaceTree } from '@/lib/places/hierarchy';
 
 import type { PlaceGazetteerNode, PlaceSummary } from '@/lib/data/types';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
+import { openQuickAdd } from '@/app/components/QuickAddHost';
 
 export default function PlacesPage() {
     const t = useTranslations('places');
@@ -143,7 +144,7 @@ export default function PlacesPage() {
                         <EmptyState variant="empty" title={t('empty_title')} message={t('empty_explore')} />
                         <div className="mt-3 flex flex-wrap justify-center gap-2">
                             <Link href="/import-export"><Button variant="outline" icon={<Upload className="w-4 h-4" aria-hidden="true" />}>{t('empty_import')}</Button></Link>
-                            <Link href="/people?add=1"><Button variant="primary" icon={<Plus className="w-4 h-4" aria-hidden="true" />}>{t('empty_add_person')}</Button></Link>
+                            <Button variant="primary" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => openQuickAdd('person')}>{t('empty_add_person')}</Button>
                         </div>
                     </div>
                 </div>
