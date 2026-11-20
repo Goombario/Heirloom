@@ -276,7 +276,12 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
             // Both move focus into themselves when they open, so the keystroke's own
             // target says whose Escape this is.
             const from = e.target as Element | null;
-            if (from?.closest?.('[role="dialog"], [role="menu"]')) return;
+            if (from?.closest?.('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+            // A SelectField (Kind of date, event type) keeps focus on its trigger and
+            // closes its own listbox on Escape, marking the key handled. Next roots
+            // React at `document`, so its stopPropagation can't stop this sibling
+            // listener; the handled mark is what says the Escape is taken (#190).
+            if (e.defaultPrevented) return;
             if ((dirtyRef.current || hasUncommittedDate(panelRef.current)) && !window.confirm(tc('unsaved_changes_confirm'))) return;
             onCancel();
         }
