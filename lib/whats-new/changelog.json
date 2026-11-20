@@ -13,6 +13,16 @@
         "ru": "У семьи может быть своя фотография."
       },
       {
+        "en": "The vertical tree can show a second name, such as a nickname or an alias, under each person's name.",
+        "fr": "L'arbre vertical peut afficher un second nom, comme un surnom ou un alias, sous le nom de chaque personne.",
+        "ru": "Вертикальное древо может показывать второе имя, например прозвище или псевдоним, под именем каждого человека."
+      },
+      {
+        "en": "When you add an event, you can cite its sources straight away.",
+        "fr": "Quand vous ajoutez un événement, vous pouvez citer ses sources tout de suite.",
+        "ru": "При добавлении события можно сразу указать его источники."
+      },
+      {
         "en": "Repositories can keep a website, a phone number and an email address.",
         "fr": "Les dépôts peuvent garder un site web, un numéro de téléphone et une adresse e-mail.",
         "ru": "У архива можно указать сайт, телефон и электронную почту."
