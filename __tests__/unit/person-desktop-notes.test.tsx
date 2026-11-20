@@ -93,7 +93,8 @@ describe('desktop person Notes (#49)', () => {
     wrap(<NotesSection person={bare} treeId={1} canEdit canDelete run={vi.fn()} refreshKey={0} onNotesChange={() => {}} onEmptyChange={empty} onEditBiography={() => {}} />);
     await screen.findByText('None yet');
     expect(document.querySelector('section#notes')).toHaveClass('is-empty');
-    expect(empty).toHaveBeenLastCalledWith(true);
+    // Reported from a passive effect, which can land just after the text paints.
+    await vi.waitFor(() => expect(empty).toHaveBeenLastCalledWith(true));
     // Adding switches the section back to its normal layout.
     fireEvent.click(screen.getByRole('button', { name: 'Add note' }));
     expect(document.querySelector('section#notes')).not.toHaveClass('is-empty');
