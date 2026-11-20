@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -17,7 +17,11 @@ vi.mock('@/app/hooks/useCountUp', () => ({ useCountUp: (value: number) => value 
 vi.mock('@/app/components/GuardedLink', () => ({
   default: ({ href, children, ...rest }: { href: string; children: ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
-vi.mock('@/app/components/ProfileImage', () => ({ default: () => <img alt="" /> }));
+// The portrait settles only when a test says so, to drive the Pick up gate.
+let settlePortrait: (() => void) | undefined;
+vi.mock('@/app/components/ProfileImage', () => ({
+  default: ({ onSettled }: { onSettled?: () => void }) => { settlePortrait = onSettled; return <img alt="" />; },
+}));
 vi.mock('@/app/components/PersonAvatar', () => ({ default: () => <span /> }));
 
 const change = { Action: 'update', Changes: { fields: {} }, CreatedAt: '2026-11-12T10:00:00Z' };
@@ -66,8 +70,8 @@ describe('DesktopHome (#53)', () => {
 
   it('shows Next steps for editors, each leaving for the person page', () => {
     wrap(<DesktopHome data={data} phase="ready" datesToCheck={7} duplicates={3} canEdit canRestore treeId={1} />);
-    const next = screen.getByRole('heading', { name: 'Next for Anna' }).closest('div')!.parentElement!;
-    expect(within(next).getByText('5 open')).toBeInTheDocument();
+    const next = screen.getByRole('heading', { name: 'Next for Anna' }).closest('.next-steps')! as HTMLElement;
+    expect(within(next).queryByText(/\d+ open/)).not.toBeInTheDocument();
     expect(within(next).getByRole('link', { name: /Death place/ })).toHaveAttribute('href', '/people/view?id=1#death');
     expect(within(next).getByRole('link', { name: /Source for Occupation, 1891/ })).toHaveAttribute('href', '/people/view?id=1#event-44');
     expect(within(next).getByRole('link', { name: /Mother’s parents/ })).toHaveAttribute('href', '/people/view?id=9#parents');
@@ -131,5 +135,29 @@ describe('DesktopHome (#53)', () => {
     expect(screen.getByText('Editors start cases for open questions.')).toBeInTheDocument();
     expect(screen.queryAllByRole('link', { name: 'New case' })).toHaveLength(0);
     expect(screen.queryByText('All clear')).toBeNull();
+  });
+});
+
+describe('DesktopHome Pick up portrait gate', () => {
+  const withPhoto: DashboardData = { ...data, resumedPerson: { ...anna, PrimaryMediaId: 77 } };
+  const pickUpVisible = () => screen.queryByRole('heading', { name: 'Next for Anna' }) !== null;
+
+  it('keeps the card behind its skeleton until the portrait has painted', () => {
+    wrap(<DesktopHome data={withPhoto} phase="ready" datesToCheck={0} duplicates={0} canEdit canRestore treeId={1} />);
+    expect(pickUpVisible()).toBe(false);
+    act(() => settlePortrait?.());
+    expect(pickUpVisible()).toBe(true);
+  });
+
+  it('shows the card anyway once the portrait has taken too long', () => {
+    vi.useFakeTimers();
+    try {
+      wrap(<DesktopHome data={withPhoto} phase="ready" datesToCheck={0} duplicates={0} canEdit canRestore treeId={1} />);
+      expect(pickUpVisible()).toBe(false);
+      act(() => { vi.advanceTimersByTime(800); });
+      expect(pickUpVisible()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

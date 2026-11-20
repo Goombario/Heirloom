@@ -62,6 +62,13 @@ describe('desktop person rail (#49)', () => {
     <FamilyRail person={anna} treeId={1} canEdit canDelete={canDelete} journey={journey} onShowJourney={() => {}} onChanged={() => {}} run={vi.fn()} />,
   );
 
+  it('with no partner, has no Partner heading and adds a family from under Parents', () => {
+    const single = { ...anna, spouses: [] } as PersonWithRelations;
+    wrap(<FamilyRail person={single} treeId={1} canEdit canDelete journey={[]} onShowJourney={() => {}} onChanged={() => {}} run={vi.fn()} />);
+    expect(screen.queryByRole('heading', { name: /^Partner/ })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Parents' })).getByRole('button', { name: /Add family/ })).toBeInTheDocument();
+  });
+
   it('opens with Open in tree, then parents with siblings inside, then each partnership', () => {
     rail(true);
     expect(screen.getByRole('link', { name: /Open in tree/ })).toHaveAttribute('href', '/tree?rootId=10');

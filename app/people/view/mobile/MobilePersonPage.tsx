@@ -16,6 +16,7 @@ import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { getInitials } from '@/lib/utils/initials';
 import { avatarClass } from '@/lib/utils/avatar';
 import { displayFullName } from '@/lib/utils/names';
+import { headingNameText } from '../derive';
 import ProfileImage from '@/app/components/ProfileImage';
 import { GlassButton, Lifespan, PageShell, cx } from '@/app/components/ui';
 import { ConfirmSheet } from '@/app/components/ui/Sheet';
@@ -57,6 +58,8 @@ export type MobilePersonPageProps = Omit<PaneContext, 'family' | 'onShowTab' | '
     onMediaChanged: () => void;
     /** Reload the person and their citations after a write (and after its Undo). */
     onChanged: () => Promise<void> | void;
+    /** True once the names have loaded: until then the heading reads the person row. */
+    variantsLoaded?: boolean;
 };
 
 
@@ -161,7 +164,8 @@ export function MobilePersonPage(props: MobilePersonPageProps) {
     const focal = photo ? portraitFocal(photo) : null;
     const family = familyOf(person, photo && focal ? { PrimaryMediaId: photo.Id, FocalX: focal.x, FocalY: focal.y, FocalRadius: focal.r } : undefined);
     const { given, surname } = nameBarParts(person);
-    const fullName = displayFullName(person) || t('unknown');
+    // A starred nickname sits in the given names; any other starred name replaces them.
+    const fullName = headingNameText(person, props.variantsLoaded ? props.variants : null, t('unknown'));
     const editor = role !== 'viewer';
 
     // A new person opens on Overview.

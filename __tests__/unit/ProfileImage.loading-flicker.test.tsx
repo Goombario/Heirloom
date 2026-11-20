@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import ProfileImage from '@/app/components/ProfileImage';
+import ProfileImage, { __resetDecodedSizes } from '@/app/components/ProfileImage';
 
 // Controllable useMediaUrl: flip `mockSrc` / `mockError` to simulate the local path.
 let mockSrc: string | null = null;
@@ -37,6 +37,7 @@ function fireLoaded(c: HTMLElement, nW = 256, nH = 192) {
 
 beforeEach(() => {
   cleanup();
+  __resetDecodedSizes();
   mockSrc = null;
   mockError = false;
   decodeMode = 'resolve';
@@ -65,6 +66,18 @@ describe('ProfileImage decode-before-swap (local/static path)', () => {
     const img = await screen.findByAltText('Ada');
     expect(img.getAttribute('src')).toBe('blob:ready');
     expect(screen.queryByText('?')).toBeNull();
+  });
+
+  it('paints a source it already decoded on the first render of a remount (Home revisit)', async () => {
+    mockSrc = 'blob:seen';
+    const first = render(<ProfileImage mediaId={42} alt="Ada" containerWidth={96} containerHeight={96} />);
+    fireLoaded(first.container);
+    await screen.findByAltText('Ada');
+    first.unmount();
+
+    const again = render(<ProfileImage mediaId={42} alt="Ada" containerWidth={96} containerHeight={96} />);
+    expect(screen.getByAltText('Ada').getAttribute('src')).toBe('blob:seen');
+    expect(loader(again.container)).toBeNull();
   });
 
   it('HOLDS the previous decoded image until the new src finishes decoding', async () => {

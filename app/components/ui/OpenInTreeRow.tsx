@@ -59,18 +59,14 @@ export function OpenInTreeRow({ personId, firstName, className }: {
  * A quick-create tile (#53): an `IconTile` over a short label, the whole
  * tile one link. Home's Quick add rail (New person, New family, New case) uses it.
  */
-export function TileLink({ href, icon, label, className }: { href: string; icon: React.ReactNode; label: string; className?: string }) {
-  return (
-    <GuardedLink
-      href={href}
-      className={cx(
-        'tile-link grid justify-items-center gap-1.5 rounded-card border border-border bg-card px-2 py-3 text-center',
-        'text-meta font-semibold text-text no-underline transition-colors hover:bg-hover-surface focus-ring',
-        className,
-      )}
-    >
-      <IconTile size={32}>{icon}</IconTile>
-      {label}
-    </GuardedLink>
+export function TileLink({ href, onClick, icon, label, className }: { icon: React.ReactNode; label: string; className?: string } & ({ href: string; onClick?: undefined } | { href?: undefined; onClick: () => void })) {
+  const classes = cx(
+    'tile-link grid justify-items-center gap-1.5 rounded-card border border-border bg-card px-2 py-3 text-center',
+    'text-meta font-semibold text-text no-underline transition-colors hover:bg-hover-surface focus-ring',
+    className,
   );
+  const body = <><IconTile size={32}>{icon}</IconTile>{label}</>;
+  // A tile that opens something over the page (New person) is a button, not a link.
+  if (onClick) return <button type="button" onClick={onClick} className={cx(classes, 'cursor-pointer')}>{body}</button>;
+  return <GuardedLink href={href ?? '/'} className={classes}>{body}</GuardedLink>;
 }

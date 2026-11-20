@@ -32,7 +32,10 @@ const READ_PREFIXES = ['list', 'get', 'search', 'suggest', 'preview'];
 //   neighbourhood — dataChecks.neighbourhood, the dates a person's date editor
 //             previews a fix against (#832). Treated as a write, each person
 //             edit would also throw away the cached data checks (#1269).
-const READ_EXACT = new Set(['detail', 'citedBy', 'coords', 'sources', 'users', 'dependentCount', 'pinChains', 'descendantCount', 'neighbourhood']);
+//   summary — dataChecks.summary, the home page's Dates to check count (#1270).
+//             Treated as a write, every home visit cleared the whole cache once
+//             it resolved, so the next visit missed and showed the skeleton.
+const READ_EXACT = new Set(['detail', 'citedBy', 'coords', 'sources', 'users', 'dependentCount', 'pinChains', 'descendantCount', 'neighbourhood', 'summary']);
 
 export function isReadMethod(name: string): boolean {
   return READ_EXACT.has(name) || READ_PREFIXES.some((p) => name.startsWith(p));

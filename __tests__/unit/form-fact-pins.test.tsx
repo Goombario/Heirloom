@@ -83,8 +83,8 @@ describe('unsourced pins', () => {
     it('hides revealed pins at rest only in read-view fact rows, never on forms', async () => {
         const { readFileSync } = await import('node:fs');
         const css = readFileSync('app/globals.css', 'utf8');
-        expect(css).toContain(':is(.tl-med-ev, tr) .cite-hover-pin { opacity: 0; }');
-        expect(css).toContain(':is(.tl-med-ev, tr):is(:hover, :focus-within) .cite-hover-pin');
+        expect(css).toContain(':is(.tl-med-ev, tr, #names .name-list__row) .cite-hover-pin { opacity: 0; }');
+        expect(css).toContain(':is(.tl-med-ev, tr, #names .name-list__row):is(:hover, :focus-within) .cite-hover-pin');
         expect(css).not.toContain('sources-cited-empty');
         expect(readFileSync('app/components/ui/FormField.tsx', 'utf8')).not.toContain('cite-reveal');
     });

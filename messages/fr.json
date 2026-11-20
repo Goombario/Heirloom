@@ -602,7 +602,6 @@
     "desk_counts": "{people, plural, one {# personne} other {# personnes}} · {families, plural, one {# famille} other {# familles}}",
     "desk_counts_span": "{people, plural, one {# personne} other {# personnes}} · {families, plural, one {# famille} other {# familles}} · <y>{first}–{last}</y>",
     "next_for": "Prochaines étapes pour {name}",
-    "steps_open": "{count, plural, one {# ouverte} other {# ouvertes}}",
     "step_birth_date": "Date de naissance",
     "step_birth_date_why": "Aucune date n’est enregistrée pour la naissance.",
     "step_death_date": "Date de décès",
@@ -5245,8 +5244,7 @@
     "name_on_record": "Nom à l’état civil",
     "name_shown": "affiché",
     "none_yet": "Rien pour l’instant",
-    "sources_none": "Rien pour l’instant. Citez-en une depuis le repère de source d’un fait.",
-    "name_on_record_lower": "nom à l’état civil"
+    "sources_none": "Rien pour l’instant. Citez-en une depuis le repère de source d’un fait."
   },
   "addPersonDialog": {
     "title": "Nouvelle personne",

@@ -16,6 +16,8 @@ vi.mock('@/app/components/GuardedLink', () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
 vi.mock('@/app/components/PersonAvatar', () => ({ default: () => null }));
+const openQuickAdd = vi.fn();
+vi.mock('@/app/components/QuickAddHost', () => ({ openQuickAdd: (kind: string) => openQuickAdd(kind) }));
 vi.mock('@/app/hooks/useActiveTreeName', () => ({ useActiveTreeName: () => 'Lindqvist tree' }));
 vi.mock('@/app/hooks/useTimestamp', () => ({ useTimestamp: () => ({ activityTime: (v: string) => v }) }));
 
@@ -86,7 +88,7 @@ describe('MobileHome (#1061)', () => {
     expect(screen.getByText('mobile_possible_duplicates').closest('a')).toHaveAttribute('href', '/people?filter=duplicates');
     expect(screen.getByText('cases_in_progress_title').closest('a')).toHaveTextContent('2');
     screen.getByRole('button', { name: 'add_person_short' }).click();
-    expect(router.push).toHaveBeenCalledWith('/people?add=1');
+    expect(openQuickAdd).toHaveBeenCalledWith('person');
     expect(screen.getByText('mobile_signoff')).toBeInTheDocument();
   });
 
@@ -116,7 +118,9 @@ describe('MobileHome (#1061)', () => {
     expect(screen.queryByRole('link', { name: 'tree' })).toBeNull();
     screen.getByRole('button', { name: 'import_gedcom' }).click();
     expect(router.push).toHaveBeenCalledWith('/import-export');
-    expect(screen.getByText('add_person_short').closest('a')).toHaveAttribute('href', '/people?add=1');
+    openQuickAdd.mockClear();
+    (screen.getByText('add_person_short').closest('button, [role="button"], a') as HTMLElement).click();
+    expect(openQuickAdd).toHaveBeenCalledWith('person');
     expect(screen.queryByText('mobile_needs_attention')).toBeNull();
   });
 });

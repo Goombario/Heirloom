@@ -602,7 +602,6 @@
     "desk_counts": "{people, plural, one {# человек} few {# человека} many {# человек} other {# человека}} · {families, plural, one {# семья} few {# семьи} many {# семей} other {# семьи}}",
     "desk_counts_span": "{people, plural, one {# человек} few {# человека} many {# человек} other {# человека}} · {families, plural, one {# семья} few {# семьи} many {# семей} other {# семьи}} · <y>{first}–{last}</y>",
     "next_for": "Дальше для {name}",
-    "steps_open": "{count} открыто",
     "step_birth_date": "Дата рождения",
     "step_birth_date_why": "Дата рождения не указана.",
     "step_death_date": "Дата смерти",
@@ -5245,8 +5244,7 @@
     "name_on_record": "Имя по документам",
     "name_shown": "показано",
     "none_yet": "Пока нет",
-    "sources_none": "Пока нет. Сошлитесь на источник через значок источника у факта.",
-    "name_on_record_lower": "имя по документам"
+    "sources_none": "Пока нет. Сошлитесь на источник через значок источника у факта."
   },
   "addPersonDialog": {
     "title": "Новый человек",

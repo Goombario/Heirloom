@@ -602,7 +602,6 @@
     "desk_counts": "{people, plural, one {# person} other {# people}} · {families, plural, one {# family} other {# families}}",
     "desk_counts_span": "{people, plural, one {# person} other {# people}} · {families, plural, one {# family} other {# families}} · <y>{first}–{last}</y>",
     "next_for": "Next for {name}",
-    "steps_open": "{count} open",
     "step_birth_date": "Birth date",
     "step_birth_date_why": "No date is recorded for the birth.",
     "step_death_date": "Death date",
@@ -5245,8 +5244,7 @@
     "name_on_record": "Name on record",
     "name_shown": "shown",
     "none_yet": "None yet",
-    "sources_none": "None yet. Cite one from a fact’s source pin.",
-    "name_on_record_lower": "name on record"
+    "sources_none": "None yet. Cite one from a fact’s source pin."
   },
   "addPersonDialog": {
     "title": "New person",

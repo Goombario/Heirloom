@@ -25,6 +25,19 @@ describe('withCacheInvalidation', () => {
     expect(dataCache.has('x')).toBe(true);
   });
 
+  it('leaves the cache alone for the home page reads, so a revisit hits it', async () => {
+    const reads = {
+      dashboard: { get: vi.fn(async () => ({})), suggestions: vi.fn(async () => []) },
+      dataChecks: { summary: vi.fn(async () => ({ openCount: 0 })) },
+    };
+    const client = withCacheInvalidation(reads as unknown as import('@/lib/data/types').DataClient);
+    dataCache.set('x', 1);
+    await client.dashboard.get(1);
+    await client.dashboard.suggestions(1);
+    await client.dataChecks.summary(1);
+    expect(dataCache.has('x')).toBe(true);
+  });
+
   it('clears the cache after a write resolves', async () => {
     const client = withCacheInvalidation(makeFakeClient());
     dataCache.set('x', 1);

@@ -363,11 +363,14 @@ export default function PersonDetailsClient() {
         if (role === 'viewer' && !(citationMap[`${fact.factTable}:${fact.factId}`]?.length)) return null;
         return renderNumberedCitePin(fact.factTable, fact.factId, label);
     };
+    // Null until the names first load, so the heading falls back to the person row.
+    const loadedVariants = variantsLoading && variants.length === 0 ? null : variants;
     const phonePage = (
         <MobilePersonPage
             person={person}
             media={media}
             variants={variants}
+            variantsLoaded={loadedVariants != null}
             notes={notes}
             biography={primaryNote}
             facts={personCitationFacts}
@@ -437,6 +440,7 @@ export default function PersonDetailsClient() {
 
                 <PersonCover
                     person={person}
+                    variants={loadedVariants}
                     media={media}
                     treeId={activeTreeId}
                     role={role}
@@ -574,7 +578,6 @@ export default function PersonDetailsClient() {
                                     <span className="section-empty__name serif">{fullName(person)}</span>
                                     {renderNumberedCitePin(FACT_TABLES.PERSON_NAME, person.Id, t('col_name'))}
                                 </span>
-                                {' · '}{tDesk('name_on_record_lower')}
                             </SectionEmpty>
                         ) : (<>
                         <SectionHeader level="label" headingId="names-title" title={tDesk('names')} action={addName} />
@@ -622,6 +625,10 @@ export default function PersonDetailsClient() {
                     <SourcesSection
                         facts={personCitationFacts}
                         title={t('sources_cited')}
+                        treeId={activeTreeId}
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        onChanged={() => { void fetchCitations(); }}
                         notice={citationsError && (
                             <InlineDataError message={citationsError} retryLabel={tc('retry')} onRetry={fetchCitations} className="mb-3" />
                         )}

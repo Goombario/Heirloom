@@ -43,7 +43,7 @@ export default function Cite({ n, empty, pending, factLabel, searchOnly = false,
             : searchOnly
                 ? t('search_records_for', { fact: fact ?? '' })
                 : fact ? t('attach_source_for', { fact }) : t('attach_source');
-        const reveal = more ? ' cite-hover-pin cite-more-pin' : searchOnly ? ' cite-hover-pin' : '';
+        const reveal = more ? ' cite-hover-pin cite-more-pin' : searchOnly ? ' cite-hover-pin' : ' cite-empty-pin';
         // A pin that can't act yet (citations still loading) isn't a button: it
         // keeps its place on the line but stays out of the accessibility tree (#861).
         if (!onClick) {

@@ -469,7 +469,8 @@ export default function FamilyDetailsClient() {
                         </>
                     )}
 
-                    <SourcesSection facts={familyCitationFacts} title={t('detail_sources_cited')} />
+                    <SourcesSection facts={familyCitationFacts} title={t('detail_sources_cited')}
+                        treeId={activeTreeId} canEdit={canEdit} canDelete={canDelete} onChanged={() => { void fetchFamily(); }} />
                 </DetailBody>
                 </div>
             </PageShell>

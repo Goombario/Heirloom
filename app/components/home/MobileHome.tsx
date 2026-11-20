@@ -18,6 +18,7 @@ import { avatarClass } from '@/lib/utils/avatar';
 import { getInitials } from '@/lib/utils/initials';
 import { displayFullName } from '@/lib/utils/names';
 import { useChangeLine } from './useChangeLine';
+import { openQuickAdd } from '@/app/components/QuickAddHost';
 
 /*
  * The home page on phones (#1061, umbrella #1067): a compact dark band instead of the
@@ -133,7 +134,7 @@ export function MobileHome({ data, phase, settingUp = false, datesToCheck, dupli
                             <div className="px-4 pt-1.5 pb-3">
                                 <CopperPill icon={<Upload aria-hidden="true" />} onClick={() => router.push('/import-export')}>{t('import_gedcom')}</CopperPill>
                             </div>
-                            <MobileRow icon={<Plus />} label={t('add_person_short')} end="chevron" divided href="/people?add=1" />
+                            <MobileRow icon={<Plus />} label={t('add_person_short')} end="chevron" divided onClick={() => openQuickAdd('person')} />
                         </>
                     )}
                 </div>
@@ -143,7 +144,7 @@ export function MobileHome({ data, phase, settingUp = false, datesToCheck, dupli
                     {resumed && <PickUpRow person={resumed} treeId={treeId} viewer={!canEdit} />}
                     {canEdit && (
                         <div className="px-4 pt-[18px]">
-                            <CopperPill icon={<Plus aria-hidden="true" />} onClick={() => router.push('/people?add=1')}>{t('add_person_short')}</CopperPill>
+                            <CopperPill icon={<Plus aria-hidden="true" />} onClick={() => openQuickAdd('person')}>{t('add_person_short')}</CopperPill>
                         </div>
                     )}
                     {(resumed || recent.length > 0) && (

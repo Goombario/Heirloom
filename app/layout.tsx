@@ -20,6 +20,8 @@ import { AppToaster } from "./components/ui";
 import { BackgroundMediaStatus } from "./components/media/BackgroundMediaStatus";
 import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import { SkipLink } from '@/app/components/SkipLink';
+import { Suspense } from "react";
+import QuickAddHost from "./components/QuickAddHost";
 
 // `subsets` only picks what is preloaded: next/font ships every subset's
 // @font-face (unicode-range), so Inter and JetBrains Mono already render
@@ -151,6 +153,8 @@ export default function RootLayout({
                 <RegisterServiceWorker />
                 <DesktopWindowFit />
                 <GlobalSearch />
+                {/* New person / New family over any page (it reads the URL, hence Suspense). */}
+                <Suspense fallback={null}><QuickAddHost /></Suspense>
                 <LocalFirstRunNotice />
                 <WhatsNewOnUpdate />
                 <AppToaster />

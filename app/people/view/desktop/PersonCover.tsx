@@ -10,7 +10,7 @@ import { getInitials } from '@/lib/utils/initials';
 import ProfileImage from '@/app/components/ProfileImage';
 import { CoverBand, Lifespan, RecordMenu, cx, type RecordMenuItem } from '@/app/components/ui';
 import { LeadNote } from '@/app/components/notes/LeadNote';
-import { avatarClass, fullName, hasDeathFact } from '../derive';
+import { avatarClass, hasDeathFact, headingName, headingNameText } from '../derive';
 import { nameBarParts } from '../mobile/model';
 import type { RunChange } from '../mobile/useChange';
 
@@ -19,8 +19,10 @@ import type { RunChange } from '../mobile/useChange';
  * hanging over its lower edge, the name and life line, the one ⋯ menu (Edit person,
  * Descendants, Delete person) and the biography beside the portrait.
  */
-export function PersonCover({ person, media, treeId, role, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
+export function PersonCover({ person, variants = null, media, treeId, role, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
   person: PersonWithRelations;
+  /** The loaded names, or null before they load: a starred name heads the page at once. */
+  variants?: Parameters<typeof headingName>[1];
   media: PersonGalleryMedia[];
   treeId: number | null;
   role: 'viewer' | 'contributor' | 'editor';
@@ -38,7 +40,7 @@ export function PersonCover({ person, media, treeId, role, biography, bioRequest
 }) {
   const t = useTranslations('personDesktop');
   const tp = useTranslations('personDetail');
-  const name = fullName(person, tp('unknown'));
+  const name = headingNameText(person, variants, tp('unknown'));
   const canWrite = role !== 'viewer';
 
   const items: RecordMenuItem[] = [
@@ -47,8 +49,9 @@ export function PersonCover({ person, media, treeId, role, biography, bioRequest
     ...(role === 'editor' ? [{ label: t('delete_person'), danger: true, separated: true, onSelect: onDelete }] : []),
   ];
 
-  const nickname = person.Nickname ?? null;
-  const title = (
+  // A starred nickname sits in the given names; any other starred name replaces them.
+  const { whole, nickname } = headingName(person, variants);
+  const title = whole ?? (
     <>
       {person.FirstName}
       {nickname && <> “{nickname}”</>}
@@ -83,7 +86,7 @@ export function PersonCover({ person, media, treeId, role, biography, bioRequest
         </span>
       ) : undefined}
       titleAside={items.length > 0 ? <RecordMenu tone="island" recordName={name} items={items} /> : undefined}
-      portrait={<Portrait person={person} media={media} treeId={treeId} canEdit={canWrite} onAdd={onAddPortrait} onOpen={onOpenPortrait} />}
+      portrait={<Portrait person={person} name={name} media={media} treeId={treeId} canEdit={canWrite} onAdd={onAddPortrait} onOpen={onOpenPortrait} />}
       lead={<Biography person={person} biography={biography} treeId={treeId} canEdit={canWrite} canDelete={role === 'editor'} run={run} request={bioRequest} />}
     />
   );
@@ -97,14 +100,13 @@ export function shortPlace(place: string | null | undefined): string {
 
 const noSubscribe = () => () => {};
 
-function Portrait({ person, media, treeId, canEdit, onAdd, onOpen }: {
-  person: PersonWithRelations; media: PersonGalleryMedia[]; treeId: number | null; canEdit: boolean;
+function Portrait({ person, name, media, treeId, canEdit, onAdd, onOpen }: {
+  person: PersonWithRelations; name: string; media: PersonGalleryMedia[]; treeId: number | null; canEdit: boolean;
   onAdd: () => void; onOpen: (m: PersonGalleryMedia) => void;
 }) {
   const tp = useTranslations('personDetail');
   const t = useTranslations('personDesktop');
   const photo = media.find((m) => m.IsPersonPrimary);
-  const name = fullName(person, tp('unknown'));
   // The 2048px portrait loads eagerly only on a hydrated desktop: phones hide this
   // header behind their own page, and the server can't know the viewport.
   const isMobile = useIsMobile();
