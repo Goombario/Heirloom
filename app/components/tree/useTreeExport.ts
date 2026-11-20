@@ -3,6 +3,13 @@ import { useTranslations } from 'next-intl';
 import type { ReactFlowInstance } from 'reactflow';
 
 /**
+ * Drawn in place of an image html-to-image cannot fetch, so one missing photo
+ * leaves a blank box instead of rejecting the whole export (#186).
+ */
+const TRANSPARENT_PIXEL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+/**
  * Custom React Hook: Tree Export to JPEG
  *
  * Provides JPEG export functionality for the React Flow tree visualization.
@@ -32,8 +39,8 @@ export function useTreeExport() {
    * 3. Transform viewport to show entire tree at 100% zoom
    * 4. Wait for layout to settle
    * 5. Capture with html-to-image
-   * 6. Restore original viewport
-   * 7. Trigger download
+   * 6. Trigger download
+   * 7. Restore container size and viewport (also on failure)
    */
   const exportAsJPEG = useCallback(
     async (currentRootId: number) => {
@@ -44,15 +51,18 @@ export function useTreeExport() {
 
       setIsExporting(true);
 
-      try {
-        const instance = reactFlowInstanceRef.current;
-        const container = containerRef.current;
+      const instance = reactFlowInstanceRef.current;
+      const container = containerRef.current;
 
-        // Step 1: Save current viewport and container styles
-        const originalViewport = instance.getViewport();
-        const originalWidth = container.style.width;
-        const originalHeight = container.style.height;
-        const originalOverflow = container.style.overflow;
+      // Step 1: Save current viewport and container styles. They are put back
+      // in `finally`, so a failed capture never leaves the tree resized.
+      const originalViewport = instance.getViewport();
+      const originalWidth = container.style.width;
+      const originalHeight = container.style.height;
+      const originalOverflow = container.style.overflow;
+      let resized = false;
+
+      try {
 
         // Step 2: Get all nodes and calculate bounding box
         const nodes = instance.getNodes();
@@ -71,6 +81,7 @@ export function useTreeExport() {
         container.style.width = `${exportWidth}px`;
         container.style.height = `${exportHeight}px`;
         container.style.overflow = 'visible';
+        resized = true;
 
         // Step 4: Transform viewport to show entire tree at zoom 1
         // Position so that all nodes are visible starting from top-left with padding
@@ -105,7 +116,9 @@ export function useTreeExport() {
             width: `${exportWidth}px`,
             height: `${exportHeight}px`,
           },
-          cacheBust: true,
+          // No cacheBust: it appends `?<time>` to every URL it inlines, and a
+          // local blob: photo URL with a query string does not resolve (#186).
+          imagePlaceholder: TRANSPARENT_PIXEL,
           filter: (node) => {
             // Exclude controls, minimap, and attribution
             const exclusions = [
@@ -121,24 +134,23 @@ export function useTreeExport() {
           },
         });
 
-        // Step 7: Restore original container size
-        container.style.width = originalWidth;
-        container.style.height = originalHeight;
-        container.style.overflow = originalOverflow;
-
-        // Step 8: Trigger download
+        // Step 7: Trigger download
         const link = document.createElement('a');
         link.download = `family_tree_${currentRootId}.jpg`;
         link.href = dataUrl;
         link.click();
-
-        // Step 9: Restore original viewport with smooth animation
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        instance.setViewport(originalViewport, { duration: 200 });
       } catch (error) {
         console.error('Failed to export tree as JPEG:', error);
         alert(t('export_failed'));
       } finally {
+        // Step 8: Restore the container and viewport, whether or not the capture worked
+        container.style.width = originalWidth;
+        container.style.height = originalHeight;
+        container.style.overflow = originalOverflow;
+        if (resized) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          instance.setViewport(originalViewport, { duration: 200 });
+        }
         setIsExporting(false);
       }
     },
