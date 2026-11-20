@@ -4,6 +4,7 @@ import React, { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DATA_MODE } from '@/lib/data';
+import { useBackupAge } from './desktop/lastBackup';
 import type { GedcomDryRunResponse, MediaExportPreflight, MediaImportItem, SkippedRecord, SpreadsheetDryRunResponse, SpreadsheetImportResponse, TreeCounts } from '@/lib/data/types';
 import { GEDCOM_IMPORT_STEPS, type GedcomImportStep } from '@/lib/gedcom/import-steps';
 import type { NamedCounts } from '@/lib/gedcom/overwrite-gate';
@@ -93,6 +94,7 @@ export function MobileImportExport(p: MobileImportExportProps) {
     const [job, setJob] = useState<Job | null>(null);
     const [small, setSmall] = useState<Small | null>(null);
     const [backedUp, setBackedUp] = useState(false);
+    const { mark: markBackup } = useBackupAge(p.activeTreeId);
     const canImport = p.permission !== 'view';
     const canReplace = p.permission === 'owner' || p.permission === 'edit';
     const counts = p.liveCounts;
@@ -159,7 +161,7 @@ export function MobileImportExport(p: MobileImportExportProps) {
 
             {(job === 'merge' || job === 'restore') && (
                 <ImportSheet p={p} restore={job === 'restore'} backedUp={backedUp} onClose={close}
-                    onBackup={async () => { if (await p.onExport(true)) setBackedUp(true); }}
+                    onBackup={async () => { if (await p.onExport(true)) { markBackup(); setBackedUp(true); } }}
                     onSmall={setSmall} />
             )}
             {job === 'xl' && <SpreadsheetSheet p={p} onClose={close} onSmall={setSmall} />}
@@ -222,6 +224,7 @@ function Eyebrow({ children, action }: { children: React.ReactNode; action?: Rea
 function ImportSheet({ p, restore, backedUp, onClose, onBackup, onSmall }: {
     p: MobileImportExportProps; restore: boolean; backedUp: boolean; onClose: () => void; onBackup: () => void; onSmall: (s: Small) => void;
 }) {
+    const { age, when } = useBackupAge(p.activeTreeId);
     const t = useTranslations('mobileImport');
     const ti = useTranslations('importExport');
     const desktop = useIsDesktopApp();
@@ -252,17 +255,21 @@ function ImportSheet({ p, restore, backedUp, onClose, onBackup, onSmall }: {
                                     <MobileRow icon={<Check />} label={t('backup_downloaded')} />
                                 ) : (
                                     <MobileRow icon={p.exportBusy ? <Loader2 className="animate-spin" /> : <Download />} label={p.exportBusy ? t('preparing_backup') : t('download_backup_now')}
-                                        sub={t('backup_sub')} disabled={p.exportBusy} onClick={onBackup} />
+                                        sub={age.kind === 'recent' ? t('backup_age_recent', { when: when ?? '' }) : t('backup_sub')} disabled={p.exportBusy} onClick={onBackup} />
                                 )}
                                 <Eyebrow>{t('step_file')}</Eyebrow>
                             </>
                         )}
                         {!restore && <Eyebrow>{t('the_file')}</Eyebrow>}
                         <FileRow file={p.file} accept=".ged,.zip" label={t('choose_file')} sub={t('choose_file_sub')} onFile={p.onFile} />
-                        {restore && !backedUp && p.file && <p className="m-0 px-4 pt-1 pb-3 text-meta leading-snug text-text-muted">{t('no_backup_yet')}</p>}
+                        {/* Warn only with no backup on this device, or an old one (#193). */}
+                        {restore && !backedUp && p.file && age.kind !== 'recent' && (
+                            <p className="m-0 px-4 pt-1 pb-3 text-meta leading-snug text-warning-text">{age.kind === 'old' ? t('backup_age_old', { when: when ?? '' }) : t('no_backup_yet')}</p>
+                        )}
                         {!restore && (
                             <p className="m-0 px-4 pt-1 pb-3 text-meta leading-snug text-text-muted">
                                 {p.treeEmpty ? t('empty_all_in', { tree: p.treeName }) : t('merge_skips')}
+                                {!p.treeEmpty && <> {age.kind === 'none' ? t('no_backup_device') : t('backup_age_recent', { when: when ?? '' })}</>}
                             </p>
                         )}
                         <MobileRow divided icon={<CircleHelp />} end="chevron" label={t('zip_title')} sub={t('zip_sub')} onClick={() => onSmall('zip')} />

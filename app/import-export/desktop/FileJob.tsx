@@ -13,7 +13,7 @@ import MediaImportRecovery from '../MediaImportRecovery';
 import { ImportReport } from '../ImportReport';
 import type { ImportViewProps } from './DesktopImportExport';
 import { DropZone, HelpCard, JobShell, TreeCard } from './JobShell';
-import { useLastBackup } from './lastBackup';
+import { useBackupAge } from './lastBackup';
 import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /** A browser-build import of this many people takes long enough to warn about (ST-1). */
@@ -31,7 +31,7 @@ export function FileJob({ p, restore, onLeave }: { p: ImportViewProps; restore: 
     const tm = useTranslations('mobileImport');
     const ti = useTranslations('importExport');
     const desktop = useIsDesktopApp();
-    const [, markBackup] = useLastBackup(p.activeTreeId);
+    const { age, when, mark: markBackup } = useBackupAge(p.activeTreeId);
     const [backedUp, setBackedUp] = useState(false);
     const [showSkipped, setShowSkipped] = useState(false);
     const [importedFrom, setImportedFrom] = useState<string | null>(null);
@@ -117,11 +117,12 @@ export function FileJob({ p, restore, onLeave }: { p: ImportViewProps; restore: 
                             {backedUp ? (
                                 <p className="m-0 flex items-center gap-2 text-sm font-medium text-success"><Check className="w-4 h-4" aria-hidden="true" />{tm('backup_downloaded')}</p>
                             ) : (
-                                <Button className="justify-self-start" onClick={() => { void backUp(); }} disabled={p.exportBusy} aria-busy={p.exportBusy}
+                                <Button className="justify-self-start" variant={age.kind === 'recent' ? 'outline' : 'primary'} onClick={() => { void backUp(); }} disabled={p.exportBusy} aria-busy={p.exportBusy}
                                     icon={p.exportBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Download className="w-4 h-4" aria-hidden="true" />}>
                                     {p.exportBusy ? tm('preparing_backup') : tm('download_backup_now')}
                                 </Button>
                             )}
+                            {!backedUp && age.kind === 'recent' && <p className="m-0 text-sm text-text-muted">{tm('backup_age_recent', { when: when ?? '' })}</p>}
                             {p.exportError && <p role="alert" className="m-0 text-sm text-error">{p.exportError}</p>}
                         </section>
                     )}
@@ -137,10 +138,17 @@ export function FileJob({ p, restore, onLeave }: { p: ImportViewProps; restore: 
                             onFile={p.onFile}
                         />
                         {restore
-                            ? !backedUp && p.file && (
-                                <p className="m-0 flex items-start gap-2 text-sm text-warning-text"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />{t('no_backup_warning')}</p>
+                            // Warn only with no backup on this device, or an old one (#193).
+                            ? !backedUp && p.file && age.kind !== 'recent' && (
+                                <p className="m-0 flex items-start gap-2 text-sm text-warning-text"><AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+                                    {age.kind === 'old' ? tm('backup_age_old', { when: when ?? '' }) : t('no_backup_warning')}</p>
                             )
-                            : <p className="m-0 text-sm text-text-muted">{p.treeEmpty ? tm('empty_all_in', { tree: p.treeName }) : t('merge_note')}</p>}
+                            : (
+                                <>
+                                    <p className="m-0 text-sm text-text-muted">{p.treeEmpty ? tm('empty_all_in', { tree: p.treeName }) : t('merge_note')}</p>
+                                    {!p.treeEmpty && <p className="m-0 text-sm text-text-muted">{age.kind === 'none' ? tm('no_backup_device') : tm('backup_age_recent', { when: when ?? '' })}</p>}
+                                </>
+                            )}
                     </section>
                 </>
             )}
