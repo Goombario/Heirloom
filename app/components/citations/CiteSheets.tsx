@@ -55,8 +55,12 @@ export interface CiteSheetTarget {
     citationId?: number | null;
 }
 
-/** Renders the sheets for a target, so a sheet can nest them inside itself (the event sheet's Sources). */
-export type CiteSheetsSlot = (target: CiteSheetTarget | null, onClose: () => void) => React.ReactNode;
+/**
+ * Renders the sheets for a target, so a sheet can nest them inside itself (the event
+ * sheet's Sources). `onPending` queues the citation instead, for a fact not saved yet
+ * (a new event, #192).
+ */
+export type CiteSheetsSlot = (target: CiteSheetTarget | null, onClose: () => void, onPending?: (pending: PendingCitation) => void) => React.ReactNode;
 
 interface CiteSheetsProps {
     /** Null closes the sheets. */

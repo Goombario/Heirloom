@@ -26,6 +26,11 @@ import { useEventMediaDraft } from '@/app/components/media/useEventMediaDraft';
 import { FAMILY_EVENT_TYPES, familyEventLabel } from './familyEventTypes';
 import { isVitalPersonType, vitalPatchFor } from './person-form/vitalEvent';
 import type { UpdatePersonInput } from '@/lib/data/types';
+import Cite from '@/app/components/Cite';
+import AttachSourceSidebar, { type PendingCitation } from '@/app/components/AttachSourceSidebar';
+import { PendingSources } from '@/app/components/citations/PendingSources';
+import { attachPendingCitations } from '@/app/components/citations/pendingCitations';
+import { FACT_TABLES, type FactTableValue } from '@/lib/db/fact-tables';
 
 interface InlineEventEditorProps {
     target:
@@ -223,6 +228,16 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
         onSaved();
     }
 
+    // Sources picked in the Add an event composer (#192). A citation needs the
+    // event's id, so they wait here and are written right after it is created.
+    const [pendingCites, setPendingCites] = useState<PendingCitation[]>([]);
+    const [citing, setCiting] = useState(false);
+    const pendingCitesRef = useRef(pendingCites);
+    pendingCitesRef.current = pendingCites;
+    /** Where this fact's citations go: birth and death are the person's own columns. */
+    const citeFactTable = (forType: string): FactTableValue =>
+        isVitalPersonType(target, forType) ? (forType === 'DEAT' ? FACT_TABLES.PERSON_DEATH : FACT_TABLES.PERSON_BIRTH) : FACT_TABLES.EVENTS;
+
     const draft = useEventMediaDraft({ treeId: activeTreeId, galleryPersonId: target.kind === 'person' ? target.personId : undefined });
     // Birth and death live on the People row, which can't hold media yet (#905),
     // so a draft staged before switching to them would be dropped on Save.
@@ -259,7 +274,8 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     // but not yet blurred, which hasn't reached `date` (#861).
     const dirty = type !== (event?.Type ?? defaultType ?? vitalLock ?? '') || date !== (event?.Date ?? '')
         || place !== (event?.Place ?? '') || placeId !== (event?.PlaceId ?? null) || description !== (event?.Description ?? '')
-        || cause !== (vitalLock === 'DEAT' ? event?.Description ?? '' : '');
+        || cause !== (vitalLock === 'DEAT' ? event?.Description ?? '' : '')
+        || pendingCites.length > 0;
     const dirtyRef = useRef(dirty);
     useEffect(() => { dirtyRef.current = dirty; });
 
@@ -376,6 +392,21 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
                     }
                 } catch {
                     // Non-fatal — coordinates are a cache, not user content.
+                }
+            }
+            // Queued sources (#192) go on the fact now that it has an id. One that
+            // fails stays queued, and the editor stays open on the saved event so
+            // Save can try it again.
+            const queued = pendingCitesRef.current;
+            const citeFactId = savesVital ? target.personId : savedEvent?.Id;
+            if (queued.length > 0 && citeFactId != null) {
+                const failed = await attachPendingCitations(client, queued, citeFactTable(type), citeFactId, activeTreeId);
+                setPendingCites(failed);
+                if (failed.length > 0) {
+                    setError(t('sources_failed', { count: failed.length }));
+                    try { await onRefresh?.(); } catch { /* parent refresh is best-effort */ }
+                    setSaving(false);
+                    return;
                 }
             }
             if (createdNow && savedEvent && draft.items.length > 0) {
@@ -655,6 +686,27 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
                 </div>
             ))}
             {notesSlot && <div>{notesSlot}</div>}
+            {!sourcesSlot && !isSyntheticVital && (!persistedEvent || pendingCites.length > 0) && (
+                <div>
+                    <span className={fieldLabel}>{t('field_sources')}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <PendingSources look="pins" pending={pendingCites}
+                            onRemove={(i) => setPendingCites((prev) => prev.filter((_, j) => j !== i))} />
+                        <Cite empty factLabel={type ? optionLabel(type) : t('new_event')} onClick={() => setCiting(true)} />
+                    </div>
+                    {citing && (
+                        <AttachSourceSidebar
+                            factTable={citeFactTable(type)}
+                            factId={null}
+                            factLabel={type ? optionLabel(type) : t('new_event')}
+                            initialView="add"
+                            canDetach={false}
+                            onPending={(p) => setPendingCites((prev) => [...prev, p])}
+                            onClose={() => setCiting(false)}
+                        />
+                    )}
+                </div>
+            )}
             {sourcesSlot && (
                 <div>
                     <span className={fieldLabel}>{t('field_sources')}</span>

@@ -17,10 +17,13 @@ import { useEventMediaDraft } from '@/app/components/media/useEventMediaDraft';
 import { FAMILY_EVENT_TYPES } from '@/app/components/familyEventTypes';
 import type { CitationFactDescriptor } from '@/app/components/citations/types';
 import type { CiteSheetsSlot } from '@/app/components/citations/CiteSheets';
+import type { PendingCitation } from '@/app/components/AttachSourceSidebar';
+import { PendingSources } from '@/app/components/citations/PendingSources';
+import { attachPendingCitations } from '@/app/components/citations/pendingCitations';
 import type { SourceNumbers } from '@/app/components/citations/factDescriptors';
 import { MobileRow, cx, fieldClass, showErrorToast } from '@/app/components/ui';
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
-import { Camera, Pencil, Trash2 } from '@/lib/icons';
+import { Camera, Pencil, Plus, Trash2 } from '@/lib/icons';
 import type { RunChange } from '@/app/people/view/mobile/useChange';
 import { END_REASON_TAGS, endReasonOf, partnerShortName } from '../derive';
 import { COMMON_FAMILY_EVENTS, endingOf, isEndType, kindKey, type EndType, type PhoneFamily } from './model';
@@ -139,6 +142,8 @@ function Body({ open, flow, onClose, data, treeId, language, canDelete, facts, s
     const [saving, setSaving] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const [citing, setCiting] = useState(false);
+    // Sources cited on a new event wait here until it is saved (#192).
+    const [pendingCites, setPendingCites] = useState<PendingCitation[]>([]);
     const formRef = useRef<HTMLDivElement>(null);
     const sourcesRef = useRef<HTMLDivElement>(null);
     const typeRef = useRef<HTMLDivElement>(null);
@@ -146,7 +151,7 @@ function Body({ open, flow, onClose, data, treeId, language, canDelete, facts, s
 
     const isForm = step.step === 'start' || step.step === 'end' || step.step === 'event';
     const dirty = isForm && (draft.type !== saved.type || draft.date !== saved.date || draft.place !== saved.place || draft.placeId !== saved.placeId
-        || draft.detail !== saved.detail || resolution !== undefined || draftMedia.items.length > 0);
+        || draft.detail !== saved.detail || resolution !== undefined || draftMedia.items.length > 0 || pendingCites.length > 0);
     const startType = (family.Type ?? 'Unknown') as FamilyType;
     const kindWord = t(`kind_${kindKey(step.step === 'start' ? draft.type as FamilyType : startType)}`);
     const when = (d: string | null | undefined, p: string | null | undefined) =>
@@ -254,11 +259,15 @@ function Body({ open, flow, onClose, data, treeId, language, canDelete, facts, s
         const date = draft.date.trim(), place = draft.place.trim(), detail = draft.detail.trim();
         let key = '';
         let mediaFailed = false;
+        let citesFailed = 0;
         const ok = await run(async () => {
             const client = await getDataClient();
             const body = { Type: type, Date: date || null, Place: place || null, PlaceId: place ? draft.placeId : null, Description: detail || null, FamilyId: family.Id, PersonId: null };
             const row = step.event ? await client.events.update(step.event.Id, body, treeId) : await client.events.create(body, treeId);
             key = `event-${row.Id}`;
+            if (isNew && pendingCites.length > 0) {
+                citesFailed = (await attachPendingCitations(client, pendingCites, FACT_TABLES.EVENTS, row.Id, treeId)).length;
+            }
             if (isNew && draftMedia.items.length > 0) {
                 try { mediaFailed = (await draftMedia.process(row.Id)).failed.length > 0; } catch { mediaFailed = true; }
             }
@@ -268,6 +277,7 @@ function Body({ open, flow, onClose, data, treeId, language, canDelete, facts, s
         setSaving(false);
         if (!ok) return;
         if (mediaFailed) showErrorToast(te('media_failed'));
+        if (citesFailed > 0) showErrorToast(te('sources_failed', { count: citesFailed }));
         onSaved(key);
         setSaved(draft);
         onClose();
@@ -483,7 +493,18 @@ function Body({ open, flow, onClose, data, treeId, language, canDelete, facts, s
                         <MobileRow divided icon={<Camera />} end="chevron" label={te('attach_media')} onClick={() => setShowMedia(true)} />
                     )}
                 </div>
-                {ev && sourcesGroup(FACT_TABLES.EVENTS, ev.Id)}
+                {ev ? sourcesGroup(FACT_TABLES.EVENTS, ev.Id) : (
+                    <div className="-mx-4 border-t border-border pt-4 mt-2">
+                        <h3 className="eyebrow m-0 px-4 mb-1">{te('sources')}</h3>
+                        {pendingCites.length === 0 && <p className="m-0 px-4 pb-1 text-base text-text-muted">{te('no_source_yet')}</p>}
+                        <PendingSources look="rows" pending={pendingCites} onRemove={(i) => setPendingCites((prev) => prev.filter((_, j) => j !== i))} />
+                        <MobileRow icon={<Plus />} end="chevron" label={te('cite_source')} onClick={() => setCiting(true)} />
+                        {citeSheets(citing ? {
+                            fact: { factTable: FACT_TABLES.EVENTS, factId: -1, label: typeLabel, value: '', citations: [] },
+                            start: 'pick',
+                        } : null, () => setCiting(false), (p) => setPendingCites((prev) => [...prev, p]))}
+                    </div>
+                )}
                 {ev && canDelete && deleteRow(te('delete_row', { type: inline }), te('delete_event_hint'))}
                 {ev && (
                     <ConfirmSheet

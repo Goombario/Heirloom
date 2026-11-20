@@ -117,6 +117,9 @@
     "attach_source_for": "Rattacher une source pour {fact}",
     "attach_another_source_for": "Rattacher une autre source pour {fact}",
     "pending_source": "Source en attente d’enregistrement",
+    "pending_sources": "Sources à enregistrer avec cet événement",
+    "pending_source_untitled": "Nouvelle source",
+    "remove_pending_source": "Retirer {title}",
     "source_label_n": "Source {n}",
     "source_label_with_title": "Source {n} : {title}",
     "view_in_library_with_title": "{title} — voir dans la bibliothèque",
@@ -3299,6 +3302,7 @@
     "ftype_census": "Recensement",
     "ftype_event": "Autre événement",
     "field_sources": "Sources",
+    "sources_failed": "L’événement est enregistré, mais {count, plural, one {une source n’a pas pu être ajoutée} other {# sources n’ont pas pu être ajoutées}}. Enregistrez de nouveau pour réessayer.",
     "age_hint": "{name} avait environ {age} ans."
   },
   "eventTypes": {
@@ -4539,6 +4543,7 @@
     "saved": "Enregistré : {type}",
     "deleted": "Supprimé : {type}",
     "media_failed": "Événement enregistré, mais certaines pièces jointes n’ont pas été envoyées. Ouvrez l’événement pour les joindre à nouveau.",
+    "sources_failed": "L’événement est enregistré, mais {count, plural, one {une source n’a pas pu être ajoutée} other {# sources n’ont pas pu être ajoutées}}. Ouvrez l’événement pour citer de nouveau.",
     "edit_fact": "Modifier : {fact}",
     "status_label": "Statut vital",
     "record_death": "Enregistrer un décès",

@@ -343,7 +343,7 @@ export default function PersonDetailsClient() {
         : research;
 
     // A sheet that cites from inside itself (the event sheet) renders its own copy, so it nests.
-    const citeSheets: CiteSheetsSlot = (target, onClose) => (
+    const citeSheets: CiteSheetsSlot = (target, onClose, onPending) => (
         <CiteSheets
             target={target}
             subject={fullName(person)}
@@ -353,6 +353,7 @@ export default function PersonDetailsClient() {
             research={target ? personResearchSubject(person, variants, target.fact.factTable, target.fact.factId, new Date().getFullYear()) : null}
             onClose={onClose}
             onChanged={fetchCitations}
+            onPending={onPending}
         />
     );
 
