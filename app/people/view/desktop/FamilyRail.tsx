@@ -97,6 +97,28 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
     ? t(withChildren ? 'partners_children_heading' : 'partners_heading', { count: partners.length })
     : withChildren ? t('children', { count: childCount }) : null;
 
+  // "+ Add family" closes the Partners section; with no partner yet there is no
+  // such section, so it closes Parents instead, without a bar or heading of its own.
+  const addFamily = canEdit ? (
+    <div className={partners.length > 0 ? 'rail-addrow' : 'mt-2'}>
+      {/* A plain "+ Add family" button, not an expander: the panel takes
+          its place while open, as on the locked person page. */}
+      {!adding && <div className="ledger-foot ledger-foot--plain"><AddRow ref={addRef} label={t('add_family')} onClick={() => setAdding(true)} /></div>}
+      {adding && (
+        // Escape closes it; the button comes back with focus (#690).
+        <div onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); } }}>
+          <AddFamilyPanel
+            person={person}
+            treeId={treeId}
+            canUndo={canDelete}
+            run={run}
+            onClose={() => setAdding(false)}
+          />
+        </div>
+      )}
+    </div>
+  ) : null;
+
   return (
     // The locked board's rail: Open in tree, then PARENTS and PARTNER AND CHILDREN as
     // two sections behind hairline bars, each family's people under its record row,
@@ -118,11 +140,12 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
             unlinkLabel={t('remove_from_family', { name: given })}
           />
         ))}
+        {!partnerHeading && addFamily}
       </section>
 
-      {(partners.length > 0 || canEdit) && (
-        <section aria-labelledby={partnerHeading ? 'rail-partners' : undefined}>
-          {partnerHeading && <SectionHeader level="label" as="h3" headingId="rail-partners" title={partnerHeading} />}
+      {partnerHeading && (
+        <section aria-labelledby="rail-partners">
+          <SectionHeader level="label" as="h3" headingId="rail-partners" title={partnerHeading} />
           {partners.map((b, i) => (
             <PartnerBlockView
               key={b.familyId}
@@ -135,25 +158,7 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
               unlinkChild={canDelete ? (c) => removeAsChild(b.familyId, c.person, displayFullName(c.person) || t('this_person'), b.card) : undefined}
             />
           ))}
-          {canEdit && (
-            <div className={partners.length > 0 ? 'rail-addrow' : undefined}>
-              {/* A plain "+ Add family" button, not an expander: the panel takes
-                  its place while open, as on the locked person page. */}
-              {!adding && <div className="ledger-foot ledger-foot--plain"><AddRow ref={addRef} label={t('add_family')} onClick={() => setAdding(true)} /></div>}
-              {adding && (
-                // Escape closes it; the button comes back with focus (#690).
-                <div onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); } }}>
-                  <AddFamilyPanel
-                    person={person}
-                    treeId={treeId}
-                    canUndo={canDelete}
-                    run={run}
-                    onClose={() => setAdding(false)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
+          {addFamily}
         </section>
       )}
 
