@@ -74,8 +74,8 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
-        className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all overflow-hidden border border-border ${
-          data.isSidebarSelected ? 'tree-card--picked' : ''
+        className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border ${
+          data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
         }`}
         style={{ width: `${PERSON_CARD_WIDTH}px`, height: `${personCardHeight(secondNameOn)}px`, display: 'flex', flexDirection: 'column', position: 'relative' }}
       >
