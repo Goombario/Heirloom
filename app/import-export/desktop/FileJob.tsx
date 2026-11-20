@@ -295,6 +295,7 @@ export function FileJob({ p, restore, onLeave }: { p: ImportViewProps; restore: 
                         initialArchive={p.recoverySeed?.treeId === p.activeTreeId ? p.recoverySeed.archive : null}
                         result={p.result}
                         links={false}
+                        peopleInHeading={!restore}
                     />
                     <ImportReport datesToCheck={p.checksCount} duplicates={p.duplicatesCount} />
                     {restore && <p className="m-0 text-sm text-text-muted">{t('restored_note')}</p>}

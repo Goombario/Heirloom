@@ -9,7 +9,7 @@ import { Banner, Badge, Button, buttonClass, Card } from '@/app/components/ui';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import GuardedLink from '@/app/components/GuardedLink';
 import { useUnsavedChangesGuard } from '@/app/components/UnsavedChangesProvider';
-import { AlertTriangle, CheckCircle2, Loader2 } from '@/lib/icons';
+import { AlertTriangle, CheckCircle2, CirclePause, Loader2 } from '@/lib/icons';
 import { formatGedcomImportWarning } from '@/lib/gedcom/import-warning';
 import { useMediaImportRecovery } from './useMediaImportRecovery';
 
@@ -39,6 +39,8 @@ export interface MediaImportRecoveryProps {
   result?: ImportResultSummary | null;
   /** The result's View people and View families; off where the page already offers them (#60). */
   links?: boolean;
+  /** The page heading already names the people count, so the records step leaves it out (#206). */
+  peopleInHeading?: boolean;
 }
 
 const STATUS_TONES: Record<MediaImportItem['status'], 'neutral' | 'green' | 'red' | 'warning'> = {
@@ -47,10 +49,11 @@ const STATUS_TONES: Record<MediaImportItem['status'], 'neutral' | 'green' | 'red
 
 type LifecyclePhase = 'processing' | 'complete' | 'attention';
 
-export default function MediaImportRecovery({ treeId = null, initialTreeId, initialItems, initialArchive = null, result = null, links = true }: MediaImportRecoveryProps) {
+export default function MediaImportRecovery({ treeId = null, initialTreeId, initialItems, initialArchive = null, result = null, links = true, peopleInHeading = false }: MediaImportRecoveryProps) {
   const t = useTranslations('importExport');
   const seedTreeId = initialTreeId === undefined ? treeId : initialTreeId;
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const lifecycleInputRef = useRef<HTMLInputElement | null>(null);
   // The items a confirm is open for: one row's Remove, or a group's selection (#859).
   const [removeIds, setRemoveIds] = useState<number[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
@@ -173,136 +176,131 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
 
   if (items.length === 0 && !busy && !error && !result) return null;
 
-  const detailGroups = result ? lifecycleGroups : groups;
+  // After an import, list only the photos that still need something (#206).
+  const detailGroups = result
+    ? lifecycleGroups.map((group) => group.filter((item) => item.status !== 'ready')).filter((group) => group.length > 0)
+    : groups;
   const hasMedia = currentItems.length > 0;
-  const showDetails = !result || phase === 'attention';
-  const phaseTone = phase === 'complete'
-    ? 'border-success/30 bg-success-bg'
-    : phase === 'attention'
-      ? 'border-error/30 bg-error-bg'
-      : 'border-warning/30 bg-warning-bg';
-  const PhaseIcon = phase === 'complete' ? CheckCircle2 : phase === 'attention' ? AlertTriangle : Loader2;
+  // Waiting: photos still need their archive but none has failed, as after
+  // Stop or a plain GEDCOM. Its rows would only repeat "Waiting" (#206).
+  const waiting = phase === 'attention' && failedCount === 0 && pendingCount > 0 && !error;
+  const showDetails = !result || (phase === 'attention' && !waiting);
+  const totalCount = currentItems.length;
+  const percent = hasMedia ? Math.round((readyCount / totalCount) * 100) : 0;
+  const showBar = hasMedia && (phase === 'processing' || waiting);
+  const records = result
+    ? [
+      !peopleInHeading && t('media_lifecycle_count_people', { count: result.peopleCount }),
+      t('media_lifecycle_count_families', { count: result.familiesCount }),
+      (result.sourcesCount ?? 0) > 0 && t('media_lifecycle_count_sources', { count: result.sourcesCount ?? 0 }),
+      (result.citationsCount ?? 0) > 0 && t('media_lifecycle_count_citations', { count: result.citationsCount ?? 0 }),
+      (result.tagsCount ?? 0) > 0 && t('media_lifecycle_count_tags', { count: result.tagsCount ?? 0 }),
+      (result.libraryMediaCount ?? 0) > 0 && t('media_lifecycle_count_library', { count: result.libraryMediaCount ?? 0 }),
+    ].filter(Boolean).join(', ')
+    : '';
+  const recordNotes: string[] = result
+    ? [
+      ...((result.preservedCount ?? 0) > 0 ? [`${t('success_preserved')} ${result.preservedCount}`] : []),
+      ...((result.matchedPeopleCount ?? 0) > 0 || (result.matchedFamiliesCount ?? 0) > 0
+        ? [t('success_matched', { people: result.matchedPeopleCount ?? 0, families: result.matchedFamiliesCount ?? 0 })]
+        : []),
+      ...((result.skippedCount ?? 0) > 0 ? [`${t('success_skipped')} ${result.skippedCount}`] : []),
+      ...(result.zipWarnings.length > 0 ? [t('success_zip_warnings'), ...result.zipWarnings] : []),
+      ...(result.warnings ?? []).map(formatImportWarning),
+    ]
+    : [];
+  const photoTitle = phase === 'processing'
+    ? t('media_lifecycle_photos_preparing')
+    : phase === 'complete'
+      ? t('media_lifecycle_photos_complete', { count: totalCount })
+      : waiting
+        ? t('media_lifecycle_photos_waiting')
+        : t('media_lifecycle_photos_attention', { ready: readyCount, total: totalCount });
+  const photoHint = phase === 'processing'
+    ? t('media_lifecycle_stay_open')
+    : waiting
+      ? t('media_lifecycle_hint_waiting', { count: pendingCount })
+      : phase === 'attention' && failedCount > 0
+        ? t('media_lifecycle_hint_attention', { count: failedCount })
+        : null;
+  const PhotoIcon = phase === 'processing' ? Loader2 : phase === 'complete' ? CheckCircle2 : waiting ? CirclePause : AlertTriangle;
+  const photoIconTone = phase === 'processing'
+    ? 'animate-spin text-primary'
+    : phase === 'complete'
+      ? 'text-success'
+      : waiting
+        ? 'text-text-muted'
+        : 'text-warning-text';
 
-  const recoveryContent = (
-    <>
-      {result ? (
-        <div className={`rounded-xl border p-4 ${phaseTone}`} data-testid="import-lifecycle-panel">
-          <div className="flex items-start gap-3" role="status" aria-live="polite">
-            <PhaseIcon
-              className={`mt-0.5 h-5 w-5 shrink-0 ${phase === 'processing' ? 'animate-spin text-warning-text' : phase === 'attention' ? 'text-error' : 'text-success'}`}
-              aria-hidden="true"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-text-secondary">
-                {t(phase === 'complete' ? 'media_lifecycle_kicker_complete' : phase === 'attention' ? 'media_lifecycle_kicker_attention' : 'media_lifecycle_kicker_processing')}
-              </p>
-              <h3 className="mt-0.5 text-lg font-bold text-text">
-                {t(phase === 'complete' ? 'media_lifecycle_title_complete' : phase === 'attention' ? 'media_lifecycle_title_attention' : 'media_lifecycle_title_processing')}
-              </h3>
-              <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                {/* No media in the file: say nothing about photos (FR-3). */}
-                {t(phase === 'complete' ? (hasMedia ? 'media_lifecycle_description_complete' : 'media_lifecycle_description_complete_records') : phase === 'attention' ? 'media_lifecycle_description_attention' : 'media_lifecycle_description_processing')}
-              </p>
+  const lifecycleSteps = result && (
+    <ol className="m-0 list-none divide-y divide-border p-0" role="status" aria-live="polite">
+      <li className="flex items-start gap-3 pb-4 last:pb-0">
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="m-0 font-semibold text-text">{t('media_lifecycle_records_saved')}</p>
+          {records && <p className="m-0 mt-1 text-sm text-text-muted">{records}</p>}
+          {recordNotes.length > 0 && (
+            <ul className="m-0 mt-2 list-disc space-y-1 pl-4 text-xs text-text-muted">
+              {recordNotes.map((note, index) => <li key={index}>{note}</li>)}
+            </ul>
+          )}
+        </div>
+      </li>
+      {hasMedia && (
+        <li className="flex flex-wrap items-start gap-3 pt-4 sm:flex-nowrap">
+          <PhotoIcon className={`mt-0.5 h-5 w-5 shrink-0 ${photoIconTone}`} aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="m-0 font-semibold text-text">{photoTitle}</p>
+              {showBar && (
+                <span className="text-sm tabular-nums text-text-secondary">
+                  {t('media_lifecycle_photos_count', { current: readyCount, total: totalCount })}
+                </span>
+              )}
             </div>
-          </div>
-
-          {phase === 'processing' && currentItems.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-1.5 flex items-center justify-between gap-3 text-xs text-text-secondary">
-                <span>{t('media_lifecycle_progress', { current: readyCount, total: currentItems.length })}</span>
-                <strong className="text-text">{Math.round((readyCount / currentItems.length) * 100)}%</strong>
-              </div>
+            {showBar && (
               <div
-                className="h-2 overflow-hidden rounded-full bg-warning-bg"
+                className="mt-2 h-1.5 overflow-hidden rounded-full bg-border"
                 role="progressbar"
                 aria-label={t('media_lifecycle_progress_label')}
                 aria-valuemin={0}
-                aria-valuemax={currentItems.length}
-                aria-valuenow={readyCount}
+                aria-valuemax={100}
+                aria-valuenow={percent}
               >
                 <span
-                  className="block h-full rounded-full bg-warning-text transition-[width] duration-200"
-                  style={{ width: `${(readyCount / currentItems.length) * 100}%` }}
+                  className={`block h-full rounded-full transition-[width] duration-200 ${phase === 'processing' ? 'bg-primary' : 'bg-text-muted'}`}
+                  style={{ width: `${percent}%` }}
                 />
               </div>
-              <p className="mt-2 text-xs font-medium text-warning-text">{t('media_lifecycle_stay_open')}</p>
-            </div>
+            )}
+            {photoHint && <p className="m-0 mt-2 text-sm text-text-muted">{photoHint}</p>}
+          </div>
+          {busy && progress && (
+            <Button variant="outline" onClick={stop}>{t('media_recovery_stop')}</Button>
           )}
-
-          <dl className={`mt-4 grid grid-cols-2 gap-2 ${hasMedia ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
-            <div className="rounded-lg border border-border bg-card/70 p-2.5">
-              <dt className="text-xs text-text-muted">{t('preview_people')}</dt>
-              <dd className="mt-0.5 text-base font-bold text-text">{result.peopleCount}</dd>
-            </div>
-            <div className="rounded-lg border border-border bg-card/70 p-2.5">
-              <dt className="text-xs text-text-muted">{t('preview_families')}</dt>
-              <dd className="mt-0.5 text-base font-bold text-text">{result.familiesCount}</dd>
-            </div>
-            <div className="rounded-lg border border-border bg-card/70 p-2.5">
-              <dt className="text-xs text-text-muted">{t('preview_sources')}</dt>
-              <dd className="mt-0.5 text-base font-bold text-text">{result.sourcesCount ?? 0}</dd>
-            </div>
-            {hasMedia && (
-              <div className="rounded-lg border border-border bg-card/70 p-2.5">
-                <dt className="text-xs text-text-muted">{t('media_lifecycle_photos_ready')}</dt>
-                <dd className="mt-0.5 text-base font-bold text-text">{readyCount} / {currentItems.length}</dd>
-              </div>
-            )}
-          </dl>
-
-          <div className="mt-3 space-y-1 text-xs text-text-secondary">
-            {result.treeName && <p><strong>{t('success_tree')}</strong> {result.treeName}</p>}
-            <p><strong>{t('success_mode')}</strong> {result.mode === 'overwrite' ? t('mode_overwrite') : t('mode_merge')}</p>
-            {(result.libraryMediaCount ?? 0) > 0 && <p><strong>{t('success_library_media')}</strong> {result.libraryMediaCount}</p>}
-            {(result.tagsCount ?? 0) > 0 && <p><strong>{t('success_tags')}</strong> {result.tagsCount}</p>}
-            {(result.citationsCount ?? 0) > 0 && <p><strong>{t('success_citations')}</strong> {result.citationsCount}</p>}
-            {(result.preservedCount ?? 0) > 0 && <p><strong>{t('success_preserved')}</strong> {result.preservedCount}</p>}
-            {(result.skippedCount ?? 0) > 0 && <p className="text-warning-text"><strong>{t('success_skipped')}</strong> {result.skippedCount}</p>}
-            {((result.matchedPeopleCount ?? 0) > 0 || (result.matchedFamiliesCount ?? 0) > 0) && (
-              <p>{t('success_matched', { people: result.matchedPeopleCount ?? 0, families: result.matchedFamiliesCount ?? 0 })}</p>
-            )}
-            {result.zipWarnings.length > 0 && (
-              <div className="text-warning-text">
-                <strong>{t('success_zip_warnings')}</strong>
-                <ul className="ml-4 list-disc">{result.zipWarnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
-              </div>
-            )}
-            {(result.warnings?.length ?? 0) > 0 && (
-              <ul className="ml-4 list-disc text-warning-text">
-                {result.warnings!.map((warning, index) => <li key={index}>{formatImportWarning(warning)}</li>)}
-              </ul>
-            )}
-          </div>
-
-          <p className="mt-3 text-xs text-text-muted">{t(DATA_MODE === 'local' ? 'import_recorded_note' : 'import_recorded_note_hosted')}</p>
-          <div className="mt-4 flex flex-wrap gap-2 empty:hidden">
-            {phase === 'processing' && (
-              <Button variant="outline" disabled icon={<Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}>
-                {t('media_lifecycle_processing_button')}
-              </Button>
-            )}
-            {busy && progress && (
-              <Button variant="outline" size="lg" onClick={stop}>{t('media_recovery_stop')}</Button>
-            )}
-            {links && phase === 'complete' && (
-              <GuardedLink href="/people" className={buttonClass({ variant: 'success', size: 'lg' })}>
-                {t('view_people')}
-              </GuardedLink>
-            )}
-            {links && <GuardedLink href={phase === 'complete' ? '/families' : '/people'} className={buttonClass({ variant: 'outline', size: 'lg' })}>
-              {t(phase === 'complete' ? 'view_families' : 'media_lifecycle_view_records')}
-            </GuardedLink>}
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-text">{t('media_recovery_title')}</h2>
-            <p className="mt-1 text-sm text-text-secondary">{t('media_recovery_description')}</p>
-          </div>
-        </div>
+          {!busy && phase === 'attention' && currentImportId !== null && (pendingCount > 0 || failedCount > 0) && (
+            <>
+              <input
+                ref={lifecycleInputRef}
+                id="media-lifecycle-archive"
+                data-testid="media-lifecycle-archive"
+                type="file"
+                accept=".zip,application/zip"
+                onChange={(event) => void handleArchive(event, currentImportId)}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
+              <Button onClick={() => lifecycleInputRef.current?.click()}>{t('media_lifecycle_choose_zip')}</Button>
+            </>
+          )}
+        </li>
       )}
+    </ol>
+  );
 
+  const recoveryBody = (
+    <>
       {progress && progress.total > 0 && !result && (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <p className="text-sm text-text-muted" role="status">
@@ -323,7 +321,7 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
       )}
 
       {showDetails && detailGroups.length > 0 && (
-        <div className="mt-4 space-y-4" aria-live="polite">
+        <div className={`mt-4 space-y-4 ${result ? 'border-t border-border pt-4' : ''}`} aria-live="polite">
           {detailGroups.map((group, index) => {
             const ordinal = index + 1;
             const inputId = `media-recovery-archive-${index}`;
@@ -356,27 +354,32 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
                         {t('media_recovery_remove_selected', { count: chosen.length })}
                       </Button>
                     )}
-                    <label htmlFor={inputId} className="sr-only">{archiveLabel}</label>
-                    <input
-                      ref={(element) => { inputRefs.current[index] = element; }}
-                      id={inputId}
-                      data-testid={inputId}
-                      type="file"
-                      accept=".zip,application/zip"
-                      onChange={(event) => void handleArchive(event, group[0].importId)}
-                      disabled={busy}
-                      className="sr-only"
-                      aria-label={archiveLabel}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-label={archiveLabel}
-                      onClick={() => inputRefs.current[index]?.click()}
-                      disabled={busy}
-                    >
-                      {busy ? t('media_recovery_processing') : t('media_recovery_choose_archive')}
-                    </Button>
+                    {/* After an import the photos step carries Choose ZIP (#206). */}
+                    {!result && (
+                      <>
+                        <label htmlFor={inputId} className="sr-only">{archiveLabel}</label>
+                        <input
+                          ref={(element) => { inputRefs.current[index] = element; }}
+                          id={inputId}
+                          data-testid={inputId}
+                          type="file"
+                          accept=".zip,application/zip"
+                          onChange={(event) => void handleArchive(event, group[0].importId)}
+                          disabled={busy}
+                          className="sr-only"
+                          aria-label={archiveLabel}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label={archiveLabel}
+                          onClick={() => inputRefs.current[index]?.click()}
+                          disabled={busy}
+                        >
+                          {busy ? t('media_recovery_processing') : t('media_recovery_choose_archive')}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
                 <ul className="divide-y divide-border" aria-label={t('media_recovery_group_heading', { group: ordinal, count: group.length })}>
@@ -387,6 +390,38 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
           })}
         </div>
       )}
+    </>
+  );
+
+  const recoveryContent = result ? (
+    <div className="space-y-2">
+      <Card className="sm:p-5" data-testid="import-lifecycle-panel">
+        {lifecycleSteps}
+        {recoveryBody}
+        {links && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {phase === 'complete' && (
+              <GuardedLink href="/people" className={buttonClass({ variant: 'primary', size: 'lg' })}>
+                {t('view_people')}
+              </GuardedLink>
+            )}
+            <GuardedLink href={phase === 'complete' ? '/families' : '/people'} className={buttonClass({ variant: 'outline', size: 'lg' })}>
+              {t(phase === 'complete' ? 'view_families' : 'media_lifecycle_view_records')}
+            </GuardedLink>
+          </div>
+        )}
+      </Card>
+      <p className="m-0 px-1 text-xs text-text-muted">{t(DATA_MODE === 'local' ? 'import_recorded_note' : 'import_recorded_note_hosted')}</p>
+    </div>
+  ) : (
+    <>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-text">{t('media_recovery_title')}</h2>
+          <p className="mt-1 text-sm text-text-secondary">{t('media_recovery_description')}</p>
+        </div>
+      </div>
+      {recoveryBody}
     </>
   );
 
