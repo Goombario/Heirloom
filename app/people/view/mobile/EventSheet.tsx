@@ -18,6 +18,10 @@ import { displayFullName } from '@/lib/utils/names';
 import { vitalPatchFor } from '@/app/components/person-form/vitalEvent';
 import type { CitationFactDescriptor } from '@/app/components/citations/types';
 import type { CiteSheetsSlot } from '@/app/components/citations/CiteSheets';
+import type { PendingCitation } from '@/app/components/AttachSourceSidebar';
+import { PendingSources } from '@/app/components/citations/PendingSources';
+import { attachPendingCitations } from '@/app/components/citations/pendingCitations';
+import { FACT_TABLES } from '@/lib/db/fact-tables';
 import { MobileRow, citeClass, cx, fieldClass, showErrorToast } from '@/app/components/ui';
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
 import { Camera, Pencil, Plus, Search, Trash2 } from '@/lib/icons';
@@ -114,6 +118,8 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
     const [saving, setSaving] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const [citing, setCiting] = useState(false);
+    // Sources cited on a new event wait here until it is saved (#192).
+    const [pendingCites, setPendingCites] = useState<PendingCitation[]>([]);
     const [query, setQuery] = useState('');
     const sourcesRef = useRef<HTMLDivElement>(null);
     const formRef = useRef<HTMLDivElement>(null);
@@ -130,7 +136,7 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
     // Setting or removing the place's map pin is a change too, even with the text untouched.
     const dirty = step.step === 'form'
         && (draft.date !== saved.date || draft.place !== saved.place || draft.placeId !== saved.placeId || draft.detail !== saved.detail
-            || resolution !== undefined || draftMedia.items.length > 0);
+            || resolution !== undefined || draftMedia.items.length > 0 || pendingCites.length > 0);
 
     // A vitals row that asked for a field opens with it focused (and the keyboard up),
     // as does a new event's Date. Sources scroll into view instead.
@@ -173,6 +179,7 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
         const placeId = place ? draft.placeId : null;
         let key = step.fact?.key ?? '';
         let mediaFailed = false;
+        let citesFailed = 0;
         const ok = await run(async () => {
             const client = await getDataClient();
             let auditIds: number[];
@@ -189,6 +196,10 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
                 auditIds = saved.auditIds;
                 savedPlaceId = type === 'DEAT' ? saved.DeathPlaceId : saved.BirthPlaceId;
                 key = `${type === 'BIRT' ? 'birth' : 'death'}-${person.Id}`;
+                if (isNew && pendingCites.length > 0) {
+                    citesFailed = (await attachPendingCitations(client, pendingCites,
+                        type === 'DEAT' ? FACT_TABLES.PERSON_DEATH : FACT_TABLES.PERSON_BIRTH, person.Id, treeId)).length;
+                }
             } else {
                 const body = { Type: type, Date: date || null, Place: place || null, PlaceId: placeId, Description: detail || null, PersonId: person.Id, FamilyId: null };
                 const row: GedcomEvent & { auditIds: number[] } = step.fact
@@ -197,6 +208,9 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
                 auditIds = row.auditIds;
                 savedPlaceId = row.PlaceId;
                 key = `event-${row.Id}`;
+                if (isNew && pendingCites.length > 0) {
+                    citesFailed = (await attachPendingCitations(client, pendingCites, FACT_TABLES.EVENTS, row.Id, treeId)).length;
+                }
                 if (isNew && draftMedia.items.length > 0) {
                     try { mediaFailed = (await draftMedia.process(row.Id)).failed.length > 0; } catch { mediaFailed = true; }
                 }
@@ -210,6 +224,7 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
         setSaving(false);
         if (!ok) return;
         if (mediaFailed) showErrorToast(t('media_failed'));
+        if (citesFailed > 0) showErrorToast(t('sources_failed', { count: citesFailed }));
         onSaved(key);
         setSaved(draft);
         onClose();
@@ -404,6 +419,22 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
                         {/* Cite a source opens on top of this sheet, so nothing typed here is lost. */}
                         <MobileRow icon={<Plus />} end="chevron" label={t('cite_source')} onClick={() => setCiting(true)} />
                         {citeSheets(citing && factDescriptor ? { fact: factDescriptor, start: 'pick' } : null, () => setCiting(false))}
+                    </div>
+                )}
+
+                {!factLike && (
+                    <div className="-mx-4 border-t border-border pt-4">
+                        <h3 className="eyebrow m-0 px-4 mb-1">{t('sources')}</h3>
+                        {pendingCites.length === 0 && <p className="m-0 px-4 pb-1 text-base text-text-muted">{t('no_source_yet')}</p>}
+                        <PendingSources look="rows" pending={pendingCites} onRemove={(i) => setPendingCites((prev) => prev.filter((_, j) => j !== i))} />
+                        <MobileRow icon={<Plus />} end="chevron" label={t('cite_source')} onClick={() => setCiting(true)} />
+                        {citeSheets(citing ? {
+                            fact: {
+                                factTable: vital ? (type === 'DEAT' ? FACT_TABLES.PERSON_DEATH : FACT_TABLES.PERSON_BIRTH) : FACT_TABLES.EVENTS,
+                                factId: -1, label: label(type), value: '', citations: [],
+                            },
+                            start: 'pick',
+                        } : null, () => setCiting(false), (p) => setPendingCites((prev) => [...prev, p]))}
                     </div>
                 )}
 

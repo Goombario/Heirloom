@@ -117,6 +117,9 @@
     "attach_source_for": "Attach source for {fact}",
     "attach_another_source_for": "Attach another source for {fact}",
     "pending_source": "Source pending save",
+    "pending_sources": "Sources to save with this event",
+    "pending_source_untitled": "New source",
+    "remove_pending_source": "Remove {title}",
     "source_label_n": "Source {n}",
     "source_label_with_title": "Source {n}: {title}",
     "view_in_library_with_title": "{title} — view in library",
@@ -3299,6 +3302,7 @@
     "ftype_census": "Census",
     "ftype_event": "Other event",
     "field_sources": "Sources",
+    "sources_failed": "The event is saved, but {count, plural, one {a source} other {# sources}} could not be added. Save again to retry.",
     "age_hint": "{name} was about {age}."
   },
   "eventTypes": {
@@ -4540,6 +4544,7 @@
     "saved": "{type} saved",
     "deleted": "{type} deleted",
     "media_failed": "Event saved, but some attachments didn’t upload. Open the event to attach them again.",
+    "sources_failed": "The event is saved, but {count, plural, one {a source} other {# sources}} could not be added. Open the event to cite again.",
     "edit_fact": "Edit {fact}",
     "status_label": "Living status",
     "record_death": "Record a death",
