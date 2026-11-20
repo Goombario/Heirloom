@@ -72,9 +72,14 @@ export function ExploreView({ roots, treeId, search, onClearSearch }: ExploreVie
     const points = nodes.flatMap((n) => pinsWithin(n)).map(({ lat, lng }) => ({ lat, lng }));
     if (points.length > 0) setFrameTarget((f) => ({ n: (f?.n ?? 0) + 1, points }));
   };
+  // A pick from search results clears the search, so the rail has to land where the
+  // place lives (reveal), not stay at the level the search began from.
   const onRailClick = (node: PlaceTreeNode) => {
-    onRowClick(node);
+    const searching = search.trim() !== '';
+    if (searching && node.id != null) state.reveal(node);
+    else onRowClick(node);
     if (node.id != null) frame([node]);
+    if (searching) onClearSearch?.();
   };
   // The breadcrumbs go up a level; they frame the level they land on, or the whole tree.
   const railState = {

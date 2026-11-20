@@ -1195,7 +1195,6 @@
     "only_undated": "Only undated records here.",
     "show_all_n": "Show all {count}",
     "show_fewer": "Show fewer",
-    "bar_counts": "{count, plural, one {# place} other {# places}} · {pinned} on the map",
     "empty_explore": "Places appear here when a record names one.",
     "empty_import": "Import a GEDCOM file",
     "empty_add_person": "Add a person",

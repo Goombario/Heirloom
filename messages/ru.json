@@ -1195,7 +1195,6 @@
     "only_undated": "Здесь только записи без даты.",
     "show_all_n": "Показать все ({count})",
     "show_fewer": "Показать меньше",
-    "bar_counts": "{count, plural, one {# место} few {# места} many {# мест} other {# места}} · {pinned} на карте",
     "empty_explore": "Места появятся здесь, когда запись назовёт хотя бы одно.",
     "empty_import": "Импортировать файл GEDCOM",
     "empty_add_person": "Добавить человека",

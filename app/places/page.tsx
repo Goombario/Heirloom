@@ -85,8 +85,6 @@ export default function PlacesPage() {
     // unreachable without first navigating up. Cards/List keep the filtered set.
     const exploreTree = useMemo(() => buildPlaceTree(currentPlaces, currentGazetteer), [currentPlaces, currentGazetteer]);
 
-    const pinned = currentPlaces.filter((p) => p.latitude != null && p.longitude != null).length;
-
     if (isPhone) {
         return (
             <PageShell topBar={<MobileListHeader title={t('title')} />} contentClassName="max-md:p-0!">
@@ -102,18 +100,15 @@ export default function PlacesPage() {
         );
     }
 
-    // Desktop (#56): a full-page workspace like the tree, with a slim Places bar (title,
-    // counts, the filter and the pin legend) over the three Explore panes.
+    // Desktop (#56): a full-page workspace like the tree, with a slim Places bar (the filter
+    // and the pin legend, left-aligned like the tree bar's find field) over the three Explore panes.
     return (
         <PageShell variant="workspace" className="flex flex-col overflow-hidden" style={{ height: 'calc(100dvh - var(--nav-h))' }}>
-            <div className="shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 bg-card border-b border-border">
-                <div className="flex items-baseline gap-2.5 min-w-0">
-                    <h1 className="serif text-lg font-semibold text-text m-0">{t('title')}</h1>
-                    {phase === 'ready'
-                        ? <span className="text-meta text-text-muted tabular-nums">{t('bar_counts', { count: currentPlaces.length, pinned })}</span>
-                        : <span className="skeleton inline-block h-3 w-32 rounded-[6px]" aria-hidden="true" />}
-                </div>
-                <div className="ml-auto flex items-center gap-2">
+            {/* The tree control bar's dark island, in both themes: the card tone sat
+                flush with the dark-mode nav. */}
+            <div className="dark-island shrink-0 flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 bg-[color:var(--color-hero-bg)]">
+                <h1 className="sr-only">{t('title')}</h1>
+                <div className="flex items-center gap-2">
                     <Input
                         type="search"
                         size="sm"

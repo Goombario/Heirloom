@@ -1195,7 +1195,6 @@
     "only_undated": "Seulement des documents non datés ici.",
     "show_all_n": "Tout afficher ({count})",
     "show_fewer": "Afficher moins",
-    "bar_counts": "{count, plural, one {# lieu} other {# lieux}} · {pinned} sur la carte",
     "empty_explore": "Les lieux apparaissent ici dès qu’un document en nomme un.",
     "empty_import": "Importer un fichier GEDCOM",
     "empty_add_person": "Ajouter une personne",
