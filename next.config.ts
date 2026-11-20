@@ -149,6 +149,15 @@ const nextConfig: NextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         sharp: path.resolve(__dirname, 'lib/empty.ts'),
+        // lib/media-thumbnail.ts (reached through the local services) imports
+        // Node's createHash for on-disk thumbnail cleanup. The browser has no
+        // such disk (fs is stubbed too), so that cleanup already fails there and
+        // its callers catch it. The crypto-browserify polyfill it would pull in
+        // drags along `util`, whose generator check calls Function() and logs a
+        // CSP violation on the static site.
+        // Next maps `crypto` to that polyfill in a rule-level resolve.fallback,
+        // which outranks the fallback above, so the stub has to be an alias.
+        crypto$: false,
       };
     }
     return config;
