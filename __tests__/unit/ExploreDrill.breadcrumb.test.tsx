@@ -95,16 +95,30 @@ describe('ExploreDrill breadcrumb — current node', () => {
     expect(s.goTo).toHaveBeenCalledWith(3);
   });
 
-  it('drops aria-current when the detail pane is showing a leaf, not the level', () => {
-    // Standing in Dover, but Buckland Cemetary is what is displayed — so the tail
-    // is still "where you are browsing" and is still marked visually, but it is
-    // not what the page is showing.
-    renderDrill(state({ selected: buckland }));
+  it('ends the trail with a picked leaf, marked current, the level still a button', () => {
+    // Standing in Dover, but Buckland Cemetary is what is displayed — so the trail
+    // ends with it as the current page, and Dover stays the way back to its own detail.
+    const s = state({ selected: buckland });
+    renderDrill(s);
+
+    const nav = screen.getByRole('navigation', { name: en.places.breadcrumb });
+    const current = nav.querySelectorAll('[aria-current="page"]');
+
+    expect(current).toHaveLength(1);
+    expect(current[0]).toHaveTextContent('Buckland Cemetary');
+    // Text, not a button: a leaf has no level of its own to drill into.
+    expect(current[0].tagName).not.toBe('BUTTON');
+    screen.getByRole('button', { name: 'Dover' }).click();
+    expect(s.goTo).toHaveBeenCalledWith(3);
+  });
+
+  it('ends the trail with a top-level leaf picked at the root', () => {
+    renderDrill(state({ currentNode: null, selected: buckland, crumbs: [], children: [uk, buckland] }));
 
     const nav = screen.getByRole('navigation', { name: en.places.breadcrumb });
 
-    expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'Dover' })).toBeInTheDocument();
+    expect(nav.querySelector('[aria-current="page"]')).toHaveTextContent('Buckland Cemetary');
+    expect(screen.getByRole('button', { name: en.places.explore_all_places })).not.toHaveAttribute('aria-current');
   });
 
   it('does not rely on colour alone — the current crumb carries its pin mark', () => {
@@ -142,5 +156,72 @@ describe('ExploreDrill search rows — region text', () => {
 
     // "Buckland Cemetary, Dover" sits under Dover under United Kingdom.
     expect(screen.getByText('Dover, United Kingdom')).toBeInTheDocument();
+  });
+});
+
+describe('ExploreDrill breadcrumb — in the Places bar', () => {
+  function renderWithSlot(slot: HTMLElement | null) {
+    return render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <ExploreDrill state={state()} search="" breadcrumbSlot={slot} />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it('renders into the slot it is given, not at the head of the rail', () => {
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
+    const { container } = renderWithSlot(slot);
+
+    expect(slot.querySelector('nav')).toHaveAttribute('aria-label', en.places.breadcrumb);
+    expect(container.querySelector('nav')).toBeNull();
+    slot.remove();
+  });
+
+  it('renders nowhere while the slot has yet to mount', () => {
+    renderWithSlot(null);
+
+    expect(screen.queryByRole('navigation', { name: en.places.breadcrumb })).not.toBeInTheDocument();
+  });
+});
+
+describe('ExploreDrill back row — breadcrumb in the bar', () => {
+  function renderWithSlot(s: ExploreState, search = '') {
+    const slot = document.createElement('div');
+    document.body.appendChild(slot);
+    render(
+      <NextIntlClientProvider locale="en" messages={en}>
+        <ExploreDrill state={s} search={search} breadcrumbSlot={slot} />
+      </NextIntlClientProvider>,
+    );
+    return slot;
+  }
+
+  it('goes up one level, to the parent', () => {
+    const s = state();
+    renderWithSlot(s);
+
+    screen.getByRole('button', { name: 'Up to United Kingdom' }).click();
+
+    expect(s.goTo).toHaveBeenCalledWith(1);
+  });
+
+  it('goes up to All places from a top-level place', () => {
+    const s = state({ currentNode: uk, selected: uk, crumbs: [uk], children: uk.children });
+    renderWithSlot(s);
+
+    screen.getByRole('button', { name: `Up to ${en.places.explore_all_places}` }).click();
+
+    expect(s.goTo).toHaveBeenCalledWith(null);
+  });
+
+  it('is absent at the root', () => {
+    renderWithSlot(state({ currentNode: null, selected: null, crumbs: [], children: [uk] }));
+    expect(screen.queryByRole('button', { name: /^Up to/ })).not.toBeInTheDocument();
+  });
+
+  it('is absent while searching', () => {
+    renderWithSlot(state(), 'buck');
+    expect(screen.queryByRole('button', { name: /^Up to/ })).not.toBeInTheDocument();
   });
 });

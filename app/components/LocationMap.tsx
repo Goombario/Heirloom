@@ -100,6 +100,8 @@ function cameraPadding(insets?: Insets, over?: Insets): Insets {
 
 /** Room kept between a cleared pin and the edge of what covers the map. */
 const CLEAR_MARGIN = 48;
+/** How long a resize must hold still before the map redraws at the new size. */
+const RESIZE_SETTLE_MS = 200;
 
 /**
  * How far (px) to slide the view so pins clear a cover on the map's left (the Explore
@@ -357,6 +359,8 @@ export default function LocationMap({
           center: [current[0].lng, current[0].lat],
           zoom: variant === 'mini' ? 9 : 11,
           attributionControl: false,
+          // The ResizeObserver below owns resizing, once the size settles.
+          trackResize: false,
         });
         map.on('error', () => { if (!cancelled) setFailed(true); });
         addMapCredit(map, { osm: creditOsm, tiles: creditTiles });
@@ -544,6 +548,9 @@ export default function LocationMap({
 
   // A map that fills its parent follows the parent's size, not just the window's: the
   // Explore pane beside it can widen (#56), which MapLibre's own resize tracking misses.
+  // It redraws once the size has held still for RESIZE_SETTLE_MS, not at every step of a
+  // window drag: a map repainting many times a second can flash (a photosensitivity
+  // risk), and the half-drawn steps are never looked at anyway.
   useEffect(() => {
     const el = elRef.current;
     if (!map || !el || typeof ResizeObserver === 'undefined') return;
@@ -558,7 +565,8 @@ export default function LocationMap({
     };
     map.on('movestart', onMove);
     let frame = 0;
-    const ro = new ResizeObserver(() => {
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const onSettled = () => {
       map.resize();
       if (!refitRef.current || heldRef.current) return;
       if (moved && movedFor === framedKeyRef.current) return;
@@ -573,10 +581,15 @@ export default function LocationMap({
         pins.forEach((m) => bounds.extend([m.lng, m.lat]));
         map.fitBounds(bounds, { padding: fitPadding(variant, elRef.current, fitMarginRef.current), maxZoom: 14, animate: false });
       });
+    };
+    const ro = new ResizeObserver(() => {
+      clearTimeout(settle);
+      settle = setTimeout(onSettled, RESIZE_SETTLE_MS);
     });
     ro.observe(el);
     return () => {
       ro.disconnect();
+      clearTimeout(settle);
       cancelAnimationFrame(frame);
       map.off('movestart', onMove);
     };

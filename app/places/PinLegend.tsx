@@ -6,6 +6,7 @@
 // fourth state can never ship with the legend still teaching three.
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/app/components/ui/Card';
 import { Info } from '@/lib/icons';
@@ -14,6 +15,7 @@ import { PinMark, PIN_STATES, PIN_STATE_LABEL_KEY } from './PinMark';
 export function PinLegend({ className = '' }: { className?: string }) {
   const t = useTranslations('places');
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -29,11 +31,14 @@ export function PinLegend({ className = '' }: { className?: string }) {
       if (triggerRef.current?.contains(target)) return;
       if (boxRef.current && !boxRef.current.contains(target)) setOpen(false);
     }
+    const onResize = () => setOpen(false);
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('resize', onResize);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('resize', onResize);
     };
   }, [open]);
 
@@ -43,10 +48,14 @@ export function PinLegend({ className = '' }: { className?: string }) {
         ref={triggerRef}
         type="button"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          const r = triggerRef.current?.getBoundingClientRect();
+          if (r) setPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
+          setOpen((v) => !v);
+        }}
         title={t('pin_legend_title')}
         aria-label={t('pin_legend_title')}
-        className="control-h inline-flex items-center gap-1.5 px-2 sm:px-2.5 rounded-lg border border-border bg-card text-xs text-text-secondary cursor-pointer hover:bg-[color:var(--color-hover-surface)] transition-colors focus-ring"
+        className="control-h inline-flex items-center gap-1.5 px-2 sm:px-2.5 rounded-lg border border-[color:var(--color-control-border)] text-xs text-text-secondary cursor-pointer hover:bg-surface-2 transition-colors focus-ring"
       >
         <Info size={14} aria-hidden="true" />
         {/* Icon-only below `sm`. The header row is already search + a four-way view
@@ -55,12 +64,14 @@ export function PinLegend({ className = '' }: { className?: string }) {
             button named when the text is hidden. */}
         <span className="hidden sm:inline">{t('pin_legend')}</span>
       </button>
-      {open && (
+      {open && pos && createPortal(
         /* Right-anchored: the trigger sits at the end of the header row, so a
            left-anchored panel would hang off the viewport on a narrow screen.
+           Portalled to <body>, as the tree bar's menus are: the Places bar is a dark
+           island, and a panel inside it would inherit the island's translucent card.
            The positioning wrapper holds the ref because `Card` forwards none. */
-        <div ref={boxRef} className="absolute right-0 z-40 mt-1.5 w-[min(19rem,calc(100vw-2rem))]">
-          <Card pad={false} className="p-3">
+        <div ref={boxRef} className="fixed z-50 w-[min(19rem,calc(100vw-2rem))]" style={{ top: pos.top, right: pos.right }}>
+          <Card pad={false} className="p-3 shadow-[var(--shadow-float)]!">
             <div className="eyebrow mb-2">
               {t('pin_legend_title')}
             </div>
@@ -79,7 +90,8 @@ export function PinLegend({ className = '' }: { className?: string }) {
               ))}
             </dl>
           </Card>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

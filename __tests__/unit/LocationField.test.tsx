@@ -1,12 +1,13 @@
 /**
  * @vitest-environment happy-dom
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll } from 'vitest';
 import { useState } from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import LocationField from '@/app/components/LocationField';
+import { getDataClient } from '@/lib/data';
 
 // The tree's places for the picker (#1186) are their own suite
 // (place-picker.test.tsx); here the field has none, so only the map is asked.
@@ -70,6 +71,11 @@ async function flushDebouncedSearch() {
 }
 
 describe('LocationField', () => {
+  // The pin popover asks for its dependents count through the lazily imported data
+  // client. Cold, that import could outlast the test that opened the popover, and
+  // its fetch then landed on the NEXT test's fetch mock (a "never fetches" test
+  // failing on a stray /dependents call). Warm it once so the call stays in-test.
+  beforeAll(async () => { await getDataClient(); });
   afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
   it('never overwrites the typed text, even on a confident resolve', async () => {
