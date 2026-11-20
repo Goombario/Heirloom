@@ -341,6 +341,7 @@ export default function PhotoStage(props: PhotoStageProps) {
                                                 // full-blob read even when the browser defers decoding
                                                 // the off-screen <img>.
                                                 loading="eager"
+                                                stage
                                                 style={imgCapStyle}
                                             />
                                         ) : null}

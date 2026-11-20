@@ -19,6 +19,13 @@ interface MediaImgProps {
   onFailure?: (retry: () => void) => void;
   /** The row's content type: a PDF document shows its first page instead (#510). */
   contentType?: string | null;
+  /**
+   * The image sits on the dark lightbox stage. The light card-alt placeholder
+   * would flash as a pale box over the photo while it decodes, so the stage
+   * keeps one stable <img>, hidden until decoded, then faded in, with only a
+   * late, light-ink spinner while it waits.
+   */
+  stage?: boolean;
 }
 
 /**
@@ -36,7 +43,7 @@ export default function MediaImg(props: MediaImgProps) {
 }
 
 function ImageMediaImg({
-  mediaId, treeId, width, alt, className, style, loading = 'lazy', onFailure,
+  mediaId, treeId, width, alt, className, style, loading = 'lazy', onFailure, stage = false,
 }: MediaImgProps) {
   const t = useTranslations('library');
   const {
@@ -110,6 +117,16 @@ function ImageMediaImg({
     );
   }
 
+  // Light ink on the dark stage, faded in late so a fast load never shows it.
+  const stageSpinner = (
+    <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 leading-none motion-safe:animate-[backdrop-in_200ms_300ms_both]"
+      aria-label={t('media_loading')}>
+      <Loader2 size={20} className="animate-spin text-ink-on-dark/70" aria-hidden="true" />
+    </span>
+  );
+
+  if (!src && stage) return stageSpinner;
+
   if (!src) {
     return (
       <div className={`${className ?? ''} relative flex items-center justify-center bg-[color:var(--card-alt)]`} style={style} aria-label={t('media_loading')}>
@@ -132,6 +149,30 @@ function ImageMediaImg({
       onError={handleError}
     />
   );
+
+  const ready = imageState === 'ready' && imageStateKey === imageKey && !mediaLoading;
+
+  if (stage) {
+    // One fragment shape in every state, so the <img> is never remounted (a
+    // remount repaints it from empty) when the spinner goes away.
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={`${src}:${reloadKey}`}
+          src={src}
+          alt={alt}
+          className={`${className ?? ''} motion-safe:transition-opacity motion-safe:duration-150`}
+          style={{ ...style, opacity: ready ? 1 : 0 }}
+          loading={loading}
+          decoding="async"
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+        {!ready && stageSpinner}
+      </>
+    );
+  }
 
   if (imageState === 'ready' && !mediaLoading) return image;
 
