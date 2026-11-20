@@ -116,7 +116,7 @@ describe('MediaImportRecovery', () => {
       </UnsavedChangesProvider>,
     );
 
-    expect(screen.getByText('media_lifecycle_title_processing')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_photos_preparing')).toBeInTheDocument();
     expect(screen.queryByText('success_title')).not.toBeInTheDocument();
     await waitFor(() => expect(api.materializeImportMedia).toHaveBeenCalled());
     const unload = new Event('beforeunload', { cancelable: true });
@@ -124,7 +124,7 @@ describe('MediaImportRecovery', () => {
     expect(unload.defaultPrevented).toBe(true);
 
     finish({ outcome: 'ready', item: ready, failureCode: null, retryable: false });
-    await waitFor(() => expect(screen.getByText('media_lifecycle_title_complete')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('media_lifecycle_photos_complete')).toBeInTheDocument());
     await waitFor(() => {
       const cleanUnload = new Event('beforeunload', { cancelable: true });
       window.dispatchEvent(cleanUnload);
@@ -153,9 +153,9 @@ describe('MediaImportRecovery', () => {
       </UnsavedChangesProvider>,
     );
 
-    expect(screen.getByText('media_lifecycle_title_processing')).toBeInTheDocument();
-    expect(screen.queryByText('media_lifecycle_title_complete')).not.toBeInTheDocument();
-    expect(screen.getByText('0 / 1')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_photos_preparing')).toBeInTheDocument();
+    expect(screen.queryByText('media_lifecycle_photos_complete')).not.toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_photos_count')).toBeInTheDocument();
     await waitFor(() => expect(api.materializeImportMedia).toHaveBeenCalled());
   });
 
@@ -184,7 +184,7 @@ describe('MediaImportRecovery', () => {
       </UnsavedChangesProvider>,
     );
 
-    expect(screen.getByText('media_lifecycle_title_processing')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_photos_preparing')).toBeInTheDocument();
     await waitFor(() => expect(api.materializeImportMedia).toHaveBeenCalled());
     const unload = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(unload);
@@ -198,9 +198,12 @@ describe('MediaImportRecovery', () => {
 
     render(<MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[failed]} result={result} />);
 
-    expect(screen.getByText('media_lifecycle_title_attention')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_photos_attention')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_hint_attention')).toBeInTheDocument();
     expect(screen.getByText('media_recovery_failure_decode_failed')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'media_recovery_choose_archive_for_group_1' })).toBeInTheDocument();
+    // One Choose ZIP, on the photos step; the group header no longer repeats it (#206).
+    expect(screen.getByRole('button', { name: 'media_lifecycle_choose_zip' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'media_recovery_choose_archive_for_group_1' })).toBeNull();
   });
 
   it('asks for an archive when a plain GEDCOM leaves referenced photos pending', async () => {
@@ -210,8 +213,11 @@ describe('MediaImportRecovery', () => {
 
     render(<MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[pending]} result={result} />);
 
-    expect(screen.getByText('media_lifecycle_title_attention')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'media_recovery_choose_archive_for_group_1' })).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_photos_waiting')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_hint_waiting')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'media_lifecycle_choose_zip' })).toBeInTheDocument();
+    // Waiting rows would only repeat "Waiting", so the list stays closed.
+    expect(screen.queryByTestId('media-recovery-group-0')).toBeNull();
   });
 
   it('treats a records-only import as complete without inventing pending media', async () => {
@@ -220,11 +226,23 @@ describe('MediaImportRecovery', () => {
 
     render(<MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[]} result={result} />);
 
-    expect(screen.getByText('media_lifecycle_title_complete')).toBeInTheDocument();
-    // No media in the file: no "Photos ready 0 / 0" and no photo copy (FR-3).
-    expect(screen.queryByText('0 / 0')).toBeNull();
-    expect(screen.queryByText('media_lifecycle_photos_ready')).toBeNull();
-    expect(screen.getByText('media_lifecycle_description_complete_records')).toBeInTheDocument();
+    expect(screen.getByText('media_lifecycle_records_saved')).toBeInTheDocument();
+    // No media in the file: no photos step and no photo copy (FR-3).
+    expect(screen.queryByText('media_lifecycle_photos_complete')).toBeNull();
+    expect(screen.queryByText('media_lifecycle_photos_count')).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('leaves the people count to the page heading when it already names it', async () => {
+    const api = client({ listUnresolvedImportMedia: vi.fn().mockResolvedValue([]) });
+    getDataClient.mockResolvedValue({ gedcom: api });
+
+    const { rerender } = render(<MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[]} result={result} />);
+    expect(screen.getByText(/media_lifecycle_count_people, media_lifecycle_count_families/)).toBeInTheDocument();
+
+    rerender(<MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[]} result={result} peopleInHeading />);
+    expect(screen.getByText(/^media_lifecycle_count_families, media_lifecycle_count_sources/)).toBeInTheDocument();
+    expect(screen.queryByText(/media_lifecycle_count_people/)).toBeNull();
   });
 
   it('matches reselected archives by exact normalized path, batches misses, and keeps mixed outcomes visible', async () => {
