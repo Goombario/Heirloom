@@ -2,7 +2,8 @@ name: CI
 
 # No paths filter: CI is a required check on `main`, and a filtered-out run never
 # reports, which would leave a docs-only PR unmergeable. Instead the `changes`
-# job below marks version-only (release bump) and docs-only PRs, and every other
+# job below marks version-only (a release bump, its What's new changelog entry,
+# or both) and docs-only PRs, and every other
 # job is skipped for them; a skipped job reports as passing (#75).
 on:
   pull_request:
