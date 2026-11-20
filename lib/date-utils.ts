@@ -497,6 +497,17 @@ export function formatDateForInput(dateStr: string | null | undefined, locale: s
     return formatDateForDisplay(dateStr, locale);
 }
 
+/**
+ * A stored timestamp as epoch milliseconds, or null when it is missing or
+ * unreadable. PGlite returns timestamp columns as `Date` objects while hosted
+ * JSON delivers ISO strings, so callers must not assume either (#187).
+ */
+export function timestampMs(value: string | Date | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const ms = value instanceof Date ? value.getTime() : new Date(value).getTime();
+    return Number.isNaN(ms) ? null : ms;
+}
+
 // --- helpers ---
 
 function pad(n: number): string {
