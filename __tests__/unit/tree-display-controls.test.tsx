@@ -9,7 +9,8 @@ const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
-    showStatus: true, onShowStatusChange: vi.fn(), ...over,
+    showStatus: true, onShowStatusChange: vi.fn(),
+    secondNameType: null, onSecondNameTypeChange: vi.fn(), ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
     <NextIntlClientProvider locale="en" messages={en}><TreeDisplayControls {...p} /></NextIntlClientProvider>,
@@ -52,5 +53,31 @@ describe('TreeDisplayControls', () => {
         expect(sw.getAttribute('aria-checked')).toBe('true');
         fireEvent.click(sw);
         expect(p.onShowStatusChange).toHaveBeenCalledWith(false);
+    });
+
+    // The second name line on vertical cards: None by default, then the name types.
+    it('picks a Second name type, and None turns it off', () => {
+        const p = props();
+        const { unmount } = renderControls(p);
+        const field = screen.getByRole('combobox', { name: en.treeView.second_name });
+        expect(field.textContent).toContain(en.treeView.second_name_none);
+        fireEvent.click(field);
+        fireEvent.click(screen.getByRole('option', { name: en.personDetail.vtype_alias }));
+        expect(p.onSecondNameTypeChange).toHaveBeenCalledWith('Alias');
+        unmount();
+
+        const q = props({ secondNameType: 'Alias' });
+        renderControls(q);
+        fireEvent.click(screen.getByRole('combobox', { name: en.treeView.second_name }));
+        fireEvent.click(screen.getByRole('option', { name: en.treeView.second_name_none }));
+        expect(q.onSecondNameTypeChange).toHaveBeenCalledWith(null);
+    });
+
+    it('disables Second name in the horizontal layout and says why', () => {
+        renderControls(props({ orientation: 'horizontal', secondNameType: 'Nickname' }));
+        const field = screen.getByRole('combobox', { name: en.treeView.second_name }) as HTMLButtonElement;
+        expect(field.disabled).toBe(true);
+        expect(field.textContent).toContain(en.personDetail.vtype_nickname);
+        expect(screen.getByText(en.treeView.second_name_vertical_only)).toBeTruthy();
     });
 });

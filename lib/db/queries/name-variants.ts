@@ -20,3 +20,16 @@ export async function getAllNameVariants(treeId: number): Promise<NameVariant[]>
     );
     return result.rows as NameVariant[];
 }
+
+/** A tree's name variants for the tree cards' second line, preferred first per person. */
+export async function getTreeCardNameVariants(
+    treeId: number
+): Promise<Array<Pick<NameVariant, 'PersonId' | 'Type' | 'Name' | 'IsPrimary'>>> {
+    const result = await query(
+        `SELECT "PersonId", "Type", "Name", "IsPrimary" FROM "NameVariant"
+         WHERE "TreeId" = $1
+         ORDER BY "PersonId", "IsPrimary" DESC, "Id"`,
+        [treeId]
+    );
+    return result.rows as Array<Pick<NameVariant, 'PersonId' | 'Type' | 'Name' | 'IsPrimary'>>;
+}

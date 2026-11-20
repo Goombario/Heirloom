@@ -4,7 +4,7 @@ import React from 'react';
 import { useNodes, useStore, Panel } from 'reactflow';
 import { FlowNode, FlowNodeData } from './types';
 import {
-  PERSON_CARD_WIDTH, PERSON_CARD_HEIGHT,
+  PERSON_CARD_WIDTH, personCardHeight,
   BAR_CARD_WIDTH, BAR_CARD_HEIGHT,
 } from '@/lib/tree/geometry';
 
@@ -12,7 +12,7 @@ import {
 function dimsFor(node: FlowNode): { w: number; h: number } {
   return node.type === 'personBar'
     ? { w: BAR_CARD_WIDTH, h: BAR_CARD_HEIGHT }
-    : { w: PERSON_CARD_WIDTH, h: PERSON_CARD_HEIGHT };
+    : { w: PERSON_CARD_WIDTH, h: personCardHeight(!!node.data.secondNameOn) };
 }
 
 interface DebugTextProps {

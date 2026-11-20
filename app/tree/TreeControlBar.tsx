@@ -145,6 +145,9 @@ function DisplayMenu({ display }: { display: TreeDisplayProps }) {
         const onDown = (e: PointerEvent) => {
             const target = e.target as Node;
             if (trigger.current?.contains(target) || panel.current?.contains(target)) return;
+            // A dropdown inside the panel (Second name) portals its list to <body>;
+            // picking from it is still inside the menu.
+            if (target instanceof Element && target.closest('[role="listbox"]')) return;
             setOpen(false);
         };
         const onKey = (e: KeyboardEvent) => {

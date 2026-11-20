@@ -4,7 +4,8 @@ import { NotFoundError } from '@/lib/data/errors';
 import { formatYearForDisplay, parseDateComponents } from '@/lib/date-utils';
 import { displayFullName } from '@/lib/utils/names';
 import type { Person, Family } from '@/lib/db/schema';
-import type { TreeData, TreeNode, FocusTrees, TreeLifespan } from '@/app/components/tree/types';
+import { TREE_SECOND_NAME_TYPES, type TreeData, type TreeNode, type FocusTrees, type TreeLifespan, type TreeCardNames, type TreeSecondNameType } from '@/app/components/tree/types';
+import { getTreeCardNameVariants } from '@/lib/db/queries/name-variants';
 import { primaryPhotoJoin } from '@/lib/db/queries/media-tags';
 import { pickDefaultRoot } from '@/lib/tree/defaultRoot';
 
@@ -51,7 +52,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
   );
   const treeId = scope.treeId;
 
-  const [peopleRes, familiesRes, fpRes, photosRes] = await Promise.all([
+  const [peopleRes, familiesRes, fpRes, photosRes, variantRows] = await Promise.all([
     query(
       // One grouped pass over the tree's name variants, joined once, instead of
       // three lookups per person (#1270). A person has at most one primary name
@@ -87,6 +88,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
        ORDER BY p."Id"`,
       [treeId]
     ),
+    getTreeCardNameVariants(treeId),
   ]);
 
   const allPeople = peopleRes.rows as TreePerson[];
@@ -129,6 +131,8 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
       });
     }
   }
+
+  const cardNames = buildCardNames(allPeople, variantRows);
 
   const personMap = new Map<number, PersonWithFamilies>();
   for (const p of allPeople) {
@@ -554,5 +558,39 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
     parents,
     allPeople: allPeopleList,
     ...(focusTrees ? { focusTrees } : {}),
+    cardNames,
   };
+}
+
+const SECOND_NAME_TYPES: ReadonlySet<string> = new Set(TREE_SECOND_NAME_TYPES);
+
+/**
+ * The names for the cards' optional second line (#Display "Second name"). For each
+ * type: the preferred variant, else the first recorded, skipping one that is
+ * already the main line's first name. A preferred nickname is never skipped: with
+ * Nickname chosen the main line shows `original` instead of the merged name.
+ */
+function buildCardNames(
+  people: TreePerson[],
+  variants: Array<{ PersonId: number; Type: string; Name: string; IsPrimary: number }>,
+): Record<number, TreeCardNames> {
+  const byId = new Map(people.map((p) => [p.Id, p]));
+  const out: Record<number, TreeCardNames> = {};
+  for (const v of variants) {
+    const p = byId.get(v.PersonId);
+    const name = (v.Name ?? '').trim();
+    if (!p || !name || !SECOND_NAME_TYPES.has(v.Type)) continue;
+    const type = v.Type as TreeSecondNameType;
+    const entry = out[p.Id] ??= p.Nickname
+      ? { original: displayFullName({ FirstName: p.FirstName, LastName: p.LastName }), byType: {} }
+      : { byType: {} };
+    if (entry.byType[type] !== undefined) continue;
+    const isPreferredNickname = type === 'Nickname' && v.IsPrimary === 1;
+    if (!isPreferredNickname && name === (p.EffectiveFirstName ?? p.FirstName ?? '').trim()) continue;
+    entry.byType[type] = name;
+  }
+  for (const id of Object.keys(out)) {
+    if (Object.keys(out[Number(id)].byType).length === 0) delete out[Number(id)];
+  }
+  return out;
 }

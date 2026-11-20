@@ -13,6 +13,15 @@
 export const PERSON_CARD_WIDTH = 96;
 export const PERSON_CARD_HEIGHT = 145;
 
+/** Extra height when the Display menu's "Second name" shows a second, smaller
+ *  name line under the main one (vertical layout only). None keeps 145. */
+const SECOND_NAME_LINE_HEIGHT = 16;
+
+/** The portrait card's height, with or without the second name line. */
+export function personCardHeight(secondName: boolean): number {
+  return secondName ? PERSON_CARD_HEIGHT + SECOND_NAME_LINE_HEIGHT : PERSON_CARD_HEIGHT;
+}
+
 /** Compact horizontal-mode bar card footprint — must match PersonBarNode's
  *  inline width/height. 44px tall satisfies the ≥44px touch-target minimum. */
 export const BAR_CARD_WIDTH = 188;
@@ -77,6 +86,15 @@ export const DEFAULT_LAYOUT_GEOMETRY: LayoutGeometry = {
   spouseGap: SPOUSE_GAP,
   minSiblingGap: MIN_SIBLING_GAP,
   minBranchGap: MIN_BRANCH_GAP,
+};
+
+/**
+ * Portrait cards with the second name line: generations move apart by the same
+ * 16px the cards grow, so the gap between rows (where the edges run) is unchanged.
+ */
+export const SECOND_NAME_LAYOUT_GEOMETRY: LayoutGeometry = {
+  ...DEFAULT_LAYOUT_GEOMETRY,
+  generationSpacing: VERTICAL_SPACING + SECOND_NAME_LINE_HEIGHT,
 };
 
 /**

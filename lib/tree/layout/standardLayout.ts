@@ -13,6 +13,9 @@ import type { TreeNode, FlowNode, FlowEdge, LayoutOutput } from '@/app/component
 import {
   DEFAULT_LAYOUT_GEOMETRY,
   HORIZONTAL_BAR_GEOMETRY,
+  SECOND_NAME_LAYOUT_GEOMETRY,
+  PERSON_CARD_WIDTH,
+  personCardHeight,
   BAR_CARD_WIDTH,
   BAR_CARD_HEIGHT,
 } from '@/lib/tree/geometry';
@@ -23,13 +26,16 @@ export function computeStandardLayout(
   rootNode: TreeNode | null,
   mode: 'descendants' | 'ancestors' = 'descendants',
   orientation: 'vertical' | 'horizontal' = 'vertical',
+  /** Second name line on the portrait cards (vertical only; bars ignore it). */
+  secondName = false,
 ): LayoutOutput {
   if (!rootNode) {
     return { nodes: [], edges: [], bounds: null, anchor: null };
   }
 
   const horizontal = orientation === 'horizontal';
-  const geometry = horizontal ? HORIZONTAL_BAR_GEOMETRY : DEFAULT_LAYOUT_GEOMETRY;
+  const tall = !horizontal && secondName;
+  const geometry = horizontal ? HORIZONTAL_BAR_GEOMETRY : tall ? SECOND_NAME_LAYOUT_GEOMETRY : DEFAULT_LAYOUT_GEOMETRY;
 
   const { nodes, edges } = computeColumnLayout(rootNode, {
     orientation: mode === 'ancestors' ? 'up' : 'down',
@@ -119,7 +125,7 @@ export function computeStandardLayout(
   return {
     nodes,
     edges,
-    bounds: layoutBounds(nodes),
+    bounds: layoutBounds(nodes, { width: PERSON_CARD_WIDTH, height: personCardHeight(tall) }),
     anchor: {
       nodeId: nodeKeyToId({ personId: rootNode.id, role: 'person' }),
       placement: mode === 'ancestors' ? 'bottom' : 'top',

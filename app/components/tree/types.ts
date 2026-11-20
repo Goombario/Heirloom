@@ -125,6 +125,23 @@ export interface TreeData {
     isIsolated: boolean;
   }[];
   focusTrees?: FocusTrees;
+  /**
+   * Names for the cards' optional second line (the Display menu's "Second name"),
+   * keyed by person id. Only people with something to show are listed.
+   */
+  cardNames?: Record<number, TreeCardNames>;
+}
+
+/** The name types the Display menu's "Second name" can show (NameVariant types). */
+export const TREE_SECOND_NAME_TYPES = ['Nickname', 'Maiden', 'Married', 'Anglicized', 'Alias', 'Given'] as const;
+export type TreeSecondNameType = typeof TREE_SECOND_NAME_TYPES[number];
+
+/** One person's names for the card's second line. */
+export interface TreeCardNames {
+  /** "First Last" without the merged nickname; set only when the preferred name is a nickname. */
+  original?: string;
+  /** The name to show for each type: the preferred one first, else the first recorded. */
+  byType: Partial<Record<TreeSecondNameType, string>>;
 }
 
 /**
@@ -142,6 +159,13 @@ export interface FlowNodeData {
   showAgeIndicator?: boolean;
   /** The living-status mark on the card (#68); hidden only when false. */
   showStatusMark?: boolean;
+  /** The second name line is on (vertical cards): the card is taller, even when
+   *  this person has no name of the chosen type. */
+  secondNameOn?: boolean;
+  /** The name for the card's second line, or null for an empty line. */
+  secondName?: string | null;
+  /** Replaces the main line (the original name when Nickname is the second name). */
+  mainName?: string;
   /** DEBUG (horizontal bar review): zoom level below which the bar switches to
    *  zoomed-out mode (name-only, scaled). Default 0.6. */
   barZoomThreshold?: number;

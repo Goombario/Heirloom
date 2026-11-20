@@ -22,8 +22,8 @@ import PersonBarNode from './PersonBarNode';
 import BranchEdge from './BranchEdge';
 import SpouseEdge from './SpouseEdge';
 import { useTreeLayoutMode } from './useTreeLayoutMode';
-import { TreeNode, FocusTrees } from './types';
-import { PERSON_CARD_WIDTH, PERSON_CARD_HEIGHT, BAR_CARD_WIDTH, BAR_CARD_HEIGHT } from '@/lib/tree/geometry';
+import { TreeNode, FocusTrees, TreeCardNames, TreeSecondNameType } from './types';
+import { PERSON_CARD_WIDTH, BAR_CARD_WIDTH, BAR_CARD_HEIGHT, personCardHeight } from '@/lib/tree/geometry';
 import { naturalFitZoom, READABLE_ZOOM } from '@/lib/tree/fitView';
 import DebugOverlay from './DebugOverlay';
 
@@ -95,6 +95,23 @@ function ZoomIndicator() {
 const MINIMAP_MAX_NODES = 300;
 
 /**
+ * The second-line fields a card gets for the Display menu's "Second name". With
+ * Nickname chosen the main line drops the merged nickname for the original name,
+ * since the nickname now has a line of its own.
+ */
+function secondNameData(
+  personId: number,
+  type: TreeSecondNameType | null,
+  cardNames: Record<number, TreeCardNames> | undefined,
+): { secondNameOn: boolean; secondName: string | null; mainName?: string } {
+  if (!type) return { secondNameOn: false, secondName: null };
+  const names = cardNames?.[personId];
+  const secondName = names?.byType[type] ?? null;
+  const mainName = type === 'Nickname' && names?.original ? names.original : undefined;
+  return { secondNameOn: true, secondName, ...(mainName ? { mainName } : {}) };
+}
+
+/**
  * Register custom node types
  */
 const nodeTypes: NodeTypes = {
@@ -125,6 +142,10 @@ interface TreeVisualizationProps {
   showAgeIndicator?: boolean;
   /** The living-status mark on the cards (#68). */
   showStatusMark?: boolean;
+  /** The Display menu's "Second name" type, or null for none. Vertical cards only. */
+  secondNameType?: TreeSecondNameType | null;
+  /** Each person's names for the second line (from the tree payload). */
+  cardNames?: Record<number, TreeCardNames>;
   /** DEBUG (bar review): zoom threshold for the bar's name-only mode. */
   barZoomThreshold?: number;
   /** Increment this to trigger a fitView; silent reloads should NOT increment it. */
@@ -146,7 +167,7 @@ interface TreeVisualizationProps {
  * - Smooth edge connections
  * - Minimap and controls
  */
-function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
+function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
   const [debugMode, setDebugMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -167,9 +188,12 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
   // Note: sidebar selection is NOT a layout input — it is decorated onto the
   // nodes in the effect below, so opening the sidebar never re-runs d3.
   const layoutModeId = focusTrees ? 'focus' : (mode === 'focus' ? 'descendants' : mode);
+  // The second name line is portrait-only: bar cards (horizontal) keep today's look.
+  // Focus is always laid out vertically, whatever `orientation` says.
+  const secondName = secondNameType != null && (layoutModeId === 'focus' || orientation === 'vertical');
   const { nodes: layoutNodes, edges: layoutEdges, bounds, anchor } = useTreeLayoutMode(
     layoutModeId,
-    { tree: focusTrees ? null : treeData, focusTrees, orientation },
+    { tree: focusTrees ? null : treeData, focusTrees, orientation, secondName },
   );
 
   // React Flow state management
@@ -211,7 +235,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
     }
 
     const CARD_W        = orientation === 'horizontal' ? BAR_CARD_WIDTH : PERSON_CARD_WIDTH;
-    const CARD_H        = orientation === 'horizontal' ? BAR_CARD_HEIGHT : PERSON_CARD_HEIGHT;
+    const CARD_H        = orientation === 'horizontal' ? BAR_CARD_HEIGHT : personCardHeight(secondName);
     const FIT_PADDING   = 0.2;
 
     // Read from the DOM ref at call time — avoids stale closure if the React
@@ -269,7 +293,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
           : h / 2 - (anchorNode.position.y + CARD_H / 2) * zoom; // center / left
 
     instance.setViewport({ x: targetX, y: targetY, zoom }, { duration: animated ? 200 : 0 });
-  }, [bounds, anchor, orientation]);
+  }, [bounds, anchor, orientation, secondName]);
 
   // Latest sidebar selection kept in a ref so the full-rebuild effect below can
   // stamp the initial isSidebarSelected without depending on sidebarSelectedId —
@@ -302,6 +326,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         showAgeIndicator,
         showStatusMark,
         barZoomThreshold,
+        ...secondNameData(node.data.person.id, secondName ? secondNameType : null, cardNames),
       },
     }));
     setNodes(nodesWithCallback);
@@ -324,7 +349,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         requestAnimationFrame(() => setIsPositioned(true));
       }, 50);
     }
-  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
+  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, secondName, secondNameType, cardNames, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
 
   // Surgical selection update: flip isSidebarSelected only on the nodes whose
   // selection state actually changed (previously- and newly-selected), leaving

@@ -1,12 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { TREE_SECOND_NAME_TYPES, type TreeSecondNameType } from '@/app/components/tree/types';
+
+/** A stored "Second name" choice, or null for none (also for anything unrecognised). */
+function parseSecondNameType(value: string | null): TreeSecondNameType | null {
+    return (TREE_SECOND_NAME_TYPES as readonly string[]).includes(value ?? '') ? value as TreeSecondNameType : null;
+}
 
 /** Tree display preferences, loaded from localStorage on mount. */
 export function useTreeDisplayPrefs() {
     const [colorblindMode, setColorblindMode] = useState(false);
     const [showAgeIndicator, setShowAgeIndicatorState] = useState(false);
     const [showStatusMark, setShowStatusMarkState] = useState(true);
+    const [secondNameType, setSecondNameTypeState] = useState<TreeSecondNameType | null>(null);
 
     // Read persisted prefs after mount (server render + first client paint use the
     // defaults, so there is no hydration mismatch).
@@ -16,6 +23,7 @@ export function useTreeDisplayPrefs() {
             setShowAgeIndicatorState(localStorage.getItem('treeShowAgeIndicator') === 'true');
             // On unless turned off (#68), so trees look as they did before the switch.
             setShowStatusMarkState(localStorage.getItem('treeShowStatusMark') !== 'false');
+            setSecondNameTypeState(parseSecondNameType(localStorage.getItem('treeSecondName')));
             // Debug-only card styles with no switch anywhere, removed by #271.
             localStorage.removeItem('treeRoundedPhotos');
             localStorage.removeItem('treeGreyscaleMode');
@@ -36,5 +44,15 @@ export function useTreeDisplayPrefs() {
         localStorage.setItem('treeShowStatusMark', String(value));
     }, []);
 
-    return { colorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark };
+    // The second name line on vertical cards: a name type, or null for none (today's cards).
+    const setSecondNameType = useCallback((value: TreeSecondNameType | null) => {
+        setSecondNameTypeState(value);
+        if (value) localStorage.setItem('treeSecondName', value);
+        else localStorage.removeItem('treeSecondName');
+    }, []);
+
+    return {
+        colorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
+        secondNameType, setSecondNameType,
+    };
 }

@@ -14,6 +14,7 @@ const display: TreeDisplayProps = {
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 3, maxDepth: 3, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(), showStatus: true, onShowStatusChange: vi.fn(),
+    secondNameType: null, onSecondNameTypeChange: vi.fn(),
 };
 
 function search(): ReturnType<typeof useTreeSearch> {
@@ -68,6 +69,20 @@ describe('TreeControlBar', () => {
         expect(screen.getByRole('switch', { name: en.treeView.show_ages })).toBeTruthy();
         fireEvent.keyDown(document, { key: 'Escape' });
         expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    // Second name's list portals to <body>; picking from it must not close the menu
+    // before the pick lands.
+    it('keeps Display open while a Second name is picked', () => {
+        const onSecondNameTypeChange = vi.fn();
+        renderBar({ display: { ...display, onSecondNameTypeChange } });
+        fireEvent.click(screen.getByRole('button', { name: en.treeView.display }));
+        fireEvent.click(screen.getByRole('combobox', { name: en.treeView.second_name }));
+        const option = screen.getByRole('option', { name: en.personDetail.vtype_given });
+        fireEvent.pointerDown(option);
+        fireEvent.click(option);
+        expect(onSecondNameTypeChange).toHaveBeenCalledWith('Given');
+        expect(screen.getByRole('dialog', { name: en.treeView.display_title })).toBeTruthy();
     });
 
     it('focuses Find on / before the global search sees it', () => {
