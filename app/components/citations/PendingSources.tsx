@@ -6,7 +6,7 @@ import { citeClass, cx } from '@/app/components/ui';
 import { X } from '@/lib/icons';
 
 /** The queued source's title: a picked source, or one to be created on save. */
-export function pendingSourceTitle(p: PendingCitation): string | null {
+function pendingSourceTitle(p: PendingCitation): string | null {
     return p.sourceTitle ?? p.newSource?.Title ?? null;
 }
 
