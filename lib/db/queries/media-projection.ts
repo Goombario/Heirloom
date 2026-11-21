@@ -4,7 +4,7 @@
  */
 const PUBLIC_MEDIA_COLUMNS = [
   'Id', 'UserId', 'TreeId', 'Title', 'Date', 'FilePath', 'SourceFile', 'Format', 'ContentType',
-  'FocalX', 'FocalY', 'FocalRadius', 'FileSize', 'ContentHash',
+  'FocalX', 'FocalY', 'FocalRadius', 'FileSize', 'ContentHash', 'CreatedAt',
 ] as const;
 
 /** The public columns, optionally from `alias`, and renamed with `as` in front ("media_Id") for a join. */

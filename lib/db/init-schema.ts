@@ -23,7 +23,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 74;
+export const SCHEMA_VERSION = 75;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -417,6 +417,13 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
   // #976: the FILE's sub-lines the app doesn't model (FTM's `_DATE` / `_TEXT`),
   // levels relative to FILE, written back under it on export.
   await pool.query(`ALTER TABLE "Media" ADD COLUMN IF NOT EXISTS "FileRawGedcom" TEXT;`);
+  // #25: when the row entered the app, set by the database and never by a client.
+  // Added without a default first, so rows that predate it stay NULL (their upload
+  // time is unknown, and the migration time would be a guess); then the default
+  // applies to every later insert, whichever path makes it. A restore keeps the
+  // backed-up value.
+  await pool.query(`ALTER TABLE "Media" ADD COLUMN IF NOT EXISTS "CreatedAt" TIMESTAMPTZ;`);
+  await pool.query(`ALTER TABLE "Media" ALTER COLUMN "CreatedAt" SET DEFAULT CURRENT_TIMESTAMP;`);
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_media_tree_upload_intent
       ON "Media" ("TreeId", "UploadIntentId")
