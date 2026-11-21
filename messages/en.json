@@ -2246,6 +2246,8 @@
     "warning_custom_records_dropped": "{count, plural, one {# record in the file is specific to the app that made it} other {# records in the file are specific to the app that made them}} ({tags}), such as event definitions. They were not imported.",
     "warning_media_blobs_dropped": "{count, plural, one {# picture is stored inside the file} other {# pictures are stored inside the file}} as GEDCOM 5.5 BLOB data. The app can't read embedded pictures, so they were imported without the image and won't be exported.",
     "warning_notes_unattached": "{count, plural, one {# note in the file isn't attached to anything} other {# notes in the file aren't attached to anything}}, such as a description of the whole tree. The app keeps a note only on what it describes, so they were not imported.",
+    "warning_dates_kept_as_written": "{count, plural, one {# date was kept as written because it couldn't be read.} other {# dates were kept as written because they couldn't be read.}}",
+    "warning_dates_review": "See them in Data checks",
     "warning_place_lines_dropped": "{count, plural, one {# line under a place} other {# lines under places}} in the file ({tags}), such as another app's structured place, {count, plural, one {has} other {have}} no home here. The place names are kept; these lines were not imported.",
     "warning_raw_pointers_dropped": "{count, plural, one {# link in the file points} other {# links in the file point}} to records the app doesn't keep, such as the submitter ({tags}). They were not imported.",
     "warning_external_media_references": "{count, plural, one {# media file is} other {# media files are}} linked by a path on another computer or a web address. They were kept as references: add the files to attach them.",

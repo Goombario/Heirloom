@@ -2246,6 +2246,8 @@
     "warning_custom_records_dropped": "Enregistrements propres à l’application d’origine ({tags}), comme des définitions d’événements : {count}. Ils n’ont pas été importés.",
     "warning_media_blobs_dropped": "Images enregistrées dans le fichier lui-même (données BLOB de GEDCOM 5.5) : {count}. L’application ne sait pas lire ces images ; elles ont été importées sans l’image et ne seront pas exportées.",
     "warning_notes_unattached": "Notes du fichier rattachées à rien, comme une description de tout l’arbre : {count}. L’application ne garde une note que sur ce qu’elle décrit ; elles n’ont pas été importées.",
+    "warning_dates_kept_as_written": "{count, plural, one {# date a été conservée telle quelle, car elle n’a pas pu être lue.} other {# dates ont été conservées telles quelles, car elles n’ont pas pu être lues.}}",
+    "warning_dates_review": "Les voir dans Vérification des dates",
     "warning_place_lines_dropped": "Lignes sous un lieu que l’application ne garde pas ({tags}), comme le lieu structuré d’une autre application : {count}. Le nom du lieu est conservé ; ces lignes n’ont pas été importées.",
     "warning_raw_pointers_dropped": "Liens conservés depuis le fichier vers des enregistrements que l’application ne garde pas ({tags}), comme l’auteur de l’envoi : {count}. Ils n’ont pas été importés.",
     "warning_external_media_references": "{count, plural, one {# fichier média est lié} other {# fichiers médias sont liés}} par un chemin sur un autre ordinateur ou une adresse web. Ils ont été conservés comme références : ajoutez les fichiers pour les joindre.",

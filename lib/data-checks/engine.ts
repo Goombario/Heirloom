@@ -15,7 +15,7 @@
  */
 
 import { FACT_TABLES } from '@/lib/db/fact-tables';
-import { isDatePhrase } from '@/lib/date-qualifiers';
+import { isUnreadableDate } from './unreadable';
 import { addMonths, addYears, dateInterval, daysFromCivil, type DateInterval } from '@/lib/date-intervals';
 import {
     DATA_CHECK_RULES, RULE_KIND, FATHER_DEATH_MONTHS, DIED_YOUNG_MAX_AGE, UNLIKELY_THRESHOLDS, ruleThreshold,
@@ -248,8 +248,7 @@ function cycles(adj: Map<number, number[]>): number[][] {
  * partner.
  */
 function flagUnreadable(input: DataCheckInput, problems: Problems): void {
-    const unreadable = (date: string | null): date is string =>
-        Boolean(date?.trim()) && dateInterval(date) === null && !isDatePhrase(date);
+    const unreadable = isUnreadableDate;
     const firstPartner = new Map(input.families.map((f) => [f.Id, f.Partner1Id ?? f.Partner2Id]));
     const flag = (owner: number | null | undefined, fact: DataCheckFact) => {
         if (owner != null) problems.add('unreadable_date', owner, { families: fact.familyId != null ? [fact.familyId] : [], facts: [fact], editable: [fact] });

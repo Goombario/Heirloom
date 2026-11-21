@@ -14,6 +14,7 @@ export type GedcomWarningTranslator = (
     | 'warning_custom_records_dropped'
     | 'warning_media_blobs_dropped'
     | 'warning_notes_unattached'
+    | 'warning_dates_kept_as_written'
     | 'warning_place_lines_dropped'
     | 'warning_raw_pointers_dropped'
     | 'warning_external_media_references'
@@ -47,6 +48,8 @@ export function formatGedcomImportWarning(
       return translate('warning_custom_records_dropped', warning.values);
     case 'media_blobs_dropped':
       return translate('warning_media_blobs_dropped', warning.values);
+    case 'dates_kept_as_written':
+      return translate('warning_dates_kept_as_written', warning.values);
     case 'notes_unattached':
       return translate('warning_notes_unattached', warning.values);
     case 'place_lines_dropped':
