@@ -75,11 +75,28 @@ admins see.
 
 A production server with no members and no bootstrap address lets nobody in.
 
+### Three ways to get the server
+
+- **The release image** (simplest): every release publishes `ghcr.io/goombario/heirloom`,
+  tagged with its version (`1.2.0`), its minor line (`1.2`) and `latest`. Test builds are
+  tagged `1.2.0-rc.1` and never become `latest`. Nothing to build, and no fork.
+- **A fork you build yourself**: for changes of your own. Railway or Docker builds it from the
+  `Dockerfile`. Point `SOURCE_URL` at your fork so the About page links your code.
+- **A Railway template**: one click on Railway, once one is published. Until then, use the
+  image on Railway as below.
+
+The image carries no secrets and no settings: everything below comes from its environment
+variables. It is built for `linux/amd64`.
+
 ### Option A: Railway
 
 1. Create a Railway project and add the **PostgreSQL** service. Railway provides its
    `DATABASE_URL`; reference it from the app service as `${{Postgres.DATABASE_URL}}`.
-2. Add a service from your fork of this repository. Railway builds it with the `Dockerfile`.
+2. Add the app service. Either **Docker Image** with `ghcr.io/goombario/heirloom:1.2`
+   (Railway can update it as new `1.2.x` images appear, under the service's settings), or
+   **GitHub Repo** with your fork, which Railway builds with the `Dockerfile`. A public repository
+   you don't have contributor access to can't auto-deploy on Railway, so use the image rather
+   than pointing at the upstream repository.
 3. Attach a **volume** to the app service, mounted at `/data`.
 4. Set the variables from the table above, with `AUTH_TRUST_HOST=true`.
 5. Generate a domain under **Settings → Networking**, put it in `NEXTAUTH_URL`, and add it to
@@ -107,7 +124,7 @@ docker run -d --name heirloom-db --network heirloom \
   -v heirloom-pg:/var/lib/postgresql/data \
   postgres:16-alpine
 
-docker build -t heirloom .
+docker pull ghcr.io/goombario/heirloom:latest   # or: docker build -t heirloom . from a fork
 
 docker run -d --name heirloom --network heirloom -p 3000:3000 \
   -e DATABASE_URL=postgresql://heirloom:change-me@heirloom-db:5432/heirloom \
@@ -118,7 +135,7 @@ docker run -d --name heirloom --network heirloom -p 3000:3000 \
   -e AUTH_TRUST_HOST=true \
   -e AUTH_BOOTSTRAP_EMAIL=you@example.com \
   -v heirloom-media:/data \
-  heirloom
+  ghcr.io/goombario/heirloom:latest
 ```
 
 Put a reverse proxy with HTTPS (Caddy, nginx, Traefik) in front of port 3000. Generate
@@ -133,7 +150,8 @@ unprivileged user.
   other is incomplete.
 - **Tools → Import/export** exports the tree as GEDCOM with its media, which any genealogy
   program can read. It is a good second copy, not a replacement for a database backup.
-- To upgrade, pull the new version and redeploy. Take a backup first: schema upgrades run on
+- To upgrade, pull the new image (or the new code) and redeploy. Pinning a minor line such as
+  `1.2` takes its fixes without jumping to the next release on its own. Take a backup first: schema upgrades run on
   start and are not reversed by rolling back the code.
 
 ## Static site
