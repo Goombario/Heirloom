@@ -1,7 +1,7 @@
 import { query, getClient } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
 import { getTreeSharingPermission } from './sharing';
-import { AccessError } from '@/lib/data/errors';
+import { AccessError, TreeNotEmptyError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
 import { DEFAULT_TREE_NAME } from '@/lib/utils/tree-name';
 import type { Tree, NewTree } from '../schema';
@@ -138,6 +138,33 @@ async function lookUpDefaultTree(userId: number): Promise<number> {
 }
 
 /**
+ * Every tree-scoped table the delete below wipes (#36). A tree is empty when none
+ * of them has a row for it. That includes its history (AuditLog: a tree whose
+ * records were all deleted still has their audit entries) and its shares and
+ * pending invitations (deleting it removes other people's access).
+ */
+const TREE_SCOPED_TABLES = [
+  'Citation', 'DataCheckConfirmations', 'Note', 'Sources', 'Repository', 'Events', 'Media',
+  'Families', 'NameVariant', 'People', 'Cases', 'Places', 'AuditLog', 'TreeSharing', 'PendingShares',
+] as const;
+
+const TREE_EMPTY_SQL = `SELECT ${TREE_SCOPED_TABLES
+  .map((table) => `NOT EXISTS (SELECT 1 FROM "${table}" WHERE "TreeId" = $1)`)
+  .join(' AND ')} AS "IsEmpty"`;
+
+/**
+ * Whether a tree holds nothing at all (#36): no records, no history, no shares.
+ * Pass a transaction's client to check under its lock.
+ */
+export async function isTreeEmpty(
+  treeId: number,
+  exec: { query(text: string, params?: unknown[]): Promise<{ rows: unknown[] }> } = { query },
+): Promise<boolean> {
+  const result = await exec.query(TREE_EMPTY_SQL, [treeId]);
+  return (result.rows[0] as { IsEmpty: boolean }).IsEmpty === true;
+}
+
+/**
  * Delete every row belonging to a tree, then the tree itself, in ONE
  * transaction. Table order mirrors importGedcomService's overwrite wipe
  * (children/links before parents) plus NameVariant, AuditLog, TreeSharing and
@@ -148,7 +175,8 @@ async function lookUpDefaultTree(userId: number): Promise<number> {
  *
  * NOT restorable: this is raw SQL that bypasses audit capture, and the tree's
  * own AuditLog rows are removed too — which is why the service/API layer
- * guards it (X-Confirm-Delete-Tree header + type-the-name UI).
+ * guards it (X-Confirm-Delete-Tree header + type-the-name UI, or a simple
+ * confirm when `onlyIfEmpty` holds for a tree with nothing in it, #36).
  *
  * Returns the dead tree's Media.FilePath values so the SERVICE layer can
  * best-effort unlink files from disk after commit. Only client.query is used
@@ -160,7 +188,7 @@ async function lookUpDefaultTree(userId: number): Promise<number> {
  * concurrent confirmed deletes on a 2-tree account can't both pass the
  * service-layer pre-check and leave the account with 0 trees.
  */
-export async function deleteTreeData(treeId: number, ownerId: number): Promise<string[]> {
+export async function deleteTreeData(treeId: number, ownerId: number, opts: { onlyIfEmpty?: boolean } = {}): Promise<string[]> {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -176,6 +204,11 @@ export async function deleteTreeData(treeId: number, ownerId: number): Promise<s
     }
     if (ownedIds.length <= 1) {
       throw new ValidationError('Cannot delete your last tree');
+    }
+    // The simple confirm (#36) only promised an empty tree. Check again under the
+    // lock: a record or share added since the dialog opened needs the full confirm.
+    if (opts.onlyIfEmpty && !(await isTreeEmpty(treeId, client))) {
+      throw new TreeNotEmptyError();
     }
     const media = await client.query(
       'SELECT "FilePath" FROM "Media" WHERE "TreeId" = $1 AND "FilePath" IS NOT NULL',

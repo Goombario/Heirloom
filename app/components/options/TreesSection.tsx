@@ -8,6 +8,8 @@ import { getDataClient } from '@/lib/data';
 import { useMyTrees } from '@/app/hooks/useMyTrees';
 import { useTree } from '@/app/contexts/TreeContext';
 import Modal from '@/app/components/Modal';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
+import { TreeNotEmptyError } from '@/lib/data/errors';
 import { Button, Card, IconButton, Input } from '@/app/components/ui';
 import { Pencil, AlertTriangle, Network, Loader2 } from '@/lib/icons';
 import type { Tree } from '@/lib/db/schema';
@@ -15,7 +17,9 @@ import type { Tree } from '@/lib/db/schema';
 /**
  * Options → Trees: list the user's own trees with inline rename and a
  * guarded (type-the-name) permanent delete. Tree deletion is NOT restorable
- * from the audit log, hence the heavy confirm.
+ * from the audit log, hence the heavy confirm. A tree with nothing in it (no
+ * records, history or shares) gets a simple confirm instead (#36); the server
+ * checks again and refuses if something was added meanwhile.
  */
 export default function TreesSection() {
   const t = useTranslations('options');
@@ -37,6 +41,8 @@ export default function TreesSection() {
   const [typedName, setTypedName] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // 'simple' for an empty tree (#36); 'filled' when the simple path found records.
+  const [deleteMode, setDeleteMode] = useState<'full' | 'simple' | 'filled'>('full');
   // Files a successful delete left on server storage (#945): a soft notice, not an error.
   const [cleanupWarningCount, setCleanupWarningCount] = useState(0);
   const deleteTitleId = useId();
@@ -84,21 +90,39 @@ export default function TreesSection() {
     setDeleteError(null);
   }
 
+  /** Opens the simple confirm for an empty tree, the type-the-name one otherwise. */
+  async function startDelete(tree: Tree) {
+    setTypedName('');
+    setDeleteError(null);
+    let empty = false;
+    try {
+      empty = await (await getDataClient()).trees.getIsEmpty(tree.Id);
+    } catch {
+      // Can't tell: the full confirm is always safe.
+    }
+    setDeleteMode(empty ? 'simple' : 'full');
+    setDeleteTarget(tree);
+  }
+
   async function handleDelete() {
-    if (!deleteTarget || deleting || typedName !== treeName(deleteTarget.Name)) return;
+    if (!deleteTarget || deleting) return;
+    const simple = deleteMode === 'simple';
+    if (!simple && typedName !== treeName(deleteTarget.Name)) return;
     setDeleting(true);
     setDeleteError(null);
     setCleanupWarningCount(0);
     try {
       const client = await getDataClient();
-      const { cleanupWarningCount: leftOnDisk } = await client.trees.remove(deleteTarget.Id);
+      const { cleanupWarningCount: leftOnDisk } = await client.trees.remove(deleteTarget.Id, simple ? { onlyIfEmpty: true } : undefined);
       setCleanupWarningCount(leftOnDisk);
       await refresh();
       if (activeTreeId === deleteTarget.Id) switchToDefaultTree();
       setDeleteTarget(null);
       setTypedName('');
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : tc('error'));
+      // Something was added since the simple confirm opened: ask again in full.
+      if (e instanceof TreeNotEmptyError) setDeleteMode('filled');
+      else setDeleteError(e instanceof Error ? e.message : tc('error'));
     } finally {
       setDeleting(false);
     }
@@ -161,7 +185,7 @@ export default function TreesSection() {
                 className={onlyTree ? 'opacity-50 cursor-not-allowed hover:no-underline' : ''}
                 aria-disabled={onlyTree || undefined}
                 title={onlyTree ? t('trees_last_tree_hint') : t('trees_delete')}
-                onClick={() => { if (!onlyTree) { setDeleteTarget(tree); setTypedName(''); setDeleteError(null); } }}
+                onClick={() => { if (!onlyTree) void startDelete(tree); }}
               >
                 {t('trees_delete')}
               </Button>
@@ -176,8 +200,22 @@ export default function TreesSection() {
         </p>
       )}
 
+      {/* An empty tree (#36): nothing to lose, so no name to type. */}
+      <ConfirmDialog
+        open={deleteTarget !== null && deleteMode === 'simple'}
+        variant="calm"
+        tone="danger"
+        title={deleteTarget ? t('trees_delete_empty_title', { name: treeName(deleteTarget.Name) }) : ''}
+        body={<>{t('trees_delete_empty_body')}{deleteError && <span role="alert" className="mt-3 block text-sm text-error">{deleteError}</span>}</>}
+        confirmLabel={t('trees_delete')}
+        cancelLabel={tc('cancel')}
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={closeDeleteModal}
+      />
+
       {/* Guarded delete confirm — deletion is permanent (not audit-restorable). */}
-      <Modal open={deleteTarget !== null} onClose={closeDeleteModal} size="sm" disableClose={deleting} labelledBy={deleteTitleId}>
+      <Modal open={deleteTarget !== null && deleteMode !== 'simple'} onClose={closeDeleteModal} size="sm" disableClose={deleting} labelledBy={deleteTitleId}>
         {deleteTarget && (
           <div className="bg-card rounded-2xl shadow-xl overflow-hidden">
             <div className="p-5 border-b border-border flex items-center gap-3">
@@ -190,6 +228,7 @@ export default function TreesSection() {
               <div role="alert" className="bg-error-bg border-l-[3px] border-error rounded-md p-3 text-sm text-error mb-3">
                 {t('trees_delete_confirm_body', { name: treeName(deleteTarget.Name) })}
               </div>
+              {deleteMode === 'filled' && <p role="status" className="text-sm text-text mb-3">{t('trees_delete_no_longer_empty')}</p>}
               <p className="text-xs text-text-muted mb-4">{t('trees_delete_export_hint')}</p>
               <Input
                 size="sm"

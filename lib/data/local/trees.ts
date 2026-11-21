@@ -6,6 +6,7 @@ import {
   getTreeInfoService,
   renameTreeService,
   deleteTreeService,
+  isTreeEmptyService,
 } from '@/lib/services/trees';
 import { ensureLocalUser } from '../local-user';
 
@@ -37,8 +38,13 @@ export class LocalTreesClient implements TreesClient {
     return renameTreeService({ id, name, currentUserId });
   }
 
-  async remove(id: number): Promise<{ cleanupWarningCount: number }> {
+  async getIsEmpty(id: number): Promise<boolean> {
     const currentUserId = await ensureLocalUser();
-    return deleteTreeService({ id, currentUserId });
+    return isTreeEmptyService({ id, currentUserId });
+  }
+
+  async remove(id: number, opts?: { onlyIfEmpty?: boolean }): Promise<{ cleanupWarningCount: number }> {
+    const currentUserId = await ensureLocalUser();
+    return deleteTreeService({ id, currentUserId, onlyIfEmpty: opts?.onlyIfEmpty });
   }
 }
