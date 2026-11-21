@@ -1,3 +1,4 @@
+import type { ExportArtifact } from '@/lib/data/types';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { PGlite } from '@electric-sql/pglite';
@@ -7,6 +8,9 @@ import { __resetLocalUserCache } from '@/lib/data/local-user';
 import { query, __setTestDb } from '@/lib/db/connection.pglite';
 import { newEmptyClusterDb } from '../setup/pglite-snapshot';
 import { truncateAllTables } from '../setup/pglite-truncate';
+
+/** The local build always returns the bytes (only the hosted media zip is a link, #29). */
+const blobOf = (a: ExportArtifact): Blob => { if (!('blob' in a)) throw new Error('expected bytes'); return a.blob; };
 
 vi.mock('@/lib/db/connection', async () => await import('@/lib/db/connection.pglite'));
 
@@ -39,7 +43,7 @@ describe('Local GEDCOM export (PGlite)', () => {
 
     const artifact = await client.gedcom.exportGedcom!();
     expect(artifact.filename).toBe('family_tree.ged');
-    const gedcom = await artifact.blob.text();
+    const gedcom = await blobOf(artifact).text();
     expect(gedcom).not.toMatch(/^0 @O\d+@ OBJE$/m);
     expect(gedcom).not.toMatch(/^\d+ OBJE(?: |$)/m);
   });
@@ -52,7 +56,7 @@ describe('Local GEDCOM export (PGlite)', () => {
     // A row as the old synthetic seed wrote it: no legacy HusbandId/WifeId.
     await query('UPDATE "Families" SET "HusbandId" = NULL, "WifeId" = NULL WHERE "Id" = $1', [family.Id]);
 
-    const gedcom = await (await client.gedcom.exportGedcom!()).blob.text();
+    const gedcom = await blobOf(await client.gedcom.exportGedcom!()).text();
     expect(gedcom.match(/^1 FAMS @F\d+@$/gm)).toHaveLength(2);
   });
 
@@ -67,9 +71,9 @@ describe('Local GEDCOM export (PGlite)', () => {
     const first = await client.gedcom.exportGedcom!({ includeMedia: true });
     const second = await client.gedcom.exportGedcom!({ includeMedia: true });
     expect(first.filename).toBe('family_tree_export.zip');
-    expect(await first.blob.arrayBuffer()).toEqual(await second.blob.arrayBuffer());
+    expect(await blobOf(first).arrayBuffer()).toEqual(await blobOf(second).arrayBuffer());
 
-    const zip = await JSZip.loadAsync(await first.blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(await blobOf(first).arrayBuffer());
     const names = Object.keys(zip.files).sort();
     expect(names).toContain('family_tree.ged');
     expect(names).toContain('cases.json');
@@ -156,7 +160,7 @@ describe('Local GEDCOM export (PGlite)', () => {
     });
     expect(JSON.stringify(preflight)).not.toMatch(/import-states|backing\.svg|@O[123]@/);
     const overridden = await client.gedcom.exportGedcom!({ includeMedia: true, mediaPolicy: 'omit-unresolved' });
-    const zip = await JSZip.loadAsync(await overridden.blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(await blobOf(overridden).arrayBuffer());
     const report = await zip.file('missing-media-report.json')!.async('string');
     expect(report).toContain('"total": 5');
     expect(report).not.toMatch(/import-states|backing\.svg|@O[123]@/);
@@ -178,7 +182,7 @@ describe('Local GEDCOM export (PGlite)', () => {
 
     await expect(client.gedcom.exportGedcom!({ includeMedia: true })).rejects.toThrow(/media/i);
     const overridden = await client.gedcom.exportGedcom!({ includeMedia: true, mediaPolicy: 'omit-unresolved' });
-    const zip = await JSZip.loadAsync(await overridden.blob.arrayBuffer());
+    const zip = await JSZip.loadAsync(await blobOf(overridden).arrayBuffer());
     expect(zip.file('missing-media-report.json')).not.toBeNull();
     expect(Object.keys(zip.files).some((name) => name.startsWith('media/O'))).toBe(false);
   });
@@ -189,7 +193,7 @@ describe('Local GEDCOM export (PGlite)', () => {
     const secondTree = await client.trees.create('Second tree');
     await client.people.create({ FirstName: 'Second', LastName: 'Tree' }, { treeId: secondTree.Id });
     const artifact = await client.gedcom.exportGedcom!({}, (await client.trees.list()).trees.find((tree) => tree.Id !== secondTree.Id)!.Id);
-    const gedcom = await artifact.blob.text();
+    const gedcom = await blobOf(artifact).text();
     expect(gedcom).toContain('First /Tree/');
     expect(gedcom).not.toContain('Second /Tree/');
     expect(first.Id).toBeGreaterThan(0);

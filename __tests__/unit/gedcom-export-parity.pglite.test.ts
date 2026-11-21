@@ -84,7 +84,7 @@ describe('hosted and local GEDCOM export assemble the same bundle', () => {
     expect(local.preflight).toEqual(hosted.preflight);
     expect(hosted.preflight.canExport).toBe(true);
 
-    const h = normalizeBundle(await readBundle(hosted.buffer));
+    const h = normalizeBundle(await readBundle(Buffer.concat(await Array.fromAsync(hosted.stream))));
     const l = normalizeBundle(await readBundle(Buffer.from(await local.blob.arrayBuffer())));
 
     expect(normalizeGedcomArchivePaths(l.ged)).toBe(normalizeGedcomArchivePaths(h.ged));

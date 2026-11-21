@@ -23,20 +23,28 @@ describe('HttpGedcomClient hosted export methods', () => {
         expect(fetch).toHaveBeenCalledWith('/api/export/gedcom?preflight=true&includeMedia=true&treeId=7');
     });
 
-    it('downloads the hosted GEDCOM artifact with the explicit media policy', async () => {
-        const blob = new Blob(['zip-bytes'], { type: 'application/zip' });
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(blob, { status: 200 })));
+    it('hands the media zip to the browser as a link, without fetching it (#29)', async () => {
+        vi.stubGlobal('fetch', vi.fn());
 
         const result = await new HttpGedcomClient().exportGedcom(
             { includeMedia: true, mediaPolicy: 'omit-unresolved' },
             7,
         );
 
-        expect(result.filename).toBe('family_tree_export.zip');
-        expect(await result.blob.text()).toBe('zip-bytes');
-        expect(fetch).toHaveBeenCalledWith(
-            '/api/export/gedcom?includeMedia=true&mediaPolicy=omit-unresolved&treeId=7',
-            { method: 'GET' },
-        );
+        expect(result).toEqual({
+            href: '/api/export/gedcom?includeMedia=true&mediaPolicy=omit-unresolved&treeId=7',
+            filename: 'family_tree_export.zip',
+        });
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('still fetches a bare GEDCOM as bytes', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('0 HEAD', { status: 200, headers: { 'content-type': 'text/plain' } })));
+
+        const result = await new HttpGedcomClient().exportGedcom({}, 7);
+
+        expect(result.filename).toBe('family_tree.ged');
+        expect('blob' in result && await result.blob.text()).toBe('0 HEAD');
+        expect(fetch).toHaveBeenCalledWith('/api/export/gedcom?treeId=7', { method: 'GET' });
     });
 });

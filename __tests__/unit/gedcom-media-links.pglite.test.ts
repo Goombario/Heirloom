@@ -150,7 +150,7 @@ describe('GEDCOM media identity and canonical links', () => {
     expect(exported.kind).toBe('zip');
     if (exported.kind !== 'zip') return;
     expect(exported.preflight.omittedTotal).toBe(0);
-    const zip = await JSZip.loadAsync(exported.buffer);
+    const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(exported.stream)));
     const gedName = Object.keys(zip.files).find((name) => name.endsWith('.ged'))!;
     const text = await zip.file(gedName)!.async('string');
     expect(text).toContain('1 FILE C:\\FTM\\Tree Media\\portrait.jpg');
@@ -193,7 +193,7 @@ describe('GEDCOM media identity and canonical links', () => {
     const { exportGedcomService } = await import('@/lib/services/gedcom-export');
     const exported = await exportGedcomService({ requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID, includeMedia: true });
     if (exported.kind !== 'zip') throw new Error(`expected a zip, got ${exported.kind}`);
-    const zip = await JSZip.loadAsync(exported.buffer);
+    const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(exported.stream)));
     const gedName = Object.keys(zip.files).find((name) => name.endsWith('.ged'))!;
     const text = (await zip.file(gedName)!.async('string')).split(/\r?\n/).join('\n');
     const xref = /^0 (@[^@]+@) OBJE$/m.exec(text)![1];
@@ -257,7 +257,7 @@ describe('GEDCOM media identity and canonical links', () => {
     const { exportGedcomService } = await import('@/lib/services/gedcom-export');
     const exported = await exportGedcomService({ requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID, includeMedia: true });
     if (exported.kind !== 'zip') throw new Error(`expected a zip, got ${exported.kind}`);
-    const zip = await JSZip.loadAsync(exported.buffer);
+    const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(exported.stream)));
     const gedName = Object.keys(zip.files).find((name) => name.endsWith('.ged'))!;
     const text = (await zip.file(gedName)!.async('string')).split(/\r?\n/).join('\n');
     const xrefOf = (title: string) => new RegExp(`^0 (@[^@]+@) OBJE\n(?:[1-9].*\n)*?2 TITL ${title}$`, 'm').exec(text)![1];
@@ -323,7 +323,7 @@ describe('GEDCOM media identity and canonical links', () => {
     const { exportGedcomService } = await import('@/lib/services/gedcom-export');
     const exported = await exportGedcomService({ requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID, includeMedia: true });
     if (exported.kind !== 'zip') throw new Error(`expected a zip, got ${exported.kind}`);
-    const zip = await JSZip.loadAsync(exported.buffer);
+    const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(exported.stream)));
     const gedName = Object.keys(zip.files).find((name) => name.endsWith('.ged'))!;
     const text = (await zip.file(gedName)!.async('string')).split(/\r?\n/).join('\n');
     const xrefOf = (title: string) => new RegExp(`^0 (@[^@]+@) OBJE\n(?:[1-9].*\n)*?2 TITL ${title}$`, 'm').exec(text)![1];

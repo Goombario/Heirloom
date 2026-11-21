@@ -89,7 +89,7 @@ describe('living people on each export surface (#866, ADR 0002)', () => {
   it('bundle sidecars: name variants and case links name the living person', async () => {
     const result = await exportGedcomService({ requestedTreeId: treeId, requestedOwnerId: null, currentUserId: OWNER, includeMedia: true });
     if (result.kind !== 'zip') throw new Error(result.kind);
-    const bundle = await readBundle(result.buffer);
+    const bundle = await readBundle(Buffer.concat(await Array.fromAsync(result.stream)));
     const lenaXref = indiRecord(bundle.ged, 'Lena')[0].split(' ')[1];
     expect(bundle.sources.nameVariants).toContainEqual(expect.objectContaining({ person: lenaXref, type: 'Maiden', name: 'Lena Former' }));
     expect(bundle.cases.cases).toContainEqual(expect.objectContaining({ linkedPersonGedcomIds: [lenaXref] }));

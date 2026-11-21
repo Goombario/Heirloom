@@ -82,7 +82,7 @@ d('place other names through import and export (#1167)', () => {
             requestedTreeId: treeId, requestedOwnerId: null, currentUserId: NAMES_USER, includeMedia: true,
         });
         if (result.kind !== 'zip') throw new Error(`expected a zip bundle, got ${result.kind}`);
-        const zip = await JSZip.loadAsync(result.buffer);
+        const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(result.stream)));
         const ged = await zip.file(/\.ged$/)[0].async('string');
         expect(ged).toContain('2 PLAC Lemberg');
         expect(ged).toContain('2 PLAC Lviv');

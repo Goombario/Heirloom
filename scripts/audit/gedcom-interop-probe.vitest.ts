@@ -303,7 +303,7 @@ describe.skipIf(!files.length)('GEDCOM interop probe', () => {
                 row.roundTrip = { error: `export kind ${exported.kind}` };
                 return;
             }
-            const zip = await JSZip.loadAsync(exported.buffer);
+            const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(exported.stream)));
             const gedName = Object.keys(zip.files).find((name) => name.endsWith('.ged'));
             if (!gedName) {
                 row.roundTrip = { error: 'export bundle has no .ged' };

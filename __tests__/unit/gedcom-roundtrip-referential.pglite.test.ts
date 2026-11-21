@@ -47,7 +47,7 @@ describe('sidecar xrefs resolve to the right records in the .ged', () => {
       includeMedia: true,
     });
     if (result.kind !== 'zip') throw new Error('expected a zip bundle');
-    bundle = await readBundle(result.buffer);
+    bundle = await readBundle(Buffer.concat(await Array.fromAsync(result.stream)));
   }, 60_000);
 
   afterAll(async () => {

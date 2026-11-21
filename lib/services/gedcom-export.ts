@@ -1,5 +1,6 @@
-import { ZipArchive } from 'archiver';
+import { ZipArchive, type ZipEntryData } from 'archiver';
 import path from 'path';
+import type { Readable } from 'stream';
 import fs from 'fs';
 import { assignFamilyXrefs, assignPersonXrefs } from '@/lib/gedcom/generator';
 import type {
@@ -53,7 +54,12 @@ export type ExportGedcomResult =
     | { kind: 'preflight'; preflight: MediaExportPreflight }
     | { kind: 'blocked'; preflight: MediaExportPreflight }
     | { kind: 'ged'; content: string; preflight: MediaExportPreflight }
-    | { kind: 'zip'; buffer: Buffer; preflight: MediaExportPreflight };
+    /**
+     * The zip as a stream (#29): nothing is buffered, and the caller pipes it to the
+     * response. A media file that can't be read part-way through destroys the
+     * stream with an error, so the download fails instead of ending short.
+     */
+    | { kind: 'zip'; stream: Readable; preflight: MediaExportPreflight };
 
 /** Push `value` onto the array stored at `key`, creating it on first use. */
 function bucket<K, V>(map: Map<K, V[]>, key: K, value: V): void {
@@ -277,14 +283,16 @@ export async function exportGedcomService(params: ExportGedcomParams): Promise<E
     }
 
     // --- Zip bundle --------------------------------------------------------
+    // The .ged and the JSON sidecars are deflated; photos are stored as they are,
+    // since JPEG, PNG and WebP don't compress further (#29).
     const archive = new ZipArchive({ zlib: { level: 9 } });
     const archiveDate = new Date(0);
-    const chunks: Buffer[] = [];
-    const archivePromise = new Promise<Buffer>((resolve, reject) => {
-        archive.on('data', (chunk: Buffer) => chunks.push(chunk));
-        archive.on('end', () => resolve(Buffer.concat(chunks)));
-        archive.on('error', (err: Error) => reject(err));
-    });
+    // archiver reports a file that vanished before it was read as a warning and
+    // leaves it out. Here that would end in a zip that looks complete and isn't,
+    // so any warning or error ends the stream with an error instead.
+    const fail = (err: Error) => { if (!archive.destroyed) archive.destroy(err); };
+    archive.on('warning', fail);
+    archive.on('error', fail);
 
     archive.append(gedcomOutput, { name: 'family_tree.ged', date: archiveDate });
 
@@ -335,17 +343,19 @@ export async function exportGedcomService(params: ExportGedcomParams): Promise<E
             // Use the exact media-ID keyed decision that fed core preflight.
             const hostedFile = mediaPhysicalPathById.get(media.Id);
             if (hostedFile) {
-                archive.file(hostedFile.absolutePath, {
+                const entry: ZipEntryData = {
                     name: archiveMediaPath(assembly.mediaIdToXref.get(media.Id), { Title: media.Title, FilePath: media.FilePath }),
                     date: archiveDate,
-                });
+                    store: true,
+                };
+                archive.file(hostedFile.absolutePath, entry);
             }
         }
     }
 
-    archive.finalize();
-    const zipBuffer = await archivePromise;
-    return { kind: 'zip', buffer: zipBuffer, preflight: assembly.preflight };
+    // Not awaited: finalize resolves only once the whole zip has been read.
+    archive.finalize().catch(fail);
+    return { kind: 'zip', stream: archive, preflight: assembly.preflight };
 }
 
 export interface HostedMediaFile {
