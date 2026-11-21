@@ -15,6 +15,13 @@ import { snapshotTables, compareSnapshots, printComparison, type Rows } from './
 const root = process.cwd();
 const load = (file: string) => import(path.join(root, file));
 
+/** An export's zip bytes: a release before #29 returns a buffer, later ones a stream. */
+async function zipBytes(res: { buffer?: Buffer; stream?: AsyncIterable<Buffer> }): Promise<Buffer> {
+  if (res.buffer) return res.buffer;
+  if (!res.stream) throw new Error('export returned neither a buffer nor a stream');
+  return Buffer.concat(await Array.fromAsync(res.stream));
+}
+
 async function withDb<T>(run: (q: (sql: string, params?: unknown[]) => Promise<Rows>) => Promise<T>): Promise<T> {
   const conn = await load('lib/db/connection.ts');
   try {
@@ -47,7 +54,7 @@ async function snapshot(dir: string): Promise<void> {
         requestedTreeId: t.Id, requestedOwnerId: null, currentUserId: t.OwnerId, includeMedia: true, mediaPolicy: 'omit-unresolved',
       });
       if (res.kind !== 'zip') throw new Error(`tree ${t.Id}: export returned ${res.kind}`);
-      writeFileSync(path.join(dir, `tree-${t.Id}.zip`), res.buffer);
+      writeFileSync(path.join(dir, `tree-${t.Id}.zip`), await zipBytes(res));
     }
     console.log(`Snapshot: ${Object.keys(tables).length} tables, ${tables.People?.length ?? 0} people → ${dir}`);
   });
@@ -112,7 +119,7 @@ async function importZip(zipFile: string, dir: string): Promise<void> {
     }
     const out = await exportGedcomService({ requestedTreeId: tree, requestedOwnerId: null, currentUserId: owner, includeMedia: true, mediaPolicy: 'omit-unresolved' });
     if (out.kind !== 'zip') throw new Error(`re-export returned ${out.kind}`);
-    const second = await readBundle(out.buffer);
+    const second = await readBundle(await zipBytes(out));
     writeFileSync(path.join(dir, 'old.ged'), first.ged);
     writeFileSync(path.join(dir, 'new.ged'), second.ged);
 
