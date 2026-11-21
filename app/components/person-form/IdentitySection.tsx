@@ -13,8 +13,8 @@ function PrimaryStar({ active, onClick, mobile, label }: { active: boolean; onCl
         <Button
             variant="ghost"
             onClick={onClick}
-            className={`border-transparent text-[15px] leading-[1]${mobile ? ' min-w-11 min-h-11' : ''}`}
-            style={{ padding: 2, color: active ? 'var(--color-link)' : 'var(--text-muted)' }}
+            className={`border-transparent text-[15px] leading-[1] !p-0.5${mobile ? ' min-w-11 min-h-11' : ''}`}
+            style={{ color: active ? 'var(--color-link)' : 'var(--text-muted)' }}
             title={label}
             aria-label={label}
             aria-pressed={active}
@@ -186,7 +186,7 @@ export default function IdentitySection({ fm, mobile = false }: { fm: UsePersonF
                                 </button>
                             )}
                             {editingId !== v.Id && (
-                                <Button variant="ghost" onClick={() => removeNameVariant(v.Id)} className={`border-transparent text-xs${mobile ? ' min-w-11 min-h-11' : ''}`} style={{ padding: 4 }} aria-label={t('remove')} title={t('remove')}>✕</Button>
+                                <Button variant="ghost" onClick={() => removeNameVariant(v.Id)} className={`border-transparent text-xs !p-1${mobile ? ' min-w-11 min-h-11' : ''}`} aria-label={t('remove')} title={t('remove')}>✕</Button>
                             )}
                         </div>
                     ))}

@@ -299,10 +299,10 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                     </div>
 
                     {/* Name display */}
-                    <h2 className="serif text-md" style={{ fontWeight: 700, color: 'var(--text)', textAlign: 'center', marginBottom: 12 }}>{displayName}</h2>
+                    <h2 className="serif text-md font-bold mb-3" style={{ color: 'var(--text)', textAlign: 'center' }}>{displayName}</h2>
 
                     {/* Action buttons */}
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                    <div className="flex gap-1.5 mb-4">
                         <Button variant="outline" onClick={openPage} onMouseEnter={prefetch} onFocus={prefetch} size="sm" className="flex-1">
                             {t('full_profile')}
                         </Button>
@@ -332,7 +332,7 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
 
                 {/* Sticky Save / Discard footer — only when dirty and editable */}
                 {!isReadOnly && isDirty && (
-                    <div style={{ position: 'sticky', bottom: 0, background: 'var(--card)', borderTop: '1px solid var(--border)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom, 0px))', display: 'flex', gap: 6 }}>
+                    <div className="gap-1.5" style={{ position: 'sticky', bottom: 0, background: 'var(--card)', borderTop: '1px solid var(--border)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom, 0px))', display: 'flex' }}>
                         <Button variant="outline" onClick={handleDiscard} disabled={saving} size="sm" className="flex-1">
                             {t('discard')}
                         </Button>

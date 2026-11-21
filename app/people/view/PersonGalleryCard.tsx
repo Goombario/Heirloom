@@ -38,7 +38,7 @@ export function PersonGalleryCard({ media, personId, treeId, canEdit, canDelete,
                                 <Star className="h-3 w-3" fill="currentColor" />
                             </span>
                         )}
-                        {item.IsTaggedHere && !item.IsOwned && <Badge className="absolute right-1 top-1" style={{ padding: '2px 6px', background: 'var(--color-media-scrim)', color: 'var(--color-on-media)' }}>{ft('tagged_badge')}</Badge>}
+                        {item.IsTaggedHere && !item.IsOwned && <Badge className="absolute right-1 top-1 !px-1.5 !py-0.5" style={{ background: 'var(--color-media-scrim)', color: 'var(--color-on-media)' }}>{ft('tagged_badge')}</Badge>}
                     </>
                 )}
             />

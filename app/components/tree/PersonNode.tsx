@@ -101,7 +101,7 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
               className={`flex items-center justify-center overflow-hidden ${avatarClass(person.sex)}`}
               style={{ width: '100%', height: `${PHOTO_HEIGHT}px`, flexShrink: 0 }}
             >
-              <span className="text-white font-semibold" style={{ fontSize: '17px' }}>
+              <span className="text-white font-semibold text-md">
                 {initials}
               </span>
             </div>
@@ -120,7 +120,7 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
         {/* Info Strip */}
         {/* A column filling the rest of the card, so the dates can sit on its
             bottom edge whether the name takes one line or two. */}
-        <div style={{ flex: 1, minHeight: 0, padding: '6px 6px 6px', textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
+        <div className="p-1.5" style={{ flex: 1, minHeight: 0, textAlign: 'center', display: 'flex', flexDirection: 'column' }}>
           <p
             className="text-text"
             style={{
