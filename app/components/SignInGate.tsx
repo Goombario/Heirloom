@@ -14,7 +14,7 @@ import { DATA_MODE } from '@/lib/data';
  *
  * Excluded in local/static (PGlite) and desktop builds, which have no auth (it
  * waits until desktop detection has answered), and skipped on the /auth/*
- * pages themselves.
+ * pages themselves and the public /privacy page (#170).
  */
 export default function SignInGate() {
   const { status } = useSession();
@@ -27,6 +27,8 @@ export default function SignInGate() {
     if (DATA_MODE === 'local' || !desktopResolved || isDesktop) return;
     if (status !== 'unauthenticated') return;
     if (pathname?.startsWith('/auth')) return;
+    // The privacy page is public (#170): Google's consent screen links to it.
+    if (pathname === '/privacy') return;
     const callbackUrl = `${pathname ?? '/'}${window.location.search}`;
     router.replace(callbackUrl === '/' ? '/auth/signin' : `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }, [status, isDesktop, desktopResolved, pathname, router]);

@@ -20,7 +20,7 @@ import { startStaticPreview } from './lib/managed-static-preview.mjs';
 let baseUrl = process.env.BASE_URL || '';
 const ROUTES = [
   '/', '/people', '/people/new', '/families', '/library', '/places',
-  '/cases', '/relationship', '/import-export', '/options', '/audit', '/data-checks', '/about',
+  '/cases', '/relationship', '/import-export', '/options', '/audit', '/data-checks', '/about', '/privacy',
   // Dev-only harness (404s in production builds) — renders the inline
   // edit-mode components (hero identity editor incl. its dark-island
   // wrapper, names panel, relationship list + add panel) with static
