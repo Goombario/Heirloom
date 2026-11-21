@@ -34,7 +34,7 @@ function Section({ title, tag, children }: { title: string; tag?: ReactNode; chi
   return (
     <section className="border-t border-border px-5 py-4 first:border-t-0 max-md:px-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="m-0 text-base font-semibold text-text">{title}</h2>
+        <h2 className="m-0 serif text-md font-semibold text-text">{title}</h2>
         {tag}
       </div>
       <div className="mt-1.5 grid gap-2 text-sm leading-relaxed text-text-secondary [&_p]:m-0">{children}</div>
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
           </div>
           <Section
             title={t('tree_title')}
-            tag={<span className="rounded-full border border-border px-2 py-0.5 text-meta text-text-secondary">{t('you_are_using', { build: tAbout(RUNNING_KEY[kind]) })}</span>}
+            tag={<span className="rounded-full bg-segment-on px-2 py-0.5 text-meta text-on-segment">{t('you_are_using', { build: tAbout(RUNNING_KEY[kind]) })}</span>}
           >
             {(['browser', 'desktop', 'server'] as const).map((c) => (
               <p key={c} className={c === here ? undefined : 'text-text-muted'}>{t.rich(`tree_${c}`, { b })}</p>
