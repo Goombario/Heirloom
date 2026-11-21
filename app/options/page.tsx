@@ -9,10 +9,11 @@ import { DATA_MODE, getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useMyTrees } from '@/app/hooks/useMyTrees';
 import { Banner, Button, Card, CoverBand, PageShell, SegmentedControl, SelectField } from '@/app/components/ui';
-import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, FlaskConical, HardDrive, Languages, Monitor, Moon, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
+import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, FlaskConical, HardDrive, Keyboard, Languages, Monitor, Moon, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
 import { readStatusSymbols, writeStatusSymbols } from '@/lib/utils/status-symbols';
 import LocalDataSection from '@/app/components/LocalDataSection';
 import TreesSection from '@/app/components/options/TreesSection';
+import KeyboardSection from '@/app/components/options/KeyboardSection';
 import EraseAllSummary from '@/app/components/options/EraseAllSummary';
 import { isGeocodingEnabled, setGeocodingEnabled } from '@/lib/geocode/prefs';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
@@ -28,6 +29,7 @@ const NAV: { href: string; key: string; Icon: LucideIcon; danger?: boolean }[] =
     { href: '#appearance', key: 'nav_appearance', Icon: Palette },
     { href: '#accessibility', key: 'nav_accessibility', Icon: Accessibility },
     { href: '#language', key: 'nav_language', Icon: Languages },
+    { href: '#keyboard', key: 'nav_keyboard', Icon: Keyboard },
     { href: '#date-preferences', key: 'nav_date_format', Icon: CalendarDays },
     { href: '#trees', key: 'nav_trees', Icon: TreeDeciduous },
     { href: '#experimental', key: 'nav_experimental', Icon: FlaskConical },
@@ -306,6 +308,8 @@ export default function OptionsPage() {
                                 {t('language_note')}
                             </p>
                         </Card>
+
+                        <KeyboardSection />
 
                         <Card id="date-preferences" pad={false} className="p-6">
                             <h2 className="section text-text mb-4">{t('date_title')}</h2>

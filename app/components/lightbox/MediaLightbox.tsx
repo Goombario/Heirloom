@@ -30,6 +30,7 @@ import { usePdfPreview } from '@/app/components/media/DocumentThumb';
 import { useDocumentFile, type DocumentRail } from './DocumentLinks';
 import LinkDocumentModal, { type DocumentLinkChoice } from './LinkDocumentModal';
 import { overlappedTag, tagPersonName, type LightboxTag, type FaceRegionInput } from './types';
+import { isTypingTarget, readLetterShortcuts } from '@/lib/keyboard/shortcuts';
 
 export interface MediaLightboxProps {
     items: Array<Media | PersonGalleryMedia>;
@@ -122,6 +123,11 @@ export default function MediaLightbox({
         // Names are on by default on a phone (#1121); desktop keeps them off until asked.
         return saved != null ? saved === '1' : window.matchMedia?.('(max-width: 767px)').matches === true;
     });
+    const toggleNames = useCallback(() => setShowNames((v) => {
+        const next = !v;
+        try { window.sessionStorage.setItem('lightbox.showNames', next ? '1' : '0'); } catch { /* this view only */ }
+        return next;
+    }), []);
     // Unnamed faces from the photo's metadata (phone editors, #1121).
     const [faces, setFaces] = useState<Array<FaceRegionInput & { Id: number }>>([]);
     const [cropOpen, setCropOpen] = useState(false);
@@ -264,6 +270,11 @@ export default function MediaLightbox({
                 onChangeIndex(index - 1);
             } else if (mode === 'view' && !pendingRegion && !editing && e.key === 'ArrowRight' && index < items.length - 1) {
                 onChangeIndex(index + 1);
+            } else if (mode === 'view' && !pendingRegion && !editing && e.code === 'KeyT' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+                && !isTypingTarget(e.target) && readLetterShortcuts()) {
+                // `t` shows or hides the face tags (#32), a letter shortcut like the rest.
+                e.preventDefault();
+                toggleNames();
             }
         }
         // The sheet closes (and leaves the stack) before this bubbling listener runs, so
@@ -275,7 +286,7 @@ export default function MediaLightbox({
             window.removeEventListener('keydown', onKeyCapture, true);
             document.removeEventListener('keydown', onKey);
         };
-    }, [index, items.length, onClose, onChangeIndex, mode, pendingRegion, editing, confirmDelete, confirmRemoveTagId, isMobile, linking]);
+    }, [index, items.length, onClose, onChangeIndex, mode, pendingRegion, editing, confirmDelete, confirmRemoveTagId, isMobile, linking, toggleNames]);
 
     useEffect(() => {
         if (pendingRegion) {
@@ -616,13 +627,7 @@ export default function MediaLightbox({
         tags,
         galleryPersonId,
         showNames,
-        onToggleNames: () => setShowNames(v => {
-            const next = !v;
-            if (typeof window !== 'undefined') {
-                window.sessionStorage.setItem('lightbox.showNames', next ? '1' : '0');
-            }
-            return next;
-        }),
+        onToggleNames: toggleNames,
         onHoverTag: setHoveredTagId,
         canRemoveTag,
         onStartRedraw: startRedraw,

@@ -20,7 +20,7 @@ import { getInitials, initialsFromName } from '@/lib/utils/initials';
 import { Search } from '@/lib/icons';
 import { personKin, type PersonKin } from '@/lib/utils/person-kin';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
-import { openQuickAdd } from '@/app/components/QuickAddHost';
+import { isSearchSlash, isTypingTarget, readLetterShortcuts } from '@/lib/keyboard/shortcuts';
 import { MobileGlobalSearch } from '@/app/components/search/MobileGlobalSearch';
 
 const LISTBOX_ID = 'global-search-listbox';
@@ -128,24 +128,17 @@ export default function GlobalSearch() {
 
     // Open modal with Ctrl+K or /
     useEffect(() => {
-        function tagOf(target: EventTarget | null): string {
-            return target instanceof HTMLElement ? target.tagName : '';
-        }
         function handleKeyDown(e: KeyboardEvent) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyK' || e.key === 'k')) {
                 e.preventDefault();
                 setIsOpen(true);
             }
             // A list page's own search (ListToolbar, the tree's Find) takes `/` first, in
             // the capture phase, and marks it handled.
-            if (e.key === '/' && !e.defaultPrevented && !['INPUT', 'TEXTAREA'].includes(tagOf(e.target))) {
+            // `/` is a letter shortcut (#32): the physical key, and off when Options turns them off.
+            if (isSearchSlash(e) && !e.defaultPrevented && !isTypingTarget(e.target) && readLetterShortcuts()) {
                 e.preventDefault();
                 setIsOpen(true);
-            }
-            // Alt+N: New person, over the current page.
-            if (e.altKey && e.key === 'n' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tagOf(e.target))) {
-                e.preventDefault();
-                openQuickAdd('person');
             }
             if (e.key === 'Escape') {
                 setIsOpen(false);

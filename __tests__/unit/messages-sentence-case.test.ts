@@ -24,6 +24,9 @@ const PROPER_NOUNS = new Set([
 ]);
 
 const ALLOWED_KEYS = new Set([
+    // Name a page (People) or a button (Show all shortcuts) by its label (#32).
+    'shortcuts.letters_desc',
+    'shortcuts.letters_off_note',
     // Example values inside placeholders: people, places and record titles.
     'people.search_placeholder',
     'library.field_title_placeholder',
