@@ -85,3 +85,12 @@ describe.each(['duplicates'])('PeoplePageClient ?filter=%s (#794)', (filter) => 
     expect(url.replace).toHaveBeenCalledWith('/people', { scroll: false });
   });
 });
+
+describe('PeoplePageClient likely duplicates Merge (#28)', () => {
+  it('offers Merge… on each flagged row for an editor', () => {
+    url.filter = 'duplicates';
+    render(<PeoplePageClient initialPeople={null} />);
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('button', { name: 'review_merge' })).toBeInTheDocument();
+  });
+});

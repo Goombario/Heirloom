@@ -14,6 +14,8 @@ import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { RotateCcw, UserRound } from '@/lib/icons';
 import PersonAvatar from '@/app/components/PersonAvatar';
 import { summarizeAuditEntry } from '@/lib/utils/audit-summary';
+import { isMergeRevertTrail, mergeLogOf } from '@/app/components/person-merge/model';
+import { MergeLogDetails, MergeRevertBody } from './MergeAudit';
 import { AuditFilterBar, type AuditFilters } from './AuditFilterBar';
 import { SkeletonList } from '@/app/components/SkeletonLoader';
 import { useAuditFieldFormat, EMPTY_AUDIT_REFS } from './useAuditFieldFormat';
@@ -56,7 +58,7 @@ function isFixedJournalChange(e: AuditLogEntryWithUser): boolean {
  * reopened (or confirmed again) from the Data checks page, not reverted here (#830).
  */
 function isAuditEntryRevertible(e: AuditLogEntryWithUser): boolean {
-    return e.EntityType !== 'import' && e.EntityType !== 'datacheck' && !isPlaceRevertMarker(e) && !isCanonicalMediaSummary(e)
+    return !isMergeRevertTrail(e.Changes) && e.EntityType !== 'import' && e.EntityType !== 'datacheck' && !isPlaceRevertMarker(e) && !isCanonicalMediaSummary(e)
         && !isFixedJournalChange(e);
 }
 
@@ -260,6 +262,10 @@ export default function AuditPage() {
         setSelectedIds(prev => eligibleIds.every(id => prev.has(id)) ? new Set() : new Set(eligibleIds));
     };
 
+    // Reverting one merge lists the later changes it undoes first (#28).
+    const confirmMergeEntry = confirmRevert?.length === 1 ? currentEntries.find((e) => e.Id === confirmRevert[0]) : undefined;
+    const confirmMerge = confirmMergeEntry ? mergeLogOf(confirmMergeEntry.Changes) : null;
+
     const handleRevert = async (ids: number[]): Promise<boolean> => {
         setConfirmRevert(null);
         setReverting(true);
@@ -278,7 +284,8 @@ export default function AuditPage() {
         }
     };
 
-    const getActionBadge = (action: string) => {
+    const getActionBadge = (action: string, entry?: AuditLogEntryWithUser) => {
+        if (entry && mergeLogOf(entry.Changes)) return <Badge tone="violet">{t('action_merged')}</Badge>;
         switch (action) {
             case 'create': return <Badge tone="green">{t('action_created')}</Badge>;
             case 'update': return <Badge>{t('action_updated')}</Badge>;
@@ -291,6 +298,16 @@ export default function AuditPage() {
     const getEntityLink = (entry: AuditLogEntryWithUser) => recordText(entry).node(true);
 
     const renderChanges = (entry: AuditLogEntryWithUser) => {
+        const merge = mergeLogOf(entry.Changes);
+        if (merge) {
+            return (
+                <div className="text-meta text-text">
+                    <div>{describe(entry)}</div>
+                    <MergeLogDetails log={merge} />
+                    <p className="m-0 mt-2 text-text-muted">{t('merge_revert_note')}</p>
+                </div>
+            );
+        }
         const description = describe(entry);
         if (description) return <div className="text-meta text-text">{description}</div>;
         if (entry.Action === 'update') {
@@ -379,7 +396,7 @@ export default function AuditPage() {
             key: 'action',
             header: t('col_action'),
             sortable: true,
-            render: (e) => getActionBadge(e.Action),
+            render: (e) => getActionBadge(e.Action, e),
         },
         {
             // Type was a pill stacked under the record label, which made every row
@@ -420,7 +437,7 @@ export default function AuditPage() {
                     disabled={reverting}
                     className="focus-ring inline-flex items-center gap-1 text-meta font-medium py-1 px-2.5 rounded-[8px] border border-border bg-card text-text hover:bg-hover-surface cursor-pointer whitespace-nowrap"
                 >
-                    <RotateCcw size={12} aria-hidden />{t('revert')}
+                    <RotateCcw size={12} aria-hidden />{mergeLogOf(e.Changes) ? t('revert_merge') : t('revert')}
                 </button>
             ) : null,
         },
@@ -463,6 +480,8 @@ export default function AuditPage() {
                 record={recordText}
                 changes={changeRows}
                 summary={(e) => describe(e) ?? (e.Action === 'update' ? null : summarizeAuditEntry(e, summaryLabels) || null)}
+                details={(e) => { const m = mergeLogOf(e.Changes); return m ? <MergeLogDetails log={m} /> : null; }}
+                revertBody={(e) => { const m = mergeLogOf(e.Changes); return m ? <MergeRevertBody entryId={e.Id} log={m} treeId={activeTreeId} /> : null; }}
             />
         );
     }
@@ -510,9 +529,10 @@ export default function AuditPage() {
                     open={confirmRevert != null}
                     variant="calm"
                     tone="danger"
-                    title={t('confirm_revert_title')}
-                    body={confirmRevert == null ? '' : confirmRevert.length === 1 ? t('confirm_revert_body_one', { count: confirmRevert.length }) : t('confirm_revert_body_other', { count: confirmRevert.length })}
-                    confirmLabel={t('revert')}
+                    title={confirmMerge ? t('confirm_revert_merge_title') : t('confirm_revert_title')}
+                    body={confirmRevert == null ? '' : confirmMerge ? <MergeRevertBody entryId={confirmRevert[0]} log={confirmMerge} treeId={activeTreeId} />
+                        : confirmRevert.length === 1 ? t('confirm_revert_body_one', { count: confirmRevert.length }) : t('confirm_revert_body_other', { count: confirmRevert.length })}
+                    confirmLabel={confirmMerge ? t('revert_merge') : t('revert')}
                     cancelLabel={t('cancel')}
                     onConfirm={() => { if (confirmRevert) handleRevert(confirmRevert); }}
                     onCancel={() => setConfirmRevert(null)}

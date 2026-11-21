@@ -1,11 +1,12 @@
 import { parseIdParam } from '@/lib/utils/parse-id';
-import { getAuditLog, getAuditEditors, getAuditRefNames, revertAuditEntry, revertAuditEntries, withoutEditorEmails } from '@/lib/db/queries/audit';
+import { getAuditLog, getAuditEditors, getAuditRefNames, getMergeLaterChanges, revertAuditEntry, revertAuditEntries, withoutEditorEmails } from '@/lib/db/queries/audit';
 import { getAuditRecords } from '@/lib/db/queries/audit-records';
 import { auditRefIds } from '@/lib/utils/audit-fields';
 import { resolveTreeScope } from '@/lib/db/queries/trees';
 import { AccessError, NotFoundError } from '@/lib/data/errors';
 import { ValidationError } from '@/lib/validation';
 import type { AuditListResult, AuditEditorsResult } from '@/lib/data/types';
+import type { AuditLogEntry } from '@/lib/db/schema';
 
 export interface ListAuditParams {
   requestedTreeId: number | null;
@@ -143,4 +144,20 @@ export async function revertAuditService(
     }
     throw err;
   }
+}
+
+export interface ListLaterChangesParams {
+  id: number;
+  requestedTreeId: number | null;
+  requestedOwnerId: number | null;
+  currentUserId: number;
+}
+
+/** GET /api/audit/[id]/later logic: what reverting a person merge undoes too (#28). */
+export async function listLaterChangesService(params: ListLaterChangesParams): Promise<AuditLogEntry[]> {
+  const scope = await resolveTreeScope({ treeId: params.requestedTreeId, ownerId: params.requestedOwnerId }, params.currentUserId);
+  if (scope.permission === 'view' || scope.permission === 'contribute') {
+    throw new AccessError('You do not have permission to revert changes in this tree');
+  }
+  return getMergeLaterChanges(params.id, scope.treeId);
 }

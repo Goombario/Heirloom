@@ -1,5 +1,6 @@
 import type { AuditClient, AuditListOptions, AuditListResult, AuditEditorsResult } from '../types';
-import { listAuditService, listAuditEditorsService, revertAuditService } from '@/lib/services/audit';
+import type { AuditLogEntry } from '@/lib/db/schema';
+import { listAuditService, listAuditEditorsService, listLaterChangesService, revertAuditService } from '@/lib/services/audit';
 import { ensureLocalUser } from '../local-user';
 
 /**
@@ -40,5 +41,10 @@ export class LocalAuditClient implements AuditClient {
     const currentUserId = await ensureLocalUser();
     return revertAuditService({ ids, requestedTreeId: treeId ?? null,
  requestedOwnerId: null, currentUserId });
+  }
+
+  async listLaterChanges(id: number, treeId?: number | null): Promise<AuditLogEntry[]> {
+    const currentUserId = await ensureLocalUser();
+    return listLaterChangesService({ id, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 }

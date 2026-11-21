@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
+import { isMergeRevertTrail, mergeLogOf } from '@/app/components/person-merge/model';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { AuditLogEntryWithUser } from '@/lib/db/schema';
@@ -190,6 +191,14 @@ export function useAuditDescription() {
             const parts = [t('summary_import_people', { count: count(snap.people) }), t('summary_import_families', { count: count(snap.families) })];
             if (typeof snap.sources === 'number') parts.push(t('summary_import_sources', { count: snap.sources }));
             return `${t(snap.mode === 'overwrite' ? 'summary_import_overwrite' : 'summary_import_merge')} · ${parts.join(', ')}`;
+        }
+        // A person merge and the trail its revert leaves (#28).
+        const merge = mergeLogOf(entry.Changes);
+        if (merge) return t('summary_person_merged', { other: merge.mergedName, kept: merge.keptName });
+        if (isMergeRevertTrail(entry.Changes)) {
+            return typeof snap.keptName === 'string' && typeof snap.mergedName === 'string'
+                ? t('summary_person_merge_reverted', { other: snap.mergedName, kept: snap.keptName })
+                : t('summary_person_merge_reverted_plain');
         }
         if (changes.summary?.kind === 'canonical_primary') {
             return t(changes.fields?.CanonicalPrimaryMediaId?.new == null ? 'summary_profile_removed' : 'summary_profile_set');

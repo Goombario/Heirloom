@@ -1,8 +1,9 @@
-import type { Audited, PeopleClient, GetPeopleOptions, GetPeopleResult, CreatePersonInput, UpdatePersonInput, NameVariant, NameVariantDates, CreateNameVariantInput, SuggestFamilyParams, FamilySuggestion } from '../types';
+import type { Audited, PeopleClient, GetPeopleOptions, GetPeopleResult, CreatePersonInput, UpdatePersonInput, NameVariant, NameVariantDates, CreateNameVariantInput, SuggestFamilyParams, FamilySuggestion, MergePreview, MergePeopleInput } from '../types';
 import type { Person, PersonWithRelations } from '@/lib/db/schema';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import type { PeopleFlag } from '@/lib/db/queries/data-quality';
 import { listPeopleService, createPersonService, getPersonService, updatePersonService, deletePersonService, searchPeopleService, listFlaggedPeopleService, listNameVariantsService, createNameVariantService, setPrimaryNameVariantService, updateNameVariantService, removeNameVariantService, suggestFamilyService, descendantCountService } from '@/lib/services/people';
+import { previewMergeService, mergePeopleService } from '@/lib/services/person-merge';
 import { ensureLocalUser } from '../local-user';
 
 /**
@@ -106,5 +107,13 @@ export class LocalPeopleClient implements PeopleClient {
     const currentUserId = await ensureLocalUser();
     return descendantCountService({ personId, requestedTreeId: treeId ?? null,
  requestedOwnerId: null, currentUserId });
+  }
+  async previewMerge(aId: number, bId: number, treeId?: number | null): Promise<MergePreview> {
+    const currentUserId = await ensureLocalUser();
+    return previewMergeService({ aId, bId, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
+  }
+  async merge(input: MergePeopleInput, treeId?: number | null): Promise<Audited<{ keptId: number }>> {
+    const currentUserId = await ensureLocalUser();
+    return mergePeopleService({ keptId: input.keptId, otherId: input.otherId, take: input.take, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 }

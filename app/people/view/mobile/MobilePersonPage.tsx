@@ -58,6 +58,8 @@ export type MobilePersonPageProps = Omit<PaneContext, 'family' | 'onShowTab' | '
     onMediaChanged: () => void;
     /** Reload the person and their citations after a write (and after its Undo). */
     onChanged: () => Promise<void> | void;
+    /** Opens Merge with another person (#28); editors only. */
+    onMerge?: () => void;
     /** True once the names have loaded: until then the heading reads the person row. */
     variantsLoaded?: boolean;
 };
@@ -471,7 +473,8 @@ export function MobilePersonPage(props: MobilePersonPageProps) {
             <JourneyPage open={journeyOpen} onClose={() => setJourneyOpen(false)} places={journey} />
 
             <EditPersonSheet open={editOpen} onClose={() => setEditOpen(false)} person={person} treeId={treeId}
-                canDelete={role === 'editor'} run={run} onDeleted={() => { setEditOpen(false); router.push('/people'); }} />
+                canDelete={role === 'editor'} run={run} onDeleted={() => { setEditOpen(false); router.push('/people'); }}
+                onMerge={role === 'editor' && props.onMerge ? () => { setEditOpen(false); props.onMerge?.(); } : undefined} />
         </div>
     );
 }
