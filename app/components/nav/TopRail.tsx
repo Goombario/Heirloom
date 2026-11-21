@@ -10,6 +10,7 @@ import TreeSwitcher from './TreeSwitcher';
 import UserMenu from '../UserMenu';
 import BackupStatusChip from '../backup/BackupStatusChip';
 import BackgroundJobsChip from '../media/BackgroundJobsChip';
+import { useBackgroundJobs } from '../media/backgroundMedia';
 
 export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: () => void; drawerOpen: boolean }) {
   const t = useTranslations('nav');
@@ -26,6 +27,9 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
     window.addEventListener('scroll', update, { passive: true });
     return () => window.removeEventListener('scroll', update);
   }, []);
+  // The photo-work chip (#207) needs room: while it shows, search and backup drop
+  // their words and keep their icons, as they do below xl.
+  const compact = useBackgroundJobs().length > 0;
   const searchHint = mac ? '⌘K' : 'Ctrl+K';
   const openSearch = () => document.dispatchEvent(new CustomEvent('open-global-search'));
 
@@ -57,13 +61,13 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
               // Width tracks --control-h so the icon-only button stays square: on a
               // coarse pointer the token is 50px, and a fixed w-9 would have made it
               // a 36×50 sliver next to the 44×44 hamburger.
-              className="control-h w-[var(--control-h)] xl:w-auto xl:px-3 flex items-center justify-center gap-2 rounded-lg text-white/90 bg-white/10 hover:bg-white/20 transition-colors">
+              className={`control-h w-[var(--control-h)] ${compact ? '' : 'xl:w-auto xl:px-3'} flex items-center justify-center gap-2 rounded-lg text-white/90 bg-white/10 hover:bg-white/20 transition-colors`}>
               <Search className="w-[18px] h-[18px]" aria-hidden="true" />
-              <kbd className="hidden xl:inline px-1.5 py-0.5 text-xs bg-black/20 text-white rounded font-mono">{searchHint}</kbd>
+              <kbd className={`hidden ${compact ? '' : 'xl:inline'} px-1.5 py-0.5 text-xs bg-black/20 text-white rounded font-mono`}>{searchHint}</kbd>
             </button>
 
             {/* Backup status: desktop only (mobile backup lives in the nav rebuild) */}
-            <span className="hidden md:block"><BackupStatusChip /></span>
+            <span className="hidden md:block"><BackupStatusChip compact={compact} /></span>
 
             {/* Account menu: desktop only (mobile account lives in the More sheet) */}
             <div className="hidden md:block"><UserMenu /></div>

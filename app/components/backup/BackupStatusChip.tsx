@@ -13,7 +13,8 @@ import { Cloud } from '@/lib/icons';
  * parent (the mobile navbar owns that surface). Colorblind-safe: the label text
  * changes with status, not just the color.
  */
-export default function BackupStatusChip() {
+/** `compact` keeps the icon-only form at every width, to make room in the top bar. */
+export default function BackupStatusChip({ compact = false }: { compact?: boolean }) {
   const t = useTranslations('options');
   const [open, setOpen] = useState(false);
   const { overdue } = useBackupOverdue();
@@ -35,16 +36,16 @@ export default function BackupStatusChip() {
         title={label}
         // Chrome, not a second coloured fill (#693 / #719): the warn state is a
         // small warning dot on the usual nav chip; the label and title say why.
-        className="relative h-9 w-9 xl:w-auto xl:px-3 flex items-center justify-center gap-2 rounded-lg text-sm transition-colors text-white/90 bg-white/10 hover:bg-white/20 focus-ring"
+        className={`relative h-9 w-9 ${compact ? '' : 'xl:w-auto xl:px-3'} flex items-center justify-center gap-2 rounded-lg text-sm transition-colors text-white/90 bg-white/10 hover:bg-white/20 focus-ring`}
       >
         <Cloud className="w-[18px] h-[18px]" aria-hidden="true" />
         {warn && (
           <span
             aria-hidden="true"
-            className="absolute top-1 right-1 xl:static w-2 h-2 rounded-full bg-nav-warning ring-2 ring-[color:var(--color-nav-bg)] xl:ring-0"
+            className={`absolute top-1 right-1 w-2 h-2 rounded-full bg-nav-warning ring-2 ring-[color:var(--color-nav-bg)] ${compact ? '' : 'xl:static xl:ring-0'}`}
           />
         )}
-        <span className="hidden xl:inline">{label}</span>
+        <span className={compact ? 'hidden' : 'hidden xl:inline'}>{label}</span>
       </button>
       <BackupModal open={open} onClose={() => setOpen(false)} />
     </>
