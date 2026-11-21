@@ -35,6 +35,7 @@ async function cleanup() {
     [`%${DOMAIN}`, ids, [TEST_USER.email, TEST_USER_2.email]]);
   await query(`DELETE FROM "Members" WHERE "Email" LIKE $1 OR "UserId" = ANY($2) OR "Email" = ANY($3)`,
     [`%${DOMAIN}`, ids, [TEST_USER.email, TEST_USER_2.email]]);
+  await query(`DELETE FROM "Media" WHERE "TreeId" IN (SELECT t."Id" FROM "Trees" t JOIN "Users" u ON u."Id" = t."OwnerId" WHERE u."Email" LIKE $1)`, [`%${DOMAIN}`]);
   await query(`DELETE FROM "TreeSharing" WHERE "SharedWithId" IN (SELECT "Id" FROM "Users" WHERE "Email" LIKE $1)`, [`%${DOMAIN}`]);
   await query(`DELETE FROM "Trees" WHERE "OwnerId" IN (SELECT "Id" FROM "Users" WHERE "Email" LIKE $1)`, [`%${DOMAIN}`]);
   await query(`DELETE FROM "Users" WHERE "Email" LIKE $1`, [`%${DOMAIN}`]);
@@ -92,6 +93,41 @@ describeIf('Members API (ADR 0029)', () => {
     const body = await parseResponse<{ members: { Email: string; Role: string; Status: string }[]; count: number }>(res);
     const emails = body.members.map((m) => m.Email);
     expect(emails).toEqual(expect.arrayContaining([TEST_USER.email, TEST_USER_2.email]));
+  });
+
+  it('totals media bytes per member over the trees they own, in one list (#70)', async () => {
+    const user = async (name: string) => {
+      const r = await query(`INSERT INTO "Users" ("Email", "GoogleId") VALUES ($1, $2) RETURNING "Id"`, [`${name}${DOMAIN}`, `g-${name}`]);
+      const id = (r.rows[0] as { Id: number }).Id;
+      await query(
+        `INSERT INTO "Members" ("Email", "UserId", "GoogleId", "Role", "Status", "Origin", "ActivatedAt")
+         VALUES ($1, $2, $3, 'member', 'active', 'invite', CURRENT_TIMESTAMP)`,
+        [`${name}${DOMAIN}`, id, `g-${name}`],
+      );
+      return id;
+    };
+    const tree = async (owner: number) =>
+      (await query(`INSERT INTO "Trees" ("OwnerId", "Name") VALUES ($1, 'Storage') RETURNING "Id"`, [owner])).rows[0] as { Id: number };
+    const media = (owner: number, treeId: number, size: number) =>
+      query(`INSERT INTO "Media" ("UserId", "TreeId", "Title", "FileSize") VALUES ($1, $2, 'm', $3)`, [owner, treeId, size]);
+
+    const owner = await user('owner');
+    const sharer = await user('sharer');
+    const empty = await user('empty');
+    const a = await tree(owner);
+    const b = await tree(owner);
+    await media(owner, a.Id, 1000);
+    await media(owner, a.Id, 2500);
+    await media(owner, a.Id, 0); // a placeholder counts zero
+    await media(owner, b.Id, 500);
+    // A tree shared with someone still counts toward its owner only.
+    await query(`INSERT INTO "TreeSharing" ("OwnerId", "SharedWithId", "TreeId", "Permission") VALUES ($1, $2, $3, 'edit')`, [owner, sharer, a.Id]);
+
+    const body = await parseResponse<{ members: { UserId: number; StorageBytes: number; TreesOwned: number; TreesEdit: number }[] }>(await LIST());
+    const row = (id: number) => body.members.find((m) => m.UserId === id)!;
+    expect(row(owner)).toMatchObject({ StorageBytes: 4000, TreesOwned: 2 });
+    expect(row(sharer)).toMatchObject({ StorageBytes: 0, TreesOwned: 0, TreesEdit: 1 });
+    expect(row(empty)).toMatchObject({ StorageBytes: 0, TreesOwned: 0 });
   });
 
   it('refuses every members route to a non-admin', async () => {

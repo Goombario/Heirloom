@@ -33,6 +33,8 @@ export interface MemberRow {
 
 /** A row for the Members page: the person's name, who invited them, what trees they reach. */
 export interface MemberListRow extends MemberRow {
+    /** Media bytes in the trees this person owns (#70). Shared trees count toward their owner only. */
+    StorageBytes: number;
     Name: string | null;
     InvitedByName: string | null;
     InvitedByEmail: string | null;
@@ -201,7 +203,7 @@ export async function insertMemberLog(
     );
 }
 
-/** Every row, with what each person reaches through tree ownership and sharing. */
+/** Every row, with what each person reaches through tree ownership and sharing, and the media bytes of the trees they own. */
 export async function listMembers(): Promise<MemberListRow[]> {
     const result = await query(
         `SELECT m.*, u."Name" AS "Name",
@@ -209,7 +211,8 @@ export async function listMembers(): Promise<MemberListRow[]> {
                 COALESCE(owned.n, 0)::int AS "TreesOwned",
                 COALESCE(sh.edit, 0)::int AS "TreesEdit",
                 COALESCE(sh.contribute, 0)::int AS "TreesContribute",
-                COALESCE(sh.view, 0)::int AS "TreesView"
+                COALESCE(sh.view, 0)::int AS "TreesView",
+                COALESCE(st.bytes, 0)::float8 AS "StorageBytes"
          FROM "Members" m
          LEFT JOIN "Users" u ON u."Id" = m."UserId"
          LEFT JOIN "Users" inv ON inv."Id" = m."InvitedBy"
@@ -222,6 +225,11 @@ export async function listMembers(): Promise<MemberListRow[]> {
                     COUNT(*) FILTER (WHERE "Permission" = 'view') AS view
              FROM "TreeSharing" GROUP BY "SharedWithId"
          ) sh ON sh."SharedWithId" = m."UserId"
+         LEFT JOIN (
+             SELECT t."OwnerId", SUM(md."FileSize") AS bytes
+             FROM "Media" md JOIN "Trees" t ON t."Id" = md."TreeId"
+             GROUP BY t."OwnerId"
+         ) st ON st."OwnerId" = m."UserId"
          ORDER BY m."Id" ASC`,
         [],
     );
