@@ -231,7 +231,7 @@ function PickUp({ person, lastChange, treeId, viewer, onPortraitSettled }: { per
                     {(person.BirthDate || person.DeathDate) && (
                         <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} tone="evidence" className="text-sm" />
                     )}
-                    {lastChange && <span className="text-sm text-text-secondary">{changeLine(lastChange)}</span>}
+                    {lastChange && <span className="text-sm text-text-secondary">{changeLine(lastChange, person)}</span>}
                     <OpenInTreeRow personId={person.Id} firstName={first} className="mt-3 max-w-[360px]" />
                 </div>
             </div>
@@ -289,7 +289,7 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
                 <ul className="rows-enter m-0 grid list-none gap-x-6 p-0 min-[1100px]:grid-cols-2">
                     {people.map((p) => {
                         const name = displayFullName(p) || t('person_fallback', { id: p.Id });
-                        const { change, time } = changeParts(p.lastChange);
+                        const { change, time } = changeParts(p.lastChange, p);
                         return (
                             <li key={p.Id}>
                                 <GuardedLink href={`/people/view?id=${p.Id}`}

@@ -10,7 +10,7 @@ vi.mock('@/app/hooks/useTimestamp', () => ({
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('next/link', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key }));
+vi.mock('next-intl', () => ({ useLocale: () => 'en', useTranslations: () => (key: string) => key }));
 vi.mock('@/app/contexts/TreeContext', () => ({
   useTree: () => ({ activeTreeId: null, activePermission: 'view', currentUserId: 1 }),
 }));

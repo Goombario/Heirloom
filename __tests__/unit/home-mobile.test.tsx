@@ -6,6 +6,7 @@ import React from 'react';
 import type { DashboardData, RecentPerson, ResumedPerson } from '@/lib/data/types';
 
 vi.mock('next-intl', () => ({
+  useLocale: () => 'en',
   useTranslations: () => Object.assign((key: string) => key, {
     rich: (key: string) => key,
   }),

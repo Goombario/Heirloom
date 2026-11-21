@@ -11,7 +11,7 @@ vi.mock('@/app/hooks/useTimestamp', () => ({
 const push = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 vi.mock('next/link', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-vi.mock('next-intl', () => ({ useTranslations: () => Object.assign((key: string) => key, { rich: (key: string) => key }) }));
+vi.mock('next-intl', () => ({ useLocale: () => 'en', useTranslations: () => Object.assign((key: string) => key, { rich: (key: string) => key }) }));
 vi.mock('@/app/hooks/useActiveTreeName', () => ({ useActiveTreeName: () => 'Lindqvist family' }));
 vi.mock('@/app/components/GuardedLink', () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 vi.mock('@/app/contexts/TreeContext', () => ({
