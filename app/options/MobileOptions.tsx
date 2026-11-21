@@ -292,7 +292,7 @@ function TypeToConfirmSheet({ open, onClose, title, body, phrase, label, confirm
             {error && <p role="alert" className="m-0 pt-2 text-meta text-error">{error}</p>}
             <button type="button" disabled={typed !== phrase || working}
                 onClick={async () => { setRunning(true); try { await onConfirm(); } finally { setRunning(false); } }}
-                className="mt-4 w-full h-12 rounded-full bg-error text-white font-semibold text-md cursor-pointer focus-ring disabled:opacity-40 disabled:cursor-default">
+                className="mt-4 w-full h-12 rounded-full bg-button-danger text-white font-semibold text-md cursor-pointer focus-ring disabled:opacity-40 disabled:cursor-default">
                 {confirmLabel}
             </button>
             <button type="button" onClick={onClose} disabled={working}

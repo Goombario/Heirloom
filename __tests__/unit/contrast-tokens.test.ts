@@ -120,6 +120,11 @@ const cases: Case[] = [
   // appeared in (a DB error on /audit) never rendered.
   ['--color-error', '--color-error-bg', light, 'light: error text on error bg'],
   ['--color-error', '--color-error-bg', dark, 'dark: error text on error bg'],
+  // #159: a danger menu row (RecordMenu, MemberRowMenu, .ev-act.danger) keeps its
+  // error text while hovered or keyboard-active.
+  ['--color-error', '--color-hover-surface', light, 'light: danger row text, hovered'],
+  ['--color-error', '--color-hover-surface', dark, 'dark: danger row text, hovered'],
+  ['--color-error', '--color-card-alt', dark, 'dark: error text on card-alt'],
   ['--color-success', '--color-success-bg', light, 'light: success text on success bg'],
   ['--color-success', '--color-success-bg', dark, 'dark: success text on success bg'],
   ['--color-warning-text', '--color-warning-bg', light, 'light: warning text on warning bg'],
@@ -161,6 +166,17 @@ const cases: Case[] = [
 ];
 
 describe('design-system color tokens meet WCAG AA contrast', () => {
+  // #159: the neutral disc's dark stop must not melt into the card it sits on.
+  it.each([['light', light], ['dark', dark]] as [string, Record<string, string>][])(
+    'selected-row mark reaches 3:1 on the card and the selected fill — %s', (_l, theme) => {
+      expect(ratio(theme['--color-segment-on'], theme['--color-card'])).toBeGreaterThanOrEqual(3);
+      expect(ratio(theme['--color-segment-on'], theme['--color-surface-2'])).toBeGreaterThanOrEqual(3);
+    });
+
+  it('dark: the unknown avatar edge stays visible on a card', () => {
+    expect(ratio(dark['--color-neutral-dark'], dark['--color-card'])).toBeGreaterThanOrEqual(1.5);
+  });
+
   it('parsed both theme token blocks', () => {
     expect(Object.keys(light).length).toBeGreaterThan(20);
     expect(dark['--color-nav-bg']).toBeDefined();
@@ -216,6 +232,13 @@ describe('design-system color tokens meet WCAG AA contrast', () => {
     ['--color-button-danger', dark, 'dark: white text on danger button'],
     ['--color-lightbox-panel', light, 'lightbox: white text on panel'],
     ['--color-lightbox-stage-top', light, 'lightbox: white text on stage (lightest)'],
+    // PersonAvatar (#159): white 8–10px initials on each gradient's light end, the
+    // worst case. Both stops are checked so a darker stop can't regress either.
+    ...(['male', 'female', 'nonbinary', 'neutral'] as const).flatMap((sex) =>
+      ([['light', light], ['dark', dark]] as const).flatMap(([name, theme]) => [
+        [`--color-${sex}`, theme, `${name}: white initials on ${sex} avatar (light stop)`],
+        [`--color-${sex}-dark`, theme, `${name}: white initials on ${sex} avatar (dark stop)`],
+      ] as [string, Record<string, string>, string][])),
   ] as [string, Record<string, string>, string][])('white on %s — %s', (bg, theme) => {
     expect(theme[bg], `${bg} missing`).toBeDefined();
     expect(ratio('#FFFFFF', theme[bg])).toBeGreaterThanOrEqual(AA);

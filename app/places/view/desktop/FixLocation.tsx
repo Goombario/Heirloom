@@ -308,7 +308,7 @@ export function SearchMapDialog({ placeName, current, currentOsm, saving, onPick
                                                 <button
                                                     type="button"
                                                     onClick={() => { setPicked(i); setConfirmFar(false); }}
-                                                    className={cx('w-full text-left rounded-md px-2.5 py-2 text-sm cursor-pointer focus-ring-inset', i === picked ? 'bg-surface-2' : 'hover:bg-hover-surface')}
+                                                    className={cx('w-full text-left rounded-md px-2.5 py-2 text-sm cursor-pointer focus-ring-inset', i === picked ? 'bg-surface-2 row-selected-mark' : 'hover:bg-hover-surface')}
                                                 >
                                                     <span className="block text-text">{c.result.name}</span>
                                                     {isCurrent(c) && <span className="block text-meta text-text-muted">{t('search_current')}</span>}

@@ -86,7 +86,7 @@ export default function DesktopNav({ className }: { className: string }) {
                 role="menuitem" tabIndex={-1}
                 aria-current={isNavItemActive(item, pathname) ? 'page' : undefined}
                 className={`flex items-center gap-3 px-3 py-2 text-sm transition-colors focus-ring-inset ${
-                  isNavItemActive(item, pathname) ? 'bg-surface-2' : 'hover:bg-hover-surface'}`}>
+                  isNavItemActive(item, pathname) ? 'bg-surface-2 row-selected-mark' : 'hover:bg-hover-surface'}`}>
                 <IconTile size={36}><Icon className="w-[18px] h-[18px]" /></IconTile>
                 <span className="grid min-w-0 flex-1">
                   <span className="font-medium text-text">{t(labelKey)}</span>
