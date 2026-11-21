@@ -1,5 +1,6 @@
 'use client';
 
+import StorageNotice from '@/app/components/backup/StorageNotice';
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -130,6 +131,7 @@ export function DesktopHome({ data, phase, settingUp = false, datesToCheck, dupl
         return (
             <div className="desktop-home grid">
                 {band}
+                <StorageNotice placement="desktop" />
                 {canEdit ? (
                     <FirstRunPaths canRestore={canRestore} onGo={(href) => router.push(href)} />
                 ) : (
@@ -152,6 +154,7 @@ export function DesktopHome({ data, phase, settingUp = false, datesToCheck, dupl
     return (
         <div className="desktop-home grid">
             {band}
+            <StorageNotice placement="desktop" />
             {(phase === 'loading' || (ready && cardPerson && !portrait.shown)) && <PickUpSkeleton />}
             {ready && cardPerson && (
                 // Mounted (and loading its photo) behind the skeleton until the portrait

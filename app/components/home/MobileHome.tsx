@@ -1,5 +1,6 @@
 'use client';
 
+import StorageNotice from '@/app/components/backup/StorageNotice';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -85,6 +86,7 @@ export function MobileHome({ data, phase, settingUp = false, datesToCheck, dupli
 
     return (
         <div className="md:hidden">
+            <StorageNotice placement="phone" />
             <header ref={bandRef} className="hero-dark mp-slim-bar !rounded-none !shadow-none !p-0">
                 <div className="grid pl-4 pr-3 pb-4" style={{ paddingTop: 'calc(10px + var(--sat))' }}>
                     <div className="flex items-center gap-2.5 -ml-1">

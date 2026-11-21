@@ -1422,10 +1422,15 @@
     "local_data_title": "Données locales",
     "local_data_desc": "Votre arbre généalogique réside entièrement dans ce navigateur. Exportez une sauvegarde régulièrement — effacer les données du site supprimera tout.",
     "local_data_desc_desktop": "Votre arbre généalogique est enregistré sur cet ordinateur. Exportez une sauvegarde régulièrement pour en garder une copie ailleurs.",
-    "storage_persistent": "Le stockage est persistant — vos données survivront aux nettoyages du navigateur.",
-    "storage_not_persistent": "Le stockage n'est pas persistant — le navigateur peut effacer les données sous pression disque.",
-    "storage_unknown": "Statut de persistance du stockage inconnu.",
     "storage_request": "Demander un stockage persistant",
+    "storage_heading": "Stockage dans ce navigateur",
+    "storage_state_kept": "Conservé durablement",
+    "storage_state_kept_sub": "Votre navigateur a accepté de ne pas effacer les données d’Heirloom.",
+    "storage_state_not_kept": "Pas conservé durablement",
+    "storage_state_not_kept_sub": "Votre navigateur peut supprimer les données d’Heirloom s’il manque d’espace. Continuez à faire des sauvegardes.",
+    "storage_state_unsupported": "Ce navigateur ne le dit pas",
+    "storage_state_unsupported_sub": "Il n’indique pas s’il conserve les données. Continuez à faire des sauvegardes.",
+    "storage_ask_again": "Redemander",
     "storage_request_denied": "Votre navigateur n'a pas accordé le stockage persistant — il l'accorde généralement après avoir ajouté cette application aux favoris ou l'avoir utilisée plusieurs fois. Continuez à exporter des sauvegardes en attendant.",
     "backup_title": "Télécharger une sauvegarde",
     "backup_desc": "Enregistre un instantané complet de votre arbre, personnes, médias et tous les enregistrements.",
@@ -4940,6 +4945,7 @@
     "persist_on": "Autorisé",
     "persist_off": "Non autorisé",
     "persist_unknown": "Inconnu",
+    "persist_cant_say": "Inconnu",
     "nudge_weeks": "{count, plural, one {Aucune sauvegarde depuis # semaine} other {Aucune sauvegarde depuis # semaines}}",
     "nudge_never": "Vous n’avez encore rien sauvegardé",
     "nudge_body": "Votre arbre familial n’existe que dans ce navigateur.",
@@ -5422,5 +5428,14 @@
     "version": "Version {version}",
     "empty": "Rien à afficher pour le moment.",
     "done": "Terminé"
+  },
+  "storageNotice": {
+    "title": "Ce navigateur peut effacer votre arbre",
+    "body": "Votre navigateur n’a pas accepté de conserver durablement les données d’Heirloom. Si l’appareil manque d’espace, il peut supprimer votre arbre sans prévenir. Seule une sauvegarde est une copie sûre.",
+    "body_short": "Votre navigateur n’a pas accepté de conserver durablement les données d’Heirloom. S’il manque d’espace, il peut supprimer votre arbre sans prévenir.",
+    "back_up_now": "Sauvegarder maintenant",
+    "how_to_keep": "Comment le conserver",
+    "how_body": "La plupart des navigateurs conservent durablement les données d’un site une fois que vous l’avez ajouté aux favoris ou installé, et utilisé plusieurs fois. Firefox vous le demande directement : choisissez Autoriser. D’ici là, faites une sauvegarde après chaque séance de modifications.",
+    "got_it": "Compris"
   }
 }

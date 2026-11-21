@@ -21,10 +21,11 @@ const w = window as unknown as Record<string, unknown>;
 afterEach(() => { delete w.__TAURI_INTERNALS__; });
 
 describe('local data wording in the desktop app (#61)', () => {
-  it('a browser gets the browser copy and the storage persistence status', () => {
+  it('a browser gets the browser copy and the storage persistence status', async () => {
     render(<FileBackupSection />);
     expect(screen.getByText('restore_desc')).toBeInTheDocument();
-    expect(screen.getByText(/^storage_/)).toBeInTheDocument();
+    // No StorageManager here, so the browser can't say (#18).
+    expect(await screen.findByText('storage_state_unsupported')).toBeInTheDocument();
   });
 
   it('the desktop app gets the desktop copy and no storage persistence row', () => {
