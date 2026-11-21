@@ -2,6 +2,7 @@ import { query, getClient } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
 import type { AuditLogEntry, AuditLogEntryWithUser, AuditFieldChanges, AuditSnapshotChanges } from '../schema';
 import { hasEditPermission } from './sharing';
+import { isPersonMergeSnapshot, laterMergeChanges, revertPersonMerge, PERSON_MERGE_REVERT_SUMMARY, PERSON_MERGE_SUMMARY } from './person-merge';
 import { revertPlaceDelete, revertPlaceEdits, revertPlaceMove, revertPlaceRename, type PlaceDeleteSnapshot, type PlaceEditChange, type PlaceMoveSnapshot, type PlaceRenameSnapshot } from './places';
 import { revertPlaceNames, type PlaceNamesSnapshot } from './place-names';
 import { setCaseNoteStrike, type CaseNoteStrikeSnapshot } from './cases';
@@ -670,6 +671,27 @@ async function revertSingleEntry(
         if (summary?.kind === 'canonical_ownership') {
             throw new Error(`Audit entry #${entry.Id} canonical ownership summary is not revertible`);
         }
+    }
+
+    // A person merge (#28, ADR 0052): later changes to the kept person first, newest
+    // first, then the merge's undo log backwards. Its trail marker is not revertible.
+    if (entry.EntityType === 'person' && summary?.kind === PERSON_MERGE_SUMMARY) {
+        const snap = (entry.Changes as { merge?: unknown }).merge;
+        if (!isPersonMergeSnapshot(snap)) throw new Error(`Audit entry #${entry.Id} is not a revertable merge`);
+        for (const later of await laterMergeChanges(executor, treeId, entry.Id, snap.keptId)) {
+            await revertSingleEntry(later as unknown as AuditLogEntry, treeOwnerId, userId, executor);
+        }
+        await revertPersonMerge(executor, treeId, snap);
+        await exec(
+            `INSERT INTO "AuditLog" ("TreeOwnerId", "UserId", "TreeId", "Action", "EntityType", "EntityId", "EntityLabel", "Changes")
+             VALUES ($1, $2, $3, 'update', 'person', $4, $5, $6)`,
+            [treeOwnerId, userId, treeId, snap.keptId, `Reverted: ${entry.EntityLabel ?? ''}`.trim(),
+             JSON.stringify({ summary: { kind: PERSON_MERGE_REVERT_SUMMARY }, snapshot: { revertOf: entry.Id, mergedId: snap.mergedId } })]
+        );
+        return;
+    }
+    if (entry.EntityType === 'person' && summary?.kind === PERSON_MERGE_REVERT_SUMMARY) {
+        throw new ValidationError('This entry records that a merge was reverted, so it can\'t be reverted itself');
     }
 
     // A place geocode, coordinate or hierarchy edit (#924) carries each touched
@@ -1510,6 +1532,18 @@ async function revertCaseNote(
          VALUES ($1, $2, $3, 'update', 'casenote', $4, $5, $6)`,
         [treeOwnerId, userId, treeId, snap.CommentId, entry.EntityLabel, JSON.stringify({ snapshot: changed })],
     );
+}
+
+/**
+ * The later changes a merge's revert undoes too (#28, ADR 0052), newest first,
+ * for the Revert confirmation. Empty for any entry that isn't a merge.
+ */
+export async function getMergeLaterChanges(id: number, treeId: number): Promise<AuditLogEntry[]> {
+    const entry = await getAuditEntryById(id, treeId);
+    const summary = (entry?.Changes as { summary?: { kind?: unknown } } | null)?.summary;
+    const snap = (entry?.Changes as { merge?: unknown } | null)?.merge;
+    if (!entry || entry.EntityType !== 'person' || summary?.kind !== PERSON_MERGE_SUMMARY || !isPersonMergeSnapshot(snap)) return [];
+    return (await laterMergeChanges({ query }, treeId, entry.Id, snap.keptId)) as unknown as AuditLogEntry[];
 }
 
 /**

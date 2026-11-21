@@ -1,8 +1,10 @@
 import type { PlaceKey } from '@/lib/places/place-key';
+import type { MergePreview } from '@/lib/services/person-merge';
+import type { MergeTake } from '@/lib/db/queries/person-merge';
 import type { EventTypeCount } from '@/lib/events/custom-types';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import type { NextStep } from '@/lib/db/queries/home';
-import type { Person, PersonWithRelations, Family, FamilyWithRelations, GedcomEvent, EventWithMedia, Media, MediaWithPerson, MediaLinkOwner, MediaTag, MediaTagWithPerson, PersonGalleryMedia, OwnerGalleryMedia, AuditLogEntryWithUser, Case, CaseComment, CaseWithRelations, Tree, MediaImportItem, MediaImportFailureCode } from '@/lib/db/schema';
+import type { Person, PersonWithRelations, Family, FamilyWithRelations, GedcomEvent, EventWithMedia, Media, MediaWithPerson, MediaLinkOwner, MediaTag, MediaTagWithPerson, PersonGalleryMedia, OwnerGalleryMedia, AuditLogEntry, AuditLogEntryWithUser, Case, CaseComment, CaseWithRelations, Tree, MediaImportItem, MediaImportFailureCode } from '@/lib/db/schema';
 import type { FamilyWithSpouseNames } from '@/lib/db/queries/families';
 import type { ChildRelationshipType, ChildRelationshipInput } from '@/lib/child-relationship';
 import type { scoreSuggestions } from '@/lib/family-suggestions';
@@ -336,6 +338,19 @@ export interface PeopleClient {
   /** Total descendants, all generations. Named for the cache-invalidation READ
    *  allowlist (see READ_EXACT in lib/data/cache-invalidation.ts). */
   descendantCount(personId: number, treeId?: number | null): Promise<number>;
+  /** Two people side by side for the merge dialog (#28). A read: the name starts with "preview". */
+  previewMerge(aId: number, bId: number, treeId?: number | null): Promise<MergePreview>;
+  /** Merge `otherId` into `keptId` (#28, ADR 0052); one audit entry. */
+  merge(input: MergePeopleInput, treeId?: number | null): Promise<Audited<{ keptId: number }>>;
+}
+
+export type { MergePreview };
+export type { MergeField, MergeSide, MergeTake } from '@/lib/db/queries/person-merge';
+export interface MergePeopleInput {
+  keptId: number;
+  otherId: number;
+  /** Per differing field, whose value to keep; the kept person's by default. */
+  take?: MergeTake;
 }
 
 export interface RelationshipClient {
@@ -832,6 +847,8 @@ export interface AuditClient {
   users(treeId?: number | null): Promise<AuditEditorsResult>;
   /** ids is always an array (single revert passes `[id]`). */
   revert(ids: number[], treeId?: number | null): Promise<{ success: true; revertedCount: number }>;
+  /** What reverting a person merge undoes too, newest first (#28); empty for other entries. */
+  listLaterChanges(id: number, treeId?: number | null): Promise<AuditLogEntry[]>;
 }
 
 // ---- Dashboard ----

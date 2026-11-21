@@ -1,7 +1,7 @@
 import type {
   Audited, NameVariantDates,
   PeopleClient, GetPeopleOptions, GetPeopleResult, CreatePersonInput,
-  UpdatePersonInput, NameVariant, CreateNameVariantInput, SuggestFamilyParams, FamilySuggestion,
+  UpdatePersonInput, NameVariant, CreateNameVariantInput, SuggestFamilyParams, FamilySuggestion, MergePreview, MergePeopleInput,
 } from '../types';
 import type { Person, PersonWithRelations } from '@/lib/db/schema';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
@@ -127,5 +127,23 @@ export class HttpPeopleClient implements PeopleClient {
     const res = await fetch(`/api/people/${personId}/descendant-count${treeQuery(treeId)}`);
     if (!res.ok) await throwForStatus(res);
     return ((await res.json()) as { count: number }).count;
+  }
+
+  async previewMerge(aId: number, bId: number, treeId?: number | null): Promise<MergePreview> {
+    const qs = new URLSearchParams({ a: String(aId), b: String(bId) });
+    if (treeId != null) qs.set('treeId', String(treeId));
+    const res = await fetch(`/api/people/merge?${qs.toString()}`);
+    if (!res.ok) await throwForStatus(res);
+    return (await res.json()) as MergePreview;
+  }
+
+  async merge(input: MergePeopleInput, treeId?: number | null): Promise<Audited<{ keptId: number }>> {
+    const res = await fetch(`/api/people/merge${treeQuery(treeId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) await throwForStatus(res);
+    return ensureAuditIds((await res.json()) as Audited<{ keptId: number }>);
   }
 }
