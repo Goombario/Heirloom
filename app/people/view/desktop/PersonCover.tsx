@@ -17,9 +17,9 @@ import type { RunChange } from '../mobile/useChange';
 /**
  * The desktop person page's header (#49): the 144px cover band with the 4:3 portrait
  * hanging over its lower edge, the name and life line, the one ⋯ menu (Edit person,
- * Descendants, Delete person) and the biography beside the portrait.
+ * Descendants, Merge with another person, Delete person) and the biography beside the portrait.
  */
-export function PersonCover({ person, variants = null, media, treeId, role, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onAddPortrait, onOpenPortrait }: {
+export function PersonCover({ person, variants = null, media, treeId, role, biography, bioRequest = 0, run, onEdit, onDescendants, hasDescendants, onDelete, onMerge, onAddPortrait, onOpenPortrait }: {
   person: PersonWithRelations;
   /** The loaded names, or null before they load: a starred name heads the page at once. */
   variants?: Parameters<typeof headingName>[1];
@@ -34,18 +34,22 @@ export function PersonCover({ person, variants = null, media, treeId, role, biog
   onDescendants: () => void;
   hasDescendants: boolean;
   onDelete: () => void;
+  /** Merge with another person… (#28): editors only. */
+  onMerge?: () => void;
   onAddPortrait: () => void;
   /** Opens the portrait in the lightbox, where it can be changed. */
   onOpenPortrait: (media: PersonGalleryMedia) => void;
 }) {
   const t = useTranslations('personDesktop');
   const tp = useTranslations('personDetail');
+  const tm = useTranslations('personMerge');
   const name = headingNameText(person, variants, tp('unknown'));
   const canWrite = role !== 'viewer';
 
   const items: RecordMenuItem[] = [
     ...(canWrite ? [{ label: t('edit_person'), onSelect: onEdit }] : []),
     ...(hasDescendants ? [{ label: tp('descendants_label'), onSelect: onDescendants }] : []),
+    ...(role === 'editor' && onMerge ? [{ label: tm('menu_merge'), separated: true, onSelect: onMerge }] : []),
     ...(role === 'editor' ? [{ label: t('delete_person'), danger: true, separated: true, onSelect: onDelete }] : []),
   ];
 

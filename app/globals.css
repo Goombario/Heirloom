@@ -1230,6 +1230,29 @@ body::after {
 }
 .btn-tonal:enabled:hover { background: color-mix(in srgb, var(--color-primary) 38%, transparent); }
 
+/* The person merge dialog's choices (#28): a bordered card per value, the picked one
+   with a copper edge and a faint copper wash, and a radio dot. */
+.merge-choice {
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  transition: border-color .12s, background .12s;
+}
+.merge-choice:hover { border-color: var(--color-text-muted); }
+.merge-choice[aria-checked="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-card));
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.merge-dot {
+  width: 18px; height: 18px; flex: none; border-radius: 9999px;
+  border: 2px solid var(--color-text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.merge-choice[aria-checked="true"] .merge-dot { border-color: var(--color-primary); }
+.merge-choice[aria-checked="true"] .merge-dot::after {
+  content: ""; width: 8px; height: 8px; border-radius: 9999px; background: var(--color-primary);
+}
+
 /* Expands a small control's HIT AREA to 44x44 without changing a pixel of how it
    looks (#431). The remove (x) on name, alias and relationship rows measured 19x22
    on a fine pointer — under the WCAG 2.2 AA 24px floor and well under the 44px

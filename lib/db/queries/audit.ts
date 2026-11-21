@@ -646,8 +646,11 @@ async function revertSingleEntry(
     entry: AuditLogEntry,
     treeOwnerId: number,
     userId: number,
-    clientOrQuery?: { query: (sql: string, params: unknown[]) => Promise<{ rows: unknown[] }> }
+    clientOrQuery?: { query: (sql: string, params: unknown[]) => Promise<{ rows: unknown[] }> },
+    /** Entries this batch has already reverted: a merge's later changes are skipped when the batch held them too. */
+    reverted: Set<number> = new Set(),
 ): Promise<void> {
+    reverted.add(entry.Id);
     const executor: AuditExecutor = clientOrQuery ?? { query };
     const exec = (sql: string, params: unknown[]) => executor.query(sql, params);
 
@@ -679,14 +682,15 @@ async function revertSingleEntry(
         const snap = (entry.Changes as { merge?: unknown }).merge;
         if (!isPersonMergeSnapshot(snap)) throw new Error(`Audit entry #${entry.Id} is not a revertable merge`);
         for (const later of await laterMergeChanges(executor, treeId, entry.Id, snap.keptId)) {
-            await revertSingleEntry(later as unknown as AuditLogEntry, treeOwnerId, userId, executor);
+            if (reverted.has(later.Id as number)) continue;
+            await revertSingleEntry(later as unknown as AuditLogEntry, treeOwnerId, userId, executor, reverted);
         }
         await revertPersonMerge(executor, treeId, snap);
         await exec(
             `INSERT INTO "AuditLog" ("TreeOwnerId", "UserId", "TreeId", "Action", "EntityType", "EntityId", "EntityLabel", "Changes")
              VALUES ($1, $2, $3, 'update', 'person', $4, $5, $6)`,
             [treeOwnerId, userId, treeId, snap.keptId, `Reverted: ${entry.EntityLabel ?? ''}`.trim(),
-             JSON.stringify({ summary: { kind: PERSON_MERGE_REVERT_SUMMARY }, snapshot: { revertOf: entry.Id, mergedId: snap.mergedId } })]
+             JSON.stringify({ summary: { kind: PERSON_MERGE_REVERT_SUMMARY }, snapshot: { revertOf: entry.Id, mergedId: snap.mergedId, keptName: snap.keptName, mergedName: snap.mergedName } })]
         );
         return;
     }
@@ -1604,8 +1608,9 @@ export async function revertAuditEntries(ids: number[], treeId: number, treeOwne
     const client = await getClient();
     try {
         await client.query('BEGIN');
+        const reverted = new Set<number>();
         for (const entry of entries) {
-            await revertSingleEntry(entry, treeOwnerId, userId, client);
+            await revertSingleEntry(entry, treeOwnerId, userId, client, reverted);
         }
         await client.query('COMMIT');
         return entries.length;
@@ -1636,5 +1641,6 @@ export async function revertAuditEntriesWith(
     );
     const entries = result.rows as AuditLogEntry[];
     if (entries.length !== new Set(ids).size) throw new Error('Audit entry not found');
-    for (const entry of entries) await revertSingleEntry(entry, treeOwnerId, userId, exec);
+    const reverted = new Set<number>();
+    for (const entry of entries) await revertSingleEntry(entry, treeOwnerId, userId, exec, reverted);
 }

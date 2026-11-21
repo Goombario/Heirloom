@@ -30,7 +30,7 @@ const MERGE_TABLES = {
     CaseLeadPerson: ['LeadId', 'PersonId'],
 } as const satisfies Record<string, readonly string[]>;
 
-export type MergeTable = keyof typeof MERGE_TABLES;
+type MergeTable = keyof typeof MERGE_TABLES;
 
 /** Generated columns: the database computes them, so nothing ever writes them. */
 const GENERATED: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -39,7 +39,7 @@ const GENERATED: Readonly<Record<string, ReadonlySet<string>>> = {
 };
 
 /** One step of the undo log. */
-export type MergeOp =
+type MergeOp =
     | { op: 'update'; table: MergeTable; key: Row; before: Row }
     | { op: 'delete'; table: MergeTable; row: Row }
     | { op: 'insert'; table: MergeTable; key: Row };
@@ -189,7 +189,7 @@ export async function findMergeBlock(exec: Executor, treeId: number, a: number, 
 }
 
 /** What sits on one person, as the merge dialog's "Also moves" line counts it. */
-export interface MergeCounts {
+interface MergeCounts {
     events: number;
     citations: number;
     notes: number;
@@ -199,7 +199,7 @@ export interface MergeCounts {
     names: number;
 }
 
-export async function countPersonRecords(exec: Executor, treeId: number, personId: number): Promise<MergeCounts> {
+async function countPersonRecords(exec: Executor, treeId: number, personId: number): Promise<MergeCounts> {
     const r = (await rows(exec,
         `SELECT
            (SELECT COUNT(*)::int FROM "Events" WHERE "PersonId" = $1 AND "TreeId" = $2) AS events,
@@ -314,6 +314,16 @@ export async function mergePeople(
     for (const f of differing) {
         const from = taken.has(f) ? kept : other;
         notKept[f] = Object.fromEntries(COMPARED[f].map((c) => [c, from[c] ?? null]));
+    }
+    // The log shows the place not kept by name, as it read before the merge.
+    for (const f of ['birth', 'death'] as const) {
+        const value = notKept[f];
+        if (!value) continue;
+        const col = f === 'birth' ? 'BirthPlace' : 'DeathPlace';
+        const from = taken.has(f) ? keptId : otherId;
+        value[col] = (await rows(exec,
+            `SELECT ${factPlaceTextSql(factPlaceColumnFor(col), 'p')} AS "Place" FROM "People" p WHERE p."Id" = $1 AND p."TreeId" = $2`,
+            [from, treeId]))[0]?.Place ?? null;
     }
 
     // The name that isn't kept stays as an Alias on the kept person.
@@ -521,7 +531,7 @@ export async function laterMergeChanges(exec: Executor, treeId: number, mergeEnt
           WHERE a."TreeId" = $1 AND a."Id" > $2
             AND a."EntityType" NOT IN ('import', 'datacheck', 'place')
             -- A revert's trail marker isn't revertible, and the entry it reverted is already undone.
-            AND NOT (a."Changes" -> 'snapshot') ? 'revertOf'
+            AND NOT COALESCE((a."Changes" -> 'snapshot') ? 'revertOf', false)
             AND NOT EXISTS (SELECT 1 FROM "AuditLog" t WHERE t."TreeId" = $1 AND t."Changes" -> 'snapshot' ->> 'revertOf' = a."Id"::text)
             AND (
               (a."EntityType" = 'person' AND a."EntityId" = $3)

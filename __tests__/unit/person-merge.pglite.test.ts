@@ -179,7 +179,21 @@ describe('Person merge (#28)', () => {
     const result = await merge();
     const { updatePersonService } = await import('@/lib/services/people');
     await updatePersonService({ id: kept, body: { DeathCause: 'Fever' }, requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID });
+    // A plain field edit (no snapshot) is listed, so the confirmation names it.
+    const { getMergeLaterChanges } = await import('@/lib/db/queries/audit');
+    const later = await getMergeLaterChanges(result.auditIds[0], treeId);
+    expect(later.map((e) => e.EntityType)).toEqual(['person']);
     await revertAuditEntry(result.auditIds[0], treeId, USER_ID, USER_ID);
+    expect(await dump()).toEqual(before);
+  });
+
+  it('reverts a later change once when the batch selects it with the merge', async () => {
+    const before = await dump();
+    const result = await merge();
+    const { updatePersonService } = await import('@/lib/services/people');
+    const edit = await updatePersonService({ id: kept, body: { DeathCause: 'Fever' }, requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID });
+    const { revertAuditEntries } = await import('@/lib/db/queries/audit');
+    await revertAuditEntries([result.auditIds[0], ...edit.auditIds], treeId, USER_ID, USER_ID);
     expect(await dump()).toEqual(before);
   });
 

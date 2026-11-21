@@ -56,6 +56,10 @@ export function MobileAudit(p: {
     changes: (e: AuditLogEntryWithUser) => AuditChangeRow[];
     /** A one-line summary ("Born 1920 · Female", "Renamed Dover → Dover, Kent"), when there is one. */
     summary: (e: AuditLogEntryWithUser) => string | null;
+    /** Extra detail under the summary (a person merge's log, #28). */
+    details?: (e: AuditLogEntryWithUser) => React.ReactNode;
+    /** The revert confirmation's body when an entry needs its own (a merge lists later changes). */
+    revertBody?: (e: AuditLogEntryWithUser) => React.ReactNode;
 }) {
     const t = useTranslations('audit');
     const tm = useTranslations('mobileAudit');
@@ -199,13 +203,13 @@ export function MobileAudit(p: {
                 column={column.key} ascending={ascending} onChange={(c, asc) => p.onSort(c, asc ? 'asc' : 'desc')} />
 
             <Sheet open={open != null} onClose={() => setOpenId(null)} title={open ? tm('row_kind', { action: actionWord(open.Action), type: t('filter_' + open.EntityType).toLowerCase() }) : ''}>
-                {open && <EntryBody entry={open} rows={p.changes(open)} summary={p.summary(open)} record={p.record(open)}
+                {open && <EntryBody entry={open} rows={p.changes(open)} summary={p.summary(open)} details={p.details?.(open)} record={p.record(open)}
                     who={p.showWho ? whoName(open) : null} when={`${timestamp(open.CreatedAt, 'date')} · ${timestamp(open.CreatedAt, 'time')}`}
                     canRevert={p.canEdit && p.isRevertible(open)} revertible={p.isRevertible(open)} reverting={p.reverting}
                     onRevert={() => { setConfirmId(open.Id); setOpenId(null); }} />}
             </Sheet>
             <ConfirmSheet open={confirming != null} title={tm('revert_title')} confirmLabel={t('revert')} keepLabel={tm('keep')} busy={p.reverting}
-                body={confirming ? tm(confirming.Action === 'create' ? 'revert_body_create' : confirming.Action === 'delete' ? 'revert_body_delete' : 'revert_body_update', { record: p.record(confirming).name }) : ''}
+                body={confirming ? p.revertBody?.(confirming) ?? tm(confirming.Action === 'create' ? 'revert_body_create' : confirming.Action === 'delete' ? 'revert_body_delete' : 'revert_body_update', { record: p.record(confirming).name }) : ''}
                 onConfirm={() => { if (confirmId != null) p.onRevert(confirmId); setConfirmId(null); }} onClose={() => setConfirmId(null)} />
         </PageShell>
     );
@@ -222,8 +226,8 @@ function Diff({ old, next }: { old?: React.ReactNode; next?: React.ReactNode }) 
     );
 }
 
-function EntryBody({ entry, rows, summary, record, who, when, canRevert, revertible, reverting, onRevert }: {
-    entry: AuditLogEntryWithUser; rows: AuditChangeRow[]; summary: string | null; record: AuditRecordText;
+function EntryBody({ entry, rows, summary, details, record, who, when, canRevert, revertible, reverting, onRevert }: {
+    entry: AuditLogEntryWithUser; rows: AuditChangeRow[]; summary: string | null; details?: React.ReactNode; record: AuditRecordText;
     who: string | null; when: string; canRevert: boolean; revertible: boolean; reverting: boolean; onRevert: () => void;
 }) {
     const t = useTranslations('audit');
@@ -235,6 +239,7 @@ function EntryBody({ entry, rows, summary, record, who, when, canRevert, reverti
             {who && <Fact label={t('col_who')} value={who} first />}
             <Fact label={t('col_when')} value={<span className="text-sm tabular-nums">{when}</span>} first={!who} />
             {summary && <p className="m-0 px-4 pt-2 text-sm text-text-secondary">{summary}</p>}
+            {details && <div className="px-4">{details}</div>}
             {rows.length > 0 && (
                 <>
                     <div className="eyebrow flex justify-between px-4 pt-4 pb-1.5">{tm('changes')}<span className="font-mono normal-case tracking-normal">{rows.length}</span></div>
