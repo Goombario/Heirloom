@@ -54,7 +54,8 @@ interface MemfsNode {
 interface EmscriptenMount { type: unknown; mountpoint: string; root?: MemfsNode }
 interface EmscriptenFs {
   root: { mount: EmscriptenMount };
-  filesystems: { IDBFS: unknown };
+  /** Emscripten 3 (PGlite 0.4). Emscripten 6 (PGlite 0.5) has no `filesystems`: IDBFS is `Module.IDBFS`. */
+  filesystems?: { IDBFS: unknown };
   getMounts(mount: EmscriptenMount): EmscriptenMount[];
   readdir(path: string): string[];
   stat(path: string): { mode: number; mtime: Date | number };
@@ -100,10 +101,10 @@ function isDirectoryContents(contents: unknown): boolean {
  * is new or its mtime differs from the stored one, and deletes paths that are
  * gone, so an unchanged map means a flush would write nothing.
  */
-function idbfsSnapshot(fs: EmscriptenFs): Map<string, number> {
+function idbfsSnapshot(fs: EmscriptenFs, idbfs: unknown): Map<string, number> {
   const snapshot = new Map<string, number>();
   for (const mount of fs.getMounts(fs.root.mount)) {
-    if (mount.type !== fs.filesystems.IDBFS) continue;
+    if (mount.type !== idbfs) continue;
     if (walkNodes(fs, mount, snapshot)) continue;
     const pending = [mount.mountpoint];
     for (let dir = pending.pop(); dir !== undefined; dir = pending.pop()) {
@@ -138,9 +139,11 @@ function sameSnapshot(a: Map<string, number>, b: Map<string, number>): boolean {
 export function skipCleanFlushes<T>(flush: Flush<T>): Flush<T> {
   const flushed = new WeakMap<object, Map<string, number>>();
   return async function (this: T, relaxedDurability?: boolean) {
-    const fs = (this as { pg?: { Module?: { FS?: EmscriptenFs } } } | null)?.pg?.Module?.FS;
-    if (!fs || typeof this !== 'object' || this === null) return flush.call(this, relaxedDurability);
-    const snapshot = idbfsSnapshot(fs);
+    const emModule = (this as { pg?: { Module?: { FS?: EmscriptenFs; IDBFS?: unknown } } } | null)?.pg?.Module;
+    const fs = emModule?.FS;
+    const idbfs = fs?.filesystems?.IDBFS ?? emModule?.IDBFS;
+    if (!fs || !idbfs || typeof this !== 'object' || this === null) return flush.call(this, relaxedDurability);
+    const snapshot = idbfsSnapshot(fs, idbfs);
     const previous = flushed.get(this);
     if (previous && sameSnapshot(previous, snapshot)) return;
     await flush.call(this, relaxedDurability);
