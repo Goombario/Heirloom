@@ -5684,6 +5684,7 @@
     "blocked_help_partners": "If one of them is really someone else, fix that family first: open it and change the partner. If both are the same person, the family record itself is wrong; remove one of them from it, then merge.",
     "blocked_help_parent": "If one of them is really someone else, fix that family first: open it and change the parent or the child. Then merge.",
     "menu_merge": "Merge with another person…",
-    "menu_merge_sub": "Combine two records for the same person"
+    "menu_merge_sub": "Combine two records for the same person",
+    "review_merge": "Merge…"
   }
 }

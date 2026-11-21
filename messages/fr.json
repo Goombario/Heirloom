@@ -5684,6 +5684,7 @@
     "blocked_help_partners": "Si l'une des deux est en fait quelqu'un d'autre, corrigez d'abord cette famille : ouvrez-la et changez le partenaire. S'il s'agit bien de la même personne, c'est la fiche de famille qui est fausse ; retirez-en l'une des deux, puis fusionnez.",
     "blocked_help_parent": "Si l'une des deux est en fait quelqu'un d'autre, corrigez d'abord cette famille : ouvrez-la et changez le parent ou l'enfant. Puis fusionnez.",
     "menu_merge": "Fusionner avec une autre personne…",
-    "menu_merge_sub": "Réunir deux fiches de la même personne"
+    "menu_merge_sub": "Réunir deux fiches de la même personne",
+    "review_merge": "Fusionner…"
   }
 }
