@@ -963,6 +963,8 @@ export type GedcomImportWarning =
   | { code: 'custom_records_dropped'; values: { count: number; tags: string } }
   /** GEDCOM 5.5 BLOB images embedded in the file, imported as media without the image (#977). */
   | { code: 'media_blobs_dropped'; values: { count: number } }
+  /** Dates that couldn't be read, kept as written; Data checks lists them (#39). */
+  | { code: 'dates_kept_as_written'; values: { count: number } }
   /** `NOTE` records nothing in the file points at (Gramps' tree description), not imported (#995). */
   | { code: 'notes_unattached'; values: { count: number } }
   /** Lines under a place the app doesn't keep (ArkivDigital's `_ADPL`), with their tags; the place name is kept (#992). */

@@ -1,4 +1,5 @@
 import { getClient, query } from '@/lib/db/connection';
+import { isUnreadableDate } from '@/lib/data-checks/unreadable';
 import { refreshPlannerStats } from '@/lib/db/queries/planner-stats';
 import { safeRollback } from '@/lib/db/rollback';
 import { parseGedcom, type ParsedMedia, type ParsedMediaRecord, type ParsedMediaRef, type ParsedFactCitation, type CitationPart, type ParsedPerson, type ParsedFamily, type ParsedSource, type ParsedRepository } from '@/lib/gedcom/parser';
@@ -1828,6 +1829,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
     recordTypes,
   } = parseGedcom(gedcomContent);
   const rawPointersDropped = markPassthroughPointers({ people, families, sources, repositories, mediaRecords }, recordTypes);
+  // #39: dates that couldn't be read are kept as written; say how many.
+  const datesKeptAsWritten = countUnreadableDates(people, families);
 
   // Reject every unsafe FILE path before resolving a tree or opening the
   // destructive transaction. A no-FILE OBJE remains a structural Media row. An
@@ -3210,6 +3213,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         : []),
       // #977: a GEDCOM 5.5 BLOB image imports as media with no file.
       ...(mediaBlobsDropped > 0 ? [{ code: 'media_blobs_dropped' as const, values: { count: mediaBlobsDropped } }] : []),
+      // #39: kept as written, listed by Data checks as unreadable dates.
+      ...(datesKeptAsWritten > 0 ? [{ code: 'dates_kept_as_written' as const, values: { count: datesKeptAsWritten } }] : []),
       // #995: a NOTE record nothing points at (Gramps' tree description) has no owner.
       ...(notesUnattached > 0 ? [{ code: 'notes_unattached' as const, values: { count: notesUnattached } }] : []),
       // #992: lines under a place the app doesn't model (ArkivDigital's `_ADPL`).
@@ -3537,4 +3542,20 @@ export async function resetService(params: ResetParams): Promise<{ success: true
   if (storedFiles.length > 0) await cleanupMediaFilesCounting(currentUserId, storedFiles);
 
   return { success: true, message: 'Your data has been erased successfully' };
+}
+
+/**
+ * How many dates in a parsed file were kept as written because they couldn't be
+ * read (#39): person birth and death, family marriage, and every event. Phrases
+ * are deliberate prose and don't count, the same rule Data checks uses.
+ */
+export function countUnreadableDates(
+  people: ReadonlyArray<{ BirthDate?: string | null; DeathDate?: string | null; events: ReadonlyArray<{ Date?: string | null }> }>,
+  families: ReadonlyArray<{ MarriageDate?: string | null; events: ReadonlyArray<{ Date?: string | null }> }>,
+): number {
+  let n = 0;
+  const count = (d: string | null | undefined) => { if (isUnreadableDate(d)) n++; };
+  for (const p of people) { count(p.BirthDate); count(p.DeathDate); p.events.forEach((e) => count(e.Date)); }
+  for (const f of families) { count(f.MarriageDate); f.events.forEach((e) => count(e.Date)); }
+  return n;
 }

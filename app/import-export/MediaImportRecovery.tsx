@@ -198,7 +198,7 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
       (result.libraryMediaCount ?? 0) > 0 && t('media_lifecycle_count_library', { count: result.libraryMediaCount ?? 0 }),
     ].filter(Boolean).join(', ')
     : '';
-  const recordNotes: string[] = result
+  const recordNotes: React.ReactNode[] = result
     ? [
       ...((result.preservedCount ?? 0) > 0 ? [`${t('success_preserved')} ${result.preservedCount}`] : []),
       ...((result.matchedPeopleCount ?? 0) > 0 || (result.matchedFamiliesCount ?? 0) > 0
@@ -206,7 +206,10 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
         : []),
       ...((result.skippedCount ?? 0) > 0 ? [`${t('success_skipped')} ${result.skippedCount}`] : []),
       ...(result.zipWarnings.length > 0 ? [t('success_zip_warnings'), ...result.zipWarnings] : []),
-      ...(result.warnings ?? []).map(formatImportWarning),
+      ...(result.warnings ?? []).map((warning) => warning.code === 'dates_kept_as_written'
+        // #39: the dates are listed in Data checks, so link there.
+        ? <>{formatImportWarning(warning)}{' '}<GuardedLink href="/data-checks" className="text-link underline">{t('warning_dates_review')}</GuardedLink></>
+        : formatImportWarning(warning)),
     ]
     : [];
   const photoTitle = phase === 'processing'
