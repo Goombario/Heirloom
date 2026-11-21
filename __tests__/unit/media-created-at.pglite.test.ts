@@ -7,7 +7,8 @@ import { initializeSchema } from '@/lib/db/init-schema';
 import { query, __setTestDb } from '@/lib/db/connection.pglite';
 import { truncateAllTables } from '../setup/pglite-truncate';
 import { resolveDefaultTree } from '@/lib/db/queries/trees';
-import { insertMediaRow, getAllMedia } from '@/lib/db/queries/media';
+import { insertMediaRow, getAllMedia, getAllMediaWithPerson } from '@/lib/db/queries/media';
+import { revertAuditEntry } from '@/lib/db/queries/audit';
 import { compareRecentlyAdded } from '@/lib/media/recently-added';
 
 vi.mock('@/lib/db/connection', async () => await import('@/lib/db/connection.pglite'));
@@ -68,6 +69,28 @@ describe('Media upload timestamp (#25)', () => {
     expect(listed.map((m) => m.Id)).toEqual([5, 3, 4, 2, 1]);
     // The client sort agrees, from any starting order.
     expect([...listed].reverse().sort(compareRecentlyAdded).map((m) => m.Id)).toEqual([5, 3, 4, 2, 1]);
+    // The Library's list reads the same order.
+    expect((await getAllMediaWithPerson(treeId)).map((m) => m.Id)).toEqual([5, 3, 4, 2, 1]);
+  });
+
+  it('keeps the upload time, or its absence, when a delete is undone', async () => {
+    const { deleteMediaService } = await import('@/lib/services/media');
+    await query(
+      `INSERT INTO "Media" ("Id", "UserId", "TreeId", "Title", "CreatedAt") VALUES
+         (7, $1, $2, 'timed', '2026-01-02T03:04:05Z'), (8, $1, $2, 'legacy', NULL)`,
+      [USER_ID, treeId],
+    );
+    for (const id of [7, 8]) {
+      expect(await deleteMediaService({ id, requestedTreeId: treeId, requestedOwnerId: null, currentUserId: USER_ID })).toBe(true);
+      const entry = (await query(
+        `SELECT "Id" FROM "AuditLog" WHERE "TreeId" = $1 AND "EntityType" = 'media' AND "EntityId" = $2 AND "Action" = 'delete'`,
+        [treeId, id],
+      )).rows[0] as { Id: number };
+      await revertAuditEntry(entry.Id, treeId, USER_ID, USER_ID);
+    }
+    const rows = (await query('SELECT "Id", "CreatedAt" FROM "Media" WHERE "Id" IN (7, 8) ORDER BY "Id"')).rows as Row[];
+    expect(new Date(rows[0].CreatedAt!).toISOString()).toBe('2026-01-02T03:04:05.000Z');
+    expect(rows[1].CreatedAt).toBeNull();
   });
 });
 
@@ -94,7 +117,8 @@ describe('v75 migration (#25)', () => {
 });
 
 describe('Media inserts (#25)', () => {
-  it('never write "CreatedAt" themselves, so only the database sets it', () => {
+  // Literal inserts only; the audit restore's dynamic insert is covered by the undo test above.
+  it('never write "CreatedAt" in a literal insert, so new rows take the database time', () => {
     const offenders: string[] = [];
     const walk = (dir: string) => {
       for (const name of readdirSync(dir)) {
