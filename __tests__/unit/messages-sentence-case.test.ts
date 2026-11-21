@@ -48,6 +48,7 @@ const ALLOWED_KEYS = new Set([
     'research.sites.lac.note',
     // Names the Data checks page in running text (#833).
     'dataChecks.open_in_data_checks',
+    'importExport.warning_dates_review',
     // Proper names: time-zone groups and cities, and UTC's official name.
     'options.tz_group_asia_pacific',
     'options.tz_utc',
