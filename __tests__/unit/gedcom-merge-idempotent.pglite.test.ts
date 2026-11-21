@@ -53,7 +53,7 @@ describe('a repeated merge import of the same bundle is a no-op (#492)', () => {
       includeMedia: true,
     });
     if (result.kind !== 'zip') throw new Error('expected a zip bundle');
-    const bundle: Bundle = await readBundle(result.buffer);
+    const bundle: Bundle = await readBundle(Buffer.concat(await Array.fromAsync(result.stream)));
 
     // Exactly what the browser importer sends: the .ged as a File plus each
     // sidecar as a JSON string (the route unzips client-side).

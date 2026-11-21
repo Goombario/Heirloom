@@ -477,14 +477,16 @@ export default function ImportExportPage() {
     function downloadExportArtifact(artifact: ExportArtifact) {
         // Phones confirm the download with the file name (#1120, #1130).
         if (isPhone) showChangeToast({ message: tm('downloaded'), detail: artifact.filename });
-        const url = URL.createObjectURL(artifact.blob);
+        // A hosted media zip is a link the browser downloads itself (#29); the
+        // `download` attribute keeps the page, so photo work keeps running.
+        const url = 'href' in artifact ? artifact.href : URL.createObjectURL(artifact.blob);
         const anchor = document.createElement('a');
         anchor.href = url;
         anchor.download = artifact.filename;
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
-        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+        if (!('href' in artifact)) window.setTimeout(() => URL.revokeObjectURL(url), 0);
     }
 
     async function exportArtifact(options: GedcomExportOptions, treeId: number | null): Promise<boolean> {

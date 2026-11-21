@@ -1045,10 +1045,14 @@ export interface MediaExportPreflight {
 }
 
 /** Browser/local and hosted export adapters return the same artifact shape. */
-export interface ExportArtifact {
-  blob: Blob;
-  filename: string;
-}
+/**
+ * An export to save: the bytes, built in the browser, or (hosted media zip, #29)
+ * a link the browser downloads itself, so the zip streams to disk and is never
+ * held in memory.
+ */
+export type ExportArtifact =
+  | { blob: Blob; filename: string }
+  | { href: string; filename: string };
 
 export interface GedcomExportOptions {
   includeMedia?: boolean;

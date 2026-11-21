@@ -236,7 +236,7 @@ describe('places that share a name (#1186)', () => {
         const { importGedcomService } = await import('@/lib/services/gedcom');
         const exported = await exportGedcomService({ ...ctx(), includeMedia: true });
         if (exported.kind !== 'zip') throw new Error('expected a zip bundle');
-        const bundle = await readBundle(exported.buffer);
+        const bundle = await readBundle(Buffer.concat(await Array.fromAsync(exported.stream)));
         const facts = (bundle.places as { facts?: unknown[] }).facts ?? [];
         expect(facts).toHaveLength(4);
 

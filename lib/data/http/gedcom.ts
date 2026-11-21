@@ -21,7 +21,11 @@ export class HttpGedcomClient implements GedcomClient {
     if (options.mediaPolicy != null) params.set('mediaPolicy', options.mediaPolicy);
     if (treeId != null) params.set('treeId', String(treeId));
     const query = params.toString();
-    const res = await fetch(`/api/export/gedcom${query ? `?${query}` : ''}`, { method: 'GET' });
+    const url = `/api/export/gedcom${query ? `?${query}` : ''}`;
+    // The media zip streams straight to the browser's downloads (#29): the caller
+    // has already run the preflight, and a failure part-way shows there.
+    if (options.includeMedia) return { href: url, filename: 'family_tree_export.zip' };
+    const res = await fetch(url, { method: 'GET' });
     if (!res.ok) await throwForStatus(res);
     const blob = await res.blob();
     const contentType = res.headers.get('content-type') ?? '';
