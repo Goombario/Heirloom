@@ -376,7 +376,7 @@
         "D6 Date": "1900s",
         "D7 Date": "12 JUN 1850 or 1851"
       },
-      "warnings": []
+      "warnings": [{ "code": "dates_kept_as_written", "values": { "count": 5 } }]
     },
     {
       "file": "genealogy/own-ancestor.ged",

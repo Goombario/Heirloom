@@ -1,6 +1,7 @@
 import type { Audited, EventsClient, EventInput } from '../types';
 import type { GedcomEvent } from '@/lib/db/schema';
-import { createEventService, updateEventService, deleteEventService } from '@/lib/services/events';
+import { createEventService, updateEventService, deleteEventService, listEventTypeCountsService } from '@/lib/services/events';
+import type { EventTypeCount } from '@/lib/events/custom-types';
 import { ensureLocalUser } from '../local-user';
 
 /**
@@ -23,5 +24,10 @@ export class LocalEventsClient implements EventsClient {
     const currentUserId = await ensureLocalUser();
     const { auditIds } = await deleteEventService({ eventId: id, requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
     return { auditIds };
+  }
+
+  async listTypeCounts(treeId?: number | null): Promise<EventTypeCount[]> {
+    const currentUserId = await ensureLocalUser();
+    return listEventTypeCountsService({ requestedTreeId: treeId ?? null, requestedOwnerId: null, currentUserId });
   }
 }

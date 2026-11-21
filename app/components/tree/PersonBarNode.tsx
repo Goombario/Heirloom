@@ -70,7 +70,7 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
-        className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border ${
+        className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border gap-2 px-2.5 ${
           data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
         }`}
         style={{
@@ -78,8 +78,6 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
           height: `${BAR_CARD_HEIGHT}px`,
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '0 10px',
           position: 'relative',
         }}
       >
@@ -106,7 +104,7 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
               className={`rounded-full flex items-center justify-center overflow-hidden ${avatarClass(person.sex)}`}
               style={{ width: AVATAR, height: AVATAR, flexShrink: 0 }}
             >
-              <span className="text-white font-semibold" style={{ fontSize: 12 }}>{initials}</span>
+              <span className="text-white font-semibold text-meta">{initials}</span>
             </div>
           )}
         </div>
@@ -133,7 +131,8 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
           </p>
           {!isZoomedOut && lifespan && (lifespan.birth || lifespan.death) && (
             <p
-              style={{ fontSize: 11, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              className="text-xs"
+              style={{ lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             >
               <TreeCardLifespan lifespan={lifespan} />
             </p>

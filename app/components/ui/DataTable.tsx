@@ -110,7 +110,7 @@ export function DataTable<T>({
       <thead>
         <tr style={{ background: 'var(--card-alt)' }}>
           {selection && (
-            <th className="w-[38px]" style={{ ...HEADER_CELL_STYLE, textAlign: 'left', paddingLeft: 14 }}>
+            <th className="w-[38px] !pl-3.5" style={{ ...HEADER_CELL_STYLE, textAlign: 'left' }}>
               <input
                 type="checkbox"
                 aria-label={tc('select_all')}

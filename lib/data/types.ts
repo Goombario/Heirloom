@@ -1,7 +1,10 @@
 import type { PlaceKey } from '@/lib/places/place-key';
+import type { MergePreview } from '@/lib/services/person-merge';
+import type { MergeTake } from '@/lib/db/queries/person-merge';
+import type { EventTypeCount } from '@/lib/events/custom-types';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import type { NextStep } from '@/lib/db/queries/home';
-import type { Person, PersonWithRelations, Family, FamilyWithRelations, GedcomEvent, EventWithMedia, Media, MediaWithPerson, MediaLinkOwner, MediaTag, MediaTagWithPerson, PersonGalleryMedia, OwnerGalleryMedia, AuditLogEntryWithUser, Case, CaseComment, CaseWithRelations, Tree, MediaImportItem, MediaImportFailureCode } from '@/lib/db/schema';
+import type { Person, PersonWithRelations, Family, FamilyWithRelations, GedcomEvent, EventWithMedia, Media, MediaWithPerson, MediaLinkOwner, MediaTag, MediaTagWithPerson, PersonGalleryMedia, OwnerGalleryMedia, AuditLogEntry, AuditLogEntryWithUser, Case, CaseComment, CaseWithRelations, Tree, MediaImportItem, MediaImportFailureCode } from '@/lib/db/schema';
 import type { FamilyWithSpouseNames } from '@/lib/db/queries/families';
 import type { ChildRelationshipType, ChildRelationshipInput } from '@/lib/child-relationship';
 import type { scoreSuggestions } from '@/lib/family-suggestions';
@@ -335,6 +338,19 @@ export interface PeopleClient {
   /** Total descendants, all generations. Named for the cache-invalidation READ
    *  allowlist (see READ_EXACT in lib/data/cache-invalidation.ts). */
   descendantCount(personId: number, treeId?: number | null): Promise<number>;
+  /** Two people side by side for the merge dialog (#28). A read: the name starts with "preview". */
+  previewMerge(aId: number, bId: number, treeId?: number | null): Promise<MergePreview>;
+  /** Merge `otherId` into `keptId` (#28, ADR 0052); one audit entry. */
+  merge(input: MergePeopleInput, treeId?: number | null): Promise<Audited<{ keptId: number }>>;
+}
+
+export type { MergePreview };
+export type { MergeField, MergeSide, MergeTake } from '@/lib/db/queries/person-merge';
+export interface MergePeopleInput {
+  keptId: number;
+  otherId: number;
+  /** Per differing field, whose value to keep; the kept person's by default. */
+  take?: MergeTake;
 }
 
 export interface RelationshipClient {
@@ -456,6 +472,8 @@ export interface EventsClient {
   update(id: number, patch: Partial<EventInput>, treeId?: number | null): Promise<Audited<GedcomEvent>>;
   /** Delete a custom event. */
   remove(id: number, treeId?: number | null): Promise<Audited>;
+  /** Every event type in the tree with how many events use it (#162). */
+  listTypeCounts(treeId?: number | null): Promise<EventTypeCount[]>;
 }
 
 export interface TreeGetParams {
@@ -829,6 +847,8 @@ export interface AuditClient {
   users(treeId?: number | null): Promise<AuditEditorsResult>;
   /** ids is always an array (single revert passes `[id]`). */
   revert(ids: number[], treeId?: number | null): Promise<{ success: true; revertedCount: number }>;
+  /** What reverting a person merge undoes too, newest first (#28); empty for other entries. */
+  listLaterChanges(id: number, treeId?: number | null): Promise<AuditLogEntry[]>;
 }
 
 // ---- Dashboard ----
@@ -963,6 +983,8 @@ export type GedcomImportWarning =
   | { code: 'custom_records_dropped'; values: { count: number; tags: string } }
   /** GEDCOM 5.5 BLOB images embedded in the file, imported as media without the image (#977). */
   | { code: 'media_blobs_dropped'; values: { count: number } }
+  /** Dates that couldn't be read, kept as written; Data checks lists them (#39). */
+  | { code: 'dates_kept_as_written'; values: { count: number } }
   /** `NOTE` records nothing in the file points at (Gramps' tree description), not imported (#995). */
   | { code: 'notes_unattached'; values: { count: number } }
   /** Lines under a place the app doesn't keep (ArkivDigital's `_ADPL`), with their tags; the place name is kept (#992). */
@@ -1023,10 +1045,14 @@ export interface MediaExportPreflight {
 }
 
 /** Browser/local and hosted export adapters return the same artifact shape. */
-export interface ExportArtifact {
-  blob: Blob;
-  filename: string;
-}
+/**
+ * An export to save: the bytes, built in the browser, or (hosted media zip, #29)
+ * a link the browser downloads itself, so the zip streams to disk and is never
+ * held in memory.
+ */
+export type ExportArtifact =
+  | { blob: Blob; filename: string }
+  | { href: string; filename: string };
 
 export interface GedcomExportOptions {
   includeMedia?: boolean;
@@ -1182,8 +1208,13 @@ export interface TreesClient {
   get(id: number): Promise<{ tree: Tree; permission: 'owner' | 'edit' | 'contribute' | 'view' }>;
   create(name: string): Promise<Tree>;
   rename(id: number, name: string): Promise<Tree>;
-  /** `cleanupWarningCount`: media files left on server storage (#945); always 0 locally. */
-  remove(id: number): Promise<{ cleanupWarningCount: number }>;
+  /** Whether an owned tree holds no records, history or shares (#36). */
+  getIsEmpty(id: number): Promise<boolean>;
+  /**
+   * `cleanupWarningCount`: media files left on server storage (#945); always 0 locally.
+   * `onlyIfEmpty` (#36): refuse with TreeNotEmptyError if the tree is no longer empty.
+   */
+  remove(id: number, opts?: { onlyIfEmpty?: boolean }): Promise<{ cleanupWarningCount: number }>;
 }
 
 // ---- Account (#35) ----

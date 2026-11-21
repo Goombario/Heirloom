@@ -1,3 +1,4 @@
+import { Readable } from 'stream';
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth/get-user-from-request';
 import { rateLimit } from '@/lib/rate-limit';
@@ -56,7 +57,9 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        return new NextResponse(new Uint8Array(result.buffer), {
+        // Streamed (#29): everything above is decided before the first byte. A
+        // failure after this point aborts the download rather than ending it short.
+        return new NextResponse(Readable.toWeb(result.stream) as ReadableStream<Uint8Array>, {
             headers: {
                 'Content-Type': 'application/zip',
                 'Content-Disposition': 'attachment; filename="family_tree_export.zip"',

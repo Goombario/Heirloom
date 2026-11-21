@@ -2,6 +2,7 @@ import { query, getClient } from '@/lib/db/connection';
 import { safeRollback } from '@/lib/db/rollback';
 import type { AuditLogEntry, AuditLogEntryWithUser, AuditFieldChanges, AuditSnapshotChanges } from '../schema';
 import { hasEditPermission } from './sharing';
+import { isPersonMergeSnapshot, laterMergeChanges, revertPersonMerge, PERSON_MERGE_REVERT_SUMMARY, PERSON_MERGE_SUMMARY } from './person-merge';
 import { revertPlaceDelete, revertPlaceEdits, revertPlaceMove, revertPlaceRename, type PlaceDeleteSnapshot, type PlaceEditChange, type PlaceMoveSnapshot, type PlaceRenameSnapshot } from './places';
 import { revertPlaceNames, type PlaceNamesSnapshot } from './place-names';
 import { setCaseNoteStrike, type CaseNoteStrikeSnapshot } from './cases';
@@ -268,7 +269,9 @@ const ENTITY_CONFIG: Record<string, EntityConfig> = {
         table: '"Media"',
         scope: 'user-tree',
         allowedFields: new Set(['Title', 'FilePath', 'Format', 'ContentType', 'FocalX', 'FocalY', 'FocalRadius', 'FileSize']),
-        restoreFields: ['Title', 'FilePath', 'Format', 'ContentType', 'FocalX', 'FocalY', 'FocalRadius', 'FileSize', 'ContentHash', 'UploadIntentId', 'UploadIntentTarget'],
+        // CreatedAt (#25): an undone delete keeps its upload time, NULL included;
+        // an entry from before v75 has no key, so the row takes the default.
+        restoreFields: ['Title', 'FilePath', 'Format', 'ContentType', 'FocalX', 'FocalY', 'FocalRadius', 'FileSize', 'ContentHash', 'UploadIntentId', 'UploadIntentTarget', 'CreatedAt'],
     },
     // Retained for historical audit rows only: the "Stories" table was dropped when
     // the Stories feature was retired (issue #70). The list/label paths don't touch the
@@ -643,8 +646,11 @@ async function revertSingleEntry(
     entry: AuditLogEntry,
     treeOwnerId: number,
     userId: number,
-    clientOrQuery?: { query: (sql: string, params: unknown[]) => Promise<{ rows: unknown[] }> }
+    clientOrQuery?: { query: (sql: string, params: unknown[]) => Promise<{ rows: unknown[] }> },
+    /** Entries this batch has already reverted: a merge's later changes are skipped when the batch held them too. */
+    reverted: Set<number> = new Set(),
 ): Promise<void> {
+    reverted.add(entry.Id);
     const executor: AuditExecutor = clientOrQuery ?? { query };
     const exec = (sql: string, params: unknown[]) => executor.query(sql, params);
 
@@ -668,6 +674,28 @@ async function revertSingleEntry(
         if (summary?.kind === 'canonical_ownership') {
             throw new Error(`Audit entry #${entry.Id} canonical ownership summary is not revertible`);
         }
+    }
+
+    // A person merge (#28, ADR 0052): later changes to the kept person first, newest
+    // first, then the merge's undo log backwards. Its trail marker is not revertible.
+    if (entry.EntityType === 'person' && summary?.kind === PERSON_MERGE_SUMMARY) {
+        const snap = (entry.Changes as { merge?: unknown }).merge;
+        if (!isPersonMergeSnapshot(snap)) throw new Error(`Audit entry #${entry.Id} is not a revertable merge`);
+        for (const later of await laterMergeChanges(executor, treeId, entry.Id, snap.keptId)) {
+            if (reverted.has(later.Id as number)) continue;
+            await revertSingleEntry(later as unknown as AuditLogEntry, treeOwnerId, userId, executor, reverted);
+        }
+        await revertPersonMerge(executor, treeId, snap);
+        await exec(
+            `INSERT INTO "AuditLog" ("TreeOwnerId", "UserId", "TreeId", "Action", "EntityType", "EntityId", "EntityLabel", "Changes")
+             VALUES ($1, $2, $3, 'update', 'person', $4, $5, $6)`,
+            [treeOwnerId, userId, treeId, snap.keptId, `Reverted: ${entry.EntityLabel ?? ''}`.trim(),
+             JSON.stringify({ summary: { kind: PERSON_MERGE_REVERT_SUMMARY }, snapshot: { revertOf: entry.Id, mergedId: snap.mergedId, keptName: snap.keptName, mergedName: snap.mergedName } })]
+        );
+        return;
+    }
+    if (entry.EntityType === 'person' && summary?.kind === PERSON_MERGE_REVERT_SUMMARY) {
+        throw new ValidationError('This entry records that a merge was reverted, so it can\'t be reverted itself');
     }
 
     // A place geocode, coordinate or hierarchy edit (#924) carries each touched
@@ -1511,6 +1539,18 @@ async function revertCaseNote(
 }
 
 /**
+ * The later changes a merge's revert undoes too (#28, ADR 0052), newest first,
+ * for the Revert confirmation. Empty for any entry that isn't a merge.
+ */
+export async function getMergeLaterChanges(id: number, treeId: number): Promise<AuditLogEntry[]> {
+    const entry = await getAuditEntryById(id, treeId);
+    const summary = (entry?.Changes as { summary?: { kind?: unknown } } | null)?.summary;
+    const snap = (entry?.Changes as { merge?: unknown } | null)?.merge;
+    if (!entry || entry.EntityType !== 'person' || summary?.kind !== PERSON_MERGE_SUMMARY || !isPersonMergeSnapshot(snap)) return [];
+    return (await laterMergeChanges({ query }, treeId, entry.Id, snap.keptId)) as unknown as AuditLogEntry[];
+}
+
+/**
  * Revert a single audit entry (public API). `treeId` scopes the entry lookup;
  * `treeOwnerId` (the tree's owning user) keys the defense-in-depth edit check
  * and the revert-audit rows.
@@ -1568,8 +1608,9 @@ export async function revertAuditEntries(ids: number[], treeId: number, treeOwne
     const client = await getClient();
     try {
         await client.query('BEGIN');
+        const reverted = new Set<number>();
         for (const entry of entries) {
-            await revertSingleEntry(entry, treeOwnerId, userId, client);
+            await revertSingleEntry(entry, treeOwnerId, userId, client, reverted);
         }
         await client.query('COMMIT');
         return entries.length;
@@ -1600,5 +1641,6 @@ export async function revertAuditEntriesWith(
     );
     const entries = result.rows as AuditLogEntry[];
     if (entries.length !== new Set(ids).size) throw new Error('Audit entry not found');
-    for (const entry of entries) await revertSingleEntry(entry, treeOwnerId, userId, exec);
+    const reverted = new Set<number>();
+    for (const entry of entries) await revertSingleEntry(entry, treeOwnerId, userId, exec, reverted);
 }

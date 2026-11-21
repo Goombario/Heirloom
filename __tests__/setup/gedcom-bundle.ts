@@ -94,7 +94,7 @@ export async function roundTrip(ids: FixtureIds): Promise<{ first: Bundle; secon
       includeMedia: true,
     });
     if (result.kind !== 'zip') throw new Error('expected a zip bundle');
-    return readBundle(result.buffer);
+    return readBundle(Buffer.concat(await Array.fromAsync(result.stream)));
   };
 
   const first = await exportOnce();

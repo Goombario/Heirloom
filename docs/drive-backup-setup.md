@@ -42,6 +42,10 @@ assessment (CASA) and no verification fee are required.
    screen*):
    - User type: **External** (unless you have a Workspace org).
    - Fill in the app name and support/developer emails.
+   - **Privacy policy link:** `<site>/privacy`, for example
+     `https://heirloom.example.workers.dev/privacy`. Every build serves that page
+     (no sign-in needed), and Google wants it before you can publish. Google expects
+     it on one of the project's *Authorized domains*.
    - Scopes: add `.../auth/drive.file` (non-sensitive).
    - While the consent screen is in **Testing** status, only email addresses you
      add as *Test users* can connect — add yourself. For a personal self-host

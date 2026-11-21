@@ -1,5 +1,6 @@
 'use client';
 
+import StorageNotice from '@/app/components/backup/StorageNotice';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -85,6 +86,7 @@ export function MobileHome({ data, phase, settingUp = false, datesToCheck, dupli
 
     return (
         <div className="md:hidden">
+            <StorageNotice placement="phone" />
             <header ref={bandRef} className="hero-dark mp-slim-bar !rounded-none !shadow-none !p-0">
                 <div className="grid pl-4 pr-3 pb-4" style={{ paddingTop: 'calc(10px + var(--sat))' }}>
                     <div className="flex items-center gap-2.5 -ml-1">
@@ -231,7 +233,7 @@ function PickUpRow({ person, treeId, viewer }: { person: ResumedPerson; treeId: 
                 {(person.BirthDate || person.DeathDate) && (
                     <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} className="text-meta" />
                 )}
-                <span className="text-meta text-text-secondary">{changeLine(person.lastChange)}</span>
+                <span className="text-meta text-text-secondary">{changeLine(person.lastChange, person)}</span>
             </span>
             <ArrowUpRight className="w-[18px] h-[18px] shrink-0 text-text-muted" aria-hidden="true" />
         </GuardedLink>
@@ -253,7 +255,7 @@ function RecentRow({ person, treeId, divided }: { person: RecentPerson; treeId: 
                     focalX={person.FocalX} focalY={person.FocalY} focalRadius={person.FocalRadius} />
             }
             label={<span className="serif text-md font-semibold">{name}</span>}
-            sub={changeLine(person.lastChange)}
+            sub={changeLine(person.lastChange, person)}
         />
     );
 }

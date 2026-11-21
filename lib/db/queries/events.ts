@@ -178,6 +178,18 @@ export async function deleteEvent(id: number, treeId: number, actingUserId?: num
 }
 
 /**
+ * How many events of each type a tree has, for the type pickers' "Used in this
+ * tree" group (#162). Every type comes back; the caller keeps the custom ones.
+ */
+export async function getEventTypeCounts(treeId: number): Promise<{ type: string; count: number }[]> {
+    const result = await query(
+        `SELECT "Type" AS type, COUNT(*) AS count FROM "Events" WHERE "TreeId" = $1 GROUP BY "Type"`,
+        [treeId]
+    );
+    return (result.rows as { type: string; count: string | number }[]).map((r) => ({ type: r.type, count: Number(r.count) }));
+}
+
+/**
  * Get total count of events in a specific tree
  */
 export async function getEventsCount(treeId: number): Promise<number> {

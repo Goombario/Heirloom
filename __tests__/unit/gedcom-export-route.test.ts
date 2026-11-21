@@ -1,3 +1,4 @@
+import { Readable } from 'stream';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
@@ -68,7 +69,7 @@ describe('GET /api/export/gedcom hosted media preflight', () => {
     it('accepts only mediaPolicy=omit-unresolved for an explicit omission export', async () => {
         exportGedcomService.mockResolvedValue({
             kind: 'zip',
-            buffer: Buffer.from('zip'),
+            stream: Readable.from([Buffer.from('zip')]),
             preflight,
         });
 
@@ -78,11 +79,23 @@ describe('GET /api/export/gedcom hosted media preflight', () => {
 
         expect(response.status).toBe(200);
         expect(response.headers.get('content-type')).toContain('application/zip');
+        expect(Buffer.from(await response.arrayBuffer()).toString()).toBe('zip');
         expect(exportGedcomService).toHaveBeenCalledWith(expect.objectContaining({
             includeMedia: true,
             mediaPolicy: 'omit-unresolved',
             preflightOnly: false,
         }));
+    });
+
+    it('streams the zip and fails the download when the stream breaks part-way (#29)', async () => {
+        const stream = new Readable({ read() {} });
+        stream.push(Buffer.from('PK partial'));
+        exportGedcomService.mockResolvedValue({ kind: 'zip', stream, preflight });
+
+        const response = await GET(new NextRequest('http://localhost/api/export/gedcom?includeMedia=true'));
+        expect(response.status).toBe(200);
+        setTimeout(() => stream.destroy(new Error('ENOENT: photo gone')), 0);
+        await expect(response.arrayBuffer()).rejects.toThrow();
     });
 
     it('does not treat a near-miss policy token as an override', async () => {

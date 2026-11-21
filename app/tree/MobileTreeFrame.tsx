@@ -77,7 +77,7 @@ export function MobileTreeFrame({
                                 return (
                                     <li key={p.id}>
                                         <MobileRow divided={i > 0} label={<span className="serif text-md font-semibold">{p.name}</span>} sub={note}
-                                            className={p.id === selectedRootId ? 'bg-surface-2' : undefined}
+                                            className={p.id === selectedRootId ? 'bg-surface-2 row-selected-mark' : undefined}
                                             onClick={() => { handlePersonSelect(p.id); setSheet(null); }} />
                                     </li>
                                 );

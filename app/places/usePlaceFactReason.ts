@@ -35,20 +35,22 @@ export function usePlaceFactReason() {
     // `sex` drives an ICU select in every reason key: French and Russian inflect
     // these verbs, and Russian has entirely different words for a woman marrying.
     const sex = link.sex === 'F' ? 'F' : 'M';
-    // A verb phrase ("Resided"), NOT the places.event_* tally headings, which are
-    // plural nouns — those rendered "Residences here 1920".
-    const eventType = link.eventType
-      ? (EVENT_VERB_TYPES.has(link.eventType)
-        ? t(`place_fact_verb_${link.eventType}`)
-        // No verb phrase: the event's own name, never its GEDCOM tag (#701).
-        : tEventTypes.has(link.eventType) ? tEventTypes(link.eventType) : familyEventLabel(link.eventType, tEventEdit))
-      : '';
-    // A missing date takes a variant key rather than an empty {date}, which would
-    // leave a dangling "Born here " with trailing space.
     if (link.kind === 'event') {
-      return date
-        ? t('place_fact_event', { eventType, date, sex })
-        : t('place_fact_event_undated', { eventType, sex });
+      // A verb phrase ("Resided"), NOT the places.event_* tally headings, which are
+      // plural nouns — those rendered "Residences here 1920".
+      if (link.eventType && EVENT_VERB_TYPES.has(link.eventType)) {
+        const eventType = t(`place_fact_verb_${link.eventType}`);
+        // A missing date takes a variant key rather than an empty {date}, which would
+        // leave a dangling "Born here " with trailing space.
+        return date
+          ? t('place_fact_event', { eventType, date, sex })
+          : t('place_fact_event_undated', { eventType, sex });
+      }
+      // No verb form (#162): a custom label as typed, or a standard type's name,
+      // around a neutral template ("Military service here, 1917").
+      const type = link.eventType ?? '';
+      const label = tEventTypes.has(type) ? tEventTypes(type) : familyEventLabel(type, tEventEdit);
+      return date ? t('place_fact_custom', { label, date }) : t('place_fact_custom_undated', { label });
     }
     const base = `place_fact_${link.kind}`;
     return date ? t(base, { date, sex }) : t(`${base}_undated`, { sex });

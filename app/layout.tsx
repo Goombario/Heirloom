@@ -9,6 +9,7 @@ import { LanguageProvider } from "./components/LanguageProvider";
 import { TreeProvider } from "./contexts/TreeContext";
 import SharedTreeBanner from "./components/SharedTreeBanner";
 import GlobalSearch from "./components/GlobalSearch";
+import KeyboardShortcuts from "./components/keyboard/KeyboardShortcuts";
 import LocalFirstRunNotice from "./components/LocalFirstRunNotice";
 import WhatsNewOnUpdate from "./components/whats-new/WhatsNewOnUpdate";
 import BackupNudge from "./components/backup/BackupNudge";
@@ -17,7 +18,7 @@ import DbWarmup from "./components/DbWarmup";
 import RegisterServiceWorker from "./components/RegisterServiceWorker";
 import DesktopWindowFit from "./components/DesktopWindowFit";
 import { AppToaster } from "./components/ui";
-import { BackgroundMediaStatus } from "./components/media/BackgroundMediaStatus";
+import BackgroundJobsTab from "./components/media/BackgroundJobsTab";
 import { UnsavedChangesProvider } from "./components/UnsavedChangesProvider";
 import { SkipLink } from '@/app/components/SkipLink';
 import { Suspense } from "react";
@@ -153,12 +154,13 @@ export default function RootLayout({
                 <RegisterServiceWorker />
                 <DesktopWindowFit />
                 <GlobalSearch />
+                <KeyboardShortcuts />
                 {/* New person / New family over any page (it reads the URL, hence Suspense). */}
                 <Suspense fallback={null}><QuickAddHost /></Suspense>
                 <LocalFirstRunNotice />
                 <WhatsNewOnUpdate />
                 <AppToaster />
-                <BackgroundMediaStatus />
+                <BackgroundJobsTab />
               </UnsavedChangesProvider>
             </TreeProvider>
           </ThemeProvider>

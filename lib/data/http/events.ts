@@ -1,5 +1,6 @@
 import type { Audited, EventsClient, EventInput } from '../types';
 import type { GedcomEvent } from '@/lib/db/schema';
+import type { EventTypeCount } from '@/lib/events/custom-types';
 import { auditIdsFrom, ensureAuditIds, throwForStatus, treeQuery } from './shared';
 
 /** Events methods backed by the hosted REST API (`/api/events`). */
@@ -28,5 +29,11 @@ export class HttpEventsClient implements EventsClient {
     const res = await fetch(`/api/events/${id}${treeQuery(treeId)}`, { method: 'DELETE' });
     if (!res.ok) await throwForStatus(res);
     return auditIdsFrom(res);
+  }
+
+  async listTypeCounts(treeId?: number | null): Promise<EventTypeCount[]> {
+    const res = await fetch(`/api/events/types${treeQuery(treeId)}`);
+    if (!res.ok) await throwForStatus(res);
+    return ((await res.json()) as { types: EventTypeCount[] }).types;
   }
 }

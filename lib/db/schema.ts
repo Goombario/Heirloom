@@ -181,6 +181,8 @@ export interface Media {
     FocalY?: number; // 0-100, default 50 (center)
     FocalRadius?: number | null; // percentage of min(nW,nH)/2 for crop circle radius; null = no crop
     FileSize?: number; // bytes; 0 for placeholder records before file upload
+    /** When the row entered the app (#25), set by the database; null for rows predating v75. A Date in local mode (PGlite), an ISO string over HTTP. */
+    CreatedAt?: string | null;
     /** SHA-256 hex of the ORIGINAL uploaded bytes; null for rows predating #592. */
     ContentHash?: string | null;
     /** Tree-scoped replay key for create-time staged uploads; null for ordinary uploads. */

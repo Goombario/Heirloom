@@ -24,6 +24,9 @@ const PROPER_NOUNS = new Set([
 ]);
 
 const ALLOWED_KEYS = new Set([
+    // Name a page (People) or a button (Show all shortcuts) by its label (#32).
+    'shortcuts.letters_desc',
+    'shortcuts.letters_off_note',
     // Example values inside placeholders: people, places and record titles.
     'people.search_placeholder',
     'library.field_title_placeholder',
@@ -48,6 +51,10 @@ const ALLOWED_KEYS = new Set([
     'research.sites.lac.note',
     // Names the Data checks page in running text (#833).
     'dataChecks.open_in_data_checks',
+    // #170: Google's policy names and account menu, verbatim.
+    'privacy.never_body',
+    'privacy.removing_body',
+    'importExport.warning_dates_review',
     // Proper names: time-zone groups and cities, and UTC's official name.
     'options.tz_group_asia_pacific',
     'options.tz_utc',

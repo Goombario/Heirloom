@@ -29,7 +29,9 @@ import {
     countTreesForUser,
     resolveDefaultTree,
     deleteTreeData,
+    isTreeEmpty,
 } from '@/lib/db/queries/trees';
+import { TreeNotEmptyError } from '@/lib/data/errors';
 
 let db: PGlite;
 
@@ -118,5 +120,50 @@ describe('trees queries', () => {
             expect(parseInt(r.rows[0].c, 10), `${table} should be empty`).toBe(0);
         }
         expect(await countTreesForUser(uid)).toBe(1); // the kept tree survives
+    });
+
+    describe('empty trees (#36)', () => {
+        it('a new tree is empty; a record, its history or a share fills it', async () => {
+            const uid = await makeUser(1);
+            const other = await makeUser(2);
+            await resolveDefaultTree(uid);
+            const t1 = (await createTree({ OwnerId: uid, Name: 'Stray' })).Id;
+            expect(await isTreeEmpty(t1)).toBe(true);
+
+            await db.query(`INSERT INTO "People" ("UserId","TreeId","FirstName") VALUES (${uid},${t1},'Ada')`);
+            expect(await isTreeEmpty(t1)).toBe(false);
+
+            // Everything deleted, but the history stays (owner's note on #36).
+            await db.query(`DELETE FROM "People" WHERE "TreeId" = ${t1}`);
+            await db.query(
+                `INSERT INTO "AuditLog" ("TreeOwnerId","UserId","TreeId","Action","EntityType","EntityId","Changes")
+                 VALUES (${uid},${uid},${t1},'delete','person',1,'{}')`
+            );
+            expect(await isTreeEmpty(t1)).toBe(false);
+
+            const t2 = (await createTree({ OwnerId: uid, Name: 'Shared' })).Id;
+            await db.query(`INSERT INTO "TreeSharing" ("OwnerId","SharedWithId","TreeId","Permission") VALUES (${uid},${other},${t2},'view')`);
+            expect(await isTreeEmpty(t2)).toBe(false);
+        });
+
+        it('onlyIfEmpty deletes an empty tree', async () => {
+            const uid = await makeUser(1);
+            await resolveDefaultTree(uid);
+            const t = (await createTree({ OwnerId: uid, Name: 'Stray' })).Id;
+            await deleteTreeData(t, uid, { onlyIfEmpty: true });
+            expect(await getTree(t)).toBeNull();
+        });
+
+        it('onlyIfEmpty refuses a tree that filled after the dialog opened, and deletes nothing', async () => {
+            const uid = await makeUser(1);
+            await resolveDefaultTree(uid);
+            const t = (await createTree({ OwnerId: uid, Name: 'Stray' })).Id;
+            expect(await isTreeEmpty(t)).toBe(true); // what the dialog saw
+            await db.query(`INSERT INTO "People" ("UserId","TreeId","FirstName") VALUES (${uid},${t},'Late')`);
+            await expect(deleteTreeData(t, uid, { onlyIfEmpty: true })).rejects.toBeInstanceOf(TreeNotEmptyError);
+            expect(await getTree(t)).not.toBeNull();
+            const people = await db.query<{ c: string }>(`SELECT COUNT(*)::text AS c FROM "People" WHERE "TreeId" = ${t}`);
+            expect(people.rows[0].c).toBe('1');
+        });
     });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { GET, POST } from '@/app/api/trees/route';
 import { GET as GET_BY_ID, PATCH, DELETE } from '@/app/api/trees/[id]/route';
+import { GET as GET_EMPTY } from '@/app/api/trees/[id]/empty/route';
 import { query } from '@/lib/db/connection';
 import { createRequest, parseResponse, TEST_USER, TEST_USER_2 } from '../../setup/test-helpers';
 import { cleanupTestData, hasTestDatabase } from '../../setup/db-helpers';
@@ -88,6 +89,53 @@ describeIf('API /api/trees', () => {
       [TEST_USER.id, doomed.Id]
     );
     expect((people.rows[0] as { n: number }).n).toBe(0);
+  });
+
+  it('GET /empty says whether the tree holds anything (#36)', async () => {
+    await listTrees();
+    const tree = await createTree('Stray');
+    const empty = async () => (await parseResponse<{ isEmpty: boolean }>(
+      await GET_EMPTY(createRequest(`http://localhost:3000/api/trees/${tree.Id}/empty`), idParams(tree.Id)))).isEmpty;
+    expect(await empty()).toBe(true);
+    await query(`INSERT INTO "People" ("UserId","TreeId","FirstName") VALUES ($1,$2,'Ada')`, [TEST_USER.id, tree.Id]);
+    expect(await empty()).toBe(false);
+  });
+
+  it("GET /empty of another user's tree → 403", async () => {
+    const tree = await createTree('Mine');
+    vi.mocked(getUserFromRequest).mockResolvedValueOnce({ id: TEST_USER_2.id, email: TEST_USER_2.email, name: TEST_USER_2.name, googleId: TEST_USER_2.googleId } as never);
+    const res = await GET_EMPTY(createRequest(`http://localhost:3000/api/trees/${tree.Id}/empty`), idParams(tree.Id));
+    expect(res.status).toBe(403);
+  });
+
+  it('DELETE ?onlyIfEmpty=1 deletes an empty tree, and refuses with 409 once it has a record (#36)', async () => {
+    await listTrees();
+    const empty = await createTree('Empty');
+    const ok = await DELETE(
+      createRequest(`http://localhost:3000/api/trees/${empty.Id}?onlyIfEmpty=1`, { method: 'DELETE', headers: CONFIRM }),
+      idParams(empty.Id)
+    );
+    expect(ok.status).toBe(200);
+
+    const filled = await createTree('Filled since');
+    await query(`INSERT INTO "People" ("UserId","TreeId","FirstName") VALUES ($1,$2,'Late')`, [TEST_USER.id, filled.Id]);
+    const res = await DELETE(
+      createRequest(`http://localhost:3000/api/trees/${filled.Id}?onlyIfEmpty=1`, { method: 'DELETE', headers: CONFIRM }),
+      idParams(filled.Id)
+    );
+    expect(res.status).toBe(409);
+    expect((await parseResponse<{ code: string }>(res)).code).toBe('tree_not_empty');
+    expect((await listTrees()).some((t) => t.Id === filled.Id)).toBe(true);
+  });
+
+  it('DELETE ?onlyIfEmpty=1 still needs the confirm header', async () => {
+    await listTrees();
+    const tree = await createTree('Empty');
+    const res = await DELETE(
+      createRequest(`http://localhost:3000/api/trees/${tree.Id}?onlyIfEmpty=1`, { method: 'DELETE' }),
+      idParams(tree.Id)
+    );
+    expect(res.status).toBe(400);
   });
 
   it('DELETE without the confirm header → 400 and the tree survives', async () => {

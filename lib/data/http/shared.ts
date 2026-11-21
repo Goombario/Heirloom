@@ -1,4 +1,4 @@
-import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadIntentConflictError, NotFoundError, PrimaryMediaConflictError, RateLimitError, ServerError, StorageLimitError, UnauthorizedError, type StorageLimitMetadata } from '../errors';
+import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadIntentConflictError, NotFoundError, PrimaryMediaConflictError, RateLimitError, ServerError, StorageLimitError, TreeNotEmptyError, UnauthorizedError, type StorageLimitMetadata } from '../errors';
 import { ValidationError } from '@/lib/validation';
 import type { Audited } from '../types';
 
@@ -39,6 +39,7 @@ export async function throwForStatus(res: Response): Promise<never> {
       if (code === 'primary_conflict' && retryable) throw new PrimaryMediaConflictError(message);
       if (code === 'media_tag_conflict' && !retryable) throw new MediaTagConflictError(message);
       if (code === 'upload_intent_conflict' && !retryable) throw new MediaUploadIntentConflictError(message);
+      if (code === 'tree_not_empty') throw new TreeNotEmptyError(message);
       throw new Error(message);
     case 400:
       throw new ValidationError(message);

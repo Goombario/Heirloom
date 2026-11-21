@@ -176,25 +176,26 @@
   /* The overdue-backup dot on the nav chip. The nav is dark in both themes, so it
      takes the dark warning orange in both (3.5:1 light, 6.5:1 dark on the chip). */
   --color-nav-warning: #FDBA74;
+  /* The finished mark and progress ring on the nav's photo-upload chip (#207), same reasoning. */
+  --color-nav-success: #6EE7B7;
+  --color-nav-progress: #FDBA74;
   --color-info-text: #1E40AF;
   --color-info-bg: #DBEAFE;
 
-  /* Gender avatar colors — muted to sit alongside the archival warm palette
-     instead of clashing with it. Male/female/non-binary are saturation-matched
-     (S 25-29%) so none of the three visually dominates the others. Each gradient's
-     light end keeps white initials at 4.5:1 or better (WCAG AA for the 8–10px
-     initials): #5B7C99, #976AAF and #a8a29e measured 4.39, 4.20 and 2.52. */
-  --color-male: #587895;
-  --color-male-dark: #456278;
-  --color-female: #9A5B6F;
-  --color-female-dark: #774655;
-  /* Lightened from #845B9A to keep separation from --color-male under
-     protanopia/deuteranopia simulation (they were nearly indistinguishable
-     at equal lightness — RGB distance dropped to ~14/24 out of ~440). */
+  /* Gender avatar colors (#159, revised option A, 2026-11-20). White initials
+     (8–10px, so WCAG AA 4.5:1) clear AA at each gradient's light end: male 4.9,
+     female 5.4, non-binary 4.6, unknown 4.6. Female and unknown were the same
+     lightness with little colour (ΔE ≈ 25); female is now a stronger rose and
+     unknown a plain grey, so every pair is at least ΔE 30 apart. Guarded by
+     contrast-tokens.test.ts. */
+  --color-male: #4F7499;
+  --color-male-dark: #3F5D7D;
+  --color-female: #A84A6E;
+  --color-female-dark: #863A57;
   --color-nonbinary: #9162AB;
   --color-nonbinary-dark: #7A5488;
-  --color-neutral: #7B736E;
-  --color-neutral-dark: #57534e;
+  --color-neutral: #78756F;
+  --color-neutral-dark: #57544F;
 
   /* Button variants */
   --color-button-success: #047857;
@@ -479,7 +480,10 @@ html.dark {
   --color-tree-edge: #6B7280;
   --color-success: #34D399;
   --color-success-bg: #064E3B;
-  --color-error: #F87171;
+  /* #159: red-300, not red-400. #F87171 was 4.18:1 under a hovered danger menu
+     row (--color-hover-surface) and 3.71:1 on card-alt. Error text only: white
+     never sits on this; filled danger uses --color-button-danger. */
+  --color-error: #FCA5A5;
   /* red-950, not the red-900 that its success/warning/info siblings use: --color-error
      (#F87171) on red-900 (#7F1D1D) is only 3.62:1, under AA. Guarded by
      contrast-tokens.test.ts. */
@@ -490,18 +494,21 @@ html.dark {
   --color-warning-edge: #F97316;
   --color-info-text: #93C5FD;
   --color-info-bg: #1E3A8A;
-  --color-male: #8CA8C0;
-  --color-male-dark: #5B7C99;
-  --color-female: #C08C9C;
-  --color-female-dark: #9A5B6F;
-  --color-nonbinary: #BFA0CF;
-  --color-nonbinary-dark: #976AAF;
-  --color-neutral: #57534e;
-  --color-neutral-dark: #292524;
+  /* Avatar gradients (#159): deeper stops so white initials clear AA (male 5.3,
+     female 5.9, non-binary 5.8, unknown 6.0). The old neutral disc ended on
+     --color-card (#292524), so its edge disappeared. */
+  --color-male: #436F98;
+  --color-male-dark: #345674;
+  --color-female: #A3446A;
+  --color-female-dark: #83344F;
+  --color-nonbinary: #7F52A3;
+  --color-nonbinary-dark: #633E80;
+  --color-neutral: #66635F;
+  --color-neutral-dark: #4C4A48;
   --color-button-success: #10B981;
   --color-button-success-hover: #059669;
   /* Darkened from #F87171 (white text = 2.8:1) to #DC2626 (4.8:1). The lighter
-     #F87171 stays as --color-error for error *text* on dark backgrounds. */
+     --color-error is for error *text* on dark backgrounds only. */
   --color-button-danger: #DC2626;
   --color-button-danger-hover: #B91C1C;
   --color-hover-surface: #3D3836;
@@ -1222,6 +1229,29 @@ body::after {
   border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-control-border, var(--color-border)));
 }
 .btn-tonal:enabled:hover { background: color-mix(in srgb, var(--color-primary) 38%, transparent); }
+
+/* The person merge dialog's choices (#28): a bordered card per value, the picked one
+   with a copper edge and a faint copper wash, and a radio dot. */
+.merge-choice {
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  transition: border-color .12s, background .12s;
+}
+.merge-choice:hover { border-color: var(--color-text-muted); }
+.merge-choice[aria-checked="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-card));
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+.merge-dot {
+  width: 18px; height: 18px; flex: none; border-radius: 9999px;
+  border: 2px solid var(--color-text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.merge-choice[aria-checked="true"] .merge-dot { border-color: var(--color-primary); }
+.merge-choice[aria-checked="true"] .merge-dot::after {
+  content: ""; width: 8px; height: 8px; border-radius: 9999px; background: var(--color-primary);
+}
 
 /* Expands a small control's HIT AREA to 44x44 without changing a pixel of how it
    looks (#431). The remove (x) on name, alias and relationship rows measured 19x22
@@ -2754,6 +2784,14 @@ html.dark .react-flow__minimap-mask {
     outline: var(--focus-ring-width) solid var(--color-focus);
     outline-offset: var(--focus-ring-offset);
   }
+}
+
+/* Selected list or menu row (#159). The bg-surface-2 fill is about 1.3:1 on a
+   dark card, so a 2px bar in the selected-fill ink carries the 3:1 cue
+   (WCAG 1.4.11) without shifting the row's content, the same marker the Places
+   Explore list draws with its left border. */
+@utility row-selected-mark {
+  box-shadow: inset 2px 0 0 var(--color-segment-on);
 }
 
 /* Inset variant for full-width rows inside clipped (overflow-hidden) popovers. */

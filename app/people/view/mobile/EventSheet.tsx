@@ -31,6 +31,7 @@ import {
     type MobileFact,
 } from './model';
 import type { RunChange } from './useChange';
+import { useCustomEventTypes } from '@/app/hooks/useCustomEventTypes';
 
 /*
  * One sheet to add, edit and delete any event on the phone (#1048, tracking #1054).
@@ -104,6 +105,8 @@ export function EventSheet(props: EventSheetProps) {
 function EventSheetBody({ open, flow, onClose, person, treeId, language, canDelete, facts, sourceNumbers, run, citeSheets, onSaved }: Omit<EventSheetProps, 'flow'> & { open: boolean; flow: EventFlow }) {
     const t = useTranslations('mobileEvents');
     const label = useEventTypeLabel();
+    // Custom labels already used in the tree, offered first under All event types (#162).
+    const usedTypes = useCustomEventTypes(treeId);
     const words = useDateQualifierWords();
     const flushPlace = usePlaceResolutionFlush(treeId);
     const draftMedia = useEventMediaDraft({ treeId, galleryPersonId: person.Id });
@@ -264,9 +267,17 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
     if (step.step === 'more') {
         const q = query.trim().toLocaleLowerCase();
         const match = (type: string) => !q || label(type).toLocaleLowerCase().includes(q);
-        const typed = resolveEventType(query, label);
+        const resolved = resolveEventType(query, label);
+        // A label already used in the tree is picked as written, never added again in other case.
+        const usedMatch = resolved?.custom ? usedTypes.find((u) => u.type.toLocaleLowerCase() === resolved.type.toLocaleLowerCase()) : undefined;
+        const typed = usedMatch ? { type: usedMatch.type, custom: false } : resolved;
         const offerCustom = typed?.custom === true;
         const groups = EVENT_TYPE_GROUPS.map((g) => ({ ...g, types: g.types.filter(match) })).filter((g) => g.types.length > 0);
+        const used = usedTypes.filter((u) => match(u.type));
+        const usedRows = used.map((u, i) => (
+            <MobileRow key={`used-${u.type}`} divided={i > 0 || Boolean(q)} label={u.type}
+                sub={t('used_count', { count: u.count })} onClick={() => pick(u.type, 'more')} />
+        ));
         return (
             <Sheet open={open} onClose={onClose} onBack={() => setStep({ step: 'choose' })} title={t('all_types')} size="full">
                 <div className="relative">
@@ -288,6 +299,12 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
                     />
                 </div>
                 <div className="-mx-4 mt-1">
+                    {!q && used.length > 0 && (
+                        <div>
+                            <h3 className="eyebrow m-0 px-4 pt-4 pb-1">{t('group_used')}</h3>
+                            {usedRows}
+                        </div>
+                    )}
                     {groups.map((g) => (
                         <div key={g.key}>
                             {!q && <h3 className="eyebrow m-0 px-4 pt-4 pb-1">{t(`group_${g.key}`)}</h3>}
@@ -307,6 +324,7 @@ function EventSheetBody({ open, flow, onClose, person, treeId, language, canDele
                             })}
                         </div>
                     ))}
+                    {q && usedRows}
                     {offerCustom && (
                         <MobileRow divided icon={<Plus />} end="chevron" label={t('add_custom', { name: typed.type })} onClick={() => pick(typed.type, 'more')} />
                     )}

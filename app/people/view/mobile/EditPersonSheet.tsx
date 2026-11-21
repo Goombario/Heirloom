@@ -7,7 +7,7 @@ import { getDataClient } from '@/lib/data';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import { MobileRow, SegmentedControl, cx, fieldClass, showChangeToast } from '@/app/components/ui';
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
-import { Trash2 } from '@/lib/icons';
+import { GitMerge, Trash2 } from '@/lib/icons';
 import { nameBarParts } from './model';
 import type { RunChange } from './useChange';
 
@@ -28,6 +28,8 @@ export function EditPersonSheet(props: {
     canDelete: boolean; run: RunChange;
     /** The person is gone: leave their page. */
     onDeleted: () => void;
+    /** Merge with another person… (#28), editors only. */
+    onMerge?: () => void;
 }) {
     // A fresh draft each time it opens.
     const [opened, setOpened] = useState(0);
@@ -36,8 +38,9 @@ export function EditPersonSheet(props: {
     return <EditPersonBody key={opened} {...props} />;
 }
 
-function EditPersonBody({ open, onClose, person, treeId, canDelete, run, onDeleted }: Parameters<typeof EditPersonSheet>[0]) {
+function EditPersonBody({ open, onClose, person, treeId, canDelete, run, onDeleted, onMerge }: Parameters<typeof EditPersonSheet>[0]) {
     const t = useTranslations('mobileProfile');
+    const tm = useTranslations('personMerge');
     const { reportError } = useErrorToast();
     const ids = useId();
     const saved = { first: person.FirstName ?? '', last: person.LastName ?? '', sex: asSex(person.Sex) };
@@ -116,6 +119,7 @@ function EditPersonBody({ open, onClose, person, treeId, canDelete, run, onDelet
             {canDelete && (
                 <>
                     <div className="-mx-4 border-t border-border mt-2">
+                        {onMerge && <MobileRow icon={<GitMerge />} label={tm('menu_merge')} sub={tm('menu_merge_sub')} onClick={onMerge} />}
                         <MobileRow icon={<Trash2 />} tone="danger" label={t('delete_person')} sub={t('delete_person_sub')} onClick={() => setConfirming(true)} />
                     </div>
                     <ConfirmSheet open={confirming} title={t('delete_person_title', { name: shownName })} body={t('delete_person_body')}

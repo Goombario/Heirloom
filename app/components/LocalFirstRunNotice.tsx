@@ -8,6 +8,7 @@ import Modal from '@/app/components/Modal';
 import { Button, Card } from '@/app/components/ui';
 import { Check, Loader2 } from '@/lib/icons';
 import { useDatabaseSetup } from '@/app/components/useDatabaseSetup';
+import { requestPersistence } from '@/app/components/backup/storagePersistence';
 
 const SEEN_KEY = 'heirloom_local_first_run_seen';
 
@@ -37,10 +38,9 @@ export default function LocalFirstRunNotice() {
     if (localStorage.getItem(SEEN_KEY)) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisible(true);
-    // Request persistent storage when the first-run notice is shown.
-    if (typeof navigator !== 'undefined' && navigator.storage?.persist) {
-      navigator.storage.persist().catch(() => {/* silently swallow denial */});
-    }
+    // Request persistent storage when the first-run notice is shown. A refusal is
+    // no longer swallowed: Home tells the user once (#18, StorageNotice).
+    void requestPersistence();
   }, []);
 
   function handleDismiss() {

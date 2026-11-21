@@ -7,8 +7,9 @@ import { useDocumentScrollLock } from '@/app/hooks/useDocumentScrollLock';
 interface ModalProps {
     open: boolean;
     onClose: () => void;
-    /** `form` is the 640px v1.1 form dialog (#55). */
-    size?: 'sm' | 'md' | 'lg' | 'xl' | 'form';
+    /** `form` is the 640px v1.1 form dialog (#55); `wide` the 1040px side-by-side
+     *  merge dialog (#28). Both are pinned near the top. */
+    size?: 'sm' | 'md' | 'lg' | 'xl' | 'form' | 'wide';
     disableClose?: boolean;
     labelledBy?: string;
     describedBy?: string;
@@ -25,6 +26,7 @@ const SIZE_CLASS: Record<NonNullable<ModalProps['size']>, string> = {
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
     form: 'max-w-[640px]',
+    wide: 'max-w-[1040px]',
 };
 
 export default function Modal({
@@ -96,7 +98,7 @@ export default function Modal({
             aria-modal="true"
             aria-labelledby={labelledBy}
             aria-describedby={describedBy}
-            className={`fixed inset-0 bg-black/50 flex ${size === 'form' ? 'items-start pt-[max(3rem,calc(var(--sat)+1rem))]' : 'items-center pt-[calc(var(--sat)+1rem)]'} justify-center px-4 pb-4 animate-backdrop-in ${elevated ? 'z-80 pointer-events-auto' : 'z-50'}`}
+            className={`fixed inset-0 bg-black/50 flex ${size === 'form' || size === 'wide' ? 'items-start pt-[max(3rem,calc(var(--sat)+1rem))]' : 'items-center pt-[calc(var(--sat)+1rem)]'} justify-center px-4 pb-4 animate-backdrop-in ${elevated ? 'z-80 pointer-events-auto' : 'z-50'}`}
             onClick={(e) => {
                 // Only a click whose mousedown+mouseup both land on the backdrop
                 // (target === currentTarget) closes. A drag that starts on the card

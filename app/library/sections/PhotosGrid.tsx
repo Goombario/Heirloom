@@ -235,7 +235,7 @@ export default function PhotosGrid({
                 <span
                   data-testid={`photo-failure-${m.Id}`}
                   aria-hidden="true"
-                  className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-error text-on-media shadow-sm"
+                  className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-button-danger text-on-media shadow-sm"
                 >
                   <AlertTriangle size={16} />
                 </span>

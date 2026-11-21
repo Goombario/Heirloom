@@ -73,7 +73,7 @@ export function LibraryPanelRow({
       aria-pressed={active}
       className={cx(
         'flex w-full min-h-8 items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm text-text cursor-pointer transition-colors focus-ring',
-        active ? 'bg-surface-2 font-semibold' : 'hover:bg-surface-2',
+        active ? 'bg-surface-2 row-selected-mark font-semibold' : 'hover:bg-hover-surface',
       )}
     >
       <span className="min-w-0 truncate">{label}</span>

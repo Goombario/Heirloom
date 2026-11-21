@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from 'next-intl';
 import type { MemberListRow, MemberRole } from '@/lib/db/queries/members';
+import { formatMediaBytes } from '@/lib/media/format-bytes';
 import { MemberActionError } from './useMembers';
 
 /** The name a row goes by: the person's Google name once they've signed in, else the address. */
@@ -35,6 +36,10 @@ export function useMemberText() {
     return parts.length > 0 ? parts.join(' · ') : null;
   };
 
+  /** Media bytes in the trees they own ("12.4 MB"), or null when they own none (#70). */
+  const storage = (m: MemberListRow): string | null =>
+    m.TreesOwned > 0 ? formatMediaBytes(m.StorageBytes ?? 0, locale) : null;
+
   const added = (m: MemberListRow): string => {
     if (m.Origin === 'bootstrap') return t('added_bootstrap');
     if (m.Origin === 'seed') return t('added_seed');
@@ -53,7 +58,7 @@ export function useMemberText() {
     return t('error_generic');
   };
 
-  return { role, trees, added, date, failure };
+  return { role, trees, storage, added, date, failure };
 }
 
 /** The normal sign-in page: an invitation lives on the address, not in the link. */

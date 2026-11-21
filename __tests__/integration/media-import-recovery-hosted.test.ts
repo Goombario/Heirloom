@@ -294,7 +294,7 @@ describeIf('hosted media import recovery', () => {
     expect(exportResult.kind).toBe('zip');
     if (exportResult.kind !== 'zip') throw new Error('expected hosted media ZIP export');
 
-    const zip = await JSZip.loadAsync(exportResult.buffer);
+    const zip = await JSZip.loadAsync(Buffer.concat(await Array.fromAsync(exportResult.stream)));
     const gedcom = (await zip.file('family_tree.ged')!.async('string')).replace(/^\uFEFF/, '');
     const topLevelObje = [...gedcom.matchAll(/^0 (@O\d+@) OBJE$/gm)].map((match) => match[1]);
     const pointerObje = [...gedcom.matchAll(/^\d+ OBJE (@O\d+@)$/gm)].map((match) => match[1]);

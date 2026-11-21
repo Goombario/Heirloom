@@ -16,13 +16,20 @@ const LINK = 'text-link underline-offset-2 hover:underline rounded focus-ring';
  */
 function Colophon() {
   const t = useTranslations('about');
+  const tPrivacy = useTranslations('privacy');
   const { version, sourceUrl } = aboutInfo();
   const parts = [
     <span key="v">{version ? t('signin_version', { version }) : t('menu_row')}</span>,
     sourceUrl && <a key="s" href={sourceUrl} target="_blank" rel="noopener noreferrer" className={LINK}>{t('source')}</a>,
     <a key="l" href={LICENSE_HREF} target="_blank" rel="noopener" className={LINK}>{t('licence_short')}</a>,
   ].filter(Boolean);
-  return <>{parts.flatMap((p, i) => (i === 0 ? [p] : [' · ', p]))}</>;
+  return (
+    <>
+      {parts.flatMap((p, i) => (i === 0 ? [p] : [' · ', p]))}
+      {/* #170: under the version line, for the Google consent screen's visitors too. */}
+      <span className="block mt-1"><a href="/privacy" className={LINK}>{tPrivacy('signin_link')}</a></span>
+    </>
+  );
 }
 
 /** NextAuth's sign-in error codes, each said in plain words (#1129). */

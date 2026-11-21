@@ -24,6 +24,8 @@ import { OwnerMediaCard } from '@/app/components/media/OwnerMediaCard';
 import EventMediaDraftPanel from '@/app/components/media/EventMediaDraftPanel';
 import { useEventMediaDraft } from '@/app/components/media/useEventMediaDraft';
 import { FAMILY_EVENT_TYPES, familyEventLabel } from './familyEventTypes';
+import { EventTypeField, type EventTypeGroup } from '@/app/components/events/EventTypeField';
+import { useCustomEventTypes } from '@/app/hooks/useCustomEventTypes';
 import { isVitalPersonType, vitalPatchFor } from './person-form/vitalEvent';
 import type { UpdatePersonInput } from '@/lib/data/types';
 import Cite from '@/app/components/Cite';
@@ -132,11 +134,14 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     const [persistedEvent, setPersistedEvent] = useState<GedcomEvent | null>(() => event ?? null);
     const isEdit = persistedEvent != null;
     const isMobile = useIsMobile();
+    // Custom labels already used in the tree, for the Type field's first group (#162).
+    const usedTypes = useCustomEventTypes(activeTreeId);
     const tGroups = useTranslations('mobileEvents');
     const { language } = useLanguage();
     const dateFieldId = useId();
     const placeFieldId = useId();
     const headingId = useId();
+    const typeHintId = useId();
     // Editing keeps its type; "Change type" in the heading row shows the Type field (fix 02).
     const [retyping, setRetyping] = useState(false);
     // Opening the editor puts focus in its first field (#798, KB-2).
@@ -611,39 +616,26 @@ export default function InlineEventEditor({ target, defaultType, event, relevant
     const heading = !type ? t('add_life_event')
         : isEdit ? t('edit_named', { type: typeName(type) })
         : t('add_named', { type: typeName(type) });
-    const typeGroups = isPerson
-        ? [
-            ...EVENT_TYPE_GROUPS.map((g) => ({
-                key: g.key,
-                label: tGroups(`group_${g.key}`),
-                options: g.types
-                    .filter((v) => (v === 'BIRT' ? allowVital?.birth ?? false : v === 'DEAT' ? allowVital?.death ?? false : true))
-                    .map((v) => ({ value: v, label: optionLabel(v) })),
-            })),
-            { key: 'other', label: t('group_other'), options: [{ value: 'EVEN', label: optionLabel('EVEN') }] },
-        ].filter((g) => g.options.length > 0)
-        : null;
+    // The standard types in the phone's groups (#162); a family has its own short list.
+    const typeGroups: EventTypeGroup[] = isPerson
+        ? EVENT_TYPE_GROUPS.map((g) => ({
+            key: g.key,
+            label: tGroups(`group_${g.key}`),
+            types: g.types.filter((v) => (v === 'BIRT' ? allowVital?.birth ?? false : v === 'DEAT' ? allowVital?.death ?? false : true)),
+        })).filter((g) => g.types.length > 0)
+        : [{ key: 'family', label: t('group_family_events'), types: FAMILY_DEFAULTS.map((o) => o.value).filter((v) => v !== 'EVEN') }];
 
     const fieldLabel = 'block text-meta font-medium mb-1 text-[color:var(--text-2)]';
     const desktopFields = (
         <>
             {/* Type: a new event picks it here; an edit shows it once "Change type" is pressed. */}
-            {choosingType && (
+            {(choosingType || (isEdit && !isSyntheticVital && retyping)) && (
                 <div className="max-w-[340px]">
                     <label htmlFor={typeFieldId} className={fieldLabel}>{t('field_type')}</label>
-                    <SelectField id={typeFieldId} size="sm" value={type} placeholder={t('choose_event')}
-                        onChange={(v) => { pickedType.current = true; setType(v); }}
-                        {...(typeGroups
-                            ? { groups: typeGroups }
-                            : { options: typeOptions.map((opt) => ({ value: opt.value, label: optionLabel(opt.value) })) })} />
-                    {isPerson && <p className="m-0 mt-1 text-xs text-text-muted">{t('marriages_from_family')}</p>}
-                </div>
-            )}
-            {isEdit && !isSyntheticVital && retyping && (
-                <div className="max-w-[340px]">
-                    <label htmlFor={typeFieldId} className={fieldLabel}>{t('field_type')}</label>
-                    <SelectField id={typeFieldId} size="sm" value={type} onChange={setType}
-                        options={typeOptions.map((opt) => ({ value: opt.value, label: optionLabel(opt.value) }))} />
+                    <EventTypeField id={typeFieldId} value={type} groups={typeGroups} used={usedTypes} labelOf={optionLabel}
+                        describedBy={choosingType && isPerson ? typeHintId : undefined}
+                        onChange={(v) => { pickedType.current = true; setType(v); }} />
+                    {choosingType && isPerson && <p id={typeHintId} className="m-0 mt-1 text-xs text-text-muted">{t('marriages_from_family')}</p>}
                 </div>
             )}
             <div className="grid gap-x-4 gap-y-3 grid-cols-[repeat(auto-fit,minmax(240px,1fr))]">

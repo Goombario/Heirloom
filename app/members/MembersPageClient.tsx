@@ -167,6 +167,14 @@ export default function MembersPageClient() {
       },
     },
     {
+      key: 'storage',
+      header: t('col_storage'),
+      render: (m) => {
+        const used = text.storage(m);
+        return used ? <span className="text-sm tabular-nums">{used}</span> : <span className="text-sm text-text-muted" aria-label={t('storage_none')}>—</span>;
+      },
+    },
+    {
       key: 'last',
       header: t('col_last_sign_in'),
       render: (m) => {

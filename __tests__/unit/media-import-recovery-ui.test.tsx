@@ -14,7 +14,14 @@ vi.mock('next-intl', () => ({
     if (values?.group !== undefined) return `${key}_${values.group}`;
     return key;
   },
+  useLocale: () => 'en',
 }));
+
+// Most of this file covers the in-panel run, which phones keep (#207); the
+// desktop cases switch `mobile.value` off and run through the jobs queue.
+const mobile = vi.hoisted(() => ({ value: true }));
+vi.mock('@/app/hooks/useIsMobile', () => ({ useIsMobile: () => mobile.value }));
+vi.mock('@/app/contexts/TreeContext', () => ({ useTree: () => ({ activeTreeName: 'Smith family' }) }));
 
 vi.mock('@/app/components/ConfirmDialog', () => ({
   default: ({ open, title, body, confirmLabel, onConfirm, onCancel }: {
@@ -32,6 +39,7 @@ vi.mock('@/lib/data', () => ({
 }));
 
 import MediaImportRecovery from '@/app/import-export/MediaImportRecovery';
+import { getBackgroundJobs, resetBackgroundMedia } from '@/app/components/media/backgroundMedia';
 
 function item(overrides: Partial<MediaImportItem> = {}): MediaImportItem {
   return {
@@ -68,6 +76,8 @@ async function zipWith(...paths: string[]): Promise<File> {
 describe('MediaImportRecovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mobile.value = true;
+    resetBackgroundMedia();
   });
 
   it('discovers unresolved items on mount and shows only safe original basenames', async () => {
@@ -538,6 +548,55 @@ describe('MediaImportRecovery', () => {
       finish({ outcome: 'ready', item: { ...rows[0], status: 'ready' }, failureCode: null, retryable: false });
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(api.materializeImportMedia).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('on desktop (#207)', () => {
+    beforeEach(() => { mobile.value = false; });
+
+    it('runs the photo step as a background job the reader can leave', async () => {
+      const unresolved = item();
+      let finish!: (value: unknown) => void;
+      const api = client({
+        listUnresolvedImportMedia: vi.fn().mockResolvedValue([]),
+        materializeImportMedia: vi.fn().mockReturnValue(new Promise((resolve) => { finish = resolve; })),
+      });
+      getDataClient.mockResolvedValue({ gedcom: api });
+      const archive = await zipWith('media/O1/portrait.jpg');
+
+      render(
+        <UnsavedChangesProvider>
+          <MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[unresolved]} initialArchive={archive} result={result} />
+        </UnsavedChangesProvider>,
+      );
+
+      await waitFor(() => expect(api.materializeImportMedia).toHaveBeenCalled());
+      expect(getBackgroundJobs()).toEqual([expect.objectContaining({ kind: 'import', scope: 'import:7', status: 'running', total: 1 })]);
+      expect(screen.getByText('media_lifecycle_can_leave')).toBeInTheDocument();
+
+      finish({ outcome: 'ready', item: { ...unresolved, status: 'ready' }, failureCode: null, retryable: false });
+      await waitFor(() => expect(getBackgroundJobs()[0]).toEqual(expect.objectContaining({ status: 'done', done: 1 })));
+    });
+
+    it('waits out the upload limit instead of failing', async () => {
+      const unresolved = item();
+      const materialize = vi.fn()
+        .mockRejectedValueOnce(new RateLimitError('slow down', 1))
+        .mockResolvedValue({ outcome: 'ready', item: { ...unresolved, status: 'ready' }, failureCode: null, retryable: false });
+      const api = client({ listUnresolvedImportMedia: vi.fn().mockResolvedValue([]), materializeImportMedia: materialize });
+      getDataClient.mockResolvedValue({ gedcom: api });
+      const archive = await zipWith('media/O1/portrait.jpg');
+
+      render(
+        <UnsavedChangesProvider>
+          <MediaImportRecovery treeId={7} initialTreeId={7} initialItems={[unresolved]} initialArchive={archive} result={result} />
+        </UnsavedChangesProvider>,
+      );
+
+      await waitFor(() => expect(screen.getByText('media_lifecycle_photos_limit')).toBeInTheDocument());
+      expect(getBackgroundJobs()[0].status).toBe('waiting');
+      await waitFor(() => expect(getBackgroundJobs()[0].status).toBe('done'), { timeout: 3000 });
+      expect(materialize).toHaveBeenCalledTimes(2);
     });
   });
 });

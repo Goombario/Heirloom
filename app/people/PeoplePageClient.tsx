@@ -33,6 +33,7 @@ import { foldForSearch } from '@/lib/utils/search-fold';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { AddPersonSheet } from './AddPersonSheet';
 import { AddPersonDialog } from './AddPersonDialog';
+import { PersonMergeFlow } from '@/app/components/person-merge/PersonMergeFlow';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useActiveTreeName } from '@/app/hooks/useActiveTreeName';
 
@@ -114,6 +115,10 @@ export default function PeoplePageClient({
     }
 
     const canEdit = activePermission !== 'view';
+    // A merge rewrites many records at once, so it needs edit permission (ADR 0052).
+    const canMerge = activePermission === 'owner' || activePermission === 'edit';
+    const tMerge = useTranslations('personMerge');
+    const [merging, setMerging] = useState<PersonWithParentFamily | null>(null);
     const { redirectIfUnauthorized } = useErrorToast();
 
     // Add person is a sheet over this list on a phone (#1065) and a quick-add dialog on
@@ -474,6 +479,15 @@ export default function PeoplePageClient({
                 );
             },
         },
+        // Likely duplicates: Merge… opens the merge dialog on the pair (#28). Editors only.
+        ...(flag === 'duplicates' && canMerge ? [{
+            key: 'merge',
+            header: '',
+            align: 'right' as const,
+            render: (person: PersonWithParentFamily) => (
+                <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setMerging(person); }}>{tMerge('review_merge')}</Button>
+            ),
+        }] : []),
     ];
 
     return (
@@ -714,6 +728,17 @@ export default function PeoplePageClient({
                     <div className="h-24 md:hidden" aria-hidden="true" />
                     <CopperPill floating icon={<Plus aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</CopperPill>
                 </>
+            )}
+            {merging && (
+                <PersonMergeFlow
+                    open
+                    onClose={() => setMerging(null)}
+                    person={merging}
+                    // A pair opens straight on the review; a larger group starts at the picker.
+                    otherId={(() => { const g = flagged.data?.find((x) => x.includes(merging.Id)); return g?.length === 2 ? g.find((id) => id !== merging.Id) : null; })()}
+                    treeId={activeTreeId}
+                    onMerged={() => { setMerging(null); retry(); flagged.retry(); }}
+                />
             )}
             {canEdit && (phone
                 ? <AddPersonSheet open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />

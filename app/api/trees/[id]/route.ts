@@ -78,8 +78,12 @@ export async function DELETE(
       );
     }
 
+    // The simple confirm for an empty tree (#36) still sends the header; it asks
+    // the service to refuse (409 tree_not_empty) if the tree has filled since.
+    const onlyIfEmpty = new URL(request.url).searchParams.get('onlyIfEmpty') === '1';
+
     // 200 with the cleanup count (#945): the tree is gone either way.
-    return NextResponse.json(await deleteTreeService({ id: treeId, currentUserId: user.id }));
+    return NextResponse.json(await deleteTreeService({ id: treeId, currentUserId: user.id, onlyIfEmpty }));
   } catch (error) {
     return handleApiError(error, 'Failed to delete tree');
   }

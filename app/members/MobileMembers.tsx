@@ -75,14 +75,15 @@ export function MobileMemberRows({ rows, meId, onOpen }: {
       <MobileListMeta count={t('count', { count: rows.length })} />
       {rows.length === 0 && <p className="m-0 px-4 py-6 text-base text-text-muted">{t('empty_filtered')}</p>}
       {rows.map((m, i) => {
+        const storageLine = (row: MemberListRow) => { const size = text.storage(row); return size ? t('storage_used', { size }) : null; };
         const role = text.role(m.Role);
         const sub = m.Status === 'invited'
           ? t('row_invited', { role })
           : m.Status === 'revoked'
             ? (m.RevokedAt ? t('row_revoked', { date: text.date(m.RevokedAt)! }) : t('row_revoked_no_date'))
             : m.UserId === meId
-              ? t('row_you', { role })
-              : [role, text.trees(m)].filter(Boolean).join(' · ');
+              ? [t('row_you', { role }), storageLine(m)].filter(Boolean).join(' · ')
+              : [role, text.trees(m), storageLine(m)].filter(Boolean).join(' · ');
         return (
           <MobileRow
             key={m.Id}

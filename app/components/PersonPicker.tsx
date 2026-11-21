@@ -412,8 +412,7 @@ const PersonPicker = forwardRef<PersonPickerHandle, PersonPickerProps>(function 
                         <input
                             ref={inputRef}
                             type="text"
-                            className={fieldClass()}
-                            style={{ paddingLeft: '2.5rem' }}
+                            className={`${fieldClass()} !pl-10`}
                             placeholder={placeholder}
                             value={searchText}
                             onChange={(e) => setSearchText(e.target.value)}

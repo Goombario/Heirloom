@@ -108,8 +108,8 @@ export function MobileBackupSheet({ open, onClose }: { open: boolean; onClose: (
                 {!desktop && (
                     <MobileRow divided icon={<Lock />} label={t('persist')}
                         sub={file.persistDenied ? to('storage_request_denied') : t('persist_sub')}
-                        value={file.isPersistent === true ? t('persist_on') : file.isPersistent === false ? t('persist_off') : t('persist_unknown')}
-                        onClick={file.isPersistent === false ? () => { void file.requestPersist(); } : undefined} />
+                        value={file.persistState === 'kept' ? t('persist_on') : file.persistState === 'not_kept' ? t('persist_off') : file.persistState === 'unsupported' ? t('persist_cant_say') : t('persist_unknown')}
+                        onClick={file.persistState === 'not_kept' ? () => { void file.requestPersist(); } : undefined} />
                 )}
             </div>
 

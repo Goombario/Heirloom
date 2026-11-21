@@ -9,16 +9,6 @@
       "count": 8
     }
   },
-  "app/components/LocationJourneyModal.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 1
-    }
-  },
-  "app/components/PersonPicker.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 1
-    }
-  },
   "app/components/lightbox/EvidencePanel.tsx": {
     "ds/no-arbitrary-font-size": {
       "count": 2
@@ -32,9 +22,6 @@
   "app/components/person-form/IdentitySection.tsx": {
     "ds/no-arbitrary-font-size": {
       "count": 3
-    },
-    "ds/no-inline-static-literal": {
-      "count": 2
     }
   },
   "app/components/person-form/NamesPanel.tsx": {
@@ -44,36 +31,6 @@
   },
   "app/components/person-form/RelationshipsSection.tsx": {
     "ds/no-arbitrary-font-size": {
-      "count": 1
-    }
-  },
-  "app/components/tree/PersonBarNode.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 4
-    }
-  },
-  "app/components/tree/PersonNode.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 2
-    }
-  },
-  "app/components/tree/PersonSidebar.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 1
-    }
-  },
-  "app/components/tree/TreeVisualization.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 8
-    }
-  },
-  "app/components/tree/person-sidebar/SidebarContent.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 5
-    }
-  },
-  "app/components/ui/DataTable.tsx": {
-    "ds/no-inline-static-literal": {
       "count": 1
     }
   },
@@ -95,21 +52,6 @@
   "app/library/sections/RepositoriesList.tsx": {
     "ds/no-arbitrary-font-size": {
       "count": 1
-    }
-  },
-  "app/people/view/DescendantsPanel.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 1
-    }
-  },
-  "app/people/view/PersonGalleryCard.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 1
-    }
-  },
-  "app/tree/TreeOverlays.tsx": {
-    "ds/no-inline-static-literal": {
-      "count": 4
     }
   }
 }

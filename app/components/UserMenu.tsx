@@ -8,7 +8,9 @@ import { useDesktopMode, useDesktopModeResolved } from '@/app/hooks/useDesktopMo
 import { DATA_MODE } from '@/lib/data';
 import ShareTreeButton from './ShareTreeButton';
 import { useMenuKeyboard } from './ui/useMenuKeyboard';
-import { LogOut, Settings, Share2, Users } from '@/lib/icons';
+import { Keyboard, LogOut, Settings, Share2, Users } from '@/lib/icons';
+import { openCheatsheet } from '@/lib/keyboard/shortcuts';
+import { Kbd } from './keyboard/Kbd';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useMembersAdmin } from '@/app/hooks/useMembersAdmin';
 import { aboutInfo } from '@/lib/about';
@@ -168,6 +170,15 @@ export default function UserMenu() {
                 </span>
               </Link>
             )}
+            {/* The way to the shortcuts list that needs no shortcut (#32). */}
+            <button
+              onClick={() => { setIsOpen(false); openCheatsheet(); }}
+              className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-text-secondary hover:bg-hover-surface focus-ring-inset" role="menuitem" tabIndex={-1}
+            >
+              <Keyboard className="w-4 h-4" aria-hidden="true" />
+              <span className="flex-1">{t('keyboard_shortcuts')}</span>
+              <span aria-hidden="true"><Kbd size="sm">?</Kbd></span>
+            </button>
             <button
               onClick={() => {
                 setIsOpen(false);

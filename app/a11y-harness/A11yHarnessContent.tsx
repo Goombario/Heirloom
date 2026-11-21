@@ -12,8 +12,6 @@
 import type { Family, Person, PersonWithRelations } from '@/lib/db/schema';
 import { HeroIdentityEditor } from '@/app/people/view/HeroIdentityEditor';
 import { NamesPanel, type NameVariant } from '@/app/components/person-form/NamesPanel';
-import { RelationshipList } from '@/app/components/person-form/RelationshipList';
-import { RelationshipAddPanel } from '@/app/people/view/RelationshipAddPanel';
 import { FamilyTypePanel } from '@/app/families/view/desktop/FamilyTypePanel';
 import InlineMarriageEditor from '@/app/families/view/InlineMarriageEditor';
 import { ChildrenList } from '@/app/families/view/sections';
@@ -146,28 +144,6 @@ export default function A11yHarnessContent() {
                     onRename={async () => {}}
                     onRemove={async () => {}}
                     onSetPrimary={async () => {}}
-                />
-            </section>
-
-            <section>
-                <h2 className="text-lg font-bold text-text mb-3">RelationshipList (canEdit)</h2>
-                <RelationshipList
-                    person={heroPerson}
-                    treeId={1}
-                    canEdit
-                    canDelete
-                    onChanged={noop}
-                />
-            </section>
-
-            <section>
-                <h2 className="text-lg font-bold text-text mb-3">RelationshipAddPanel (partner / to-family)</h2>
-                <RelationshipAddPanel
-                    personId={1}
-                    treeId={1}
-                    excludeIds={[1]}
-                    onAdded={noop}
-                    onClose={noop}
                 />
             </section>
 

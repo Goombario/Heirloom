@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { MediaWithPerson } from '@/lib/db/schema';
 import { isPdfMedia } from '@/lib/media/allowed-extensions';
+import { compareRecentlyAdded } from '@/lib/media/recently-added';
 
 export type PhotoTagFilter = 'all' | 'tagged' | 'untagged';
 /** Photos and PDF documents share the Media tab (#510); Type narrows it to one. */
@@ -71,7 +72,7 @@ export function usePhotoFilters(
 
     return [...visible].sort((left, right) => {
       if (sort === 'recent') {
-        return right.Id - left.Id;
+        return compareRecentlyAdded(left, right);
       }
 
       if (sort === 'size-desc') {

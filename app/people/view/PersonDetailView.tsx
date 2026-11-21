@@ -45,6 +45,7 @@ import { DescendantsPanel } from './DescendantsPanel';
 import { useReturnFocus, useReturnFocusTo } from '@/app/hooks/useReturnFocus';
 import { useDataCheckMarks } from '@/app/components/data-checks/marks';
 import { MobilePersonPage, MobilePersonSkeleton } from './mobile/MobilePersonPage';
+import { PersonMergeFlow } from '@/app/components/person-merge/PersonMergeFlow';
 import { factPlaceEntry } from '@/lib/places/place-key';
 
 export default function PersonDetailsClient() {
@@ -211,6 +212,8 @@ export default function PersonDetailsClient() {
     const [editOpen, setEditOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    // Merge with another person (#28): the picker, the side-by-side review and done.
+    const [mergeOpen, setMergeOpen] = useState(false);
     // The portrait opens in the lightbox, where it can be changed (#49).
     const [viewing, setViewing] = useState<PersonGalleryMedia | null>(null);
     const lifeEventsRef = useRef<HTMLElement>(null);
@@ -365,6 +368,12 @@ export default function PersonDetailsClient() {
     };
     // Null until the names first load, so the heading falls back to the person row.
     const loadedVariants = variantsLoading && variants.length === 0 ? null : variants;
+    // Names, notes and the portrait live outside the person row, so a phone edit
+    // (and a merge that kept this record) reloads them too.
+    const reloadAll = async () => {
+        setNotesRefresh((n) => n + 1);
+        await Promise.all([fetchPerson(), fetchCitations(), refreshVariants(), fetchMedia()]);
+    };
     const phonePage = (
         <MobilePersonPage
             person={person}
@@ -387,11 +396,8 @@ export default function PersonDetailsClient() {
             onCite={(fact, label) => setAttachTarget({ factTable: fact.factTable, factId: fact.factId, factLabel: label, initialView: 'add' })}
             onAddMedia={() => setShowUpload(true)}
             onMediaChanged={fetchMedia}
-            onChanged={async () => {
-                // Names, notes and the portrait live outside the person row, so a phone edit reloads them too.
-                setNotesRefresh((n) => n + 1);
-                await Promise.all([fetchPerson(), fetchCitations(), refreshVariants(), fetchMedia()]);
-            }}
+            onChanged={reloadAll}
+            onMerge={() => setMergeOpen(true)}
         />
     );
 
@@ -451,6 +457,7 @@ export default function PersonDetailsClient() {
                     hasDescendants={countDescendants(person) > 0}
                     onDescendants={() => setShowDescendants(true)}
                     onDelete={() => setShowDeleteConfirm(true)}
+                    onMerge={() => setMergeOpen(true)}
                     onAddPortrait={() => setShowUpload(true)}
                     onOpenPortrait={setViewing}
                 />
@@ -738,6 +745,18 @@ export default function PersonDetailsClient() {
             {showJourney && journeyStops.length > 0 && (
                 <LocationJourneyModal stops={journeyStops} onClose={() => setShowJourney(false)} />
             )}
+
+            <PersonMergeFlow
+                open={mergeOpen}
+                onClose={() => setMergeOpen(false)}
+                person={person}
+                treeId={activeTreeId}
+                onMerged={(keptId) => {
+                    setMergeOpen(false);
+                    if (keptId === person.Id) void reloadAll();
+                    else router.replace(`/people/view?id=${keptId}`);
+                }}
+            />
 
             <ConfirmDialog
                 open={showDeleteConfirm}

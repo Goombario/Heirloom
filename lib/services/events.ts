@@ -1,4 +1,5 @@
-import { createEvent, getEventById, updateEvent, deleteEvent } from '@/lib/db/queries/events';
+import { createEvent, getEventById, getEventTypeCounts, updateEvent, deleteEvent } from '@/lib/db/queries/events';
+import type { EventTypeCount } from '@/lib/events/custom-types';
 import type { Audited } from '@/lib/db/queries/audit-capture';
 import { validateStringField, validateDateField, validateNameField, validatePlaceIdField, ValidationError } from '@/lib/validation';
 import type { FactPlacePick } from '@/lib/db/queries/place-links';
@@ -151,4 +152,19 @@ export async function deleteEventService(params: DeleteEventParams): Promise<Aud
   }
 
   return deleteEvent(eventId, scope.treeId, currentUserId);
+}
+
+export interface ListEventTypeCountsParams {
+  requestedTreeId: number | null;
+  requestedOwnerId: number | null;
+  currentUserId: number;
+}
+
+/** GET /api/events/types logic: every event type in the tree with its count (#162). */
+export async function listEventTypeCountsService(params: ListEventTypeCountsParams): Promise<EventTypeCount[]> {
+  const scope = await resolveTreeScope(
+    { treeId: params.requestedTreeId, ownerId: params.requestedOwnerId },
+    params.currentUserId
+  );
+  return getEventTypeCounts(scope.treeId);
 }

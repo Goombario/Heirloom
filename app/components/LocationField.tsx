@@ -648,6 +648,9 @@ function EditPinPopover({
     (async () => {
       try {
         const client = await getDataClient();
+        // The data layer imports lazily; if the popover closed meanwhile, don't
+        // send a request nobody will read (#212).
+        if (cancelled) return;
         const count = await client.places.dependentCount(leafName, treeId);
         if (!cancelled) setDependentCount(count);
       } catch {

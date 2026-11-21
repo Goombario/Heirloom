@@ -150,6 +150,24 @@ describe('fetchCandidates', () => {
     expect(candidates[0].props).toEqual(FEATURE.properties);
     expect(candidates[0].result).toMatchObject({ name: 'Canterbury, England, United Kingdom', lat: 51.2802, lng: 1.0789 });
   });
+
+  it('drops a feature that repeats an earlier OSM object (#158)', async () => {
+    const other = { ...FEATURE, properties: { ...FEATURE.properties, name: 'Dover', city: 'Dover', osm_id: 456 } };
+    const noId = { ...FEATURE, properties: { ...FEATURE.properties, name: 'Deal', city: 'Deal', osm_id: undefined, osm_type: undefined } };
+    vi.stubGlobal('fetch', mockFetchOnce([FEATURE, other, FEATURE, noId, noId]));
+    const candidates = await fetchCandidates('canterbury');
+    expect(candidates.map((c) => c.result.osmId)).toEqual([123, 456, null, null]);
+  });
+});
+
+describe('searchPlaces dedupe', () => {
+  beforeEach(() => { __clearGeocodeCache(); });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('lists a repeated OSM object once (#158)', async () => {
+    vi.stubGlobal('fetch', mockFetchOnce([FEATURE, FEATURE]));
+    expect(await searchPlaces('canterbury')).toHaveLength(1);
+  });
 });
 
 describe('buildHierarchyLevels', () => {

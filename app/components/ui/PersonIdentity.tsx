@@ -53,9 +53,11 @@ const AVATAR_PX: Record<'sm' | 'md', number> = { sm: 24, md: 34 };
  * Identity only: it is deliberately NOT interactive and owns no click handler,
  * so callers decide whether it is a button, a link, or static text.
  *
- * Extracted from `PersonPicker`'s private `ResultRow` (#487 follow-up). Roughly
- * a dozen other screens still hand-roll this pattern; migrating them is tracked
- * separately rather than widened into this change.
+ * Extracted from `PersonPicker`'s private `ResultRow` (#487 follow-up). List rows
+ * use it through `PersonRow` (#55). The avatars that remain hand-rolled are a
+ * different layout on purpose (#23): the tree sidebar's centred header, the
+ * people table's name cell, Explore's multi-fact rows and a source's cited-by
+ * rows.
  */
 export function PersonIdentity({
   name,

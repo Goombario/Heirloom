@@ -9,7 +9,10 @@ import { Banner, Badge, Button, buttonClass, Card } from '@/app/components/ui';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
 import GuardedLink from '@/app/components/GuardedLink';
 import { useUnsavedChangesGuard } from '@/app/components/UnsavedChangesProvider';
-import { AlertTriangle, CheckCircle2, CirclePause, Loader2 } from '@/lib/icons';
+import { AlertTriangle, CheckCircle2, CirclePause, Clock, Loader2 } from '@/lib/icons';
+import { useIsMobile } from '@/app/hooks/useIsMobile';
+import { useTree } from '@/app/contexts/TreeContext';
+import { useClockTime } from '@/app/components/media/BackgroundJobsChip';
 import { formatGedcomImportWarning } from '@/lib/gedcom/import-warning';
 import { useMediaImportRecovery } from './useMediaImportRecovery';
 
@@ -57,7 +60,15 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
   // The items a confirm is open for: one row's Remove, or a group's selection (#859).
   const [removeIds, setRemoveIds] = useState<number[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
-  const { items, busy, error, progress, reusedCount, recover, remove, removeMany, stop } = useMediaImportRecovery({ treeId, initialTreeId: seedTreeId, initialItems });
+  const tj = useTranslations('jobs');
+  const clock = useClockTime();
+  // Desktop: the photo step runs in the background queue and carries on across
+  // pages (#207). Phones keep the stay-on-page rule: their browsers pause hidden tabs.
+  const background = !useIsMobile();
+  const { activeTreeName } = useTree();
+  const jobTree = result?.treeName ?? activeTreeName;
+  const jobLabel = jobTree ? tj('label_import', { tree: jobTree }) : tj('label_import_plain');
+  const { items, busy, error, progress, waitUntil, reusedCount, recover, remove, removeMany, stop } = useMediaImportRecovery({ treeId, initialTreeId: seedTreeId, initialItems, background, jobLabel });
   const autoRecoveryKey = useRef<string | null>(null);
 
   const currentImportId = initialItems?.[0]?.importId ?? null;
@@ -90,7 +101,9 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
   // The selected File object only lives in this page. Register the active phase
   // with the app-wide navigation guard so links, history traversal, refresh and
   // tab close cannot silently interrupt materialization.
-  useUnsavedChangesGuard(Boolean(result && phase === 'processing' && (initialArchive || busy)));
+  // On a desktop the queue asks before a reload or close itself, and moving around
+  // the app is fine (#207).
+  useUnsavedChangesGuard(Boolean(!background && result && phase === 'processing' && (initialArchive || busy)));
 
   useEffect(() => {
     if (seedTreeId !== treeId || !initialArchive || !initialItems || initialItems.length === 0) return;
@@ -198,7 +211,7 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
       (result.libraryMediaCount ?? 0) > 0 && t('media_lifecycle_count_library', { count: result.libraryMediaCount ?? 0 }),
     ].filter(Boolean).join(', ')
     : '';
-  const recordNotes: string[] = result
+  const recordNotes: React.ReactNode[] = result
     ? [
       ...((result.preservedCount ?? 0) > 0 ? [`${t('success_preserved')} ${result.preservedCount}`] : []),
       ...((result.matchedPeopleCount ?? 0) > 0 || (result.matchedFamiliesCount ?? 0) > 0
@@ -206,25 +219,34 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
         : []),
       ...((result.skippedCount ?? 0) > 0 ? [`${t('success_skipped')} ${result.skippedCount}`] : []),
       ...(result.zipWarnings.length > 0 ? [t('success_zip_warnings'), ...result.zipWarnings] : []),
-      ...(result.warnings ?? []).map(formatImportWarning),
+      ...(result.warnings ?? []).map((warning) => warning.code === 'dates_kept_as_written'
+        // #39: the dates are listed in Data checks, so link there.
+        ? <>{formatImportWarning(warning)}{' '}<GuardedLink href="/data-checks" className="text-link underline">{t('warning_dates_review')}</GuardedLink></>
+        : formatImportWarning(warning)),
     ]
     : [];
-  const photoTitle = phase === 'processing'
+  const photoTitle = waitUntil != null
+    ? t('media_lifecycle_photos_limit', { current: progress?.current ?? 0, total: progress?.total ?? 0 })
+    : phase === 'processing'
     ? t('media_lifecycle_photos_preparing')
     : phase === 'complete'
       ? t('media_lifecycle_photos_complete', { count: totalCount })
       : waiting
         ? t('media_lifecycle_photos_waiting')
         : t('media_lifecycle_photos_attention', { ready: readyCount, total: totalCount });
-  const photoHint = phase === 'processing'
-    ? t('media_lifecycle_stay_open')
+  const photoHint = waitUntil != null
+    ? t('media_lifecycle_hint_limit', { time: clock(waitUntil) })
+    : phase === 'processing'
+    ? (background ? t('media_lifecycle_can_leave') : t('media_lifecycle_stay_open'))
     : waiting
       ? t('media_lifecycle_hint_waiting', { count: pendingCount })
       : phase === 'attention' && failedCount > 0
         ? t('media_lifecycle_hint_attention', { count: failedCount })
         : null;
-  const PhotoIcon = phase === 'processing' ? Loader2 : phase === 'complete' ? CheckCircle2 : waiting ? CirclePause : AlertTriangle;
-  const photoIconTone = phase === 'processing'
+  const PhotoIcon = waitUntil != null ? Clock : phase === 'processing' ? Loader2 : phase === 'complete' ? CheckCircle2 : waiting ? CirclePause : AlertTriangle;
+  const photoIconTone = waitUntil != null
+    ? 'text-text-muted'
+    : phase === 'processing'
     ? 'animate-spin text-primary'
     : phase === 'complete'
       ? 'text-success'
@@ -306,6 +328,7 @@ export default function MediaImportRecovery({ treeId = null, initialTreeId, init
           <p className="text-sm text-text-muted" role="status">
             {t('media_recovery_progress', { current: progress.current, total: progress.total })}
           </p>
+          {waitUntil != null && <p className="m-0 text-sm text-text-muted">{t('media_lifecycle_hint_limit', { time: clock(waitUntil) })}</p>}
           {busy && <Button variant="outline" size="sm" onClick={stop}>{t('media_recovery_stop')}</Button>}
         </div>
       )}

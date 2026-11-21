@@ -53,7 +53,7 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
   // sidebar reports the current error. Do not let the delayed loading veil cover
   // the retry action (the hook intentionally keeps the stale form non-editable).
   const loadingOverlay = showLoadingOverlay && !loadError && (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--color-card) 70%, transparent)', backdropFilter: 'blur(4px)' }}>
+    <div className="backdrop-blur-xs" style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--color-card) 70%, transparent)' }}>
       <span className="muted text-sm">{tCommon('loading')}</span>
     </div>
   );

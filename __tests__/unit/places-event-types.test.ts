@@ -46,4 +46,17 @@ describe('places event-type sets', () => {
       for (const type of KNOWN_EVENT_TYPES) expect(headings[`event_${type}`], type).toBeTruthy();
     }
   });
+
+  it('gives every standard type except the three own-key reasons and EVEN a verb phrase in every catalog (#16)', () => {
+    for (const type of KNOWN_EVENT_TYPES) {
+      if (['BIRT', 'MARR', 'DEAT', 'EVEN'].includes(type)) continue;
+      expect(EVENT_VERB_TYPES.has(type), type).toBe(true);
+    }
+    for (const messages of [enMessages, frMessages, ruMessages]) {
+      const p = (messages as { places: Record<string, string> }).places;
+      for (const type of EVENT_VERB_TYPES) expect(p[`place_fact_verb_${type}`], type).toBeTruthy();
+      expect(p.place_fact_custom).toContain('{label}');
+      expect(p.place_fact_custom_undated).toContain('{label}');
+    }
+  });
 });

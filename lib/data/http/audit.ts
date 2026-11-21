@@ -1,4 +1,5 @@
 import type { AuditClient, AuditListOptions, AuditListResult, AuditEditorsResult } from '../types';
+import type { AuditLogEntry } from '@/lib/db/schema';
 import { throwForStatus, treeQuery } from './shared';
 
 /** Audit log backed by the hosted REST API (`/api/audit`). */
@@ -34,5 +35,11 @@ export class HttpAuditClient implements AuditClient {
     });
     if (!res.ok) await throwForStatus(res);
     return (await res.json()) as { success: true; revertedCount: number };
+  }
+
+  async listLaterChanges(id: number, treeId?: number | null): Promise<AuditLogEntry[]> {
+    const res = await fetch(`/api/audit/${id}/later${treeQuery(treeId)}`);
+    if (!res.ok) await throwForStatus(res);
+    return ((await res.json()) as { entries: AuditLogEntry[] }).entries;
   }
 }
