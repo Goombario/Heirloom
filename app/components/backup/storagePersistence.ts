@@ -17,7 +17,7 @@ export const PERSIST_ANSWERED_EVENT = 'heirloom:persist-answered';
 /** Set once the Home notice was dismissed with Got it; it never shows again. */
 export const STORAGE_NOTICE_DISMISSED_KEY = 'heirloom_storage_notice_dismissed';
 
-export function canAskPersistence(): boolean {
+function canAskPersistence(): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.storage?.persist === 'function';
 }
 
