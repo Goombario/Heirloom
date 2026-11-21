@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.2.0",
+    "items": [
+      {
+        "en": "You can merge two records of the same person. The merge is one entry in the audit log, and you can revert it.",
+        "fr": "Vous pouvez fusionner deux fiches d'une même personne. La fusion forme une seule entrée du journal, et vous pouvez l'annuler.",
+        "ru": "Две записи об одном человеке можно объединить. Объединение — одна запись в журнале, и его можно отменить."
+      },
+      {
+        "en": "Events can have a type you name yourself, and the Places pages describe every kind of event.",
+        "fr": "Un événement peut avoir un type que vous nommez vous-même, et les pages Lieux décrivent chaque sorte d'événement.",
+        "ru": "У события может быть свой тип с вашим названием, а на страницах мест описано событие любого типа."
+      },
+      {
+        "en": "Keyboard shortcuts: press ? to see them all. You can turn letter shortcuts off in Options › Keyboard.",
+        "fr": "Raccourcis clavier : appuyez sur ? pour tous les voir. Vous pouvez désactiver les raccourcis à une lettre dans Options › Clavier.",
+        "ru": "Сочетания клавиш: нажмите ?, чтобы увидеть все. Однобуквенные сочетания можно отключить в Настройки › Клавиатура."
+      },
+      {
+        "en": "On a computer, photos keep uploading while you use the rest of the app. The top bar shows how far they've got.",
+        "fr": "Sur ordinateur, les photos continuent de s'envoyer pendant que vous utilisez le reste de l'application. La barre du haut montre leur avancement.",
+        "ru": "На компьютере фотографии продолжают загружаться, пока вы работаете в других разделах. Ход загрузки виден в верхней панели."
+      },
+      {
+        "en": "An empty tree can be deleted with a simple confirmation.",
+        "fr": "Un arbre vide peut être supprimé avec une simple confirmation.",
+        "ru": "Пустое древо можно удалить простым подтверждением."
+      }
+    ]
+  },
+  {
     "version": "1.1.0",
     "items": [
       {
