@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { GET, POST } from '@/app/api/events/route';
+import { GET as GET_TYPES } from '@/app/api/events/types/route';
 import { GET as GET_BY_ID, PUT, DELETE } from '@/app/api/events/[id]/route';
 import { POST as CREATE_PERSON_EVENT } from '@/app/api/people/[id]/events/route';
 import { POST as CREATE_PERSON } from '@/app/api/people/route';
@@ -87,6 +88,19 @@ describeIf('API /api/events', () => {
       const data = await parseResponse<{ events: { Type: string }[]; count: number }>(res);
       expect(data.count).toBe(1);
       expect(data.events[0].Type).toBe('OCCU');
+    });
+  });
+
+  describe('GET /api/events/types', () => {
+    it('counts each event type in the tree, custom labels as typed (#162)', async () => {
+      const person = await createTestPerson();
+      for (const Type of ['Military service', 'Military service', 'OCCU']) {
+        await POST(createRequest('http://localhost:3000/api/events', { method: 'POST', body: { Type, PersonId: person.Id } }));
+      }
+      const res = await GET_TYPES(createRequest('http://localhost:3000/api/events/types'));
+      expect(res.status).toBe(200);
+      const data = await parseResponse<{ types: { type: string; count: number }[] }>(res);
+      expect(data.types).toEqual(expect.arrayContaining([{ type: 'Military service', count: 2 }, { type: 'OCCU', count: 1 }]));
     });
   });
 
