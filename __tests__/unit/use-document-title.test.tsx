@@ -5,7 +5,7 @@ import { render, waitFor } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import en from '@/messages/en.json';
 import fr from '@/messages/fr.json';
-import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
+import { setDocumentTitlePrefix, useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 
 function Page({ name }: { name: string | null }) {
     useDocumentTitle(name);
@@ -48,5 +48,26 @@ describe('useDocumentTitle (#729)', () => {
         expect(document.title).toBe('People - Heirloom');
         outer.unmount();
         expect(document.title).toBe('Heirloom');
+    });
+
+    // Photo work prefixes the tab (#207). A second observer that rewrote the title
+    // fought this one forever and froze the page; the prefix goes through this one.
+    it('keeps a prefix on every page title and settles after the layout rewrites it', async () => {
+        const el = document.head.querySelector('title') ?? document.head.appendChild(document.createElement('title'));
+        const { unmount } = render(<NextIntlClientProvider locale="en" messages={en}><Page name="People" /></NextIntlClientProvider>);
+        let writes = 0;
+        const counter = new MutationObserver(() => { writes++; });
+        counter.observe(document.head, { subtree: true, childList: true, characterData: true });
+        setDocumentTitlePrefix((title) => `(52%) ${title}`);
+        expect(document.title).toBe('(52%) People - Heirloom');
+        el.textContent = 'Heirloom';
+        await waitFor(() => expect(document.title).toBe('(52%) People - Heirloom'));
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(writes).toBeLessThan(10);
+        unmount();
+        expect(document.title).toBe('(52%) Heirloom');
+        setDocumentTitlePrefix(null);
+        expect(document.title).toBe('Heirloom');
+        counter.disconnect();
     });
 });

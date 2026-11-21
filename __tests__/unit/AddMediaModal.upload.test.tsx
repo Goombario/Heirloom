@@ -48,6 +48,11 @@ vi.mock('@/lib/media/upload-preview', () => ({
   createUploadPreview: createUploadPreviewMock,
 }));
 
+// Desktop sends uploads to the background queue (#207); the in-dialog failure
+// wording below is what phones still show, so those tests switch to a phone.
+const mobile = vi.hoisted(() => ({ value: false }));
+vi.mock('@/app/hooks/useIsMobile', () => ({ useIsMobile: () => mobile.value }));
+
 const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
@@ -57,6 +62,8 @@ beforeEach(() => {
   // sonner keeps its toast store between renders, so the last test's toast would
   // reappear in the next test's <Toaster>.
   toast.dismiss();
+  mobile.value = false;
+  resetBackgroundMedia();
   uploadMock.mockClear();
   uploadMock.mockResolvedValue({ Id: 1 });
   findDuplicatesMock.mockClear();
@@ -75,6 +82,7 @@ beforeEach(() => {
 import AddMediaModal, { type AddMediaTarget } from '@/app/components/media/AddMediaModal';
 import { AppToaster } from '@/app/components/ui/Toast';
 import { RateLimitError, StorageLimitError } from '@/lib/data/errors';
+import { getBackgroundJobs, resetBackgroundMedia } from '@/app/components/media/backgroundMedia';
 
 /** A File whose bytes are its own marker text, so hashes are predictable. */
 function photo(marker: string, name = `${marker}.jpg`) {
@@ -366,6 +374,7 @@ describe('AddMediaModal: new files', () => {
   // ---- #593: partial-failure surface ---------------------------------------
 
   it('flags a batch interrupted partway and retries only what is left', async () => {
+    mobile.value = true;
     uploadMock
       .mockResolvedValueOnce({ Id: 1 })
       .mockRejectedValueOnce(new Error('boom'));
@@ -393,10 +402,13 @@ describe('AddMediaModal: new files', () => {
     await waitFor(() => expect(uploadButton(2)).toBeInTheDocument());
     fireEvent.click(uploadButton(2));
 
-    await waitFor(() => expect(onMediaChanged).toHaveBeenCalledOnce());
+    // In the background queue the gallery refreshes as photos land and once more when the job ends.
+    await waitFor(() => expect(getBackgroundJobs()[0]?.status).toBe('stopped'));
+    expect(onMediaChanged).toHaveBeenCalled();
   });
 
   it('uses the rate-limit wording instead of the raw error on a 429', async () => {
+    mobile.value = true;
     uploadMock.mockRejectedValueOnce(new RateLimitError('Too many upload requests. Please try again later.'));
     render(<UploadModal target={{ kind: 'owner', ownerTable: 'People', ownerId: 1 }} treeId={null} onClose={vi.fn()} onUploaded={vi.fn()} />);
     selectFiles([photo('alpha')]);
@@ -408,6 +420,7 @@ describe('AddMediaModal: new files', () => {
   });
 
   it('uses the translated storage-full wording instead of the raw quota error', async () => {
+    mobile.value = true;
     uploadMock.mockRejectedValueOnce(new StorageLimitError('raw quota details'));
     render(<UploadModal target={{ kind: 'owner', ownerTable: 'People', ownerId: 1 }} treeId={null} onClose={vi.fn()} onUploaded={vi.fn()} />);
     selectFiles([photo('alpha')]);
@@ -419,6 +432,7 @@ describe('AddMediaModal: new files', () => {
   });
 
   it('uses authoritative structured quota details when the hosted upload returns them', async () => {
+    mobile.value = true;
     uploadMock.mockRejectedValueOnce(new StorageLimitError('raw quota details', {
       usedBytes: 90 * 1024 * 1024,
       limitBytes: 100 * 1024 * 1024,
@@ -452,6 +466,7 @@ describe('AddMediaModal: new files', () => {
   });
 
   it('uses generic translated wording instead of exposing local database details', async () => {
+    mobile.value = true;
     const rawDetails = 'duplicate key value violates unique constraint "MediaBlob_pkey"';
     uploadMock.mockRejectedValueOnce(new Error(rawDetails));
     render(<UploadModal target={{ kind: 'owner', ownerTable: 'People', ownerId: 1 }} treeId={null} onClose={vi.fn()} onUploaded={vi.fn()} />);
@@ -464,6 +479,7 @@ describe('AddMediaModal: new files', () => {
   });
 
   it('keeps the upload fallback for non-Error failures', async () => {
+    mobile.value = true;
     uploadMock.mockRejectedValueOnce('offline sentinel');
     render(<UploadModal target={{ kind: 'owner', ownerTable: 'People', ownerId: 1 }} treeId={null} onClose={vi.fn()} onUploaded={vi.fn()} />);
     selectFiles([photo('alpha')]);
@@ -474,6 +490,7 @@ describe('AddMediaModal: new files', () => {
   });
 
   it('clears a stale batch banner when more files are added', async () => {
+    mobile.value = true;
     uploadMock.mockRejectedValueOnce(new Error('boom'));
     render(<UploadModal target={{ kind: 'owner', ownerTable: 'People', ownerId: 1 }} treeId={null} onClose={vi.fn()} onUploaded={vi.fn()} />);
     selectFiles([photo('alpha')]);
