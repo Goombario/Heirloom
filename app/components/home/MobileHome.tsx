@@ -231,7 +231,7 @@ function PickUpRow({ person, treeId, viewer }: { person: ResumedPerson; treeId: 
                 {(person.BirthDate || person.DeathDate) && (
                     <Lifespan birth={person.BirthDate} death={person.DeathDate} status={livingStatus(person)} className="text-meta" />
                 )}
-                <span className="text-meta text-text-secondary">{changeLine(person.lastChange)}</span>
+                <span className="text-meta text-text-secondary">{changeLine(person.lastChange, person)}</span>
             </span>
             <ArrowUpRight className="w-[18px] h-[18px] shrink-0 text-text-muted" aria-hidden="true" />
         </GuardedLink>
@@ -253,7 +253,7 @@ function RecentRow({ person, treeId, divided }: { person: RecentPerson; treeId: 
                     focalX={person.FocalX} focalY={person.FocalY} focalRadius={person.FocalRadius} />
             }
             label={<span className="serif text-md font-semibold">{name}</span>}
-            sub={changeLine(person.lastChange)}
+            sub={changeLine(person.lastChange, person)}
         />
     );
 }
