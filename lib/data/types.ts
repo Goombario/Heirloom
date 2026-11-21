@@ -1,4 +1,5 @@
 import type { PlaceKey } from '@/lib/places/place-key';
+import type { EventTypeCount } from '@/lib/events/custom-types';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import type { NextStep } from '@/lib/db/queries/home';
 import type { Person, PersonWithRelations, Family, FamilyWithRelations, GedcomEvent, EventWithMedia, Media, MediaWithPerson, MediaLinkOwner, MediaTag, MediaTagWithPerson, PersonGalleryMedia, OwnerGalleryMedia, AuditLogEntryWithUser, Case, CaseComment, CaseWithRelations, Tree, MediaImportItem, MediaImportFailureCode } from '@/lib/db/schema';
@@ -456,6 +457,8 @@ export interface EventsClient {
   update(id: number, patch: Partial<EventInput>, treeId?: number | null): Promise<Audited<GedcomEvent>>;
   /** Delete a custom event. */
   remove(id: number, treeId?: number | null): Promise<Audited>;
+  /** Every event type in the tree with how many events use it (#162). */
+  listTypeCounts(treeId?: number | null): Promise<EventTypeCount[]>;
 }
 
 export interface TreeGetParams {

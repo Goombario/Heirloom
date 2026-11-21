@@ -55,6 +55,21 @@ describe('LocalEventsClient update / remove (PGlite)', () => {
     expect(audit.rows.length).toBeGreaterThanOrEqual(1);
   });
 
+  it('listTypeCounts counts each event type in the tree, custom labels as typed (#162)', async () => {
+    const client = new LocalDataClient();
+    await seedPerson(12);
+    await seedPerson(13);
+    for (const [Type, PersonId] of [['Military service', 12], ['Military service', 13], ['OCCU', 12], ['Medal of Military Merit', 12]] as const) {
+      await client.events.create({ Type, PersonId });
+    }
+    const counts = await client.events.listTypeCounts();
+    expect([...counts].sort((a, b) => a.type.localeCompare(b.type))).toEqual([
+      { type: 'Medal of Military Merit', count: 1 },
+      { type: 'Military service', count: 2 },
+      { type: 'OCCU', count: 1 },
+    ]);
+  });
+
   it('remove deletes the event and writes an audit entry', async () => {
     const client = new LocalDataClient();
     await seedPerson(11);

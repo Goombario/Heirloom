@@ -78,7 +78,8 @@ const client = vi.hoisted(() => ({
     updateTag: vi.fn(async () => ({ auditIds: [33] })),
     setPrimary: vi.fn(async () => ({ auditIds: [34] })),
   },
-  events: { create: vi.fn(async () => ({ Id: 99, auditIds: [8] })), update: vi.fn(async () => ({ Id: 10, auditIds: [9] })), remove: vi.fn(async () => ({ auditIds: [11] })) },
+  events: { create: vi.fn(async () => ({ Id: 99, auditIds: [8] })), update: vi.fn(async () => ({ Id: 10, auditIds: [9] })), remove: vi.fn(async () => ({ auditIds: [11] })),
+    listTypeCounts: vi.fn(async () => [{ type: 'OCCU', count: 3 }, { type: 'Military service', count: 4 }]) },
   places: { geocodeUpsert: vi.fn(), geocodeUpsertHierarchy: vi.fn() },
   audit: { revert: vi.fn(async () => ({ success: true, revertedCount: 1 })) },
 }));
@@ -297,6 +298,21 @@ describe('phone vitals and events editing (#1047, #1048)', () => {
     expect(client.events.create).toHaveBeenCalledWith(
       { Type: 'Land lease', Date: '1902', Place: null, PlaceId: null, Description: null, PersonId: 1, FamilyId: null }, 1,
     );
+  });
+
+  it('lists labels used in the tree first under All event types, and reuses one as written (#162)', async () => {
+    render(<MobilePersonPage {...props()} />);
+    fireEvent.click(screen.getByRole('tab', { name: /tab_events/ }));
+    fireEvent.click(screen.getByText('add_event', { selector: 'button' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'add_event' })).getByText('more_types'));
+    const more = screen.getByRole('dialog', { name: 'all_types' });
+    expect(await within(more).findByText('group_used')).toBeTruthy();
+    expect(within(more).getByRole('button', { name: /Military service/ })).toBeTruthy();
+    expect(within(more).queryByRole('button', { name: /^OCCU.*used_count/ })).toBeNull();
+    fireEvent.change(within(more).getByRole('searchbox'), { target: { value: 'military SERVICE' } });
+    expect(within(more).queryByText('add_custom')).toBeNull();
+    fireEvent.click(within(more).getByRole('button', { name: /Military service/ }));
+    expect(screen.getByRole('dialog', { name: 'add_title' })).toBeTruthy();
   });
 
   it('deletes an event after one confirm, and keeps a death deleted from its sheet deceased', async () => {

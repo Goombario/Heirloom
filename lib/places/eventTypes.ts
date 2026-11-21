@@ -26,6 +26,9 @@ export const KNOWN_EVENT_TYPES = new Set([
 /** Event types with a dedicated `places.place_fact_verb_*` reason phrase. */
 export const EVENT_VERB_TYPES = new Set([
   'RESI', 'OCCU', 'EDUC', 'CENS', 'EMIG', 'IMMI', 'BAPM', 'CHR', 'BURI',
+  // Every other standard type the app records (#16), so none falls back to its name.
+  'ADOP', 'GRAD', 'NATU', 'RETI', 'WILL', 'PROB',
+  'ENGA', 'MARB', 'MARC', 'MARL', 'MARS', 'DIV', 'DIVF', 'ANUL', 'SEPA',
 ]);
 
 /**
