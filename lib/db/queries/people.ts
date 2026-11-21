@@ -394,7 +394,7 @@ export async function getPersonWithRelations(id: number, treeId: number): Promis
     }));
 
     // Flat sibling list, kept for callers that want every sibling regardless of
-    // which parent family they come through (RelationshipsSection, tree layout).
+    // which parent family they come through (the tree layout).
     const siblings: Person[] = parents.flatMap((p) => p.siblings);
 
     return {
