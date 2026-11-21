@@ -7,6 +7,7 @@ import { Card } from './Card';
 import { IconButton } from './IconButton';
 import { Input } from './Input';
 import { cx } from './cx';
+import { isSearchSlash, readLetterShortcuts } from '@/lib/keyboard/shortcuts';
 
 /**
  * True when a key press belongs to something else: a field, or a dialog or popover
@@ -37,7 +38,7 @@ export function ListToolbar({ search, onSearchChange, searchLabel, filters, acti
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || typingIn(e.target)) return;
+      if (!isSearchSlash(e) || e.defaultPrevented || typingIn(e.target) || !readLetterShortcuts()) return;
       e.preventDefault();
       inputRef.current?.focus();
     };

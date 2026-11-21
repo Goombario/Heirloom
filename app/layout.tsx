@@ -9,6 +9,7 @@ import { LanguageProvider } from "./components/LanguageProvider";
 import { TreeProvider } from "./contexts/TreeContext";
 import SharedTreeBanner from "./components/SharedTreeBanner";
 import GlobalSearch from "./components/GlobalSearch";
+import KeyboardShortcuts from "./components/keyboard/KeyboardShortcuts";
 import LocalFirstRunNotice from "./components/LocalFirstRunNotice";
 import WhatsNewOnUpdate from "./components/whats-new/WhatsNewOnUpdate";
 import BackupNudge from "./components/backup/BackupNudge";
@@ -153,6 +154,7 @@ export default function RootLayout({
                 <RegisterServiceWorker />
                 <DesktopWindowFit />
                 <GlobalSearch />
+                <KeyboardShortcuts />
                 {/* New person / New family over any page (it reads the URL, hence Suspense). */}
                 <Suspense fallback={null}><QuickAddHost /></Suspense>
                 <LocalFirstRunNotice />

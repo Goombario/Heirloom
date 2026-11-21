@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Badge, fieldClass } from '@/app/components/ui';
 import { Search as SearchIcon } from '@/lib/icons';
 import type { useTreeSearch } from './useTreeSearch';
+import { isSearchSlash, readLetterShortcuts } from '@/lib/keyboard/shortcuts';
 
 type Search = ReturnType<typeof useTreeSearch>;
 
@@ -45,7 +46,7 @@ export function TreeFindField({ search, ready, selectedRootId, variant }: {
     useEffect(() => {
         if (!isBar) return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented || typingIn(e.target)) return;
+            if (!isSearchSlash(e) || e.defaultPrevented || typingIn(e.target) || !readLetterShortcuts()) return;
             e.preventDefault();
             inputRef.current?.focus();
         };

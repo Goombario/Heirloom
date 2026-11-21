@@ -27,6 +27,7 @@ export {
   Ellipsis,        // A row's overflow menu (Library Faces rows, #1156)
   Split,           // Library Faces: move one face to its own row (#1156)
   Search,
+  Keyboard,        // Keyboard shortcuts (#32)
   SearchX,         // RecordNotFound (#697)
   ArrowLeft,       // RecordNotFound back link
   ArrowLeftRight,  // Relationship swap
