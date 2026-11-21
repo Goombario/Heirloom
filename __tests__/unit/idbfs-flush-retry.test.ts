@@ -85,6 +85,27 @@ describe('skipCleanFlushes (#1160)', () => {
     return { files, target, flush, skip: skipCleanFlushes(flush) };
   };
 
+  it('finds the IDBFS mounts on Emscripten 6 (PGlite 0.5), where IDBFS is Module.IDBFS (#205)', async () => {
+    const { files, target, flush, skip } = setup();
+    const { filesystems, ...fs } = target.pg.Module.FS;
+    const emscripten6 = { pg: { Module: { FS: fs, IDBFS: filesystems.IDBFS } } };
+    await skip.call(emscripten6, true);
+    await skip.call(emscripten6, true);
+    expect(flush).toHaveBeenCalledTimes(1);
+    files.set('/pglite/db/base/1/1259', 101);
+    await skip.call(emscripten6, true);
+    expect(flush).toHaveBeenCalledTimes(2);
+  });
+
+  it('flushes every time when it cannot tell which mounts are IDBFS', async () => {
+    const { target, flush, skip } = setup();
+    const { filesystems: _unused, ...fs } = target.pg.Module.FS;
+    const unknown = { pg: { Module: { FS: fs } } };
+    await skip.call(unknown, true);
+    await skip.call(unknown, true);
+    expect(flush).toHaveBeenCalledTimes(2);
+  });
+
   it('flushes the first time, then skips while nothing changed', async () => {
     const { target, flush, skip } = setup();
     await skip.call(target, true);
