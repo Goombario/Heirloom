@@ -6,7 +6,6 @@ import RestoreProgress from './RestoreProgress';
 import RestoreTotalsTable from './RestoreTotalsTable';
 import { useFileBackup } from './useFileBackup';
 import { Button } from '@/app/components/ui';
-import { AlertTriangle, CircleHelp, Lock } from '@/lib/icons';
 import { useIsDesktopApp } from '@/app/hooks/useIsDesktopApp';
 
 /**
@@ -18,7 +17,7 @@ export default function FileBackupSection() {
   const t = useTranslations('options');
   const desktop = useIsDesktopApp();
   const {
-    isPersistent, persistDenied, requestPersist: handleRequestPersist,
+    persistState, persistDenied, requestPersist: handleRequestPersist,
     backup, backupBusy, backupError,
     fileInputRef, chooseFile, onFileChange: handleFileChange,
     restoreStatus, pending, restoreError, confirmRestore: handleRestoreConfirm, cancelRestore,
@@ -62,27 +61,27 @@ export default function FileBackupSection() {
 
       {/* Storage persistence. The desktop app's storage is not a website's, so it
           is never evicted and there is nothing to request (#61). */}
-      {desktop ? null : isPersistent === false ? (
-        <div role="alert" className="flex items-start gap-2.5 rounded-lg p-3 bg-warning-bg border border-warning-text/30">
-          <AlertTriangle className="w-[18px] h-[18px] shrink-0 mt-px text-warning-text" aria-hidden="true" />
-          <div className="min-w-0 text-sm">
-            <p className="text-warning-text leading-relaxed">{t('storage_not_persistent')}</p>
-            {persistDenied && (
-              <p className="text-xs text-warning-text/90 mt-1 leading-relaxed">{t('storage_request_denied')}</p>
+      {desktop || persistState == null ? null : (
+        // Three honest states (#18): kept, not kept (Ask again), or the browser can't say.
+        <div className="border-t border-border pt-3" role={persistState === 'not_kept' ? 'alert' : undefined}>
+          <h4 className="text-sm font-semibold text-text mb-2">{t('storage_heading')}</h4>
+          <div className="flex items-start gap-2.5">
+            <span aria-hidden="true" className={persistState === 'kept'
+              ? 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-success'
+              : persistState === 'not_kept'
+                ? 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-warning-edge'
+                : 'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-text-muted'} />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-medium text-text">{t(`storage_state_${persistState}`)}</p>
+              <p className="text-text-muted leading-relaxed">{t(`storage_state_${persistState}_sub`)}</p>
+              {persistState === 'not_kept' && persistDenied && (
+                <p className="text-xs text-text-muted mt-1 leading-relaxed">{t('storage_request_denied')}</p>
+              )}
+            </div>
+            {persistState === 'not_kept' && (
+              <Button variant="outline" size="sm" onClick={handleRequestPersist}>{t('storage_ask_again')}</Button>
             )}
-            <Button variant="outline" size="sm" className="mt-2.5" onClick={handleRequestPersist}>
-              {t('storage_request')}
-            </Button>
           </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 text-sm">
-          {isPersistent === true
-            ? <Lock className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />
-            : <CircleHelp className="w-4 h-4 shrink-0 text-text-muted" aria-hidden="true" />}
-          <span className="text-text-secondary">
-            {isPersistent === true ? t('storage_persistent') : t('storage_unknown')}
-          </span>
         </div>
       )}
 

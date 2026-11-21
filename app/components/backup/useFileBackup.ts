@@ -1,5 +1,6 @@
 'use client';
 
+import { readPersistState, requestPersistence, type PersistState } from './storagePersistence';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { dumpDatabaseLogical, getDatabaseTotals, inspectBackupLogical, loadDatabase, type DatabaseTotals } from '@/lib/db/connection.pglite';
@@ -23,7 +24,8 @@ interface PendingRestore {
  */
 export function useFileBackup() {
   const t = useTranslations('options');
-  const [isPersistent, setIsPersistent] = useState<boolean | null>(null);
+  // Kept for good, not kept, or the browser can't say (#18). Null until read.
+  const [persistState, setPersistState] = useState<PersistState | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [restoreStatus, setRestoreStatus] = useState<RestoreStatus>('idle');
   const [pending, setPending] = useState<PendingRestore | null>(null);
@@ -33,22 +35,16 @@ export function useFileBackup() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.storage?.persisted) {
-      navigator.storage.persisted().then(setIsPersistent).catch(() => setIsPersistent(null));
-    }
+    void readPersistState().then(setPersistState);
   }, []);
 
+  /** Ask again: only ever from a button press, never on load. */
   async function requestPersist() {
-    try {
-      const granted = await navigator.storage.persist();
-      setIsPersistent(granted);
-      // Browsers (esp. Chromium) auto-deny without engagement and return false
-      // with no prompt — surface that so the button doesn't look broken.
-      setPersistDenied(!granted);
-    } catch {
-      // API unsupported — treat like a denial for messaging purposes.
-      setPersistDenied(true);
-    }
+    const state = await requestPersistence();
+    setPersistState(state);
+    // Browsers (esp. Chromium) auto-deny without engagement and return false
+    // with no prompt — surface that so the button doesn't look broken.
+    setPersistDenied(state !== 'kept');
   }
 
   /** Saves the snapshot. Resolves to the file name once saved, or null when cancelled or failed. */
@@ -150,7 +146,7 @@ export function useFileBackup() {
   }
 
   return {
-    isPersistent, persistDenied, requestPersist,
+    persistState, persistDenied, requestPersist,
     backup, backupBusy, backupError,
     fileInputRef, chooseFile: () => fileInputRef.current?.click(), onFileChange,
     restoreStatus, pending, restoreError, confirmRestore, cancelRestore,

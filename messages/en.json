@@ -1422,10 +1422,15 @@
     "local_data_title": "Local data",
     "local_data_desc": "Your family tree lives entirely in this browser. Export a backup regularly — clearing site data will erase everything.",
     "local_data_desc_desktop": "Your family tree is saved on this computer. Export a backup regularly so there is a copy somewhere else.",
-    "storage_persistent": "Storage is persistent — your data will survive browser clean-ups.",
-    "storage_not_persistent": "Storage is not persistent — the browser may clear data under disk pressure.",
-    "storage_unknown": "Storage persistence status unknown.",
     "storage_request": "Request persistent storage",
+    "storage_heading": "Storage in this browser",
+    "storage_state_kept": "Kept for good",
+    "storage_state_kept_sub": "Your browser has agreed not to clear Heirloom's data.",
+    "storage_state_not_kept": "Not kept for good",
+    "storage_state_not_kept_sub": "Your browser may delete Heirloom's data if space runs low. Keep making backups.",
+    "storage_state_unsupported": "This browser can't say",
+    "storage_state_unsupported_sub": "It doesn't report whether it keeps data. Keep making backups.",
+    "storage_ask_again": "Ask again",
     "storage_request_denied": "Your browser didn't grant persistent storage — it's usually granted automatically after you bookmark this app or use it a few times. Keep exporting backups in the meantime.",
     "backup_title": "Download backup",
     "backup_desc": "Saves a complete snapshot of your tree, people, media, and all records. Keep this file somewhere safe.",
@@ -4940,6 +4945,7 @@
     "persist_on": "Allowed",
     "persist_off": "Not allowed",
     "persist_unknown": "Unknown",
+    "persist_cant_say": "Can't say",
     "nudge_weeks": "{count, plural, one {You haven’t backed up in # week} other {You haven’t backed up in # weeks}}",
     "nudge_never": "You haven’t backed up yet",
     "nudge_body": "Your family tree lives only in this browser.",
@@ -5422,5 +5428,14 @@
     "version": "Version {version}",
     "empty": "Nothing to show yet.",
     "done": "Done"
+  },
+  "storageNotice": {
+    "title": "This browser may clear your tree",
+    "body": "Your browser didn't agree to keep Heirloom's data for good. If the device runs low on space, it can delete your tree without asking. A backup is the only copy that is safe.",
+    "body_short": "Your browser didn't agree to keep Heirloom's data for good. If space runs low, it can delete your tree without asking.",
+    "back_up_now": "Back up now",
+    "how_to_keep": "How to keep it",
+    "how_body": "Most browsers keep a site's data for good once you bookmark it or install it, and use it a few times. Firefox asks you directly, so allow it there. Until then, back up after each session of changes.",
+    "got_it": "Got it"
   }
 }
