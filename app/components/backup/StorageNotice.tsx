@@ -80,7 +80,7 @@ export default function StorageNotice({ placement }: { placement: 'desktop' | 'p
     return (
         <>
             <section aria-labelledby={titleId}
-                className="storage-notice relative mt-6 flex gap-3.5 overflow-hidden rounded-panel border border-border bg-card p-5 pl-6 shadow-card before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-warning-edge">
+                className="storage-notice relative mb-6 flex gap-3.5 overflow-hidden rounded-panel border border-border bg-card p-5 pl-6 shadow-card before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-warning-edge">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-warning-bg text-warning-text">
                     <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                 </span>
