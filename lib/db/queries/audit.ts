@@ -268,7 +268,9 @@ const ENTITY_CONFIG: Record<string, EntityConfig> = {
         table: '"Media"',
         scope: 'user-tree',
         allowedFields: new Set(['Title', 'FilePath', 'Format', 'ContentType', 'FocalX', 'FocalY', 'FocalRadius', 'FileSize']),
-        restoreFields: ['Title', 'FilePath', 'Format', 'ContentType', 'FocalX', 'FocalY', 'FocalRadius', 'FileSize', 'ContentHash', 'UploadIntentId', 'UploadIntentTarget'],
+        // CreatedAt (#25): an undone delete keeps its upload time, NULL included;
+        // an entry from before v75 has no key, so the row takes the default.
+        restoreFields: ['Title', 'FilePath', 'Format', 'ContentType', 'FocalX', 'FocalY', 'FocalRadius', 'FileSize', 'ContentHash', 'UploadIntentId', 'UploadIntentTarget', 'CreatedAt'],
     },
     // Retained for historical audit rows only: the "Stories" table was dropped when
     // the Stories feature was retired (issue #70). The list/label paths don't touch the

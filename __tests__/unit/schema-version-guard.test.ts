@@ -134,7 +134,8 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // columns and the one-time lift of the first WWW/PHON/EMAIL out of its passthrough.
 // v73 — a place's geocoder kind (#45, ADR 0050): "Places"."OsmKind".
 // v74 — the last version whose What's new a user has seen (#35, ADR 0051): "Users"."LastSeenVersion".
-const EXPECTED_FINGERPRINT = 'f40ab165b64ef8febfc5057b8646cb96e04ab2cbed038b32d627156e4bb97b3a';
+// v75 — when a media row entered the app (#25): "Media"."CreatedAt", NULL for older rows.
+const EXPECTED_FINGERPRINT = 'b996597ace048f0dc6f9b86039f00b1435553a22d5b88182fb54c1673c08872b';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

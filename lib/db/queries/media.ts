@@ -17,7 +17,7 @@ export interface HostedMediaThumbnailBackfillRow {
  */
 export async function getAllMedia(treeId: number): Promise<Media[]> {
     const result = await query(
-        `SELECT ${publicMediaColumns()} FROM "Media" WHERE "TreeId" = $1 ORDER BY "Id" DESC`,
+        `SELECT ${publicMediaColumns()} FROM "Media" WHERE "TreeId" = $1 ORDER BY "CreatedAt" DESC NULLS LAST, "Id" DESC`,
         [treeId]
     );
     return result.rows as Media[];
@@ -90,7 +90,7 @@ export async function getAllMediaWithPerson(treeId: number): Promise<MediaWithPe
          ) owner_link ON true
          LEFT JOIN "People" p ON p."Id" = owner_link."OwnerId" AND p."TreeId" = m."TreeId"
          WHERE m."TreeId" = $1
-         ORDER BY m."Id" DESC`,
+         ORDER BY m."CreatedAt" DESC NULLS LAST, m."Id" DESC`,
         [treeId]
     );
     return result.rows as MediaWithPerson[];
