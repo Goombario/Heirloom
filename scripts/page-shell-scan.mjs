@@ -22,7 +22,7 @@ let baseUrl = process.env.BASE_URL || '';
 // People list's Add person dialog (#52), so it is checked for hydration only.
 const ROUTES = [
   '/', '/people', '/families', '/library', '/places',
-  '/cases', '/relationship', '/import-export', '/options', '/audit', '/data-checks', '/about',
+  '/cases', '/relationship', '/import-export', '/options', '/audit', '/data-checks', '/about', '/privacy',
 ];
 
 // Routes whose h1 is a hero title inside a card, not the PageShell title block,

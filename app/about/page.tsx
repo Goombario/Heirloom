@@ -10,6 +10,7 @@ import { DATA_MODE } from '@/lib/data';
 import { isDesktopApp } from '@/lib/desktop';
 import { CREDITS_HREF, LICENSE_HREF, aboutInfo, runningAs, type RunningAs } from '@/lib/about';
 import TextFileDialog from './TextFileDialog';
+import GuardedLink from '@/app/components/GuardedLink';
 import WhatsNewDialog from '@/app/components/whats-new/WhatsNewDialog';
 import { entriesUpTo } from '@/lib/whats-new';
 
@@ -50,12 +51,13 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * About Heirloom (#1256): version, build, which build kind this is, the source
- * link AGPL section 13 asks for, the licence, a generic privacy note and the
+ * link AGPL section 13 asks for, the licence, the privacy page (#170) and the
  * third-party credits. Reached from the foot of every menu. It names no tree,
  * member or owner, since shared-tree viewers see it too.
  */
 export default function AboutPage() {
   const t = useTranslations('about');
+  const tPrivacy = useTranslations('privacy');
   const locale = useLocale();
   const legacyDesktop = useDesktopMode();
   // Read after hydration: the static export pre-renders without a window.
@@ -92,6 +94,10 @@ export default function AboutPage() {
               <button type="button" className={LINK} onClick={() => setFile('licence')}>{t('licence_name')}</button>
             </Row>
             <Row label={t('data')}>{t(DATA_KEY[kind])}</Row>
+            {/* #170: the page the Google consent screen links to. */}
+            <Row label={t('privacy')}>
+              <GuardedLink href="/privacy" className={LINK}>{tPrivacy('about_row')}</GuardedLink>
+            </Row>
             <Row label={t('whats_new')}>
               <button type="button" className={LINK} onClick={() => setFile('whats_new')}>{t('whats_new_link')}</button>
             </Row>

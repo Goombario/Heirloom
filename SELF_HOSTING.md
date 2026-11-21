@@ -47,7 +47,9 @@ new version starts, so there is no separate migration step.
 1. Open the [Google Cloud Console](https://console.cloud.google.com/) and create a project
    (or pick one).
 2. Go to **Google Auth Platform** (older consoles: **APIs & Services → OAuth consent screen**):
-   - **Branding:** an app name and your support email.
+   - **Branding:** an app name and your support email. For the **privacy policy link** use
+     `https://heirloom.example.com/privacy`: Heirloom serves that page to anyone, signed in or
+     not, and Google asks for it before you publish the app.
    - **Audience:** choose **External**. While the app is in **Testing**, only the addresses
      you add under **Test users** can sign in, which is fine for a family. To skip that list,
      **Publish** the app; Heirloom only asks for the basic `openid email profile` scopes, which
@@ -175,4 +177,6 @@ https://github.com/Goombario/Heirloom, which is right only while you run the cod
 Heirloom holds private family data. Apart from Google sign-in, the only outside services the app
 calls are map tiles (OpenFreeMap by default; set `NEXT_PUBLIC_MAP_STYLE_URL` to self-host) and
 place search (the Photon geocoder at photon.komoot.io), and those only send map positions and
-place names you search for. Never commit a `.env` file, a database dump or a family GEDCOM to a fork.
+place names you search for. The app's own `/privacy` page says the same to your members, in
+English, French and Russian; it names no operator, so put your contact address in Google's
+consent screen form. Never commit a `.env` file, a database dump or a family GEDCOM to a fork.
