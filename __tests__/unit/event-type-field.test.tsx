@@ -50,6 +50,14 @@ describe('EventTypeField (#162)', () => {
     expect(onPick).toHaveBeenCalledWith('GRAD');
   });
 
+  it('still offers Add when the text only spells a hidden tag', () => {
+    render(<Harness onPick={vi.fn()} />);
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Grad' } });
+    expect(options()).toEqual(['Graduation', 'add_custom:Grad']);
+  });
+
   it('matches used labels and ends with Add as a new event type', () => {
     const onPick = vi.fn();
     render(<Harness onPick={onPick} />);

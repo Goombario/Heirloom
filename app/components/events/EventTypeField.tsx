@@ -92,8 +92,9 @@ export function EventTypeField({ id, value, onChange, groups, used, labelOf, des
         }
         const all = groups.flatMap((g) => g.types);
         const standard = all.filter((type) => matches(labelOf(type)));
-        // A label that already names a type is picked, never added again.
-        const known = all.some((type) => type.toLowerCase() === lower || labelOf(type).toLocaleLowerCase() === lower)
+        // A label that already names a type is picked, never added again. Only shown
+        // names count: typing "Grad" must still offer Add, not match the GRAD tag.
+        const known = all.some((type) => labelOf(type).toLocaleLowerCase() === lower)
             || used.some((u) => u.type.toLocaleLowerCase() === lower);
         return [
             { key: 'standard', label: t('group_standard'), rows: standard.map((type): Row => ({ kind: 'type', type })), empty: standard.length === 0 },
