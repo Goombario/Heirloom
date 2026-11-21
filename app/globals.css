@@ -176,6 +176,9 @@
   /* The overdue-backup dot on the nav chip. The nav is dark in both themes, so it
      takes the dark warning orange in both (3.5:1 light, 6.5:1 dark on the chip). */
   --color-nav-warning: #FDBA74;
+  /* The finished mark and progress ring on the nav's photo-upload chip (#207), same reasoning. */
+  --color-nav-success: #6EE7B7;
+  --color-nav-progress: #FDBA74;
   --color-info-text: #1E40AF;
   --color-info-bg: #DBEAFE;
 

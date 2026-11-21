@@ -8,9 +8,8 @@ import MediaImg from '@/app/components/MediaImg';
 import { Banner, Button, DialogHeader, EmptyState, InlineDataError, ScrollArea, SegmentedControl, showSuccessToast, cx } from '@/app/components/ui';
 import { Input } from '@/app/components/ui/Input';
 import { withWriteBatch } from '@/lib/data';
-import { DATA_MODE } from '@/lib/data/mode';
 import { addInBackground } from './backgroundMedia';
-import { FileTooLargeError, RateLimitError, StorageLimitError } from '@/lib/data/errors';
+import { FileTooLargeError, RateLimitError, StorageLimitError, UnauthorizedError } from '@/lib/data/errors';
 import { errorToastKey } from '@/lib/utils/data-error';
 import { isPdfMedia } from '@/lib/media/allowed-extensions';
 import { formatMediaBytes } from '@/lib/media/format-bytes';
@@ -95,6 +94,7 @@ export default function AddMediaModal({
     const tu = useTranslations('upload');
     const tc = useTranslations('common');
     const to = useTranslations('ownerMedia');
+    const tj = useTranslations('jobs');
     const locale = useLocale();
     const router = useRouter();
     const titleId = useId();
@@ -133,8 +133,10 @@ export default function AddMediaModal({
     const linkIds = [...new Set([...picked, ...swappedIds])];
     const pickedCount = linkIds.length + toUpload.length;
     const needsAttached = library.enabled && (picked.size > 0 || swappedIds.length > 0);
-    // Desktop, local build only: the hosted server does the photo work, and phone pages stay as built.
-    const inBackground = DATA_MODE === 'local' && !isMobile;
+    // Desktop, every build (#207): the batch goes to the background queue and the
+    // dialog closes. Phones stay as built: their browsers pause background tabs.
+    // A link-only batch is quick and stays in the dialog.
+    const inBackground = !isMobile && toUpload.length > 0;
     const canAdd = pickedCount > 0 && !busy && !batch.scanning && (!needsAttached || attachedIds != null);
 
     const candidates = useMemo(() => {
@@ -307,10 +309,12 @@ export default function AddMediaModal({
     }
 
     /**
-     * The local build saves each photo on this device, which takes a while for a big
-     * batch. On a desktop the batch carries on in the background and the dialog closes
-     * at once, so the reader can keep working (#62); `BackgroundMediaStatus` shows how
-     * far it has got. Galleries refresh as photos land, at most once a second.
+     * A big batch takes a while: the local build saves each photo on this device, and
+     * hosted sends each one to the server. On a desktop the batch carries on in the
+     * background queue and the dialog closes at once, so the reader can keep working
+     * (#62, #207); the top-bar chip shows how far it has got, with Stop. Galleries
+     * refresh as photos land, at most once a second. The hosted upload limit waits and
+     * carries on; an expired sign-in stops with a Sign in link.
      */
     function addLater() {
         const rows = toUpload.map(row => ({ input: uploadInput(row), name: row.file.name }));
@@ -327,27 +331,32 @@ export default function AddMediaModal({
             onMediaChanged?.();
         };
         void addInBackground({
+            kind: 'add',
+            label: targetName ? tj('label_add', { name: targetName }) : tj('label_add_plain'),
             total: rows.length + links.length,
-            describe: (e) => describeFailure(e, current),
-            run: async (added) => {
+            describe: (e) => (e instanceof UnauthorizedError ? '' : describeFailure(e, current)),
+            run: async ({ added, step, stopped }) => {
                 try {
                     // One IndexedDB flush for the whole batch (#1259), which also asks
                     // before the page is left while it runs.
                     await withWriteBatch(async (client) => {
                         for (const row of rows) {
+                            if (stopped()) return;
                             current = row.name;
-                            const media = await client.media.upload(row.input, treeId);
+                            const media = await step(() => client.media.upload(row.input, treeId));
                             facesFound += media.FacesFound ?? 0;
                             added();
                             refresh();
                         }
                         current = null;
+                        if (stopped()) return;
                         if (caseSource && links.length > 0) {
-                            await caseSource.attach(links);
+                            await step(() => caseSource.attach(links));
                             for (let i = 0; i < links.length; i++) added();
                         } else if (owner) {
                             for (const id of links) {
-                                await client.media.linkToOwner(id, owner.ownerTable, owner.ownerId!, treeId, owner.ownerFact);
+                                if (stopped()) return;
+                                await step(() => client.media.linkToOwner(id, owner.ownerTable, owner.ownerId!, treeId, owner.ownerFact));
                                 added();
                             }
                         }

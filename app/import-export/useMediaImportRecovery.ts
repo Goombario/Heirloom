@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDataClient, withWriteBatch } from '@/lib/data';
-import { AccessError, NotFoundError, RateLimitError } from '@/lib/data/errors';
+import { AccessError, NotFoundError, RateLimitError, UnauthorizedError } from '@/lib/data/errors';
+import { addInBackground, isJobActive, stopBackgroundJob, useBackgroundJob } from '@/app/components/media/backgroundMedia';
 import type { MediaImportItem, MediaImportMaterializationOutcome } from '@/lib/data/types';
 import { matchArchiveMediaExact, normalizeArchiveManifest, normalizeArchivePath, type ArchiveMediaEntry } from '@/lib/gedcom/media-match';
 import { ALLOWED_EXTENSIONS, contentTypeForExtension } from '@/lib/media/allowed-extensions';
@@ -28,6 +29,13 @@ export interface MediaImportRecoveryOptions {
   /** Tree selection that produced the initial seed items/archive. */
   initialTreeId?: number | null;
   initialItems?: MediaImportItem[];
+  /**
+   * Desktop (#207): the photo step runs in the background queue, so it carries on
+   * across pages and shows in the top bar. Phones keep the stay-on-page rule.
+   */
+  background?: boolean;
+  /** The job's name in the top-bar list ("Imported photos · Ellison family"). */
+  jobLabel?: string;
 }
 
 /** What went wrong, as the panel words it. Remove failures say why, not "use the archive" (#859). */
@@ -46,6 +54,8 @@ export interface MediaImportRecoveryState {
   busy: boolean;
   error: MediaImportRecoveryError | null;
   progress: { current: number; total: number } | null;
+  /** While the hosted upload limit holds the photo step: when it carries on (ms since epoch). */
+  waitUntil: number | null;
   /** Files in the last recovery run that were already in the tree and were linked instead of copied (#858). */
   reusedCount: number;
   refresh: () => Promise<MediaImportItem[]>;
@@ -120,7 +130,10 @@ function belongsToScope(itemTreeId: number | null, scopeTreeId: number | null | 
   return scopeTreeId == null || itemTreeId === scopeTreeId;
 }
 
-export function useMediaImportRecovery({ treeId = null, initialTreeId, initialItems }: MediaImportRecoveryOptions = {}): MediaImportRecoveryState {
+/** The queue scope of a tree's import photo step, so a reopened panel finds it. */
+const importScope = (treeId: number | null | undefined) => `import:${treeId ?? 'default'}`;
+
+export function useMediaImportRecovery({ treeId = null, initialTreeId, initialItems, background = false, jobLabel = '' }: MediaImportRecoveryOptions = {}): MediaImportRecoveryState {
   const seedTreeId = initialTreeId === undefined ? treeId : initialTreeId;
   const [items, setItems] = useState<MediaImportItem[]>(() => initialItems ?? []);
   const [busy, setBusy] = useState(false);
@@ -132,11 +145,14 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
   const removedRef = useRef<Set<number>>(new Set());
   const discoverySequenceRef = useRef(0);
 
-  // Leaving the page used to change nothing the recovery loop checked, so it
-  // kept uploading from the captured archive in the background (#859). The loop
-  // now stops before its next file once the panel is unmounted. A flag rather
-  // than a generation bump, so Strict Mode's remount doesn't end a running loop.
+  // On a phone, leaving the page stops the loop before its next file (#859): a
+  // phone browser pauses background tabs, so a hidden loop would only stall. A
+  // flag rather than a generation bump, so Strict Mode's remount doesn't end a
+  // running loop. On a desktop the loop is a visible background job with Stop
+  // (#207), so leaving the page doesn't stop it.
   const mountedRef = useRef(false);
+  const job = useBackgroundJob(importScope(treeId));
+  const jobActive = job != null && isJobActive(job);
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
@@ -230,27 +246,53 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
       setProgress({ current: 0, total: matched.length });
       setReusedCount(0);
       let currentProgress = 0;
-      // One IndexedDB flush for every photo, not one per photo (#1259).
-      const stopped = await withWriteBatch(async (batchClient) => {
-        for (const match of matched) {
-          if (!mountedRef.current || !isCurrent(generation, operationTree, generationRef.current, treeRef.current)) return true;
-          try {
-            const outcome = await batchClient.gedcom.materializeImportMedia(match.item.id, normalizeArchivePath(match.item.archivePath) ?? match.item.archivePath, match.file, operationTree);
-            if (isCurrent(generation, operationTree, generationRef.current, treeRef.current)) {
-              await refresh();
-              updateOutcome(outcome);
-              if (outcome.item) localOutcomes.push(outcome.item);
-              if (outcome.outcome === 'ready' && outcome.reused) setReusedCount((count) => count + 1);
+      const stillHere = () => isCurrent(generation, operationTree, generationRef.current, treeRef.current);
+      /** Materializes every matched photo; returns true when it stopped early. */
+      const materializeAll = (shouldStop: () => boolean, step: <T>(fn: () => Promise<T>) => Promise<T>, counted: () => void) =>
+        // One IndexedDB flush for every photo, not one per photo (#1259).
+        withWriteBatch(async (batchClient) => {
+          for (const match of matched) {
+            if (shouldStop()) return true;
+            try {
+              const outcome = await step(() => batchClient.gedcom.materializeImportMedia(match.item.id, normalizeArchivePath(match.item.archivePath) ?? match.item.archivePath, match.file, operationTree));
+              if (stillHere()) {
+                await refresh();
+                updateOutcome(outcome);
+                if (outcome.item) localOutcomes.push(outcome.item);
+                if (outcome.outcome === 'ready' && outcome.reused) setReusedCount((count) => count + 1);
+              }
+            } catch (caught) {
+              // A stop, a lapsed sign-in or a refused tree ends the job; one bad photo doesn't.
+              if (background && (caught instanceof UnauthorizedError || (caught instanceof Error && caught.name === 'JobStopped'))) throw caught;
+              if (stillHere()) setError('generic_error');
+            } finally {
+              currentProgress += 1;
+              counted();
+              if (stillHere()) setProgress({ current: currentProgress, total: matched.length });
             }
-          } catch {
-            if (isCurrent(generation, operationTree, generationRef.current, treeRef.current)) setError('generic_error');
-          } finally {
-            currentProgress += 1;
-            if (isCurrent(generation, operationTree, generationRef.current, treeRef.current)) setProgress({ current: currentProgress, total: matched.length });
           }
-        }
-        return false;
-      });
+          return false;
+        });
+      let stopped = false;
+      if (background && matched.length > 0) {
+        await addInBackground({
+          kind: 'import',
+          label: jobLabel,
+          scope: importScope(operationTree),
+          total: matched.length,
+          describe: () => '',
+          run: async ({ added, step, stopped: stopPressed, stop }) => {
+            stopped = await materializeAll(() => {
+              // Panel Stop bumps the generation, as does moving the panel to another
+              // tree: either way the job ends where it is. Leaving the page doesn't.
+              if (!stillHere()) stop();
+              return stopPressed() || !stillHere();
+            }, step, () => added());
+          },
+        });
+      } else {
+        stopped = await materializeAll(() => !mountedRef.current || !stillHere(), (fn) => fn(), () => {});
+      }
       if (stopped) return;
       if (isCurrent(generation, operationTree, generationRef.current, treeRef.current) && localOutcomes.length > 0) {
         setItems((previous) => mergeItems(previous, localOutcomes));
@@ -273,7 +315,7 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
       }
     }
   // `items` is intentionally read at operation start; callers get a stable operation snapshot.
-  }, [items, refresh]);
+  }, [background, items, jobLabel, refresh]);
 
   function updateOutcome(outcome: MediaImportMaterializationOutcome) {
     const item = outcome.item;
@@ -338,11 +380,27 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
   }, [refreshQuietly]);
 
   const stop = useCallback(() => {
+    if (job && isJobActive(job)) stopBackgroundJob(job.id);
     generationRef.current += 1;
     setBusy(false);
     setProgress(null);
     void refreshQuietly();
-  }, [refreshQuietly]);
+  }, [job, refreshQuietly]);
 
-  return { items, busy, error, progress, reusedCount, refresh, recover, remove, removeMany, stop };
+  // A panel reopened while its tree's photo step runs elsewhere keeps its list
+  // current as photos land, and once more when the job ends.
+  const jobDone = job?.done ?? 0;
+  useEffect(() => {
+    if (job == null) return;
+    void refreshQuietly();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh on each photo and on the job's end, not on every job field
+  }, [jobDone, jobActive]);
+
+  // A panel opened while its tree's photo step runs in the background shows that job.
+  const shownProgress = jobActive ? { current: job.done, total: job.total } : progress;
+  return {
+    items, busy: busy || jobActive, error, progress: shownProgress,
+    waitUntil: jobActive && job.status === 'waiting' ? job.waitUntil : null,
+    reusedCount, refresh, recover, remove, removeMany, stop,
+  };
 }

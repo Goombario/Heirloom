@@ -22,8 +22,7 @@ const findDuplicatesMock = vi.fn().mockResolvedValue([]);
 const linkToOwnerMock = vi.fn().mockResolvedValue(undefined);
 const listMock = vi.fn().mockResolvedValue({ media: [], count: 0 });
 const listForOwnerMock = vi.fn().mockResolvedValue([]);
-// The local build: photos are processed on this device, so a desktop batch runs in the background (#62).
-vi.mock('@/lib/data/mode', () => ({ DATA_MODE: 'local' }));
+// Every build: a desktop batch runs in the background queue (#62, #207).
 vi.mock('@/lib/data', () => {
   const client = () => ({
     media: { upload: uploadMock, findDuplicates: findDuplicatesMock, linkToOwner: linkToOwnerMock, list: listMock, listForOwner: listForOwnerMock },
@@ -73,7 +72,7 @@ beforeEach(() => {
 
 import AddMediaModal, { type AddMediaTarget } from '@/app/components/media/AddMediaModal';
 import { StorageLimitError } from '@/lib/data/errors';
-import { BackgroundMediaStatus } from '@/app/components/media/BackgroundMediaStatus';
+import BackgroundJobsChip from '@/app/components/media/BackgroundJobsChip';
 import { resetBackgroundMedia } from '@/app/components/media/backgroundMedia';
 
 /** A File whose bytes are its own marker text, so hashes are predictable. */
@@ -105,36 +104,69 @@ function UploadModal({ target = PERSON, onUploaded, ...rest }: Partial<React.Com
 }
 
 
-describe('AddMediaModal: adding in the background on a desktop, local build (#62)', () => {
+describe('AddMediaModal: adding in the background on a desktop (#62, #207)', () => {
   it('closes at once and keeps adding, showing progress outside the dialog', async () => {
     const second = deferred<{ Id: number }>();
     uploadMock.mockResolvedValueOnce({ Id: 1 }).mockReturnValueOnce(second.promise);
     const onAdded = vi.fn();
     const onMediaChanged = vi.fn();
-    render(<><UploadModal onUploaded={onAdded} onMediaChanged={onMediaChanged} /><BackgroundMediaStatus /></>);
+    render(<><UploadModal onUploaded={onAdded} onMediaChanged={onMediaChanged} /><BackgroundJobsChip /></>);
     selectFiles([photo('alpha'), photo('beta')]);
     await waitFor(() => expect(uploadButton(2)).toBeInTheDocument());
 
     fireEvent.click(uploadButton(2));
     expect(onAdded).toHaveBeenCalledOnce();
-    await waitFor(() => expect(screen.getByText('background_adding')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('chip_running')).toBeInTheDocument());
     // The gallery refreshes as the first photo lands, before the batch is done.
     await waitFor(() => expect(onMediaChanged).toHaveBeenCalled());
 
     second.resolve({ Id: 2 });
-    await waitFor(() => expect(screen.getByText('background_added:2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('chip_done:2')).toBeInTheDocument());
     expect(uploadMock).toHaveBeenCalledTimes(2);
   });
 
   it('reports a batch that stops partway, with what it added', async () => {
     uploadMock.mockResolvedValueOnce({ Id: 1 }).mockRejectedValueOnce(new StorageLimitError('full'));
-    render(<><UploadModal /><BackgroundMediaStatus /></>);
+    render(<><UploadModal /><BackgroundJobsChip /></>);
     selectFiles([photo('alpha'), photo('beta')]);
     await waitFor(() => expect(uploadButton(2)).toBeInTheDocument());
 
     fireEvent.click(uploadButton(2));
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('background_stopped'));
-    fireEvent.click(screen.getByRole('button', { name: 'background_dismiss' }));
-    expect(screen.queryByText('background_stopped')).toBeNull();
+    await waitFor(() => expect(screen.getByText('chip_stopped')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'chip_aria_stopped' }));
+    // The list says why, what it added, and what to do: add the other one again.
+    const row = screen.getByRole('listitem');
+    expect(row).toHaveTextContent('stopped');
+    expect(row).toHaveTextContent('rest_add:1');
+    fireEvent.click(screen.getByRole('button', { name: 'dismiss' }));
+    expect(screen.queryByText('chip_stopped')).toBeNull();
+  });
+
+  it('waits out the hosted upload limit and carries on, without an error', async () => {
+    const { RateLimitError } = await import('@/lib/data/errors');
+    uploadMock.mockRejectedValueOnce(new RateLimitError('busy', 0.05)).mockResolvedValue({ Id: 1 });
+    render(<><UploadModal /><BackgroundJobsChip /></>);
+    selectFiles([photo('alpha')]);
+    await waitFor(() => expect(uploadButton(1)).toBeInTheDocument());
+
+    fireEvent.click(uploadButton(1));
+    await waitFor(() => expect(screen.getByText('chip_waiting')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('chip_done:1')).toBeInTheDocument());
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops on an expired sign-in with a Sign in link, without redirecting', async () => {
+    const { UnauthorizedError } = await import('@/lib/data/errors');
+    uploadMock.mockRejectedValueOnce(new UnauthorizedError());
+    render(<><UploadModal /><BackgroundJobsChip /></>);
+    selectFiles([photo('alpha'), photo('beta')]);
+    await waitFor(() => expect(uploadButton(2)).toBeInTheDocument());
+
+    fireEvent.click(uploadButton(2));
+    await waitFor(() => expect(screen.getByText('chip_stopped')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'chip_aria_stopped' }));
+    expect(screen.getByRole('link', { name: 'sign_in' })).toHaveAttribute('href', '/api/auth/signin');
+    expect(screen.getByRole('listitem')).toHaveTextContent('rest_add:2');
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ import DesktopNav from './DesktopNav';
 import TreeSwitcher from './TreeSwitcher';
 import UserMenu from '../UserMenu';
 import BackupStatusChip from '../backup/BackupStatusChip';
+import BackgroundJobsChip from '../media/BackgroundJobsChip';
 
 export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: () => void; drawerOpen: boolean }) {
   const t = useTranslations('nav');
@@ -46,6 +47,9 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
           </div>
 
           <div className="flex items-center gap-1 lg:gap-2 shrink-0">
+            {/* Photos still uploading (#207): desktop only, phones keep their stay-on-page flows */}
+            <span className="hidden md:block"><BackgroundJobsChip /></span>
+
             {/* Tree switcher: dropdown on desktop; mobile switcher lives in the drawer */}
             <span className="hidden md:block"><TreeSwitcher variant="dropdown" /></span>
 
