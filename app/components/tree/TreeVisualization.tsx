@@ -37,18 +37,14 @@ function ZoomIndicator() {
   const pct  = Math.round(zoom * 100);
 
   return (
-    <Panel position="top-right" style={{ margin: '10px' }}>
+    <Panel position="top-right" className="!m-2.5">
       <div
+        className="gap-[5px] py-1 pr-[9px] pl-[7px] rounded-[7px] backdrop-blur-[6px]"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '5px',
-          padding: '4px 9px 4px 7px',
           background: 'color-mix(in srgb, var(--color-card) 88%, transparent)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
           border: '1px solid var(--color-border)',
-          borderRadius: '7px',
           boxShadow: '0 1px 3px color-mix(in srgb, var(--color-border) 60%, transparent)',
           userSelect: 'none',
           pointerEvents: 'none',
@@ -67,10 +63,9 @@ function ZoomIndicator() {
         {/* Percentage — re-keyed on each change to replay the tick animation */}
         <span
           key={pct}
+          className="text-xs font-medium"
           style={{
             fontVariantNumeric: 'tabular-nums',
-            fontSize: '11px',
-            fontWeight: 500,
             color: 'var(--color-text-muted)',
             minWidth: '3ch',
             textAlign: 'right',

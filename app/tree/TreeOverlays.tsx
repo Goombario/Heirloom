@@ -17,8 +17,8 @@ export function TreeOverlays({ isSavingTree, isExporting }: { isSavingTree: bool
             {/* Saving overlay — shown during a silent tree reload after a sidebar save that outlasts the delay */}
             {showSaving && (
                 <div
-                    className="fixed inset-0 z-100 flex items-center justify-center pointer-events-none"
-                    style={{ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', backgroundColor: 'var(--color-scrim)' }}
+                    className="fixed inset-0 z-100 flex items-center justify-center pointer-events-none backdrop-blur-sm"
+                    style={{ backgroundColor: 'var(--color-scrim)' }}
                 >
                     <div
                         className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl shadow-2xl"
@@ -69,8 +69,8 @@ export function TreeOverlays({ isSavingTree, isExporting }: { isSavingTree: bool
             {/* Export overlay */}
             {isExporting && (
                 <div
-                    className="fixed inset-0 z-100 flex items-center justify-center"
-                    style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', backgroundColor: 'var(--color-scrim)' }}
+                    className="fixed inset-0 z-100 flex items-center justify-center backdrop-blur-md"
+                    style={{ backgroundColor: 'var(--color-scrim)' }}
                 >
                     <div
                         className="flex flex-col items-center gap-5 px-10 py-8 rounded-2xl shadow-2xl"

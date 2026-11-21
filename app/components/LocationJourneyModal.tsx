@@ -53,8 +53,7 @@ export default function LocationJourneyModal({ stops, onClose }: LocationJourney
               type="button"
               variant="outline"
               onClick={() => setLegendOpen(o => !o)}
-              className="text-meta"
-              style={{ padding: '6px 10px' }}
+              className="text-meta !px-2.5 !py-1.5"
               aria-expanded={legendOpen}
             >
               {legendOpen ? '▾' : '▸'} {stops.length}

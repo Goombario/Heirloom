@@ -149,7 +149,7 @@ export function DescendantsPanel({ person, treeId, onClose }: DescendantsPanelPr
                         {loading ? t('loading_lower') : t('descendants_summary', { count: totalCount, max: MAX_DESCENDANT_GENERATIONS })}
                     </div>
                 </div>
-                <Button variant="ghost" onClick={onClose} aria-label={t('close_descendants')} style={{ padding: 6 }}>
+                <Button variant="ghost" onClick={onClose} aria-label={t('close_descendants')} className="!p-1.5">
                     <X className="w-4 h-4" aria-hidden="true" />
                 </Button>
             </div>
