@@ -5,6 +5,7 @@ import {
   renameTree,
   countTreesForUser,
   deleteTreeData,
+  isTreeEmpty,
   resolveDefaultTree,
   resolveTreeScope,
   type TreeScope,
@@ -73,6 +74,15 @@ export async function renameTreeService(params: {
 }
 
 /**
+ * Whether an owned tree holds nothing (#36): no records, history or shares. The
+ * delete dialog offers a simple confirm then; the delete checks again itself.
+ */
+export async function isTreeEmptyService(params: { id: number; currentUserId: number }): Promise<boolean> {
+  await getOwnedTree(params.id, params.currentUserId);
+  return isTreeEmpty(params.id);
+}
+
+/**
  * Deletes a tree and ALL its data in one transaction. NOT restorable from the
  * audit log (the wipe bypasses audit capture and removes the tree's audit rows)
  * — which is why the route requires the X-Confirm-Delete-Tree header and the UI
@@ -84,6 +94,8 @@ export async function renameTreeService(params: {
 export async function deleteTreeService(params: {
   id: number;
   currentUserId: number;
+  /** The simple confirm (#36): delete only if the tree is still empty, else TreeNotEmptyError. */
+  onlyIfEmpty?: boolean;
 }): Promise<{ cleanupWarningCount: number }> {
   const tree = await getOwnedTree(params.id, params.currentUserId);
   // Fast-path friendly error; the authoritative ≥1-tree check runs again
@@ -91,7 +103,7 @@ export async function deleteTreeService(params: {
   if ((await countTreesForUser(params.currentUserId)) <= 1) {
     throw new ValidationError('Cannot delete your last tree');
   }
-  const filePaths = await deleteTreeData(params.id, params.currentUserId);
+  const filePaths = await deleteTreeData(params.id, params.currentUserId, { onlyIfEmpty: params.onlyIfEmpty === true });
   // Best-effort disk cleanup after commit (server mode only — local/PGlite
   // media lives in MediaBlob and cascades with the Media rows).
   return { cleanupWarningCount: await cleanupMediaFilesCounting(tree.OwnerId, filePaths) };

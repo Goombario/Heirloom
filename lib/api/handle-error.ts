@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ValidationError } from '@/lib/validation';
-import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadIntentConflictError, MembershipConflictError, NotFoundError, PrimaryMediaConflictError, StorageLimitError } from '@/lib/data/errors';
+import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadIntentConflictError, MembershipConflictError, NotFoundError, PrimaryMediaConflictError, StorageLimitError, TreeNotEmptyError } from '@/lib/data/errors';
 
 /**
  * Standard API route error → HTTP response mapping, shared so routes don't each
@@ -10,6 +10,7 @@ import { AccessError, FileTooLargeError, MediaTagConflictError, MediaUploadInten
  *   - `AccessError` (or a legacy `"Access denied"` message) → 403
  *   - `NotFoundError`             → 404
  *   - `MembershipConflictError`   → 409 with its `code`
+ *   - `TreeNotEmptyError`         → 409 with its `code`
  *   - `StorageLimitError`         → 507
  *   - anything else               → 500 (logged with `fallback` as the label)
  *
@@ -52,6 +53,9 @@ export function handleApiError(error: unknown, fallback = 'Internal server error
             { error: error.message, code: error.code, retryable: error.retryable },
             { status: 409 },
         );
+    }
+    if (error instanceof TreeNotEmptyError) {
+        return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });
     }
     if (error instanceof MembershipConflictError) {
         return NextResponse.json({ error: error.message, code: error.code }, { status: 409 });

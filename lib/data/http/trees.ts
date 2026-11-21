@@ -37,10 +37,18 @@ export class HttpTreesClient implements TreesClient {
     return data.tree;
   }
 
-  async remove(id: number): Promise<{ cleanupWarningCount: number }> {
+  async getIsEmpty(id: number): Promise<boolean> {
+    const res = await fetch(`/api/trees/${id}/empty`);
+    if (!res.ok) await throwForStatus(res);
+    const body = (await res.json()) as { isEmpty?: unknown };
+    return body.isEmpty === true;
+  }
+
+  async remove(id: number, opts?: { onlyIfEmpty?: boolean }): Promise<{ cleanupWarningCount: number }> {
     // Tree deletion is NOT restorable from the audit log — the API demands the
-    // confirmation header; the UI additionally gates on typing the tree's name.
-    const res = await fetch(`/api/trees/${id}`, {
+    // confirmation header on every delete, empty or not; the UI additionally gates
+    // a tree with data on typing its name (#36).
+    const res = await fetch(`/api/trees/${id}${opts?.onlyIfEmpty ? '?onlyIfEmpty=1' : ''}`, {
       method: 'DELETE',
       headers: { 'X-Confirm-Delete-Tree': 'CONFIRM_DELETE_TREE' },
     });

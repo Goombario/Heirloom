@@ -63,6 +63,20 @@ export class MediaTagConflictError extends Error {
   }
 }
 
+/**
+ * A delete that was confirmed as "the tree is empty" found records in it (HTTP 409,
+ * #36): something was added after the dialog opened. The UI asks again with the
+ * full type-the-name confirmation.
+ */
+export class TreeNotEmptyError extends Error {
+  readonly code = 'tree_not_empty';
+
+  constructor(message = 'This tree is no longer empty') {
+    super(message);
+    this.name = 'TreeNotEmptyError';
+  }
+}
+
 /** An upload replay key was reused for different immutable bytes or owner target. */
 export class MediaUploadIntentConflictError extends Error {
   readonly code = 'upload_intent_conflict';

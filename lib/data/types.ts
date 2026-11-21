@@ -1182,8 +1182,13 @@ export interface TreesClient {
   get(id: number): Promise<{ tree: Tree; permission: 'owner' | 'edit' | 'contribute' | 'view' }>;
   create(name: string): Promise<Tree>;
   rename(id: number, name: string): Promise<Tree>;
-  /** `cleanupWarningCount`: media files left on server storage (#945); always 0 locally. */
-  remove(id: number): Promise<{ cleanupWarningCount: number }>;
+  /** Whether an owned tree holds no records, history or shares (#36). */
+  getIsEmpty(id: number): Promise<boolean>;
+  /**
+   * `cleanupWarningCount`: media files left on server storage (#945); always 0 locally.
+   * `onlyIfEmpty` (#36): refuse with TreeNotEmptyError if the tree is no longer empty.
+   */
+  remove(id: number, opts?: { onlyIfEmpty?: boolean }): Promise<{ cleanupWarningCount: number }>;
 }
 
 // ---- Account (#35) ----

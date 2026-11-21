@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import { DATA_MODE, getDataClient } from '@/lib/data';
 import { CalendarDays, Clock, Languages, Network, Pencil, Share2, Trash2 } from '@/lib/icons';
 import { Banner, MobileListHeader, MobileRow, PageShell, RadioRow, SegmentedControl, SwitchRow, cx } from '@/app/components/ui';
-import { Sheet } from '@/app/components/ui/Sheet';
+import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
+import { TreeNotEmptyError } from '@/lib/data/errors';
 import BackupPanel from '@/app/components/backup/BackupPanel';
 import ShareTreeButton from '@/app/components/ShareTreeButton';
 import EraseAllSummary from '@/app/components/options/EraseAllSummary';
@@ -174,10 +175,30 @@ function TreesGroup() {
     const isDesktop = useDesktopMode();
     const canShare = DATA_MODE !== 'local' && !isDesktop;
     const [openId, setOpenId] = useState<number | null>(null);
-    const [step, setStep] = useState<'menu' | 'rename' | 'delete' | 'share' | null>(null);
+    // 'delete-empty' is the simple confirm for a tree with nothing in it (#36).
+    const [step, setStep] = useState<'menu' | 'rename' | 'delete' | 'delete-empty' | 'share' | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [filled, setFilled] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [cleanup, setCleanup] = useState(0);
     const open = trees.find((tr) => tr.Id === openId) ?? null;
+
+    async function startDelete(tree: Tree) {
+        setFilled(false);
+        setError(null);
+        let empty = false;
+        try { empty = await (await getDataClient()).trees.getIsEmpty(tree.Id); } catch { /* the full confirm is always safe */ }
+        setStep(empty ? 'delete-empty' : 'delete');
+    }
+
+    async function removeTree(tree: Tree, onlyIfEmpty: boolean) {
+        const client = await getDataClient();
+        const { cleanupWarningCount } = await client.trees.remove(tree.Id, onlyIfEmpty ? { onlyIfEmpty } : undefined);
+        setCleanup(cleanupWarningCount);
+        await refresh();
+        if (activeTreeId === tree.Id) switchToDefaultTree();
+        close();
+    }
     const onlyTree = trees.length <= 1;
     const close = () => { setStep(null); setError(null); };
 
@@ -205,7 +226,7 @@ function TreesGroup() {
                                 <MobileRow divided icon={<Share2 aria-hidden="true" />} label={tm('manage_sharing')} end="chevron" onClick={() => setStep('share')} />
                             )}
                             <MobileRow divided tone="danger" icon={<Trash2 aria-hidden="true" />} label={t('trees_delete')}
-                                sub={onlyTree ? t('trees_last_tree_hint') : tm('delete_tree_hint')} disabled={onlyTree} onClick={() => setStep('delete')} />
+                                sub={onlyTree ? t('trees_last_tree_hint') : tm('delete_tree_hint')} disabled={onlyTree} onClick={() => { if (open) void startDelete(open); }} />
                         </div>
                     </div>
                 )}
@@ -217,18 +238,29 @@ function TreesGroup() {
                     await refresh();
                     close();
                 }} />}
+            {open && <ConfirmSheet open={step === 'delete-empty'} onClose={() => setStep('menu')} busy={deleting}
+                title={t('trees_delete_empty_title', { name: treeName(open.Name) })} body={t('trees_delete_empty_body')}
+                confirmLabel={t('trees_delete')} keepLabel={tc('cancel')}
+                onConfirm={async () => {
+                    setDeleting(true);
+                    try {
+                        await removeTree(open, true);
+                    } catch (e) {
+                        // Filled since the confirm opened, or failed: the full confirm says why.
+                        if (e instanceof TreeNotEmptyError) setFilled(true);
+                        else setError(e instanceof Error ? e.message : tc('error'));
+                        setStep('delete');
+                    } finally {
+                        setDeleting(false);
+                    }
+                }} />}
             {open && <TypeToConfirmSheet open={step === 'delete'} onClose={() => setStep('menu')} title={t('trees_delete_confirm_title')}
-                body={<>{t('trees_delete_confirm_body', { name: treeName(open.Name) })} {t('trees_delete_export_hint')}</>}
+                body={<>{filled && <>{t('trees_delete_no_longer_empty')} </>}{t('trees_delete_confirm_body', { name: treeName(open.Name) })} {t('trees_delete_export_hint')}</>}
                 phrase={treeName(open.Name)} label={t('trees_delete_type_name')} confirmLabel={t('trees_delete')} keepLabel={tc('cancel')} error={error}
                 onConfirm={async () => {
                     setError(null);
                     try {
-                        const client = await getDataClient();
-                        const { cleanupWarningCount } = await client.trees.remove(open.Id);
-                        setCleanup(cleanupWarningCount);
-                        await refresh();
-                        if (activeTreeId === open.Id) switchToDefaultTree();
-                        close();
+                        await removeTree(open, false);
                     } catch (e) {
                         setError(e instanceof Error ? e.message : tc('error'));
                     }
