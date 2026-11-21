@@ -304,7 +304,7 @@ export function SearchMapDialog({ placeName, current, currentOsm, saving, onPick
                                 : (
                                     <ul role="listbox" aria-label={t('search_results')} className="m-0 p-0 list-none grid gap-0.5">
                                         {results.map((c, i) => (
-                                            <li key={`${c.result.osmType ?? ''}-${c.result.osmId ?? i}`} role="option" aria-selected={i === picked}>
+                                            <li key={`${c.result.osmType ?? ''}-${c.result.osmId ?? ''}-${i}`} role="option" aria-selected={i === picked}>
                                                 <button
                                                     type="button"
                                                     onClick={() => { setPicked(i); setConfirmFar(false); }}

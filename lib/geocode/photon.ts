@@ -101,7 +101,25 @@ export async function fetchCandidates(
       };
       return { props: p, result };
     })
-    .filter((c) => c.result.name.length > 0);
+    .filter((c) => c.result.name.length > 0)
+    .filter(firstOfEachOsmObject((c) => c.result));
+}
+
+/**
+ * Photon can return the same OSM object twice (seen with "australia",
+ * `way/866085535`). Keep the first of each osmType + osmId; results without
+ * an OSM id are never treated as repeats.
+ */
+function firstOfEachOsmObject<T>(pick: (item: T) => GeocodeResult): (item: T) => boolean {
+  const seen = new Set<string>();
+  return (item) => {
+    const r = pick(item);
+    if (r.osmType == null || r.osmId == null) return true;
+    const key = `${r.osmType}/${r.osmId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  };
 }
 
 /** De-duplicating, case-insensitive join — same rule buildCanonicalName uses. */
@@ -329,7 +347,7 @@ export async function searchPlaces(
         countryCode: p.countrycode ?? null,
         osmKind: osmKindOf(p),
       };
-    }).filter((r) => r.name.length > 0);
+    }).filter((r) => r.name.length > 0).filter(firstOfEachOsmObject((r) => r));
 
     // FIFO insertion-order eviction — drop oldest entry when at capacity.
     if (memCache.size >= CACHE_MAX) memCache.delete(memCache.keys().next().value as string);
