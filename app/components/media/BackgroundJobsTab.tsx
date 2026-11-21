@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { setDocumentTitlePrefix } from '@/app/hooks/useDocumentTitle';
 import { summarizeJobs, useBackgroundJobs } from './backgroundMedia';
 
 type TabMark = { kind: 'progress'; percent: number } | { kind: 'stopped' } | { kind: 'done' } | null;
@@ -55,18 +56,8 @@ export default function BackgroundJobsTab() {
       ? t('tab_progress', { percent: mark.percent, title })
       : mark.kind === 'stopped' ? t('tab_stopped', { title }) : t('tab_done', { title });
 
-    // Next.js sets the title on each page; keep our prefix on whatever it sets.
-    let base = document.title;
-    let applied = '';
-    const apply = () => {
-      if (document.title === applied) return;
-      base = document.title;
-      applied = prefixed(base);
-      document.title = applied;
-    };
-    apply();
-    const titleObserver = new MutationObserver(apply);
-    titleObserver.observe(document.head, { subtree: true, childList: true, characterData: true });
+    // The app's title keeper puts the prefix on whatever title each page sets.
+    setDocumentTitlePrefix(prefixed);
 
     // The icon links are Next's, in <head>, outside any component of ours.
     // eslint-disable-next-line no-restricted-syntax -- no ref reaches the document's own icon links
@@ -83,8 +74,7 @@ export default function BackgroundJobsTab() {
     }
 
     return () => {
-      titleObserver.disconnect();
-      if (document.title === applied) document.title = base;
+      setDocumentTitlePrefix(null);
       icons.forEach((link, i) => { link.href = originals[i]; });
       added?.remove();
     };

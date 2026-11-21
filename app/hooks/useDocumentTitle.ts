@@ -13,10 +13,32 @@ const APP_NAME = 'Heirloom';
 // callers can never fight over it.
 const mounted: { title: string }[] = [];
 let observer: MutationObserver | null = null;
+// A prefix such as "(52%) " while photo work runs (#207). It goes through this one
+// observer: a second observer that rewrote the title would fight this one forever.
+let prefix: ((title: string) => string) | null = null;
 
 function apply(): void {
-    const want = mounted[mounted.length - 1]?.title ?? APP_NAME;
+    const base = mounted[mounted.length - 1]?.title ?? APP_NAME;
+    const want = prefix ? prefix(base) : base;
     if (document.title !== want) document.title = want;
+}
+
+function sync(): void {
+    const needed = mounted.length > 0 || prefix != null;
+    if (needed && !observer && typeof MutationObserver !== 'undefined') {
+        observer = new MutationObserver(apply);
+        observer.observe(document.head, { subtree: true, childList: true, characterData: true });
+    } else if (!needed && observer) {
+        observer.disconnect();
+        observer = null;
+    }
+    apply();
+}
+
+/** Put a prefix on the tab title, whatever page sets it; null takes it off. */
+export function setDocumentTitlePrefix(next: ((title: string) => string) | null): void {
+    prefix = next;
+    sync();
 }
 
 /**
@@ -31,18 +53,10 @@ export function useDocumentTitle(pageName: string | null | undefined): void {
     useEffect(() => {
         const entry = { title };
         mounted.push(entry);
-        apply();
-        if (!observer && typeof MutationObserver !== 'undefined') {
-            observer = new MutationObserver(apply);
-            observer.observe(document.head, { subtree: true, childList: true, characterData: true });
-        }
+        sync();
         return () => {
             mounted.splice(mounted.indexOf(entry), 1);
-            if (mounted.length === 0) {
-                observer?.disconnect();
-                observer = null;
-            }
-            apply();
+            sync();
         };
     }, [title]);
 }
