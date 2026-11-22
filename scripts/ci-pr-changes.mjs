@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// CI helper for #75: decides whether a pull request is version-only or
-// docs-only, and writes `version_only` and `docs_only` to $GITHUB_OUTPUT.
+// CI helper for #75: decides whether a pull request is version-only, docs-only
+// or fixtures-only, and writes `version_only`, `docs_only` and `fixtures_only`
+// to $GITHUB_OUTPUT.
 // Usage: node scripts/ci-pr-changes.mjs <base-sha>
 // The base commit must be fetched; HEAD is the PR's merge commit.
 import { execFileSync } from 'node:child_process';
@@ -24,8 +25,8 @@ const read = (path, side) => {
   }
 };
 
-const { versionOnly, docsOnly } = classifyPrChanges(files, read);
-console.log(`${files.length} changed file(s); version_only=${versionOnly} docs_only=${docsOnly}`);
+const { versionOnly, docsOnly, fixturesOnly } = classifyPrChanges(files, read);
+console.log(`${files.length} changed file(s); version_only=${versionOnly} docs_only=${docsOnly} fixtures_only=${fixturesOnly}`);
 
 const out = process.env.GITHUB_OUTPUT;
-if (out) appendFileSync(out, `version_only=${versionOnly}\ndocs_only=${docsOnly}\n`);
+if (out) appendFileSync(out, `version_only=${versionOnly}\ndocs_only=${docsOnly}\nfixtures_only=${fixturesOnly}\n`);
