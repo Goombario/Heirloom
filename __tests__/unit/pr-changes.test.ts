@@ -25,7 +25,7 @@ describe('classifyPrChanges (#75)', () => {
       { 'package.json': pkg('1.0.0'), 'package-lock.json': lock('1.0.0') },
       { 'package.json': pkg('1.1.0'), 'package-lock.json': lock('1.1.0') },
     );
-    expect(classifyPrChanges(['package.json', 'package-lock.json'], read)).toEqual({ versionOnly: true, docsOnly: false });
+    expect(classifyPrChanges(['package.json', 'package-lock.json'], read)).toEqual({ versionOnly: true, docsOnly: false, fixturesOnly: false });
   });
 
   it('runs everything when a dependency changes alongside the bump', () => {
@@ -102,5 +102,14 @@ describe('classifyPrChanges (#75)', () => {
     expect(classifyPrChanges(['README.md', 'docs/decisions/0048-x.md', 'docs/diagram.svg'], read).docsOnly).toBe(true);
     expect(classifyPrChanges(['README.md', 'app/page.tsx'], read).docsOnly).toBe(false);
     expect(classifyPrChanges([], read).docsOnly).toBe(false);
+  });
+
+  it('marks a PR that only adds schema upgrade fixtures as fixtures-only', () => {
+    const read = reader({}, {});
+    expect(classifyPrChanges(['test-fixtures/schema-v75.hlbak'], read).fixturesOnly).toBe(true);
+    expect(classifyPrChanges(['test-fixtures/schema-v75.hlbak', 'test-fixtures/schema-v39.hlbak'], read).fixturesOnly).toBe(true);
+    expect(classifyPrChanges(['test-fixtures/synthetic.hlbak'], read).fixturesOnly).toBe(false);
+    expect(classifyPrChanges(['test-fixtures/schema-v75.hlbak', '__tests__/unit/schema-upgrade.pglite.test.ts'], read).fixturesOnly).toBe(false);
+    expect(classifyPrChanges([], read).fixturesOnly).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ name: CI
 # No paths filter: CI is a required check on `main`, and a filtered-out run never
 # reports, which would leave a docs-only PR unmergeable. Instead the `changes`
 # job below marks version-only (a release bump, its What's new changelog entry,
-# or both) and docs-only PRs, and every other
+# or both), docs-only and upgrade-fixture-only PRs, and every other
 # job is skipped for them; a skipped job reports as passing (#75).
 on:
   pull_request:
@@ -21,14 +21,14 @@ permissions:
   contents: read
 
 jobs:
-  # Cheap gate: is this PR only a version bump or only docs? See
-  # scripts/lib/pr-changes.mjs for the exact rules. HEAD is the PR's merge
+  # Cheap gate: is this PR only a version bump, only docs or only an upgrade
+  # fixture? See scripts/lib/pr-changes.mjs for the exact rules. HEAD is the PR's merge
   # commit, so its first parent is the base it merges into. It fails open: if
   # this job fails, `skip` is empty and every job below still runs.
   changes:
     runs-on: ubuntu-latest
     outputs:
-      skip: ${{ steps.classify.outputs.version_only == 'true' || steps.classify.outputs.docs_only == 'true' }}
+      skip: ${{ steps.classify.outputs.version_only == 'true' || steps.classify.outputs.docs_only == 'true' || steps.classify.outputs.fixtures_only == 'true' }}
     steps:
       - uses: actions/checkout@v7
         with:

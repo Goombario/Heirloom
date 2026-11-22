@@ -9,11 +9,18 @@
 //   changelog must pass the checks its unit test makes, since that test is
 //   skipped with the rest.
 // - docs_only: every changed file is Markdown or under `docs/`.
+// - fixtures_only: every changed file is a schema upgrade fixture
+//   (`test-fixtures/schema-v<N>.hlbak`), as in the PR that follows each release.
+//   The script that writes one runs the upgrade test before it's committed, and
+//   every later PR runs that test again with the fixture included. Other `.hlbak`
+//   files (`synthetic.hlbak`) also seed the a11y scans and other tests, so they
+//   still run everything.
 //
 // The workflow has no `paths` filter, because a filtered-out run never reports
 // its required checks; a skipped job does report, as passing.
 
 const DOC_FILE = /(^docs\/)|(\.md$)/;
+const UPGRADE_FIXTURE = /^test-fixtures\/schema-v\d+\.hlbak$/;
 const CHANGELOG = 'lib/whats-new/changelog.json';
 const RELEASE_VERSION = /^(\d+)\.(\d+)\.(\d+)$/;
 
@@ -87,10 +94,11 @@ function isValidChangelog(text) {
 /**
  * @param {string[]} files changed paths
  * @param {(path: string, side: 'base' | 'head') => string | null} read file text on each side
- * @returns {{ versionOnly: boolean, docsOnly: boolean }}
+ * @returns {{ versionOnly: boolean, docsOnly: boolean, fixturesOnly: boolean }}
  */
 export function classifyPrChanges(files, read) {
   const docsOnly = files.length > 0 && files.every(f => DOC_FILE.test(f));
+  const fixturesOnly = files.length > 0 && files.every(f => UPGRADE_FIXTURE.test(f));
 
   const changesChangelog = files.includes(CHANGELOG);
   const others = files.filter(f => f !== CHANGELOG).sort();
@@ -102,5 +110,5 @@ export function classifyPrChanges(files, read) {
     && (!bumpsVersion || isVersionBump(read))
     && (!changesChangelog || isValidChangelog(read(CHANGELOG, 'head')));
 
-  return { versionOnly, docsOnly };
+  return { versionOnly, docsOnly, fixturesOnly };
 }
