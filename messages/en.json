@@ -40,7 +40,8 @@
     "more_count": "{count} more",
     "fact_birth": "Birth",
     "fact_death": "Death",
-    "fact_marriage": "Marriage"
+    "fact_marriage": "Marriage",
+    "untitled": "Untitled"
   },
   "eventMediaDraft": {
     "title": "Photos & documents",
