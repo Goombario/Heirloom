@@ -10,7 +10,7 @@ const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
     showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
-    secondNameType: null, onSecondNameTypeChange: vi.fn(), ...over,
+    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
     <NextIntlClientProvider locale="en" messages={en}><TreeDisplayControls {...p} /></NextIntlClientProvider>,
@@ -81,6 +81,21 @@ describe('TreeDisplayControls', () => {
         fireEvent.click(screen.getByRole('combobox', { name: en.treeView.second_name }));
         fireEvent.click(screen.getByRole('option', { name: en.treeView.second_name_none }));
         expect(q.onSecondNameTypeChange).toHaveBeenCalledWith(null);
+    });
+
+    // #12: the line under the name, Dates by default, for both orientations.
+    it('picks what goes under the name', () => {
+        const p = props();
+        renderControls(p);
+        const field = screen.getByRole('combobox', { name: en.treeView.under_name });
+        expect(field.textContent).toContain(en.treeView.under_name_dates);
+        expect(screen.getByText(en.treeView.under_name_help)).toBeTruthy();
+        fireEvent.click(field);
+        expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+            en.treeView.under_name_dates, en.treeView.under_name_occupation, en.treeView.under_name_residence, en.treeView.under_name_birthplace,
+        ]);
+        fireEvent.click(screen.getByRole('option', { name: en.treeView.under_name_residence }));
+        expect(p.onUnderNameChange).toHaveBeenCalledWith('residence');
     });
 
     it('disables Second name in the horizontal layout and says why', () => {

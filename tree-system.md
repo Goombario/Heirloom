@@ -355,6 +355,7 @@ A repeat card (`FlowNodeData.repeatOf` set) is drawn faded with a dashed outline
 | `treeColorblindMode` | Shape markers on branch edges |
 | `treeShowAgeIndicator` | "Show ages" in the Display controls (the desktop Display menu and the Display sheet below lg, #271): the age beside each card's status mark |
 | `tree:orientation` | `vertical` (portrait cards) or `horizontal` (bar cards); descendants/ancestors only. Unlike the others, this is a **layout input**, not a post-layout decoration. |
+| `treeUnderName` | "Under the name" in the Display controls (#12): `occupation`, `residence` (last residence) or `birthplace` replaces the dates line on portrait and bar cards; absent = Dates (today's cards). Post-layout decoration only. |
 | `treeSecondName` | "Second name" in the Display controls: a NameVariant type (`Nickname`, `Maiden`, `Married`, `Anglicized`, `Alias`, `Given`) shown as a 12px second line under the portrait card's name; absent = None (today's cards). Vertical cards only (focus included); the dropdown is disabled in horizontal. Also a **layout input**: on, every portrait card is 168px (`personCardHeight(true)`) and generations are 244px apart (`SECOND_NAME_LAYOUT_GEOMETRY`), so the gap between rows is unchanged. |
 
 Node names use each person's **primary name** (the `NameVariant` marked
@@ -371,6 +372,15 @@ nickname. With Nickname chosen, `TreeVisualization` passes `original` as the car
 `mainName`, so the nickname appears once, on its own line. A person with no name of the
 chosen type keeps an empty line so a row stays level. The portrait card's dates sit on
 its bottom edge (`.tree-card-dates`, margin-top auto) whether the name takes one line or two.
+
+The line under the name reads `TreeData.cardFacts` (`getTreeCardFacts` in
+`lib/db/queries/tree-card-facts.ts`, shaped by `buildCardFacts` in `lib/services/tree.ts`):
+per person, the value of the latest OCCU event, the place of the latest RESI event that
+has one, and the birth place, both places cut to the town (`townOf`, the part before the
+first comma). "Latest" is by `SortableYear`, then the newest record. `TreeVisualization`
+stamps `underName` and `underText` on each card; the card shows the text in the dates'
+place in the normal font (`.tree-card-under`), or a blank line when the person has none,
+so the card keeps its size and one row never mixes two kinds of fact (no fallback to dates).
 
 The debug-only `treeRoundedPhotos` and `treeGreyscaleMode` prefs were removed (#271);
 `useTreeDisplayPrefs` clears their stale keys.

@@ -135,7 +135,16 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
           >
             {displayName}
           </p>
-          {!isZoomedOut && lifespan && (lifespan.birth || lifespan.death) && (
+          {!isZoomedOut && data.underName && (
+            <p
+              className="text-xs tree-card-under"
+              title={data.underText ?? undefined}
+              style={{ lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            >
+              {data.underText ?? '\u00a0'}
+            </p>
+          )}
+          {!isZoomedOut && !data.underName && lifespan && (lifespan.birth || lifespan.death) && (
             <p
               className="text-xs"
               style={{ lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}

@@ -3179,7 +3179,13 @@
     "bring_into_view_tip": "Faire défiler l’arbre jusqu’à {name}",
     "find_in_tree": "Trouver une personne dans l’arbre",
     "repeat_pill": "Aussi dans cet arbre",
-    "repeat_title": "Aller à la carte complète de cette personne"
+    "repeat_title": "Aller à la carte complète de cette personne",
+    "under_name": "Sous le nom",
+    "under_name_dates": "Dates",
+    "under_name_occupation": "Profession",
+    "under_name_residence": "Dernière résidence",
+    "under_name_birthplace": "Lieu de naissance",
+    "under_name_help": "Chaque personne sur cet appareil choisit le sien."
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",

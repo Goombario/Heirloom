@@ -4,7 +4,7 @@ import { useEffect, useId, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SegmentedControl } from '@/app/components/ui/SegmentedControl';
 import { SelectField } from '@/app/components/ui/Select';
-import { TREE_SECOND_NAME_TYPES, type TreeSecondNameType } from '@/app/components/tree/types';
+import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 import { cx } from '@/app/components/ui/cx';
 
 /** Mini pedigree glyph flowing downward — the vertical (portrait-card) layout. */
@@ -58,6 +58,9 @@ export interface TreeDisplayProps {
     /** The name type shown as a second line on vertical cards, or null for none. */
     secondNameType: TreeSecondNameType | null;
     onSecondNameTypeChange: (v: TreeSecondNameType | null) => void;
+    /** The card's line under the name (#12): dates or one fact. */
+    underName: TreeUnderName;
+    onUnderNameChange: (v: TreeUnderName) => void;
 }
 
 /** Each "Second name" choice's label: the person page's own name-type words. */
@@ -80,6 +83,7 @@ export function TreeDisplayControls({
     barZoomThreshold, onBarZoomThresholdChange,
     depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
     colorblind, onColorblindChange, secondNameType, onSecondNameTypeChange,
+    underName, onUnderNameChange,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
     const tNames = useTranslations('personDetail');
@@ -95,6 +99,8 @@ export function TreeDisplayControls({
     const commit = () => { if (live !== depth) onDepthCommit(live); };
 
     // Bars (horizontal) don't draw the second line yet; the choice is kept for vertical.
+    const underNameId = useId();
+    const underNameOptions = TREE_UNDER_NAME.map((v) => ({ value: v, label: t(`under_name_${v}`) }));
     const secondNameId = useId();
     const secondNameDisabled = orientation === 'horizontal';
     const secondNameOptions = [
@@ -150,6 +156,17 @@ export function TreeDisplayControls({
                     </div>
                 </div>
             )}
+
+            <div>
+                <label htmlFor={underNameId} className="eyebrow mb-2 block">{t('under_name')}</label>
+                <SelectField
+                    id={underNameId}
+                    value={underName}
+                    onChange={(v) => onUnderNameChange(v as TreeUnderName)}
+                    options={underNameOptions}
+                />
+                <div className="muted text-xs mt-1">{t('under_name_help')}</div>
+            </div>
 
             <div>
                 <label htmlFor={secondNameId} className="eyebrow mb-2 block">{t('second_name')}</label>

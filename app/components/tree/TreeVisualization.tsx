@@ -22,7 +22,7 @@ import PersonBarNode from './PersonBarNode';
 import BranchEdge from './BranchEdge';
 import SpouseEdge from './SpouseEdge';
 import { useTreeLayoutMode } from './useTreeLayoutMode';
-import { TreeNode, FocusTrees, TreeCardNames, TreeSecondNameType } from './types';
+import { TreeNode, FocusTrees, TreeCardNames, TreeSecondNameType, type TreeUnderName, type TreeCardFacts } from './types';
 import { PERSON_CARD_WIDTH, BAR_CARD_WIDTH, BAR_CARD_HEIGHT, personCardHeight } from '@/lib/tree/geometry';
 import { naturalFitZoom, READABLE_ZOOM } from '@/lib/tree/fitView';
 import DebugOverlay from './DebugOverlay';
@@ -106,6 +106,17 @@ function secondNameData(
   return { secondNameOn: true, secondName, ...(mainName ? { mainName } : {}) };
 }
 
+/** The line under the name (#12): nothing for dates (the card draws its lifespan),
+ *  else the chosen fact, or null for a blank line. */
+function underNameData(
+  personId: number,
+  underName: TreeUnderName,
+  cardFacts: Record<number, TreeCardFacts> | undefined,
+): { underName?: Exclude<TreeUnderName, 'dates'>; underText?: string | null } {
+  if (underName === 'dates') return {};
+  return { underName, underText: cardFacts?.[personId]?.[underName] ?? null };
+}
+
 /**
  * Register custom node types
  */
@@ -143,6 +154,9 @@ interface TreeVisualizationProps {
   secondNameType?: TreeSecondNameType | null;
   /** Each person's names for the second line (from the tree payload). */
   cardNames?: Record<number, TreeCardNames>;
+  /** The Display menu's "Under the name" (#12) and the facts it reads. */
+  underName?: TreeUnderName;
+  cardFacts?: Record<number, TreeCardFacts>;
   /** DEBUG (bar review): zoom threshold for the bar's name-only mode. */
   barZoomThreshold?: number;
   /** Increment this to trigger a fitView; silent reloads should NOT increment it. */
@@ -164,7 +178,7 @@ interface TreeVisualizationProps {
  * - Smooth edge connections
  * - Minimap and controls
  */
-function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
+function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
   const [debugMode, setDebugMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -324,6 +338,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         showStatusMark,
         barZoomThreshold,
         ...secondNameData(node.data.person.id, secondName ? secondNameType : null, cardNames),
+        ...underNameData(node.data.person.id, underName, cardFacts),
       },
     }));
     setNodes(nodesWithCallback);
@@ -346,7 +361,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         requestAnimationFrame(() => setIsPositioned(true));
       }, 50);
     }
-  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, secondName, secondNameType, cardNames, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
+  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, secondName, secondNameType, cardNames, underName, cardFacts, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
 
   // Surgical selection update: flip isSidebarSelected only on the nodes whose
   // selection state actually changed (previously- and newly-selected), leaving

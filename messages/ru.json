@@ -3179,7 +3179,13 @@
     "bring_into_view_tip": "Прокрутить дерево обратно к {name}",
     "find_in_tree": "Найти человека в дереве",
     "repeat_pill": "Также в этом дереве",
-    "repeat_title": "Перейти к полной карточке этого человека"
+    "repeat_title": "Перейти к полной карточке этого человека",
+    "under_name": "Под именем",
+    "under_name_dates": "Даты",
+    "under_name_occupation": "Род занятий",
+    "under_name_residence": "Последнее место жительства",
+    "under_name_birthplace": "Место рождения",
+    "under_name_help": "Каждый на этом устройстве выбирает своё."
   },
   "personDetail": {
     "family_eyebrow": "Семья {surname}",

@@ -133,6 +133,22 @@ export interface TreeData {
    * keyed by person id. Only people with something to show are listed.
    */
   cardNames?: Record<number, TreeCardNames>;
+  /** Facts for the cards' line under the name (#12), keyed by person id. Only
+   *  people with at least one are listed. */
+  cardFacts?: Record<number, TreeCardFacts>;
+}
+
+/** What the Display menu's "Under the name" puts on the card's line under the name (#12). */
+export const TREE_UNDER_NAME = ['dates', 'occupation', 'residence', 'birthplace'] as const;
+export type TreeUnderName = typeof TREE_UNDER_NAME[number];
+
+/** One person's facts for the line under the name. Places are the town only. */
+export interface TreeCardFacts {
+  occupation?: string;
+  /** Town of the latest residence event. */
+  residence?: string;
+  /** Town of the birth place. */
+  birthplace?: string;
 }
 
 /** The name types the Display menu's "Second name" can show (NameVariant types). */
@@ -173,6 +189,10 @@ export interface FlowNodeData {
   secondName?: string | null;
   /** Replaces the main line (the original name when Nickname is the second name). */
   mainName?: string;
+  /** The Display menu's "Under the name" (#12): set when it isn't dates. The card
+   *  shows `underText` there in the normal font, or a blank line when it's null. */
+  underName?: Exclude<TreeUnderName, 'dates'>;
+  underText?: string | null;
   /** DEBUG (horizontal bar review): zoom level below which the bar switches to
    *  zoomed-out mode (name-only, scaled). Default 0.6. */
   barZoomThreshold?: number;

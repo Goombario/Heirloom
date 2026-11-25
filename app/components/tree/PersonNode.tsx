@@ -153,7 +153,14 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
               {data.secondName}
             </p>
           )}
-          {!isZoomedOut && lifespan && (lifespan.birth || lifespan.death) && (
+          {/* Under the name (#12): a chosen fact in the normal font, or a blank line
+              that keeps the card its size when the person has none. */}
+          {!isZoomedOut && data.underName && (
+            <p className="tree-card-dates tree-card-under" title={data.underText ?? undefined}>
+              {data.underText ?? '\u00a0'}
+            </p>
+          )}
+          {!isZoomedOut && !data.underName && lifespan && (lifespan.birth || lifespan.death) && (
             <p
               // 11px, like the bar card (#1215): at 12px the widest lifespan
               // ("~1796 – ~1819") fit in its 88px with only 4px to spare, and a fallback

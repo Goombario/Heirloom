@@ -1627,6 +1627,9 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Display › Under the name (#12): a fact in the dates' place, in the normal font
+   and secondary ink, so it never reads as a date. */
+.tree-card-under { font-family: inherit; color: var(--color-text-secondary); }
 /* The tree card's optional second name line (Display › Second name, vertical cards).
    12px secondary text 4px under the name, one line, cut with an ellipsis. It borrows
    3px of the strip's side padding like the dates. The fixed height keeps the line

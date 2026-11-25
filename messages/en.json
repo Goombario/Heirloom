@@ -3179,7 +3179,13 @@
     "bring_into_view_tip": "Scroll the tree back to {name}",
     "find_in_tree": "Find a person in the tree",
     "repeat_pill": "Also in this tree",
-    "repeat_title": "Go to this person’s full card"
+    "repeat_title": "Go to this person’s full card",
+    "under_name": "Under the name",
+    "under_name_dates": "Dates",
+    "under_name_occupation": "Occupation",
+    "under_name_residence": "Last residence",
+    "under_name_birthplace": "Birthplace",
+    "under_name_help": "Each person on this device picks their own."
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",

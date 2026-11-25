@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { TREE_SECOND_NAME_TYPES, type TreeSecondNameType } from '@/app/components/tree/types';
+import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 
 /** A stored "Second name" choice, or null for none (also for anything unrecognised). */
 function parseSecondNameType(value: string | null): TreeSecondNameType | null {
     return (TREE_SECOND_NAME_TYPES as readonly string[]).includes(value ?? '') ? value as TreeSecondNameType : null;
+}
+
+/** A stored "Under the name" choice; dates (today's cards) for anything unrecognised. */
+function parseUnderName(value: string | null): TreeUnderName {
+    return (TREE_UNDER_NAME as readonly string[]).includes(value ?? '') ? value as TreeUnderName : 'dates';
 }
 
 /** Tree display preferences, loaded from localStorage on mount. */
@@ -14,6 +19,7 @@ export function useTreeDisplayPrefs() {
     const [showAgeIndicator, setShowAgeIndicatorState] = useState(false);
     const [showStatusMark, setShowStatusMarkState] = useState(true);
     const [secondNameType, setSecondNameTypeState] = useState<TreeSecondNameType | null>(null);
+    const [underName, setUnderNameState] = useState<TreeUnderName>('dates');
 
     // Read persisted prefs after mount (server render + first client paint use the
     // defaults, so there is no hydration mismatch).
@@ -24,6 +30,7 @@ export function useTreeDisplayPrefs() {
             // On unless turned off (#68), so trees look as they did before the switch.
             setShowStatusMarkState(localStorage.getItem('treeShowStatusMark') !== 'false');
             setSecondNameTypeState(parseSecondNameType(localStorage.getItem('treeSecondName')));
+            setUnderNameState(parseUnderName(localStorage.getItem('treeUnderName')));
             // Debug-only card styles with no switch anywhere, removed by #271.
             localStorage.removeItem('treeRoundedPhotos');
             localStorage.removeItem('treeGreyscaleMode');
@@ -57,7 +64,15 @@ export function useTreeDisplayPrefs() {
         else localStorage.removeItem('treeSecondName');
     }, []);
 
+    // The line under the name (#12): dates (today's cards) or one fact, per device.
+    const setUnderName = useCallback((value: TreeUnderName) => {
+        setUnderNameState(value);
+        if (value === 'dates') localStorage.removeItem('treeUnderName');
+        else localStorage.setItem('treeUnderName', value);
+    }, []);
+
     return {
+        underName, setUnderName,
         colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
         secondNameType, setSecondNameType,
     };

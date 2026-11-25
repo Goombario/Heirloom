@@ -99,3 +99,25 @@ describe('tree repeat card', () => {
         });
     }
 });
+
+// Display › Under the name (#12): a fact in place of the dates, or a blank line.
+describe('tree card line under the name', () => {
+    const dated = { ...person, lifespan: { birth: '1890', death: '1960', deceased: true } };
+    for (const [name, Card] of [['portrait card', PersonNode], ['bar card', PersonBarNode]] as const) {
+        it(`${name}: shows the fact instead of the dates, and a blank line when there is none`, () => {
+            const withFact = renderCard(Card, { person: dated, underName: 'occupation', underText: 'Seamstress' } as Partial<FlowNodeData>);
+            expect(withFact.container.querySelector('.tree-card-under')!.textContent).toBe('Seamstress');
+            expect(withFact.container.textContent).not.toContain('1890');
+            withFact.unmount();
+
+            const blank = renderCard(Card, { person: dated, underName: 'birthplace', underText: null } as Partial<FlowNodeData>);
+            expect(blank.container.querySelector('.tree-card-under')!.textContent).toBe(' ');
+            expect(blank.container.textContent).not.toContain('1890');
+            blank.unmount();
+
+            const dates = renderCard(Card, { person: dated } as Partial<FlowNodeData>);
+            expect(dates.container.querySelector('.tree-card-under')).toBeNull();
+            expect(dates.container.textContent).toContain('1890');
+        });
+    }
+});

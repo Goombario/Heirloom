@@ -4,8 +4,9 @@ import { NotFoundError } from '@/lib/data/errors';
 import { formatYearForDisplay, parseDateComponents } from '@/lib/date-utils';
 import { displayFullName } from '@/lib/utils/names';
 import type { Person, Family } from '@/lib/db/schema';
-import { TREE_SECOND_NAME_TYPES, type TreeData, type TreeNode, type FocusTrees, type TreeLifespan, type TreeCardNames, type TreeSecondNameType } from '@/app/components/tree/types';
+import { TREE_SECOND_NAME_TYPES, type TreeData, type TreeNode, type FocusTrees, type TreeLifespan, type TreeCardNames, type TreeSecondNameType, type TreeCardFacts } from '@/app/components/tree/types';
 import { getTreeCardNameVariants } from '@/lib/db/queries/name-variants';
+import { getTreeCardFacts, type TreeCardFactRow } from '@/lib/db/queries/tree-card-facts';
 import { primaryPhotoJoin } from '@/lib/db/queries/media-tags';
 import { pickDefaultRoot } from '@/lib/tree/defaultRoot';
 
@@ -52,7 +53,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
   );
   const treeId = scope.treeId;
 
-  const [peopleRes, familiesRes, fpRes, photosRes, variantRows] = await Promise.all([
+  const [peopleRes, familiesRes, fpRes, photosRes, variantRows, factRows] = await Promise.all([
     query(
       // One grouped pass over the tree's name variants, joined once, instead of
       // three lookups per person (#1270). A person has at most one primary name
@@ -89,6 +90,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
       [treeId]
     ),
     getTreeCardNameVariants(treeId),
+    getTreeCardFacts(treeId),
   ]);
 
   const allPeople = peopleRes.rows as TreePerson[];
@@ -133,6 +135,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
   }
 
   const cardNames = buildCardNames(allPeople, variantRows);
+  const cardFacts = buildCardFacts(factRows);
 
   const personMap = new Map<number, PersonWithFamilies>();
   for (const p of allPeople) {
@@ -559,7 +562,28 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
     allPeople: allPeopleList,
     ...(focusTrees ? { focusTrees } : {}),
     cardNames,
+    cardFacts,
   };
+}
+
+/** The town of a place name: its first part ("Lviv" of "Lviv, Lviv Oblast, Ukraine"). */
+export function townOf(place: string | null): string | undefined {
+  const town = place?.split(',')[0]?.trim();
+  return town ? town : undefined;
+}
+
+/** The facts for the cards' line under the name (#12), keyed by person; places as towns. */
+function buildCardFacts(rows: readonly TreeCardFactRow[]): Record<number, TreeCardFacts> {
+  const out: Record<number, TreeCardFacts> = {};
+  for (const r of rows) {
+    const facts: TreeCardFacts = {
+      ...(r.Occupation ? { occupation: r.Occupation } : {}),
+      ...(townOf(r.Residence) ? { residence: townOf(r.Residence) } : {}),
+      ...(townOf(r.BirthPlace) ? { birthplace: townOf(r.BirthPlace) } : {}),
+    };
+    if (Object.keys(facts).length > 0) out[r.PersonId] = facts;
+  }
+  return out;
 }
 
 const SECOND_NAME_TYPES: ReadonlySet<string> = new Set(TREE_SECOND_NAME_TYPES);
