@@ -63,7 +63,10 @@ export function useSearchWords() {
         if (has && (c.op === 'has' || c.op === 'has_none')) return t(c.op === 'has' ? `sum_has_${has}` : `sum_no_${has}`);
         const f = field(c.field).toLocaleLowerCase();
         const kind = valueKind(c.field, c.op);
-        return kind === 'none' ? `${f} ${op(c.op)}` : `${f} ${op(c.op)} ${value(c, names)}`;
+        if (kind === 'none') return `${f} ${op(c.op)}`;
+        // A choice reads as a word in the sentence ("sex is female"); a name or typed text keeps its case.
+        const v = value(c, names);
+        return `${f} ${op(c.op)} ${kind === 'sex' || kind === 'living' ? v.toLocaleLowerCase() : v}`;
     }
 
     /** The whole query as one line: "(a and b) or (c and d)". */

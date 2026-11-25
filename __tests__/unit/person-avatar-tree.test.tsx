@@ -30,7 +30,10 @@ vi.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLo
 vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en' }) }));
 vi.mock('@/app/components/date-input/aliases', () => ({ useDateQualifierWords: () => ({}) }));
 vi.mock('@/app/components/useCachedResource', () => ({
-    useCachedResource: () => ({ data: { people: [person] }, loading: false, error: null, retry: vi.fn() }),
+    // Only the list's own read answers; advanced search's (#247) have nothing here.
+    useCachedResource: (key: string | null) => (key?.startsWith('people:list') || key?.startsWith('people:tree') || (key && !key.startsWith('search:') && !key.startsWith('people:search') && !key.startsWith('people:saved'))
+        ? { data: { people: [person] }, loading: false, error: null, retry: vi.fn() }
+        : { data: undefined, loading: false, error: null, retry: vi.fn() }),
 }));
 vi.mock('@/app/components/useLoadPhase', () => ({ useLoadPhase: () => 'ready' }));
 vi.mock('@/lib/data', () => ({ getDataClient: vi.fn() }));
