@@ -25,7 +25,7 @@ vi.mock('@/app/components/useErrorToast', () => ({
 vi.mock('@/app/components/LanguageProvider', () => ({ useLanguage: () => ({ language: 'en' }) }));
 vi.mock('next-intl', () => ({
     useTranslations: () => (key: string, values?: Record<string, unknown>) =>
-        values && 'count' in values ? `${key}:${values.count}` : key,
+        values && 'count' in values ? `${key}:${values.count}` : key === 'cite_on_marriage_to' ? `${key}:${values?.name}` : key,
 }));
 
 import { CiteOnPanel } from '@/app/library/source-modal/CiteOnPanel';
@@ -126,7 +126,8 @@ describe('Cite on… (#799, EV-7)', () => {
         await user.type(screen.getByRole('textbox', { name: 'search_families_plain' }), 'Bracken');
         await user.click(await screen.findByRole('button', { name: /Tom Bracken/ }));
         await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
-        expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(4);
+        // The family block and its four members, each once.
+        expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(5);
         expect(h.peopleGet).toHaveBeenCalledTimes(4);
     });
 
@@ -147,5 +148,63 @@ describe('Cite on… (#799, EV-7)', () => {
         expect(row).toHaveAttribute('placeholder', 'ph_row_page');
         await user.type(screen.getByRole('textbox', { name: 'cite_on_shared_page' }), 'Folio 3');
         expect(row).toHaveAttribute('placeholder', 'Folio 3');
+    });
+
+    // #31: the family is cited too, in its own block above its members.
+    describe('a family block', () => {
+        const family = { Id: 9, Partner1Id: 1, Partner2Id: 5, MarriageDate: '1884', MarriagePlace: 'Brackwater', Type: 'Marriage' };
+        const tom = { ...people[1], spouses: [{ person: { Id: 5, FirstName: 'Eda', LastName: 'Bracken' }, family, children: [] }] };
+        beforeEach(() => {
+            h.familiesGet.mockResolvedValue({
+                family,
+                husband: { Id: 1, FirstName: 'Tom', LastName: 'Bracken' },
+                wife: { Id: 5, FirstName: 'Eda', LastName: 'Bracken' },
+                children: [{ Id: 4 }],
+                events: [{ Id: 70, Type: 'DIV', Date: '1901', Place: null }],
+            });
+            h.peopleGet.mockImplementation((id: number) => Promise.resolve(id === 1 ? tom : id === 5 ? { Id: 5, FirstName: 'Eda', LastName: 'Bracken', events: [], spouses: [{ person: { Id: 1, FirstName: 'Tom', LastName: 'Bracken' }, family, children: [] }] } : people[id]));
+        });
+
+        it('comes first, with the marriage and the family events, ticked by year', async () => {
+            const user = userEvent.setup();
+            renderPanel();
+            await addHousehold(user);
+            const headings = screen.getAllByRole('heading', { level: 3 });
+            expect(headings[0]).toHaveTextContent('Tom Bracken & Eda Bracken');
+            const block = headings[0].closest('li')!;
+            expect(within(block).getByText('cite_on_family_label')).toBeInTheDocument();
+            expect(within(block).getByRole('checkbox', { name: /MARR/ })).not.toBeChecked();
+            // The 1901 census ticks the 1901 divorce.
+            expect(within(block).getByRole('checkbox', { name: /DIV/ })).toBeChecked();
+            // The members' own blocks don't repeat the marriage.
+            expect(screen.queryByRole('checkbox', { name: /cite_on_marriage_to/ })).not.toBeInTheDocument();
+
+            await user.click(within(block).getByRole('checkbox', { name: /MARR/ }));
+            await user.click(screen.getByRole('button', { name: /^cite_on_submit/ }));
+            await waitFor(() => expect(h.createMany).toHaveBeenCalledOnce());
+            const keys = h.createMany.mock.calls[0][0].facts.map((f: { FactTable: string; FactId: number }) => `${f.FactTable}:${f.FactId}`);
+            expect(keys).toEqual(expect.arrayContaining(['Families:9', 'Events:70', 'Events:50']));
+            expect(keys.filter((k: string) => k === 'Families:9')).toHaveLength(1);
+        });
+
+        it('counts an imported marriage citation as already cited', async () => {
+            const user = userEvent.setup();
+            renderPanel([{ factTable: 'FamilyMarriage', factId: 9 }]);
+            await addHousehold(user);
+            const block = screen.getAllByRole('heading', { level: 3 })[0].closest('li')!;
+            expect(within(block).getByRole('checkbox', { name: /MARR/ })).toBeDisabled();
+            expect(within(block).getByText('cite_on_already')).toBeInTheDocument();
+        });
+
+        it('takes the family off with its own remove, and its members keep their marriage row', async () => {
+            const user = userEvent.setup();
+            renderPanel();
+            await addHousehold(user);
+            await user.click(screen.getByRole('button', { name: /cite_on_remove_family/ }));
+            expect(screen.queryByText('cite_on_family_label')).not.toBeInTheDocument();
+            expect(screen.getByRole('checkbox', { name: 'cite_on_marriage_to:Eda Bracken · 1884 · Brackwater' })).toBeInTheDocument();
+            // Shown once, in Tom's block, though Eda's marriage is the same fact.
+            expect(screen.getAllByRole('checkbox', { name: /cite_on_marriage_to/ })).toHaveLength(1);
+        });
     });
 });

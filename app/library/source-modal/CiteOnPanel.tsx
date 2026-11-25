@@ -13,15 +13,15 @@ import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { getDataClient } from '@/lib/data';
 import { formatDateForDisplay, formatLifespan, formatYearOrEmpty } from '@/lib/date-utils';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
-import { Quote, Users, X } from '@/lib/icons';
+import { Heart, Quote, Users, X } from '@/lib/icons';
 import type { CitedByRow } from '@/lib/db/queries/citations';
 import type { Source } from '@/lib/data/types';
-import { citeKey, citeOnPersonFrom, preselectedKeys, sourceYear, type CiteOnFact, type CiteOnPerson } from './citeOnFacts';
+import { citeKey, citeOnFamilyFrom, citeOnPersonFrom, isCitedFact, preselectedKeys, sourceYear, type CiteOnFact, type CiteOnFamily, type CiteOnPerson } from './citeOnFacts';
 
 /**
  * "Cite on…" from the source view (#799, EV-7): cite one source on many facts
- * in one write. Add people one by one or a whole household (its partners and
- * children), tick the facts, and give one shared citation detail and certainty,
+ * in one write. Add people one by one or a whole family (its own block with the
+ * marriage and family events, then its partners and children), tick the facts, and give one shared citation detail and certainty,
  * with an optional page or line per fact. Facts dated in the year the source's
  * title names are ticked for you; facts already citing this source are shown
  * but can't be ticked again.
@@ -49,6 +49,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const cited = useMemo(() => new Set(citedBy.map(row => citeKey(row.factTable, row.factId))), [citedBy]);
 
     const [people, setPeople] = useState<CiteOnPerson[]>([]);
+    const [families, setFamilies] = useState<CiteOnFamily[]>([]);
     const [ticked, setTicked] = useState<Set<string>>(new Set());
     const [rowPages, setRowPages] = useState<Record<string, string>>({});
     const [page, setPage] = useState('');
@@ -61,7 +62,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useUnsavedChangesGuard(people.length > 0 || page !== '' || quay !== '' || dataText !== '' || url !== '');
+    useUnsavedChangesGuard(people.length > 0 || families.length > 0 || page !== '' || quay !== '' || dataText !== '' || url !== '');
 
     // Opening puts focus in the household search when it shows (a census), else the
     // person picker, rather than leaving it on the page (#861). Not on a phone, where
@@ -78,6 +79,12 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const typeLabel = (type: string) =>
         EVENT_TYPES[type] ? tTypes(type as Parameters<typeof tTypes>[0]) : getEventDisplayType(type);
     const personName = (p: CiteOnPerson) => p.name || tc('unknown');
+    const familyName = (f: CiteOnFamily) => f.partners.length > 0
+        ? f.partners.map(n => n || tc('unknown')).join(' & ')
+        : tc('unknown');
+    const factLabel = (f: CiteOnFact) => f.partnerName !== undefined
+        ? t('cite_on_marriage_to', { name: f.partnerName || tc('unknown') })
+        : typeLabel(f.type);
 
     async function addPeople(ids: number[]) {
         const fresh = ids.filter((id, i) => ids.indexOf(id) === i && !people.some(p => p.id === id));
@@ -105,6 +112,15 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
         try {
             const client = await getDataClient();
             const detail = await client.families.get(familyId, treeId);
+            const block = citeOnFamilyFrom(familyId, detail);
+            if (!families.some(f => f.id === block.id)) {
+                setFamilies(prev => (prev.some(f => f.id === block.id) ? prev : [...prev, block]));
+                setTicked(prev => {
+                    const next = new Set(prev);
+                    for (const key of preselectedKeys(block, year, cited)) next.add(key);
+                    return next;
+                });
+            }
             const ids = [detail.husband?.Id, detail.wife?.Id, ...(detail.children ?? []).map(c => c.Id)]
                 .filter((id): id is number => typeof id === 'number');
             setHouseholdOpen(false);
@@ -117,13 +133,25 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
         }
     }
 
-    function removePerson(p: CiteOnPerson) {
-        setPeople(prev => prev.filter(q => q.id !== p.id));
+    // A tick stays while another block still offers that fact (a marriage in a
+    // partner's block, say); otherwise it goes with the block.
+    function untickGone(removed: CiteOnFact[], remaining: CiteOnFact[]) {
+        const kept = new Set(remaining.map(f => f.key));
         setTicked(prev => {
             const next = new Set(prev);
-            for (const f of p.facts) next.delete(f.key);
+            for (const f of removed) if (!kept.has(f.key)) next.delete(f.key);
             return next;
         });
+    }
+
+    function removePerson(p: CiteOnPerson) {
+        setPeople(prev => prev.filter(q => q.id !== p.id));
+        untickGone(p.facts, [...families.flatMap(f => f.facts), ...people.filter(q => q.id !== p.id).flatMap(q => q.facts)]);
+    }
+
+    function removeFamily(fam: CiteOnFamily) {
+        setFamilies(prev => prev.filter(f => f.id !== fam.id));
+        untickGone(fam.facts, [...families.filter(f => f.id !== fam.id).flatMap(f => f.facts), ...people.flatMap(q => q.facts)]);
     }
 
     function toggle(key: string, on: boolean) {
@@ -134,8 +162,22 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
         });
     }
 
+    // Each fact shows once (#31): a family's block holds its marriage and events, so
+    // a member's "Marriage to …" row hides while that block is listed, and a marriage
+    // shared by two partners added on their own shows in the first one's block.
+    const familyIds = new Set(families.map(f => f.id));
+    const seen = new Set<string>();
+    const shownOnce = (facts: CiteOnFact[]) => facts.filter(f => {
+        if (seen.has(f.key)) return false;
+        seen.add(f.key);
+        return true;
+    });
+    const familyFacts = new Map(families.map(f => [f.id, shownOnce(f.facts)]));
+    const personFacts = new Map(people.map(p => [p.id, shownOnce(p.facts.filter(f => f.partnerName === undefined || f.familyId == null || !familyIds.has(f.familyId)))]));
+    const shownFacts = [...familyFacts.values(), ...personFacts.values()].flat();
+
     // "Tick every birth" and the like: one switch per fact type present, across everyone.
-    const openFacts = people.flatMap(p => p.facts).filter(f => !cited.has(f.key));
+    const openFacts = shownFacts.filter(f => !isCitedFact(f, cited));
     const types = [...new Set(openFacts.map(f => f.type))];
     function toggleType(type: string) {
         const keys = openFacts.filter(f => f.type === type).map(f => f.key);
@@ -150,7 +192,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const count = openFacts.filter(f => ticked.has(f.key)).length;
 
     async function submit() {
-        const facts = people.flatMap(p => p.facts).filter(f => ticked.has(f.key) && !cited.has(f.key));
+        const facts = openFacts.filter(f => ticked.has(f.key));
         if (facts.length === 0) return;
         setSaving(true);
         onSavingChange?.(true);
@@ -167,6 +209,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
             }, treeId);
             // Nothing is unsaved any more: clear the guard before the view changes.
             setPeople([]);
+            setFamilies([]);
             setPage('');
             setQuay('');
             setDataText('');
@@ -180,11 +223,11 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
         }
     }
 
-    function factRow(p: CiteOnPerson, f: CiteOnFact) {
-        const isCited = cited.has(f.key);
+    function factRow(owner: string, f: CiteOnFact) {
+        const isCited = isCitedFact(f, cited);
         const on = isCited || ticked.has(f.key);
         const boxId = `${idBase}-${f.key}`;
-        const label = typeLabel(f.type);
+        const label = factLabel(f);
         return (
             <li key={f.key} className="py-1.5">
                 <div className="flex items-center gap-2.5 min-h-11 sm:min-h-0">
@@ -212,7 +255,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                             className={fieldClass('sm')}
                             // An empty row inherits the default page below (lib/services/citations.ts, #908).
                             placeholder={page.trim() || t('ph_row_page')}
-                            aria-label={t('cite_on_row_page', { fact: label, name: personName(p) })}
+                            aria-label={t('cite_on_row_page', { fact: label, name: owner })}
                             disabled={saving}
                         />
                     </div>
@@ -294,7 +337,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                     {adding && <p role="status" className="muted text-meta m-0">{t('cite_on_adding')}</p>}
                 </div>
 
-                {people.length === 0 ? (
+                {people.length === 0 && families.length === 0 ? (
                     <div className="text-center text-text-muted border border-dashed border-[color:var(--border)] rounded-[12px] p-5 text-sm mb-4">
                         {t('cite_on_empty')}
                     </div>
@@ -313,6 +356,37 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                             </div>
                         )}
                         <ul className="list-none m-0 p-0 mb-4 flex flex-col gap-2.5">
+                            {families.map(fam => {
+                                const headingId = `${idBase}-family-${fam.id}`;
+                                const name = familyName(fam);
+                                const married = formatYearOrEmpty(fam.marriageDate);
+                                const facts = familyFacts.get(fam.id) ?? [];
+                                return (
+                                    <li key={`family-${fam.id}`} className="bg-card-alt border border-border rounded-[12px] py-2 px-3" aria-labelledby={headingId}>
+                                        <div className="flex items-center gap-2">
+                                            <Heart size={15} aria-hidden="true" className="shrink-0 text-text-secondary" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="eyebrow m-0">{t('cite_on_family_label')}</div>
+                                                <h3 id={headingId} className="text-sm font-semibold m-0 truncate">
+                                                    {name}
+                                                    {married && <span className="muted font-normal"> · {t('cite_on_married', { year: married })}</span>}
+                                                </h3>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFamily(fam)}
+                                                disabled={saving}
+                                                aria-label={t('cite_on_remove_family', { name })}
+                                                title={t('cite_on_remove_family', { name })}
+                                                className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-8 sm:min-h-8 rounded text-text-muted hover:text-text hover:bg-[color:var(--color-hover-surface)] transition"
+                                            >
+                                                <X size={15} aria-hidden="true" />
+                                            </button>
+                                        </div>
+                                        <ul className="list-none m-0 p-0">{facts.map(f => factRow(name, f))}</ul>
+                                    </li>
+                                );
+                            })}
                             {people.map(p => {
                                 const years = formatLifespan({ birth: formatYearOrEmpty(p.birthDate) || null, death: formatYearOrEmpty(p.deathDate) || null });
                                 const headingId = `${idBase}-person-${p.id}`;
@@ -334,10 +408,10 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                                                 <X size={15} aria-hidden="true" />
                                             </button>
                                         </div>
-                                        {p.facts.length === 0 ? (
-                                            <p className="muted text-meta mt-1 mb-1">{t('cite_on_no_facts')}</p>
+                                        {(personFacts.get(p.id) ?? []).length === 0 ? (
+                                            <p className="muted text-meta mt-1 mb-1">{t(p.facts.length === 0 ? 'cite_on_no_facts' : 'cite_on_facts_in_family')}</p>
                                         ) : (
-                                            <ul className="list-none m-0 p-0">{p.facts.map(f => factRow(p, f))}</ul>
+                                            <ul className="list-none m-0 p-0">{(personFacts.get(p.id) ?? []).map(f => factRow(personName(p), f))}</ul>
                                         )}
                                     </li>
                                 );

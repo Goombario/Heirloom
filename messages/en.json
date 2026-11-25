@@ -2950,11 +2950,11 @@
     "recently_cited": "Recently cited",
     "cite_on": "Cite on…",
     "cite_on_title": "Cite “{title}” on…",
-    "cite_on_intro": "Add people one at a time or a whole family's members, then tick the facts this source supports.",
+    "cite_on_intro": "Add people one at a time or a whole family, then tick the facts this source supports.",
     "cite_on_year_hint": "Facts dated {year} are ticked for you.",
     "cite_on_add_person": "Add a person…",
-    "cite_on_add_family_members": "Add a family's members…",
-    "cite_on_family_members_hint": "Find a family by a partner's surname. Its partners and children are added as people. The family record itself isn't cited here.",
+    "cite_on_add_family_members": "Add a family and its members…",
+    "cite_on_family_members_hint": "Find a family by a partner's surname. The family is added with its marriage and events, then its partners and children.",
     "cite_on_adding": "Adding…",
     "cite_on_load_failed": "Couldn't load that person. Try again.",
     "cite_on_empty": "No one added yet.",
@@ -3004,7 +3004,12 @@
     "media_type_photos": "Photos",
     "media_type_documents": "Documents",
     "media_grid_photos": "Photographs",
-    "media_grid_documents": "Documents"
+    "media_grid_documents": "Documents",
+    "cite_on_family_label": "Family",
+    "cite_on_married": "married {year}",
+    "cite_on_marriage_to": "Marriage to {name}",
+    "cite_on_remove_family": "Remove the family of {name}",
+    "cite_on_facts_in_family": "Their marriage is listed in the family above."
   },
   "mobileLibrary": {
     "library_view": "Show",

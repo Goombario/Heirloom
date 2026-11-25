@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { citeOnPersonFrom, preselectedKeys, sourceYear } from '@/app/library/source-modal/citeOnFacts';
+import { citeOnFamilyFrom, citeOnPersonFrom, isCitedFact, preselectedKeys, sourceYear } from '@/app/library/source-modal/citeOnFacts';
 import type { PersonWithRelations } from '@/lib/db/schema';
 
 const person = (over: Partial<PersonWithRelations>): PersonWithRelations =>
@@ -33,5 +33,29 @@ describe('Cite on… facts (#799)', () => {
         const p = citeOnPersonFrom(person({ BirthDate: '1901', events: [event(5, 'RESI', 'ABT 1901'), event(7, 'RESI', '1911')] }));
         expect(preselectedKeys(p, 1901, new Set(['PersonBirth:1']))).toEqual(['Events:5']);
         expect(preselectedKeys(p, null, new Set())).toEqual([]);
+    });
+
+    // #31
+    it('a family block starts with the marriage, then its events in order', () => {
+        const fam = citeOnFamilyFrom(9, {
+            family: { Id: 9, Partner1Id: 1, Partner2Id: 2, MarriageDate: null, MarriagePlace: null, MarriagePlaceId: null, Type: 'Marriage' },
+            husband: { Id: 1, FirstName: 'Tom', LastName: 'Bracken' } as never,
+            wife: null,
+            events: [event(71, 'DIV', '1910'), event(70, 'ENGA', '1883')] as never,
+        });
+        expect(fam.partners).toEqual(['Tom Bracken']);
+        expect(fam.facts.map(f => f.key)).toEqual(['Families:9', 'Events:70', 'Events:71']);
+        // An imported citation on the marriage itself counts.
+        expect(isCitedFact(fam.facts[0], new Set(['FamilyMarriage:9']))).toBe(true);
+    });
+
+    it("a person's own block lists each marriage with the partner's name", () => {
+        const p = citeOnPersonFrom(person({
+            BirthDate: '1859',
+            spouses: [{ person: { Id: 2, FirstName: 'Eda', LastName: 'Lind' }, family: { Id: 9, MarriageDate: '1884', MarriagePlace: 'Brackwater' }, children: [] }] as never,
+        }));
+        const m = p.facts.find(f => f.type === 'MARR')!;
+        expect(m).toMatchObject({ key: 'Families:9', partnerName: 'Eda Lind', familyId: 9, date: '1884' });
+        expect(preselectedKeys(p, 1884, new Set())).toEqual(['Families:9']);
     });
 });

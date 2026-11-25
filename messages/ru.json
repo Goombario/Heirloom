@@ -2950,11 +2950,11 @@
     "recently_cited": "Недавно цитированные",
     "cite_on": "Сослаться в…",
     "cite_on_title": "Сослаться на «{title}» в…",
-    "cite_on_intro": "Добавьте людей по одному или всех членов семьи и отметьте факты, которые подтверждает этот источник.",
+    "cite_on_intro": "Добавьте людей по одному или целую семью и отметьте факты, которые подтверждает этот источник.",
     "cite_on_year_hint": "Факты {year} года уже отмечены.",
     "cite_on_add_person": "Добавить человека…",
-    "cite_on_add_family_members": "Добавить членов семьи…",
-    "cite_on_family_members_hint": "Найдите семью по фамилии одного из супругов. Супруги и дети будут добавлены как отдельные люди. Сама запись о семье здесь не цитируется.",
+    "cite_on_add_family_members": "Добавить семью и её членов…",
+    "cite_on_family_members_hint": "Найдите семью по фамилии одного из супругов. Семья добавляется с браком и событиями, затем её супруги и дети.",
     "cite_on_adding": "Добавление…",
     "cite_on_load_failed": "Не удалось загрузить этого человека. Попробуйте ещё раз.",
     "cite_on_empty": "Пока никто не добавлен.",
@@ -3004,7 +3004,12 @@
     "media_type_photos": "Фото",
     "media_type_documents": "Документы",
     "media_grid_photos": "Фотографии",
-    "media_grid_documents": "Документы"
+    "media_grid_documents": "Документы",
+    "cite_on_family_label": "Семья",
+    "cite_on_married": "брак в {year}",
+    "cite_on_marriage_to": "Брак с {name}",
+    "cite_on_remove_family": "Убрать семью {name}",
+    "cite_on_facts_in_family": "Их брак указан в семье выше."
   },
   "mobileLibrary": {
     "library_view": "Показать",
