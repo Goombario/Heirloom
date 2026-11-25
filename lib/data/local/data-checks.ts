@@ -15,6 +15,8 @@ import { ensureLocalUser } from '../local-user';
  */
 const snapshots = memoUntilWrite<number, DataChecksSnapshot>();
 const cachedDataChecks = (treeId: number) => snapshots.get(treeId, () => loadDataChecks(treeId));
+/** The same cached snapshot, for advanced search's "Data checks" condition (#247). */
+export const localDataChecksLoader = cachedDataChecks;
 
 /** TEST ONLY: forget every cached snapshot. */
 export function __resetDataCheckSnapshots(): void {

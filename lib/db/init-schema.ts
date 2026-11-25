@@ -24,7 +24,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 76;
+export const SCHEMA_VERSION = 77;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -2289,6 +2289,23 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_datacheckconfirmations_problem
       ON "DataCheckConfirmations" ("TreeId", "PersonId", "Rule");
   `);
+
+  // #247 (ADR 0054): a member's saved advanced searches. Each is the member's own
+  // (no shared saved searches); a search is shared by its link, and the results
+  // follow each viewer's access. "Query" is the search as JSON, read through
+  // normalizeQuery, so a field added or dropped later can't break an old row.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "SavedSearch" (
+      "Id" SERIAL PRIMARY KEY,
+      "UserId" INTEGER NOT NULL REFERENCES "Users"("Id") ON DELETE CASCADE,
+      "TreeId" INTEGER NOT NULL REFERENCES "Trees"("Id") ON DELETE CASCADE,
+      "Page" TEXT NOT NULL CHECK ("Page" IN ('people')),
+      "Name" TEXT NOT NULL CHECK (btrim("Name") <> ''),
+      "Query" TEXT NOT NULL,
+      "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_savedsearch_user_tree ON "SavedSearch" ("UserId", "TreeId", "Page");`);
 
   // ── v23: normalise legacy raw-GEDCOM Events."Date" values (#400) ────────────
   // Runs last: it only needs "Events", and keeping it at the end means a failure

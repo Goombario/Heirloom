@@ -1,5 +1,6 @@
 import type { DataClient } from '../types';
 import { LocalAccountClient } from './account';
+import { LocalSearchClient } from './search';
 import { LocalPeopleClient } from './people';
 import { LocalRelationshipClient } from './relationship';
 import { LocalPlacesClient } from './places';
@@ -21,6 +22,7 @@ import { LocalCasesClient } from './cases';
 /** DataClient backed by in-browser PGlite. */
 export class LocalDataClient implements DataClient {
   account = new LocalAccountClient();
+  search = new LocalSearchClient();
   people = new LocalPeopleClient();
   relationship = new LocalRelationshipClient();
   places = new LocalPlacesClient();

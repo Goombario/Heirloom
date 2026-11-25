@@ -44,7 +44,7 @@ export function isReadMethod(name: string): boolean {
 // Sub-clients whose writes change nothing the cache holds. `account` records the
 // last version a user's What's new showed (#35) on every first load after an
 // update; treating that as a write would throw the warm cache away at start-up.
-const UNCACHED_SUB_CLIENTS = new Set(['account']);
+const UNCACHED_SUB_CLIENTS = new Set(['account', 'search']);
 
 /** Wraps each sub-client in a Proxy that clears the cache after any write resolves. */
 function wrapSubClient<T extends object>(sub: T): T {

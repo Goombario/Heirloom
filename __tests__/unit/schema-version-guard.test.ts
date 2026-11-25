@@ -137,7 +137,9 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // v75 — when a media row entered the app (#25): "Media"."CreatedAt", NULL for older rows.
 // v76 — a person's name parts (#37, ADR 0053): "People"."NamePrefix" / "SurnamePrefix" /
 // "NameSuffix", and the one-time lift of the first NPFX/SPFX/NSFX out of "NameRawGedcom".
-const EXPECTED_FINGERPRINT = 'f38065516142e04341d2fe9deb5378cd31168a4b0b4a19333c03ec8defa2ec50';
+// v77 — saved searches (#247, ADR 0054): "SavedSearch", a member's own named
+//   People-list queries per tree.
+const EXPECTED_FINGERPRINT = 'aa719432166b129ffd08ae6c41620b3c6da1b728c9bd02d6194ea5d1a65b6fcd';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

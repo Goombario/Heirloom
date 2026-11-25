@@ -128,3 +128,4 @@ What this makes easy, what it makes hard, and what invariant must now be maintai
 | [0051](0051-whats-new-shows-each-release-once-per-user.md) | What's new shows each release once per user | releases / accounts |
 | [0052](0052-a-person-merge-is-one-revertible-change.md) | A person merge is one revertible change | people / audit |
 | [0053](0053-a-person-has-a-name-prefix-surname-prefix-and-suffix.md) | A person has a name prefix, surname prefix and suffix | people / gedcom |
+| [0054](0054-saved-searches-are-each-members-own-and-shared-by-link.md) | Saved searches are each member's own, and shared by link | people / search |
