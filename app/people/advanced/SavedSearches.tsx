@@ -35,6 +35,7 @@ export function SavedSearchesMenu({ saved, current, canCopy, onOpen, onCopy, onM
             valueLabel={t('saved')}
             icon={<Bookmark className="w-3.5 h-3.5" aria-hidden="true" />}
             triggerClassName="h-9 text-sm"
+            optionClassName="whitespace-nowrap"
             options={options}
             footer={saved.length === 0 ? t('saved_none') : undefined}
             isSelected={(v) => v.kind === 'open' && v.saved.id === current}
