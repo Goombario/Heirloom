@@ -37,4 +37,12 @@ describe('mergeIdentityAgrees (#871)', () => {
     expect(mergeIdentityAgrees({ FirstName: 'Ana', LastName: 'Smith Jones' }, existing('Ana', 'Jones'))).toBe(false);
     expect(mergeIdentityAgrees({ FirstName: 'Ana', LastName: 'de la Cruz' }, existing('Ana', 'Ruiz', 'F', ['Ana de la Cruz']))).toBe(true);
   });
+
+  // #37: one file keeps "von" apart (SPFX), another writes it in the surname.
+  it('agrees on a surname with or without its prefix', () => {
+    expect(mergeIdentityAgrees({ FirstName: 'Johann', LastName: 'von Habsburg' }, { ...existing('Johann', 'Habsburg'), SurnamePrefix: 'von' })).toBe(true);
+    expect(mergeIdentityAgrees({ FirstName: 'Johann', LastName: 'Habsburg', SurnamePrefix: 'von' }, existing('Johann', 'von Habsburg'))).toBe(true);
+    expect(mergeIdentityAgrees({ FirstName: 'Johann', LastName: 'Habsburg', SurnamePrefix: 'von' }, existing('Johann', 'Habsburg'))).toBe(true);
+    expect(mergeIdentityAgrees({ FirstName: 'Johann', LastName: 'von Habsburg' }, existing('Johann', 'Habsburg'))).toBe(false);
+  });
 });

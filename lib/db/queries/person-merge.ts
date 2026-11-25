@@ -59,7 +59,7 @@ const FIELD_COLUMNS: Record<MergeField, readonly string[]> = {
 
 /** The columns that decide whether a field differs between the two people. */
 const COMPARED: Record<MergeField, readonly string[]> = {
-    name: ['FirstName', 'LastName'],
+    name: ['FirstName', 'LastName', 'NamePrefix', 'SurnamePrefix', 'NameSuffix'],
     sex: ['Sex'],
     living: ['IsDeceased'],
     birth: ['BirthDate', 'BirthPlaceId'],

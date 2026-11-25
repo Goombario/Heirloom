@@ -20,14 +20,12 @@ export async function backfillNameParts(db: DbExecutor): Promise<number> {
   for (const row of res.rows as Array<{ Id: number; FirstName: string | null; LastName: string | null; NameRawGedcom: string }>) {
     const parts = liftNameParts(row.NameRawGedcom.split('\n'), row);
     if (parts.NamePrefix === null && parts.SurnamePrefix === null && parts.NameSuffix === null) continue;
-    // A person keeps a name: a first name that was only the prefix keeps it.
-    const first = parts.FirstName || parts.LastName ? parts.FirstName : row.FirstName;
     await db.query(
       `UPDATE "People" SET "NamePrefix" = $2, "SurnamePrefix" = $3, "NameSuffix" = $4,
          "FirstName" = $5, "LastName" = $6, "NameRawGedcom" = $7
        WHERE "Id" = $1 AND "NamePrefix" IS NULL AND "SurnamePrefix" IS NULL AND "NameSuffix" IS NULL
          AND "NameRawGedcom" = $8`,
-      [row.Id, parts.NamePrefix, parts.SurnamePrefix, parts.NameSuffix, first, parts.LastName,
+      [row.Id, parts.NamePrefix, parts.SurnamePrefix, parts.NameSuffix, parts.FirstName, parts.LastName,
         parts.rest.length ? parts.rest.join('\n') : null, row.NameRawGedcom],
     );
     lifted++;

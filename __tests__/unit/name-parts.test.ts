@@ -23,8 +23,9 @@ describe('liftNameParts', () => {
 
   it("doesn't take a word that only starts the same", () => {
     expect(liftNameParts(['2 SPFX de'], { FirstName: 'A', LastName: 'Dekker' })).toMatchObject({ SurnamePrefix: 'de', LastName: 'Dekker' });
-    // A name that is only the piece stays.
+    // A name that is only the piece stays, unless there's a last name to keep.
     expect(liftNameParts(['2 NPFX Dr'], { FirstName: 'Dr', LastName: null })).toMatchObject({ FirstName: 'Dr' });
+    expect(liftNameParts(['2 NPFX Rev.'], { FirstName: 'Rev.', LastName: 'Jones' })).toMatchObject({ FirstName: null, NamePrefix: 'Rev.' });
   });
 });
 

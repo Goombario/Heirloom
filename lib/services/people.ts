@@ -187,7 +187,11 @@ export async function updatePersonService(params: UpdatePersonParams): Promise<A
   }
   // #37: the name prefix, surname prefix and suffix. Clearing all of them leaves the name as it is.
   for (const field of ['NamePrefix', 'SurnamePrefix', 'NameSuffix'] as const) {
-    if (body[field] !== undefined) updateData[field] = validateNameField(body[field], field, 100, stored?.[field]);
+    if (body[field] === undefined) continue;
+    const value = validateNameField(body[field], field, 100, stored?.[field]);
+    // The GEDCOM NAME line marks the surname with slashes, so a part can't hold one.
+    if (value?.includes('/')) throw new ValidationError(`${field} can't contain a slash`);
+    updateData[field] = value;
   }
   if (body.Sex !== undefined) updateData.Sex = validateSexField(body.Sex);
   if (body.BirthDate !== undefined) updateData.BirthDate = validateDateField(body.BirthDate, 'BirthDate', 100);

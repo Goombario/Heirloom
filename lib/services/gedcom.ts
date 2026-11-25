@@ -1261,6 +1261,7 @@ interface MergeHolder {
   Id: number;
   FirstName: string | null;
   LastName: string | null;
+  SurnamePrefix: string | null;
   Sex: string | null;
   Variants: string[];
 }
@@ -1275,7 +1276,7 @@ async function mergeHoldersByXref(
   xref?: string,
 ): Promise<Map<string, MergeHolder[]>> {
   const res = await client.query(
-    `SELECT p."Id", p."GedcomId", p."FirstName", p."LastName", p."Sex",
+    `SELECT p."Id", p."GedcomId", p."FirstName", p."LastName", p."SurnamePrefix", p."Sex",
             COALESCE(ARRAY_AGG(nv."Name") FILTER (WHERE nv."Name" IS NOT NULL), '{}') AS "Variants"
        FROM "People" p
        LEFT JOIN "NameVariant" nv ON nv."PersonId" = p."Id" AND nv."TreeId" = p."TreeId"

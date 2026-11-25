@@ -12,6 +12,8 @@ import { normalizeNameText } from '../validation';
 export interface IncomingIdentity {
   FirstName?: string | null;
   LastName?: string | null;
+  /** "von" in "von Habsburg" (#37): one file may keep it apart, another in the surname. */
+  SurnamePrefix?: string | null;
   Sex?: string | null;
 }
 
@@ -53,12 +55,16 @@ export function mergeIdentityAgrees(incoming: IncomingIdentity, existing: Existi
 
   const inGiven = nameTokens(incoming.FirstName)[0] ?? null;
   const inSurname = nameTokens(incoming.LastName).join(' ') || null;
+  // The surname with its prefix, so "von Habsburg" and "Habsburg" + SPFX "von" agree (#37).
+  const inFull = nameTokens([incoming.SurnamePrefix, incoming.LastName].filter(Boolean).join(' ')).join(' ') || null;
   const exGiven = nameTokens(existing.FirstName)[0] ?? null;
   const exSurname = nameTokens(existing.LastName).join(' ') || null;
   if (Boolean(inGiven) !== Boolean(exGiven) || Boolean(inSurname) !== Boolean(exSurname)) return false;
 
   const exGivens = new Set<string>(exGiven ? [exGiven] : []);
   const exSurnames = new Set<string>(exSurname ? [exSurname] : []);
+  const exFull = nameTokens([existing.SurnamePrefix, existing.LastName].filter(Boolean).join(' ')).join(' ');
+  if (exFull) exSurnames.add(exFull);
   for (const variant of existing.Variants) {
     const tokens = nameTokens(variant);
     if (tokens.length === 0) continue;
@@ -69,6 +75,6 @@ export function mergeIdentityAgrees(incoming: IncomingIdentity, existing: Existi
   }
 
   if (inGiven && !exGivens.has(inGiven)) return false;
-  if (inSurname && !exSurnames.has(inSurname)) return false;
+  if (inSurname && !exSurnames.has(inSurname) && !(inFull && exSurnames.has(inFull))) return false;
   return true;
 }

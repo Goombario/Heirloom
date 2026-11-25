@@ -51,7 +51,11 @@ export function liftNameParts(
         out[PART_TAGS[tag]] = value;
     }
     let { FirstName, LastName } = name;
-    if (out.NamePrefix) FirstName = without(FirstName, out.NamePrefix, 'start');
+    if (out.NamePrefix) {
+        // "1 NAME Rev. /Jones/" with "2 NPFX Rev.": the first name was only the prefix.
+        if (LastName && FirstName?.trim().toLocaleLowerCase() === out.NamePrefix.toLocaleLowerCase()) FirstName = null;
+        else FirstName = without(FirstName, out.NamePrefix, 'start');
+    }
     if (out.SurnamePrefix) LastName = without(LastName, out.SurnamePrefix, 'start');
     if (out.NameSuffix) {
         const last = without(LastName, out.NameSuffix, 'end');
