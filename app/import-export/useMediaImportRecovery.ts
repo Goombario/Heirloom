@@ -211,6 +211,8 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
     return result.discovered;
   }, [discover]);
 
+  // Retry from the jobs panel runs the latest recover, with the latest list.
+  const recoverRef = useRef<(file: File, importId?: string) => Promise<void>>(async () => {});
   const recover = useCallback(async (file: File, importId?: string, seedItems?: MediaImportItem[]) => {
     const generation = generationRef.current;
     const operationTree = treeRef.current;
@@ -281,6 +283,11 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
           scope: importScope(operationTree),
           total: matched.length,
           describe: () => '',
+          // #236: the photos the job hadn't reached, and Retry with the ZIP this tab
+          // still holds; photos already added are skipped (only unresolved ones run).
+          zipName: file.name,
+          notAdded: () => matched.slice(currentProgress).map((m) => ({ name: m.item.archivePath.split('/').pop() || m.item.archivePath })),
+          retry: () => { void recoverRef.current(file, targetImportId); },
           run: async ({ added, step, stopped: stopPressed, stop }) => {
             stopped = await materializeAll(() => {
               // Panel Stop bumps the generation, as does moving the panel to another
@@ -316,6 +323,7 @@ export function useMediaImportRecovery({ treeId = null, initialTreeId, initialIt
     }
   // `items` is intentionally read at operation start; callers get a stable operation snapshot.
   }, [background, items, jobLabel, refresh]);
+  useEffect(() => { recoverRef.current = recover; }, [recover]);
 
   function updateOutcome(outcome: MediaImportMaterializationOutcome) {
     const item = outcome.item;

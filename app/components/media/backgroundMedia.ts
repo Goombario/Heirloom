@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { RateLimitError, UnauthorizedError } from '@/lib/data/errors';
+import { FileTooLargeError, RateLimitError, StorageLimitError, UnauthorizedError } from '@/lib/data/errors';
 
 /**
  * One queue for photo work that carries on while the reader moves around the app
@@ -21,6 +21,24 @@ import { RateLimitError, UnauthorizedError } from '@/lib/data/errors';
 type BackgroundJobKind = 'add' | 'import';
 type BackgroundJobStatus = 'queued' | 'running' | 'waiting' | 'stopped' | 'done';
 
+/** Why a job stopped (#236), so the row can say it in plain words. */
+type StopCause = 'you' | 'network' | 'server' | 'too_large' | 'storage' | 'sign_in';
+
+/** One photo that didn't make it; `tooLarge` ones can never be added, so Retry skips them. */
+interface NotAdded { name: string; tooLarge?: boolean }
+
+/** Where a job's photos were going: a person, family, source, event's person or case. */
+export interface JobTarget { name: string; href: string }
+
+/** The cause an error stands for. A fetch that never reached the server is a dropped connection. */
+function stopCauseOf(error: unknown): StopCause {
+  if (error instanceof UnauthorizedError) return 'sign_in';
+  if (error instanceof StorageLimitError) return 'storage';
+  if (error instanceof FileTooLargeError) return 'too_large';
+  if (error instanceof TypeError || (error instanceof Error && /network|failed to fetch|load failed/i.test(error.message))) return 'network';
+  return 'server';
+}
+
 /** One job as the chip, the jobs list and the import panel see it. */
 export interface BackgroundJobView {
   id: number;
@@ -37,6 +55,16 @@ export interface BackgroundJobView {
   reason: string | null;
   /** The job stopped because the sign-in expired. */
   signIn: boolean;
+  /** Why it stopped (#236); null until it has. */
+  cause: StopCause | null;
+  /** Where the photos were going, linked from the row. */
+  target: JobTarget | null;
+  /** The photos that weren't added, in the order they were picked. */
+  notAdded: NotAdded[];
+  /** The job can be queued again from what this tab still holds (the files, the ZIP). */
+  canRetry: boolean;
+  /** An import job's ZIP, named so it can be chosen again. */
+  zipName: string | null;
 }
 
 /** What a job's `run` gets. */
@@ -59,6 +87,14 @@ export interface BackgroundJob {
   run: (control: BackgroundJobControl) => Promise<void>;
   /** Words an error that stopped the job. */
   describe: (error: unknown) => string;
+  /** Where the photos were going (#236). */
+  target?: JobTarget;
+  /** An import's ZIP name. */
+  zipName?: string;
+  /** What is still to do, read when the job stops. */
+  notAdded?: () => NotAdded[];
+  /** Queue what is left again (it skips what made it). Absent when nothing can be redone from here. */
+  retry?: () => void;
 }
 
 /** Thrown by `step` when Stop ends a wait. */
@@ -73,6 +109,7 @@ interface Entry {
   view: BackgroundJobView;
   stopRequested: boolean;
   wake: (() => void) | null;
+  retry: (() => void) | null;
 }
 
 let entries: Entry[] = [];
@@ -123,9 +160,17 @@ export function addInBackground(job: BackgroundJob): Promise<void> {
     view: {
       id: nextId++, kind: job.kind, label: job.label, scope: job.scope ?? null,
       done: 0, total: job.total, status: 'queued', waitUntil: null, reason: null, signIn: false,
+      cause: null, target: job.target ?? null, notAdded: [], canRetry: false, zipName: job.zipName ?? null,
     },
     stopRequested: false,
     wake: null,
+    retry: job.retry ?? null,
+  };
+  // What a stopped job still holds: the photos left, and whether Retry can redo them.
+  const leftOver = (cause: StopCause): Partial<BackgroundJobView> => {
+    const notAdded = job.notAdded?.() ?? [];
+    const redoable = notAdded.filter((n) => !n.tooLarge).length > 0 || (notAdded.length === 0 && entry.view.done < entry.view.total);
+    return { cause, notAdded, canRetry: entry.retry != null && redoable && cause !== 'storage' };
   };
   // A new job starts a new round: finished jobs from the last one leave the list,
   // stopped ones stay until dismissed.
@@ -155,18 +200,20 @@ export function addInBackground(job: BackgroundJob): Promise<void> {
   };
 
   const run = queue.then(async () => {
-    if (entry.stopRequested) { patch(entry, { status: 'stopped' }); return; }
+    if (entry.stopRequested) { patch(entry, { status: 'stopped', ...leftOver('you') }); return; }
     patch(entry, { status: 'running' });
     try {
       await job.run(control);
       const complete = !entry.stopRequested && entry.view.done >= entry.view.total;
-      patch(entry, { status: complete ? 'done' : 'stopped', waitUntil: null });
+      patch(entry, complete ? { status: 'done', waitUntil: null } : { status: 'stopped', waitUntil: null, ...leftOver('you') });
     } catch (error) {
+      const stopped = error instanceof JobStopped;
       patch(entry, {
         status: 'stopped',
         waitUntil: null,
-        reason: error instanceof JobStopped ? null : job.describe(error),
+        reason: stopped ? null : job.describe(error),
         signIn: error instanceof UnauthorizedError,
+        ...leftOver(stopped ? 'you' : stopCauseOf(error)),
       });
     }
   });
@@ -180,7 +227,19 @@ export function stopBackgroundJob(id: number): void {
   if (!entry || !isJobActive(entry.view)) return;
   entry.stopRequested = true;
   entry.wake?.();
-  if (entry.view.status === 'queued') patch(entry, { status: 'stopped' });
+  if (entry.view.status === 'queued') patch(entry, { status: 'stopped', cause: 'you', canRetry: entry.retry != null });
+}
+
+/**
+ * Retry a stopped job (#236): it leaves the list and what it had left is queued
+ * again as a new job, which skips the photos that already made it.
+ */
+export function retryBackgroundJob(id: number): void {
+  const entry = entries.find((e) => e.view.id === id);
+  if (!entry || entry.view.status !== 'stopped' || !entry.retry) return;
+  entries = entries.filter((e) => e !== entry);
+  publish();
+  entry.retry();
 }
 
 /** Clear every finished or stopped job from the list. */
