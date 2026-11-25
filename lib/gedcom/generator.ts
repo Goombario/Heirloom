@@ -5,6 +5,7 @@ import { archiveMediaPath } from '@/lib/gedcom/media-archive-name';
 import { countStaleMediaPointers, dropDanglingPointers, markStaleMediaPointers, resolveRawPointerTokens, type RawPointerKind } from '@/lib/gedcom/raw-pointers';
 import { CHILD_RELATIONSHIP_TO_FTM_VALUE, isChildRelationshipType, sharedChildRelationship } from '@/lib/child-relationship';
 import { factPlaceKey, placeKeyString } from '@/lib/places/place-key';
+import { gedcomNameText } from '@/lib/gedcom/name-parts';
 
 export interface GedcomExportSource {
     Id: number;
@@ -892,14 +893,21 @@ function generatePersonRecord(
 ): void {
     const gedcomId = personIdMap.get(p.Id)!;
     lines.push(`0 ${gedcomId} INDI`);
-    lines.push(`1 NAME ${p.FirstName || ''} /${p.LastName || ''}/`);
+    // #37 (ADR 0053): the NAME text carries every piece, as PERSONAL_NAME_PIECES expects
+    // ("Dr Johann /von Habsburg/ PhD"); without any, the line is as it always was.
+    const hasParts = Boolean(p.NamePrefix || p.SurnamePrefix || p.NameSuffix);
+    lines.push(hasParts ? `1 NAME ${gedcomNameText(p)}` : `1 NAME ${p.FirstName || ''} /${p.LastName || ''}/`);
     // Explicit name pieces (Q7). The slashes in "1 NAME" force every receiving
     // application to re-derive the split, which degrades for compound surnames,
     // surname prefixes and given names containing a space. GIVN/SURN are {0:1}
     // each under NAME (ged551-2.txt:620-635) and say it outright. Omitted rather
     // than emitted blank when the column is empty.
+    // In PERSONAL_NAME_PIECES order: NPFX, GIVN, SPFX, SURN, NSFX (ged551-2.txt).
+    if (p.NamePrefix) pushGedcomLine(lines, 2, 'NPFX', p.NamePrefix);
     if (p.FirstName) pushGedcomLine(lines, 2, 'GIVN', p.FirstName);
+    if (p.SurnamePrefix) pushGedcomLine(lines, 2, 'SPFX', p.SurnamePrefix);
     if (p.LastName) pushGedcomLine(lines, 2, 'SURN', p.LastName);
+    if (p.NameSuffix) pushGedcomLine(lines, 2, 'NSFX', p.NameSuffix);
     // NICK is a NAME piece in 5.5.1 (no level-1 NICK), so a nickname goes under the
     // primary name. One with its own citations keeps `1 NICK` / `2 SOUR` below (#963).
     const nicknamesUnderName = new Set<number>();
@@ -908,7 +916,7 @@ function generatePersonRecord(
         pushGedcomLine(lines, 2, 'NICK', nv.Name);
         nicknamesUnderName.add(nv.Id);
     }
-    // Passthrough: the NAME pieces the app doesn't model (NPFX, NSFX, SPFX, TYPE, …) (#964).
+    // Passthrough: the NAME pieces the app doesn't model (TYPE, FONE, a second NPFX, …) (#964).
     pushRaw(lines, p.NameRawGedcom);
     pushCitations(lines, 2, `PersonName:${p.Id}`, citationsByFact, sourceIdToXref);
 

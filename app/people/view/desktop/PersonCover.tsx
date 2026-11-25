@@ -57,9 +57,13 @@ export function PersonCover({ person, variants = null, media, treeId, role, biog
   const { whole, nickname } = headingName(person, variants);
   const title = whole ?? (
     <>
+      {/* The header alone carries the name parts (#37). */}
+      {person.NamePrefix && <>{person.NamePrefix} </>}
       {person.FirstName}
       {nickname && <> “{nickname}”</>}
+      {person.SurnamePrefix && <> {person.SurnamePrefix}</>}
       {person.LastName && <> {person.LastName}</>}
+      {person.NameSuffix && <> {person.NameSuffix}</>}
       {!person.FirstName && !person.LastName && tp('unknown')}
     </>
   );

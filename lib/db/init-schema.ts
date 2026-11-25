@@ -1,6 +1,7 @@
 import { backfillEventDates } from './backfill-event-dates';
 import { backfillCitationLinks } from './backfill-citation-links';
 import { backfillRepositoryContacts } from './backfill-repository-contacts';
+import { backfillNameParts } from './backfill-name-parts';
 import { dropFactPlaceText, hasFactPlaceText } from './place-text-migration';
 import { FTM_VALUE_TO_CHILD_RELATIONSHIP } from '@/lib/child-relationship';
 
@@ -23,7 +24,7 @@ export interface DbExecutor {
  * `__tests__/unit/schema-version-guard.test.ts` fingerprints the function below
  * and fails if it changes, to stop a schema edit shipping without a bump here.
  */
-export const SCHEMA_VERSION = 75;
+export const SCHEMA_VERSION = 76;
 
 /** FTM's typed `_FREL` / `_MREL` values as a case-insensitive regex alternation. */
 const MAPPED_FTM_VALUES = Object.keys(FTM_VALUE_TO_CHILD_RELATIONSHIP)
@@ -55,6 +56,8 @@ const CITATION_URL_BACKFILLED = 'Record link; passthrough links lifted (#1024)';
 
 /** The comment on `Repository."Website"` once its contacts backfill has finished (#40). */
 const REPOSITORY_CONTACTS_BACKFILLED = 'Website; passthrough WWW/PHON/EMAIL lifted (#40)';
+/** The comment on `People."NamePrefix"` once its name-parts backfill has finished (#37). */
+const NAME_PARTS_BACKFILLED = 'Name prefix; passthrough NPFX/SPFX/NSFX lifted (#37)';
 
 /**
  * Initialize database schema. Fully idempotent and race-condition safe.
@@ -447,6 +450,20 @@ export async function initializeSchema(pool: DbExecutor): Promise<void> {
   await pool.query(`ALTER TABLE "People" ADD COLUMN IF NOT EXISTS "DeathRawGedcom" TEXT;`);
   // #964: the primary `1 NAME`'s unmodeled sub-lines (NPFX, NSFX, SPFX, TYPE, …).
   await pool.query(`ALTER TABLE "People" ADD COLUMN IF NOT EXISTS "NameRawGedcom" TEXT;`);
+  // #37 (ADR 0053): the name prefix, surname prefix and suffix are modeled; a later
+  // NPFX/SPFX/NSFX stays in "NameRawGedcom". The backfill lifts them once, marked done
+  // by the column's comment as "Repository"."Website"'s backfill is.
+  await pool.query(`ALTER TABLE "People" ADD COLUMN IF NOT EXISTS "NamePrefix" TEXT;`);
+  await pool.query(`ALTER TABLE "People" ADD COLUMN IF NOT EXISTS "SurnamePrefix" TEXT;`);
+  await pool.query(`ALTER TABLE "People" ADD COLUMN IF NOT EXISTS "NameSuffix" TEXT;`);
+  const namePartsNote = await pool.query(`
+    SELECT col_description(a.attrelid, a.attnum) AS "Note" FROM pg_attribute a
+    WHERE a.attrelid = '"People"'::regclass AND a.attname = 'NamePrefix'
+  `);
+  if ((namePartsNote.rows[0] as { Note: string | null } | undefined)?.Note !== NAME_PARTS_BACKFILLED) {
+    await backfillNameParts(pool);
+    await pool.query(`COMMENT ON COLUMN "People"."NamePrefix" IS '${NAME_PARTS_BACKFILLED}'`);
+  }
   // #968: 1 when the imported INDI had a bare `1 BIRT` (no date, place or anything
   // else), so it still exports. NULL otherwise.
   await pool.query(`ALTER TABLE "People" ADD COLUMN IF NOT EXISTS "BirthRecorded" INTEGER;`);

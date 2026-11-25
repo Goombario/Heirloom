@@ -4926,7 +4926,14 @@
     "delete_person_sub": "Убирает из всех семей",
     "delete_person_title": "Удалить: {name}?",
     "delete_person_body": "Человек будет убран из всех семей вместе с событиями, именами и заметками. Источники остаются в древе. Вернуть его можно через историю.",
-    "person_deleted": "Удалено: {name}"
+    "person_deleted": "Удалено: {name}",
+    "more_name_parts": "Другие части имени",
+    "name_prefix": "Приставка",
+    "name_prefix_placeholder": "д-р",
+    "name_before_last": "Перед фамилией",
+    "name_before_last_placeholder": "фон, де, ван",
+    "name_suffix": "Суффикс",
+    "name_suffix_placeholder": "мл., PhD"
   },
   "mobilePhoto": {
     "open_page": "Открыть страницу",
@@ -5285,7 +5292,6 @@
     "sources": "Источники",
     "add_media": "Добавить медиа",
     "no_sources": "Источников пока нет. Сошлитесь на источник через значок источника у факта.",
-    "name_hint": "Достаточно имени или фамилии.",
     "name_needed": "Введите имя или фамилию.",
     "vitals": "Рождение и смерть",
     "edit_in_timeline": "Изменить в хронологии",

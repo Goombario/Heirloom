@@ -8,6 +8,7 @@ import { useErrorToast } from '@/app/components/useErrorToast';
 import { MobileRow, SegmentedControl, cx, fieldClass, showChangeToast } from '@/app/components/ui';
 import { ConfirmSheet, Sheet } from '@/app/components/ui/Sheet';
 import { GitMerge, Trash2 } from '@/lib/icons';
+import { NamePartsFields, namePartsBody, namePartsChanged, namePartsDraft } from '@/app/components/person-form/NamePartsFields';
 import { nameBarParts } from './model';
 import type { RunChange } from './useChange';
 
@@ -43,11 +44,11 @@ function EditPersonBody({ open, onClose, person, treeId, canDelete, run, onDelet
     const tm = useTranslations('personMerge');
     const { reportError } = useErrorToast();
     const ids = useId();
-    const saved = { first: person.FirstName ?? '', last: person.LastName ?? '', sex: asSex(person.Sex) };
+    const saved = { first: person.FirstName ?? '', last: person.LastName ?? '', parts: namePartsDraft(person), sex: asSex(person.Sex) };
     const [draft, setDraft] = useState(saved);
     const [saving, setSaving] = useState(false);
     const [confirming, setConfirming] = useState(false);
-    const dirty = draft.first.trim() !== saved.first.trim() || draft.last.trim() !== saved.last.trim() || draft.sex !== saved.sex;
+    const dirty = draft.first.trim() !== saved.first.trim() || draft.last.trim() !== saved.last.trim() || namePartsChanged(draft.parts, saved.parts) || draft.sex !== saved.sex;
     const name = `${draft.first} ${draft.last}`.trim();
     const shownName = nameBarParts(person).given || `${saved.first} ${saved.last}`.trim() || t('this_person');
 
@@ -59,6 +60,7 @@ function EditPersonBody({ open, onClose, person, treeId, canDelete, run, onDelet
             return client.people.update(person.Id, {
                 FirstName: draft.first.trim() || null,
                 LastName: draft.last.trim() || null,
+                ...(namePartsChanged(draft.parts, saved.parts) ? namePartsBody(draft.parts) : {}),
                 Sex: draft.sex || null,
             }, treeId);
         }, { message: t('person_saved'), detail: name || undefined });
@@ -98,6 +100,7 @@ function EditPersonBody({ open, onClose, person, treeId, canDelete, run, onDelet
                 <h3 className="eyebrow m-0">{t('group_name')}</h3>
                 {field('first', t('first_name'), t('first_name_placeholder'), false)}
                 {field('last', t('last_name'), t('last_name_placeholder'), true)}
+                <NamePartsFields phone value={draft.parts} onChange={(parts) => setDraft((d) => ({ ...d, parts }))} />
             </div>
             <div className="grid gap-3 pt-4 pb-3 border-t border-border">
                 <h3 className="eyebrow m-0">{t('group_about')}</h3>

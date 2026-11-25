@@ -127,3 +127,4 @@ What this makes easy, what it makes hard, and what invariant must now be maintai
 | [0050](0050-a-place-knows-what-kind-of-place-the-geocoder-matched.md) | A place knows what kind of place the geocoder matched | places |
 | [0051](0051-whats-new-shows-each-release-once-per-user.md) | What's new shows each release once per user | releases / accounts |
 | [0052](0052-a-person-merge-is-one-revertible-change.md) | A person merge is one revertible change | people / audit |
+| [0053](0053-a-person-has-a-name-prefix-surname-prefix-and-suffix.md) | A person has a name prefix, surname prefix and suffix | people / gedcom |

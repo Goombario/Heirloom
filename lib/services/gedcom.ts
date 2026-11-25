@@ -50,6 +50,7 @@ import {
 import type { ParsedSpreadsheetPerson, ParsedSpreadsheetFamily } from '@/lib/spreadsheet/parser';
 import { liftCitationLink } from '@/lib/gedcom/citation-link';
 import { liftRepositoryContacts } from '@/lib/gedcom/repository-contacts';
+import { liftNameParts } from '@/lib/gedcom/name-parts';
 
 /** Join captured passthrough lines into a single TEXT value for storage (null when empty). */
 function rawGedcom(lines: string[] | undefined): string | null {
@@ -1829,6 +1830,16 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
     recordTypes,
   } = parseGedcom(gedcomContent);
   const rawPointersDropped = markPassthroughPointers({ people, families, sources, repositories, mediaRecords }, recordTypes);
+  // #37 (ADR 0053): the name prefix, surname prefix and suffix are person fields, lifted
+  // out of the NAME passthrough and off the name text that repeats them.
+  for (const p of people) {
+    const parts = liftNameParts(p.nameRawLines, { FirstName: p.FirstName ?? null, LastName: p.LastName ?? null });
+    p.NamePrefix = parts.NamePrefix;
+    p.SurnamePrefix = parts.SurnamePrefix;
+    p.NameSuffix = parts.NameSuffix;
+    if (parts.FirstName || parts.LastName) { p.FirstName = parts.FirstName; p.LastName = parts.LastName; }
+    p.nameRawLines = parts.rest;
+  }
   // #39: dates that couldn't be read are kept as written; say how many.
   const datesKeptAsWritten = countUnreadableDates(people, families);
 
@@ -2119,6 +2130,7 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         'UserId', 'TreeId', 'FirstName', 'LastName', 'Sex', 'GedcomId', 'BirthDate',
         'DeathDate', 'DeathCause', 'IsDeceased', 'RawGedcom',
         'BirthRawGedcom', 'DeathRawGedcom', 'NameRawGedcom', 'BirthRecorded',
+        'NamePrefix', 'SurnamePrefix', 'NameSuffix',
       ];
       const personRows = people.map((person) => [
         scope.ownerId, scope.treeId, person.FirstName, person.LastName, person.Sex, person.GedcomId,
@@ -2126,6 +2138,7 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         rawGedcom(person.rawLines),
         rawGedcom(person.birthRawLines), rawGedcom(person.deathRawLines), rawGedcom(person.nameRawLines),
         bareBirth(person),
+        person.NamePrefix ?? null, person.SurnamePrefix ?? null, person.NameSuffix ?? null,
       ]);
       const personIds = await batchInsert(client, 'People', personColumns, personRows, { returning: true });
       people.forEach((person, i) => {
@@ -2194,8 +2207,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         }
 
         const result = await client.query(
-          `INSERT INTO "People" ("UserId", "TreeId", "FirstName", "LastName", "Sex", "GedcomId", "BirthDate", "DeathDate", "DeathCause", "IsDeceased", "RawGedcom", "BirthRawGedcom", "DeathRawGedcom", "NameRawGedcom", "BirthRecorded")
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          `INSERT INTO "People" ("UserId", "TreeId", "FirstName", "LastName", "Sex", "GedcomId", "BirthDate", "DeathDate", "DeathCause", "IsDeceased", "RawGedcom", "BirthRawGedcom", "DeathRawGedcom", "NameRawGedcom", "BirthRecorded", "NamePrefix", "SurnamePrefix", "NameSuffix")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
            RETURNING "Id"`,
           [
             scope.ownerId,
@@ -2213,6 +2226,9 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
             rawGedcom(person.deathRawLines),
             rawGedcom(person.nameRawLines),
             bareBirth(person),
+            person.NamePrefix ?? null,
+            person.SurnamePrefix ?? null,
+            person.NameSuffix ?? null,
           ]
         );
 

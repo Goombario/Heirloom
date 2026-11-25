@@ -50,7 +50,7 @@ export type MergeField = (typeof MERGE_FIELDS)[number];
 export type MergeTake = Partial<Record<MergeField, 'kept' | 'other'>>;
 
 const FIELD_COLUMNS: Record<MergeField, readonly string[]> = {
-    name: ['FirstName', 'LastName', 'NameRawGedcom'],
+    name: ['FirstName', 'LastName', 'NamePrefix', 'SurnamePrefix', 'NameSuffix', 'NameRawGedcom'],
     sex: ['Sex'],
     living: ['IsDeceased'],
     birth: ['BirthDate', 'BirthPlaceId', 'BirthPlaceNameId', 'BirthRawGedcom', 'BirthRecorded'],

@@ -68,7 +68,12 @@ export interface CreatePersonInput {
 }
 
 /** Partial update for a person — same fields as create, all optional. */
-export type UpdatePersonInput = CreatePersonInput;
+export type UpdatePersonInput = CreatePersonInput & {
+  /** The name prefix, surname prefix and suffix (#37, ADR 0053); null clears one. */
+  NamePrefix?: string | null;
+  SurnamePrefix?: string | null;
+  NameSuffix?: string | null;
+};
 
 /** A row of the `NameVariant` table as returned by the API. */
 export interface NameVariant {

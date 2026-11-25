@@ -16,7 +16,7 @@ import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { getInitials } from '@/lib/utils/initials';
 import { avatarClass } from '@/lib/utils/avatar';
 import { displayFullName } from '@/lib/utils/names';
-import { headingNameText } from '../derive';
+import { headingNameText, headingNameWithParts } from '../derive';
 import ProfileImage from '@/app/components/ProfileImage';
 import { GlassButton, Lifespan, PageShell, cx } from '@/app/components/ui';
 import { ConfirmSheet } from '@/app/components/ui/Sheet';
@@ -168,6 +168,8 @@ export function MobilePersonPage(props: MobilePersonPageProps) {
     const { given, surname } = nameBarParts(person);
     // A starred nickname sits in the given names; any other starred name replaces them.
     const fullName = headingNameText(person, props.variantsLoaded ? props.variants : null, t('unknown'));
+    // The header alone carries the name parts (#37).
+    const headerName = headingNameWithParts(person, props.variantsLoaded ? props.variants : null, t('unknown'));
     const editor = role !== 'viewer';
 
     // A new person opens on Overview.
@@ -335,7 +337,7 @@ export function MobilePersonPage(props: MobilePersonPageProps) {
                     </span>
                 </div>
                 <div className="absolute inset-x-4 bottom-3.5 z-[2] grid gap-1.5">
-                    <h1 className="m-0 serif font-semibold text-white mp-hero-name text-balance">{fullName}</h1>
+                    <h1 className="m-0 serif font-semibold text-white mp-hero-name text-balance">{headerName}</h1>
                     {!photo && editor && (
                         <button type="button" onClick={() => setPortraitOpen(true)}
                             className="justify-self-start inline-flex items-center gap-1.5 min-h-[34px] px-3 rounded-full bg-black/[0.32] border border-white/30 text-white text-sm font-semibold cursor-pointer focus-ring [&_svg]:w-3.5 [&_svg]:h-3.5">

@@ -4926,7 +4926,14 @@
     "delete_person_sub": "La retire de toutes ses familles",
     "delete_person_title": "Supprimer {name} ?",
     "delete_person_body": "Cette personne est retirée de toutes ses familles, avec ses événements, noms et notes. Les sources restent dans l’arbre. L’historique permet de la rétablir.",
-    "person_deleted": "{name} supprimé(e)"
+    "person_deleted": "{name} supprimé(e)",
+    "more_name_parts": "Autres éléments du nom",
+    "name_prefix": "Préfixe",
+    "name_prefix_placeholder": "Dr",
+    "name_before_last": "Avant le nom",
+    "name_before_last_placeholder": "von, de, van",
+    "name_suffix": "Suffixe",
+    "name_suffix_placeholder": "fils, PhD"
   },
   "mobilePhoto": {
     "open_page": "Ouvrir sa page",
@@ -5285,7 +5292,6 @@
     "sources": "Sources",
     "add_media": "Ajouter un média",
     "no_sources": "Aucune source citée pour l’instant. Citez-en une depuis le repère de source d’un fait.",
-    "name_hint": "Un prénom ou un nom suffit.",
     "name_needed": "Saisissez un prénom ou un nom.",
     "vitals": "Naissance et décès",
     "edit_in_timeline": "Modifier dans la chronologie",

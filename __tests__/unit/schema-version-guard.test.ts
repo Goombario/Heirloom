@@ -135,7 +135,9 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 // v73 — a place's geocoder kind (#45, ADR 0050): "Places"."OsmKind".
 // v74 — the last version whose What's new a user has seen (#35, ADR 0051): "Users"."LastSeenVersion".
 // v75 — when a media row entered the app (#25): "Media"."CreatedAt", NULL for older rows.
-const EXPECTED_FINGERPRINT = 'b996597ace048f0dc6f9b86039f00b1435553a22d5b88182fb54c1673c08872b';
+// v76 — a person's name parts (#37, ADR 0053): "People"."NamePrefix" / "SurnamePrefix" /
+// "NameSuffix", and the one-time lift of the first NPFX/SPFX/NSFX out of "NameRawGedcom".
+const EXPECTED_FINGERPRINT = 'f38065516142e04341d2fe9deb5378cd31168a4b0b4a19333c03ec8defa2ec50';
 
 function schemaFingerprint(): string {
   const src = readFileSync(

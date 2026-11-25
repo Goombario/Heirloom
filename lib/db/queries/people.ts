@@ -440,7 +440,7 @@ export async function createPerson(data: NewPerson, actingUserId?: number, place
 // (ADR 0010) and people use Note + NoteLink like every other owner. Keep this in
 // lockstep with ENTITY_CONFIG.person.allowedFields in audit.ts.
 const ALLOWED_PERSON_FIELDS: ReadonlySet<string> = new Set([
-    'FirstName', 'LastName', 'Sex', 'GedcomId',
+    'FirstName', 'LastName', 'NamePrefix', 'SurnamePrefix', 'NameSuffix', 'Sex', 'GedcomId',
     'BirthDate', 'BirthPlace', 'DeathDate', 'DeathPlace', 'DeathCause', 'IsDeceased',
 ]);
 
