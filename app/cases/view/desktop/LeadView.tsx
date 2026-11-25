@@ -117,7 +117,7 @@ export function LeadView({ summary, findings, facts = [], requests, comments, se
                                 return (
                                     <li key={p.Id}>
                                         <Link href={`/people/view?id=${p.Id}`} className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 py-0.5 pl-0.5 pr-3 text-sm text-text no-underline hover:underline focus-ring">
-                                            <PersonAvatar as="span" size={22} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
+                                            <PersonAvatar decorative as="span" size={22} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
                                                 sex={p.Sex} name={name} initials={initialsFromName(name)} />
                                             {name}
                                         </Link>

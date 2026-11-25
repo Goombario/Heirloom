@@ -103,7 +103,7 @@ export function LeadDialog({ lead, casePeople, treeId, sheet = false, onSave, on
                                 <button key={p.Id} type="button" aria-pressed={on} onClick={() => toggle(p)}
                                     className={cx('inline-flex items-center gap-1.5 h-[30px] rounded-full pl-1 pr-3 text-sm cursor-pointer focus-ring border',
                                         on ? 'bg-segment-on text-on-segment border-segment-on' : 'bg-card text-text border-dashed border-border')}>
-                                    <PersonAvatar as="span" size={22} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
+                                    <PersonAvatar decorative as="span" size={22} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
                                         sex={p.Sex} name={name} initials={initialsFromName(name)} />
                                     {name}
                                 </button>

@@ -147,7 +147,7 @@ export function LedgerTimeline({ items, head = 5, keep = [], add, addRef, classN
       <ol className="ledger__list">
         {parts.map((part) => 'row' in part
           ? <Row key={part.row.key} it={part.row} />
-          : <Fold key={`fold-${part.run[0].key}`} run={part.run} onOpen={() => setExpanded(true)} label={t('more_events', { count: part.run.length })} aria={t('show_more_events', { count: part.run.length })} />)}
+          : <Fold key={`fold-${part.run[0].key}`} run={part.run} onOpen={() => setExpanded(true)} label={t('more_events', { count: part.run.length })} />)}
         {add && (
           <li className="ledger__ev ledger__phantom">
             <span className="ledger__when" aria-hidden="true" />
@@ -167,12 +167,14 @@ export function LedgerTimeline({ items, head = 5, keep = [], add, addRef, classN
   );
 }
 
-function Fold({ run, onOpen, label, aria }: { run: LedgerItem[]; onOpen: () => void; label: string; aria: string }) {
+function Fold({ run, onOpen, label }: { run: LedgerItem[]; onOpen: () => void; label: string }) {
   const years = run.map((h) => h.sortYear).filter((y): y is number => y != null);
   const range = years.length ? (years[0] === years[years.length - 1] ? String(years[0]) : `${years[0]} – ${years[years.length - 1]}`) : '';
   return (
     <li>
-      <button type="button" className="ledger__fold focus-ring" onClick={onOpen} aria-label={aria}>
+      {/* Named by what it shows ("2 more events 1890 – 1900"), so voice control can
+          say it (WCAG 2.5.3, #21). */}
+      <button type="button" className="ledger__fold focus-ring" onClick={onOpen}>
         <span />
         <span className="ledger__rule ledger__rule--dashed" aria-hidden="true" />
         <span className="ledger__fold-body">

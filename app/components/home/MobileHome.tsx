@@ -250,7 +250,7 @@ function RecentRow({ person, treeId, divided }: { person: RecentPerson; treeId: 
             href={`/people/view?id=${person.Id}`}
             divided={divided}
             lead={
-                <PersonAvatar as="span" size={36} mediaId={person.PrimaryMediaId} treeId={treeId} name={name} sex={person.Sex}
+                <PersonAvatar decorative as="span" size={36} mediaId={person.PrimaryMediaId} treeId={treeId} name={name} sex={person.Sex}
                     initials={getInitials(person.FirstName, person.LastName)}
                     focalX={person.FocalX} focalY={person.FocalY} focalRadius={person.FocalRadius} />
             }

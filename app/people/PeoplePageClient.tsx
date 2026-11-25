@@ -397,7 +397,7 @@ export default function PeoplePageClient({
                 const fullName = displayFullName(person) || t('unnamed');
                 return (
                     <div className="row gap-2.5">
-                        <PersonAvatar
+                        <PersonAvatar decorative
                             mediaId={person.PrimaryMediaId}
                             treeId={activeTreeId}
                             name={String(fullName)}

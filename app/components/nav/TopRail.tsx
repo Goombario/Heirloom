@@ -57,7 +57,8 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
             {/* Tree switcher: dropdown on desktop; mobile switcher lives in the drawer */}
             <span className="hidden md:block"><TreeSwitcher variant="dropdown" /></span>
 
-            <button onClick={openSearch} aria-label={`${t('search')} (${searchHint})`} title={`${t('search')} (${searchHint})`}
+            <button onClick={openSearch} // No brackets in the name: the visible key must read as part of it (WCAG 2.5.3, #21).
+              aria-label={`${t('search')}, ${searchHint}`} title={`${t('search')} (${searchHint})`}
               // Width tracks --control-h so the icon-only button stays square: on a
               // coarse pointer the token is 50px, and a fixed w-9 would have made it
               // a 36×50 sliver next to the 44×44 hamburger.

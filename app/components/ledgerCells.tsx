@@ -65,7 +65,7 @@ export function LedgerPeople({ people, treeId }: { people: LedgerPerson[]; treeI
         const name = displayFullName(p) || '?';
         return (
           <GuardedLink key={p.Id} href={`/people/view?id=${p.Id}`} className="ledger-ro__person focus-ring rounded-sm">
-            <PersonAvatar as="span" mediaId={p.PrimaryMediaId} treeId={treeId} name={name} initials={getInitials(p.FirstName, p.LastName)}
+            <PersonAvatar decorative as="span" mediaId={p.PrimaryMediaId} treeId={treeId} name={name} initials={getInitials(p.FirstName, p.LastName)}
               sex={p.Sex} size={24} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius} />
             {name}
           </GuardedLink>

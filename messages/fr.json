@@ -27,7 +27,8 @@
     "save_hint": "Ctrl+S pour enregistrer · Échap pour annuler",
     "scope_birth": "Naissance",
     "scope_death": "Décès",
-    "scope_marriage": "Mariage"
+    "scope_marriage": "Mariage",
+    "row_edit": "Modifier la note"
   },
   "ownerMedia": {
     "section_title": "Médias",
@@ -5220,7 +5221,6 @@
     "finder_cancel": "Annuler",
     "range_of": "{from}–{to} sur {total}",
     "more_events": "{count, plural, one {# autre événement} other {# autres événements}}",
-    "show_more_events": "Afficher {count, plural, one {# autre événement} other {# autres événements}}",
     "show_fewer": "Afficher moins",
     "ro_date": "Date",
     "ro_place": "Lieu",

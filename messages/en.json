@@ -27,7 +27,8 @@
     "save_hint": "Ctrl+S to save · Esc to cancel",
     "scope_birth": "Birth",
     "scope_death": "Death",
-    "scope_marriage": "Marriage"
+    "scope_marriage": "Marriage",
+    "row_edit": "Edit note"
   },
   "ownerMedia": {
     "section_title": "Media",
@@ -5220,7 +5221,6 @@
     "finder_cancel": "Cancel",
     "range_of": "{from}–{to} of {total}",
     "more_events": "{count, plural, one {# more event} other {# more events}}",
-    "show_more_events": "Show {count, plural, one {# more event} other {# more events}}",
     "show_fewer": "Show fewer",
     "ro_date": "Date",
     "ro_place": "Place",

@@ -18,6 +18,10 @@ import { resolveChromiumExecutable } from './lib/chromium-resolver.mjs';
 import { startStaticPreview } from './lib/managed-static-preview.mjs';
 
 let baseUrl = process.env.BASE_URL || '';
+// Contrast, plus the two name checks of #21: a control's accessible name must hold
+// its visible text (WCAG 2.5.3), and a photo beside a printed name is decorative.
+const RULES = ['color-contrast', 'label-content-name-mismatch', 'image-redundant-alt'];
+
 const ROUTES = [
   '/', '/people', '/people/new', '/families', '/library', '/places',
   '/cases', '/relationship', '/import-export', '/options', '/audit', '/data-checks', '/about', '/privacy',
@@ -95,11 +99,13 @@ async function scanRoute(page, route) {
   }
 
   await page.evaluate(axeSource.source);
-  const res = await page.evaluate(async () =>
-    await window.axe.run(document, { runOnly: { type: 'rule', values: ['color-contrast'] } }));
+  const res = await page.evaluate(async (rules) =>
+    await window.axe.run(document, { runOnly: { type: 'rule', values: rules } }), RULES);
   const violations = res.violations.reduce((s, v) => s + v.nodes.length, 0);
   const combos = [...new Set(res.violations.flatMap((v) =>
-    v.nodes.map((node) => (node.failureSummary || '').match(/contrast of [\d.]+.*?background color: #\w+/s)?.[0] || '')))];
+    v.nodes.map((node) => v.id === 'color-contrast'
+      ? (node.failureSummary || '').match(/contrast of [\d.]+.*?background color: #\w+/s)?.[0] || ''
+      : `${v.id}: ${node.html.slice(0, 120)}`)))];
   return { violations, combos };
 }
 
@@ -162,12 +168,12 @@ async function main() {
       broken.map((r) => `  [${r.theme}] ${r.route}: ${r.error}`).join('\n')}`);
   }
   if (total > 0) {
-    console.error(`\n✗ ${total} color-contrast violation(s):\n${failures.join('\n')}`);
+    console.error(`\n✗ ${total} violation(s) (contrast or names):\n${failures.join('\n')}`);
   }
   if (broken.length > 0 || total > 0) {
     process.exitCode = 1;
   } else {
-    console.log(`\n✓ No color-contrast violations across ${ROUTES.length} routes × ${THEMES.length} themes.`);
+    console.log(`\n✓ No contrast or name violations across ${ROUTES.length} routes × ${THEMES.length} themes.`);
   }
 }
 

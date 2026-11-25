@@ -65,7 +65,7 @@ function RecordPeople({ record, treeId }: { record: PlaceRecord; treeId: number 
         <div className="flex flex-wrap gap-x-4 gap-y-1.5">
             {record.people.map((p) => (
                 <Link key={p.id} href={`/people/view?id=${p.id}`} className="inline-flex items-center gap-2 serif text-base font-semibold text-text hover:underline rounded focus-ring">
-                    <PersonAvatar mediaId={p.mediaId} treeId={treeId} sex={p.sex === 'M' || p.sex === 'F' ? p.sex : null} name={p.name} initials={initialsFromName(p.name)} size={26} />
+                    <PersonAvatar decorative mediaId={p.mediaId} treeId={treeId} sex={p.sex === 'M' || p.sex === 'F' ? p.sex : null} name={p.name} initials={initialsFromName(p.name)} size={26} />
                     {p.name || '?'}
                 </Link>
             ))}
@@ -414,7 +414,7 @@ function Lanes({ records, people, placeId, placeName, canEdit, treeId, onSelectP
                 <div>
                     {shownRows.map((lane) => (
                         <Link key={lane.personId} href={`/people/view?id=${lane.personId}`} className="place-lanes__name focus-ring-inset">
-                            <PersonAvatar mediaId={lane.marks[0]?.people.find((p) => p.id === lane.personId)?.mediaId ?? null} treeId={treeId} sex={null} name={lane.name} initials={initialsFromName(lane.name)} size={30} />
+                            <PersonAvatar decorative mediaId={lane.marks[0]?.people.find((p) => p.id === lane.personId)?.mediaId ?? null} treeId={treeId} sex={null} name={lane.name} initials={initialsFromName(lane.name)} size={30} />
                             <span className="grid min-w-0">
                                 <span className="place-lanes__nm">{lane.name || '?'}</span>
                                 {life.get(lane.personId) && <span className="place-lanes__yrs">{life.get(lane.personId)}</span>}

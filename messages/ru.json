@@ -27,7 +27,8 @@
     "save_hint": "Ctrl+S — сохранить · Esc — отменить",
     "scope_birth": "Рождение",
     "scope_death": "Смерть",
-    "scope_marriage": "Брак"
+    "scope_marriage": "Брак",
+    "row_edit": "Изменить заметку"
   },
   "ownerMedia": {
     "section_title": "Медиа",
@@ -5220,7 +5221,6 @@
     "finder_cancel": "Отмена",
     "range_of": "{from}–{to} из {total}",
     "more_events": "{count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
-    "show_more_events": "Показать {count, plural, one {ещё # событие} few {ещё # события} many {ещё # событий} other {ещё # события}}",
     "show_fewer": "Показать меньше",
     "ro_date": "Дата",
     "ro_place": "Место",

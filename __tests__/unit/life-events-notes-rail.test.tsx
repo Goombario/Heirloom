@@ -160,8 +160,7 @@ describe('event notes rail — read-only reader', () => {
         const row = await screen.findByTestId('note-row');
         // Matched on the prefix of the Edit action's accessible name, which carries an
         // excerpt of the row's own note. An exact-name query would pass vacuously.
-        const editPrefix = en.notes.edit_for.split('{')[0];
-        expect(within(row).queryByRole('button', { name: new RegExp(`^${editPrefix}`) })).not.toBeInTheDocument();
+        expect(within(row).queryByRole('button', { name: new RegExp(`${en.notes.row_edit}$`) })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: en.notes.add_button })).not.toBeInTheDocument();
         // …and no route into the editor either, so the "Note" description box is
         // not reachable for them at all.
@@ -209,8 +208,7 @@ describe('event notes rail — editor', () => {
         // The counterpart of the view-only assertion above: an editor DOES get the
         // row's Edit, which proves that query finds a present button rather than
         // passing vacuously on a name nothing uses.
-        const editPrefix = en.notes.edit_for.split('{')[0];
-        expect(screen.getByRole('button', { name: new RegExp(`^${editPrefix}`) })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: new RegExp(`${en.notes.row_edit}$`) })).toBeInTheDocument();
     });
 
     it('can add a note to an event that has none (no disclosure to open)', async () => {
@@ -242,7 +240,7 @@ describe('event notes rail — editor', () => {
         const row = await screen.findByTestId('note-row');
 
         // A note opens into its edit panel (#30); Delete lives there.
-        await user.click(within(row).getByRole('button', { name: /^Edit note/ }));
+        await user.click(within(row).getByRole('button', { name: /Edit note$/ }));
         await user.click(within(row).getByRole('button', { name: en.common.delete }));
 
         const dialog = await screen.findByRole('dialog');
@@ -408,7 +406,7 @@ describe('vital notes rail — Birth and Death rows', () => {
         await user.click(screen.getAllByRole('button', { name: new RegExp(`^${editPrefix} `) })[0]);
         const row = await screen.findByTestId('note-row');
         // A note opens into its edit panel (#30); Delete lives there.
-        await user.click(within(row).getByRole('button', { name: /^Edit note/ }));
+        await user.click(within(row).getByRole('button', { name: /Edit note$/ }));
         await user.click(within(row).getByRole('button', { name: en.common.delete }));
         expect(await screen.findByRole('dialog')).toBeInTheDocument();
 
@@ -429,7 +427,7 @@ describe('vital notes rail — Birth and Death rows', () => {
         const row = await screen.findByTestId('note-row');
 
         // The note opens to its editor and Delete; nothing offers to promote a birth note.
-        await user.click(within(row).getByRole('button', { name: /^Edit note/ }));
+        await user.click(within(row).getByRole('button', { name: /Edit note$/ }));
         expect(within(row).getByRole('textbox', { name: en.common.edit })).toBeInTheDocument();
         expect(within(row).getByRole('button', { name: en.common.delete })).toBeInTheDocument();
         expect(within(row).queryByRole('button', { name: en.notes.make_primary })).not.toBeInTheDocument();

@@ -75,7 +75,7 @@ export function PhoneLead({ summary, findings, facts = [], requests, comments, s
                         return (
                             <li key={p.Id}>
                                 <Link href={`/people/view?id=${p.Id}`} className="inline-flex items-center gap-1.5 h-8 rounded-full border border-border bg-card pl-[3px] pr-3 serif text-base font-semibold text-text no-underline focus-ring">
-                                    <PersonAvatar as="span" size={26} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
+                                    <PersonAvatar decorative as="span" size={26} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
                                         sex={p.Sex} name={name} initials={initialsFromName(name)} />
                                     {name}
                                 </Link>
