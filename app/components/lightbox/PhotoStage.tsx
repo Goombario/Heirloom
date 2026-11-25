@@ -237,7 +237,10 @@ export default function PhotoStage(props: PhotoStageProps) {
                 // like a different state, not the normal bar with an extra button
                 // (#456). This mirrors MobileLightbox, which already does exactly
                 // this — a titled bar plus a filled Done control.
-                <div className="flex items-center gap-[14px] px-5 py-4 relative z-[5]">
+                // Its empty part is backdrop too (#253): a click there closes, the
+                // same guard as the stage below. Tag mode keeps backdrop close off.
+                <div data-testid="lightbox-top-bar" className="flex items-center gap-[14px] px-5 py-4 relative z-[5]"
+                    onClick={(e) => { if (!tagMode && e.target === e.currentTarget) onClose(); }}>
                     {tagMode ? (
                         <>
                             <ScanFace className="w-5 h-5 text-white shrink-0" aria-hidden="true" />
