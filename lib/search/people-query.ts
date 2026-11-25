@@ -8,7 +8,7 @@
  * one (`?q=`), and the service validates what it is sent with `normalizeQuery`.
  */
 
-export type GroupMatch = 'all' | 'any';
+type GroupMatch = 'all' | 'any';
 
 export interface SearchCondition {
     field: FieldId;
@@ -46,7 +46,7 @@ export const FIELD_IDS = [
 ] as const;
 export type FieldId = (typeof FIELD_IDS)[number];
 
-export const OP_IDS = [
+const OP_IDS = [
     'is', 'is_not', 'contains', 'starts_with', 'is_empty',
     'before', 'after', 'between', 'unknown',
     'is_in',
@@ -105,7 +105,7 @@ export const SEX_VALUES = ['M', 'F', 'X', 'U'] as const;
 export const LIVING_VALUES = ['living', 'deceased', 'unknown'] as const;
 
 /** "Related to" defaults (#247 lock): any line, blood and marriage, six steps. */
-export const DEFAULT_STEPS = 6;
+const DEFAULT_STEPS = 6;
 export const MAX_STEPS = 20;
 const MAX_GROUPS = 10;
 const MAX_CONDS = 20;
@@ -126,7 +126,7 @@ export function newCondition(field: FieldId): SearchCondition {
 }
 
 /** True when a condition has the value its kind needs, so it takes part in the search. */
-export function isComplete(c: SearchCondition): boolean {
+function isComplete(c: SearchCondition): boolean {
     const kind = valueKind(c.field, c.op);
     if (kind === 'none') return true;
     if (kind === 'person' || kind === 'source' || kind === 'case') return typeof c.id === 'number' && c.id > 0;
@@ -206,9 +206,4 @@ export function decodeQuery(param: string | null | undefined): SearchQuery {
     } catch {
         return EMPTY_QUERY;
     }
-}
-
-/** The same condition, ignoring nothing: used to light a chip whose row is in the builder. */
-export function sameCondition(a: SearchCondition, b: SearchCondition): boolean {
-    return a.field === b.field && a.op === b.op && (a.v ?? '') === (b.v ?? '') && (a.v2 ?? '') === (b.v2 ?? '') && (a.id ?? 0) === (b.id ?? 0);
 }

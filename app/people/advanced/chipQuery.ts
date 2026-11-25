@@ -7,7 +7,7 @@ import type { SexBucket, TriState } from '../peopleFilters';
  * adds a row to the panel and editing or removing that row changes the chip.
  */
 
-export type TriChip = 'parents' | 'children' | 'photo' | 'living';
+type TriChip = 'parents' | 'children' | 'photo' | 'living';
 
 export interface ChipState {
     sex: SexBucket | null;
