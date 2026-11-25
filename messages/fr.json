@@ -3009,7 +3009,8 @@
     "cite_on_married": "mariés en {year}",
     "cite_on_marriage_to": "Mariage avec {name}",
     "cite_on_remove_family": "Retirer la famille de {name}",
-    "cite_on_facts_in_family": "Leur mariage figure dans la famille ci-dessus."
+    "cite_on_facts_in_family": "Leur mariage figure dans la famille ci-dessus.",
+    "cite_on_marriage": "Mariage"
   },
   "mobileLibrary": {
     "library_view": "Afficher",

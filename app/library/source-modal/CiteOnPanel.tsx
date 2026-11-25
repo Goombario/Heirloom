@@ -13,6 +13,8 @@ import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { getDataClient } from '@/lib/data';
 import { formatDateForDisplay, formatLifespan, formatYearOrEmpty } from '@/lib/date-utils';
 import { EVENT_TYPES, getEventDisplayType } from '@/lib/db/schema';
+import { FACT_TABLES } from '@/lib/db/fact-tables';
+import { partnershipKindKey } from '@/app/families/view/derive';
 import { Heart, Quote, Users, X } from '@/lib/icons';
 import type { CitedByRow } from '@/lib/db/queries/citations';
 import type { Source } from '@/lib/data/types';
@@ -40,6 +42,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const t = useTranslations('library');
     const tc = useTranslations('common');
     const tTypes = useTranslations('eventTypes');
+    const tFam = useTranslations('families');
     const { language } = useLanguage();
     const dateWords = useDateQualifierWords();
     const { redirectIfUnauthorized } = useErrorToast();
@@ -82,9 +85,14 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
     const familyName = (f: CiteOnFamily) => f.partners.length > 0
         ? f.partners.map(n => n || tc('unknown')).join(' & ')
         : tc('unknown');
+    // A family's start row is named for its kind, as the family page names it.
+    const kindTitle = (f: CiteOnFact) => {
+        const kind = tFam(partnershipKindKey(f.familyType) as Parameters<typeof tFam>[0]);
+        return kind.charAt(0).toLocaleUpperCase(language) + kind.slice(1);
+    };
     const factLabel = (f: CiteOnFact) => f.partnerName !== undefined
         ? t('cite_on_marriage_to', { name: f.partnerName || tc('unknown') })
-        : typeLabel(f.type);
+        : f.familyId != null && f.factTable === FACT_TABLES.FAMILIES ? kindTitle(f) : typeLabel(f.type);
 
     async function addPeople(ids: number[]) {
         const fresh = ids.filter((id, i) => ids.indexOf(id) === i && !people.some(p => p.id === id));
@@ -350,7 +358,7 @@ export function CiteOnPanel({ source, treeId, citedBy, titleId, isMobile, onCanc
                                     const keys = openFacts.filter(f => f.type === type).map(f => f.key);
                                     const allOn = keys.every(k => ticked.has(k));
                                     return (
-                                        <FilterChip key={type} active={allOn} label={typeLabel(type)} onClick={() => toggleType(type)} disabled={saving} />
+                                        <FilterChip key={type} active={allOn} label={type === 'MARR' ? t('cite_on_marriage') : typeLabel(type)} onClick={() => toggleType(type)} disabled={saving} />
                                     );
                                 })}
                             </div>

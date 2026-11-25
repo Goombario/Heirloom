@@ -3009,7 +3009,8 @@
     "cite_on_married": "брак в {year}",
     "cite_on_marriage_to": "Брак с {name}",
     "cite_on_remove_family": "Убрать семью {name}",
-    "cite_on_facts_in_family": "Их брак указан в семье выше."
+    "cite_on_facts_in_family": "Их брак указан в семье выше.",
+    "cite_on_marriage": "Брак"
   },
   "mobileLibrary": {
     "library_view": "Показать",

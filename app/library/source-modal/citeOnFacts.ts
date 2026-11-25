@@ -2,7 +2,7 @@ import { FACT_TABLES, type FactTableValue } from '@/lib/db/fact-tables';
 import { sortableYear } from '@/lib/date-utils';
 import { compareTimelineItems, shouldRenderColumnBirth, shouldRenderColumnDeath } from '@/app/people/view/derive';
 import { displayFullName } from '@/lib/utils/names';
-import type { PersonWithRelations } from '@/lib/db/schema';
+import type { FamilyType, PersonWithRelations } from '@/lib/db/schema';
 import type { FamilyDetail } from '@/lib/data/types';
 
 /** One fact the "Cite on…" panel offers for a person (#799). */
@@ -19,6 +19,8 @@ export interface CiteOnFact {
     partnerName?: string;
     /** The family a marriage belongs to; its family block, when present, shows it instead (#31). */
     familyId?: number;
+    /** A marriage's partnership kind, so a civil union isn't called a marriage. */
+    familyType?: FamilyType | null;
     /** Other keys that also count as this fact already citing the source (an imported marriage citation). */
     alsoKeys?: string[];
 }
@@ -53,7 +55,7 @@ export function isCitedFact(f: CiteOnFact, cited: ReadonlySet<string>): boolean 
  * family page's own "+" does; an imported citation on the marriage itself
  * (FamilyMarriage, #962) counts as already cited.
  */
-function marriageFact(familyId: number, date: string | null | undefined, place: string | null | undefined): CiteOnFact {
+function marriageFact(familyId: number, date: string | null | undefined, place: string | null | undefined, familyType: FamilyType | null | undefined): CiteOnFact {
     return {
         key: citeKey(FACT_TABLES.FAMILIES, familyId),
         factTable: FACT_TABLES.FAMILIES,
@@ -62,13 +64,14 @@ function marriageFact(familyId: number, date: string | null | undefined, place: 
         date: date ?? null,
         place: place ?? null,
         familyId,
+        familyType: familyType ?? null,
         alsoKeys: [citeKey(FACT_TABLES.FAMILY_MARRIAGE, familyId)],
     };
 }
 
 /** A family block's facts: the marriage first, as the family page starts with it, then its events in timeline order. */
 export function citeOnFamilyFrom(familyId: number, detail: Partial<FamilyDetail>): CiteOnFamily {
-    const f = { Id: familyId, MarriageDate: null, MarriagePlace: null, ...detail.family };
+    const f = { Id: familyId, MarriageDate: null, MarriagePlace: null, Type: null, ...detail.family };
     const items: (CiteOnFact & { sortKey: number | null })[] = [];
     for (const e of detail.events ?? []) {
         items.push({ key: citeKey(FACT_TABLES.EVENTS, e.Id), factTable: FACT_TABLES.EVENTS, factId: e.Id, type: e.Type, date: e.Date ?? null, place: e.Place ?? null, familyId: f.Id, sortKey: sortableYear(e.Date) });
@@ -79,7 +82,7 @@ export function citeOnFamilyFrom(familyId: number, detail: Partial<FamilyDetail>
         id: f.Id,
         partners,
         marriageDate: f.MarriageDate ?? null,
-        facts: [marriageFact(f.Id, f.MarriageDate, f.MarriagePlace), ...items.map(({ sortKey: _sortKey, ...fact }) => fact)],
+        facts: [marriageFact(f.Id, f.MarriageDate, f.MarriagePlace, f.Type), ...items.map(({ sortKey: _sortKey, ...fact }) => fact)],
     };
 }
 
@@ -100,7 +103,7 @@ export function citeOnPersonFrom(p: PersonWithRelations): CiteOnPerson {
     // Each of their marriages, as "Marriage to {name}" (#31).
     for (const sp of p.spouses ?? []) {
         const fam = sp.family;
-        items.push({ ...marriageFact(fam.Id, fam.MarriageDate, fam.MarriagePlace), partnerName: sp.person ? displayFullName(sp.person) : '', sortKey: sortableYear(fam.MarriageDate) });
+        items.push({ ...marriageFact(fam.Id, fam.MarriageDate, fam.MarriagePlace, fam.Type), partnerName: sp.person ? displayFullName(sp.person) : '', sortKey: sortableYear(fam.MarriageDate) });
     }
     if (shouldRenderColumnDeath(p)) {
         items.push({ key: citeKey(FACT_TABLES.PERSON_DEATH, p.Id), factTable: FACT_TABLES.PERSON_DEATH, factId: p.Id, type: 'DEAT', date: p.DeathDate ?? null, place: p.DeathPlace ?? null, sortKey: sortableYear(p.DeathDate) });

@@ -173,13 +173,13 @@ describe('Cite on… (#799, EV-7)', () => {
             expect(headings[0]).toHaveTextContent('Tom Bracken & Eda Bracken');
             const block = headings[0].closest('li')!;
             expect(within(block).getByText('cite_on_family_label')).toBeInTheDocument();
-            expect(within(block).getByRole('checkbox', { name: /MARR/ })).not.toBeChecked();
+            expect(within(block).getByRole('checkbox', { name: /marriage_kind/i })).not.toBeChecked();
             // The 1901 census ticks the 1901 divorce.
             expect(within(block).getByRole('checkbox', { name: /DIV/ })).toBeChecked();
             // The members' own blocks don't repeat the marriage.
             expect(screen.queryByRole('checkbox', { name: /cite_on_marriage_to/ })).not.toBeInTheDocument();
 
-            await user.click(within(block).getByRole('checkbox', { name: /MARR/ }));
+            await user.click(within(block).getByRole('checkbox', { name: /marriage_kind/i }));
             await user.click(screen.getByRole('button', { name: /^cite_on_submit/ }));
             await waitFor(() => expect(h.createMany).toHaveBeenCalledOnce());
             const keys = h.createMany.mock.calls[0][0].facts.map((f: { FactTable: string; FactId: number }) => `${f.FactTable}:${f.FactId}`);
@@ -192,7 +192,7 @@ describe('Cite on… (#799, EV-7)', () => {
             renderPanel([{ factTable: 'FamilyMarriage', factId: 9 }]);
             await addHousehold(user);
             const block = screen.getAllByRole('heading', { level: 3 })[0].closest('li')!;
-            expect(within(block).getByRole('checkbox', { name: /MARR/ })).toBeDisabled();
+            expect(within(block).getByRole('checkbox', { name: /marriage_kind/i })).toBeDisabled();
             expect(within(block).getByText('cite_on_already')).toBeInTheDocument();
         });
 
