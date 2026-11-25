@@ -9,6 +9,7 @@ import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
 import { RepeatPill, useJumpToCard } from './RepeatPill';
+import { RelateBadge, relateClass } from './RelateMark';
 import { StatusMark } from '../ui/StatusMark';
 
 const PHOTO_HEIGHT = 72;
@@ -50,10 +51,10 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
 
   const repeatOf = data.repeatOf;
   const jumpToFull = useJumpToCard(repeatOf);
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (repeatOf) { jumpToFull(); return; }
     if (personId && data.onPersonClick) {
-      data.onPersonClick(personId);
+      data.onPersonClick(personId, { shift: e.shiftKey });
     }
   };
 
@@ -77,12 +78,13 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
 
       {/* Person Card */}
       {repeatOf && <RepeatPill onJump={jumpToFull} />}
+      <RelateBadge relate={data.relate} />
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border ${
           repeatOf ? 'tree-card--repeat' : data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
-        }`}
+        }${relateClass(data.relate)}`}
         style={{ width: `${PERSON_CARD_WIDTH}px`, height: `${personCardHeight(secondNameOn)}px`, display: 'flex', flexDirection: 'column', position: 'relative' }}
       >
         {/* Photo Area */}

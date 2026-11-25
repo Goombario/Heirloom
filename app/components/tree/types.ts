@@ -186,9 +186,14 @@ export interface FlowNodeData {
   /** A numbered join between a person and one of several partners (#248): the
    *  marriage's number. Its children's lines leave from it. */
   joinNumber?: number;
+  /** A join's two people: the person and that marriage's partner. */
+  joinOf?: [number, number];
+  /** "How are they related?" (#256): this card is person 1, person 2, on the path
+   *  between them, or faded. The partner half of a couple card has its own. */
+  relate?: 'first' | 'second' | 'on' | 'dim';
   isSelected?: boolean; // True for the root/leaf person being viewed
   isSidebarSelected?: boolean; // True for the person clicked to open sidebar
-  onPersonClick?: (id: number) => void;
+  onPersonClick?: (id: number, opts?: { shift?: boolean }) => void;
   onPersonDoubleClick?: (id: number) => void;
   showAgeIndicator?: boolean;
   /** The living-status mark on the card (#68); hidden only when false. */
@@ -212,6 +217,7 @@ export interface FlowNodeData {
 /** What a couple card's partner half shows, beside the person's own fields. */
 export interface PartnerView {
   isSidebarSelected: boolean;
+  relate?: 'first' | 'second' | 'on' | 'dim';
   secondName?: string | null;
   mainName?: string;
   underText?: string | null;

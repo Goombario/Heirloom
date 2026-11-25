@@ -343,6 +343,10 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 
 A repeat card (`FlowNodeData.repeatOf` set) is drawn faded with a dashed outline (`.tree-card--repeat`) and an "Also in this tree" chip above it (`RepeatPill.tsx`). The chip, and a click anywhere on the card, pans to the full card (`useJumpToCard`, at least `READABLE_ZOOM`). A repeat opens no sidebar, so it has no Add or Edit of its own, and never shows the selected outline. Its lines still go to its own place in the tree, so every person's parents stay directly above them. Locked mockup: option B in every view (issue #13).
 
+## How two people are related (#256)
+
+Desktop only. Shift-click a card (the person open in the panel is person 1, so one Shift-click is enough; Shift-clicking person 2 again takes them off; a third person replaces person 2), or press the panel's route icon button (`SidebarContent` `onRelate`) and click someone. `app/tree/useTreeRelate.ts` holds the pair and asks `client.relationship.get` (the Relationship tool's walk); `lib/tree/relate.ts` holds the click rules and `relateRoles`, which marks cards `first` / `second` / `on` / `dim` (`data.relate`, and `partnerView.relate` for a couple card's partner half) and lines `on` (copper, 3px) or `dim`. A line counts as on the path when the people its two cards stand for are consecutive on the path; a partner card stands for the couple, a join for its marriage (`data.joinOf`). Decoration only: it never re-runs the layout. `TreeRelateCard` at the canvas foot says the relationship, the steps, the path's people and the shared ancestor; when the path runs through someone not drawn it names them and offers a Descendants view from the shared ancestor (`wholePathRoot`). Esc, the card's ×, a plain click or the empty tree clears it. The Relationship tool's "Show in the tree" opens `/tree?rootId=<shared ancestor>&mode=descendants&relate=<p1>,<p2>`.
+
 ## Multi-Spouse Rendering
 
 - **BranchEdge**: drawn for each child; color = `_branchColor`; in colorblind mode a shape marker is drawn at the midpoint cycling square→circle→triangle→diamond

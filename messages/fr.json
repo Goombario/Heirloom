@@ -3200,7 +3200,16 @@
     "partners_own": "Cartes séparées",
     "partners_couple": "Une carte par couple",
     "partners_help": "Une carte par couple, les partenaires côte à côte. Cliquez sur une moitié pour ouvrir cette personne.",
-    "partners_focus_na": "La vue Focus garde ses propres cartes."
+    "partners_focus_na": "La vue Focus garde ses propres cartes.",
+    "relate_title": "Leur lien de parenté",
+    "relate_pair": "{a} et {b}",
+    "relate_clear": "Effacer (Échap)",
+    "relate_failed": "Impossible de calculer le lien",
+    "relate_not_drawn": "Le chemin passe par {names}, absent de cette vue.",
+    "relate_show_whole": "Afficher tout le chemin",
+    "relate_pick": "Cliquez sur une personne pour voir son lien avec {name}",
+    "relate_cancel": "Annuler (Échap)",
+    "relate_shift_hint": "Maj enfoncée : cliquez sur une deuxième personne. Échap efface."
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",
@@ -3457,7 +3466,8 @@
     "note": "Note",
     "quick_edit": "Modification rapide",
     "close_prompt_title": "Enregistrer vos modifications ?",
-    "close_prompt_body": "Vos modifications de {name} ne sont pas encore enregistrées."
+    "close_prompt_body": "Vos modifications de {name} ne sont pas encore enregistrées.",
+    "relate_button": "Quel est le lien de {name} avec…"
   },
   "dateInput": {
     "kind_label": "Type de date",
@@ -5609,7 +5619,10 @@
     "always_label": "Toujours actifs",
     "always_desc": "Les raccourcis avec <mod></mod> et <esc></esc> restent actifs : rechercher, enregistrer, publier, afficher la liste, fermer.",
     "show_all": "Afficher tous les raccourcis",
-    "photo_zoom": "Zoomer, dézoomer, ajuster"
+    "photo_zoom": "Zoomer, dézoomer, ajuster",
+    "group_tree": "Dans l’arbre",
+    "tree_relate": "Lien entre deux personnes",
+    "key_click": "clic"
   },
   "jobs": {
     "title": "Envoi des photos",

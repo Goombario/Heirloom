@@ -310,6 +310,7 @@ export function useTreeData() {
         selectedPersonId,
         setSelectedPersonId,
         selectPerson,
+        navigateTree,
         handlePersonClick,
         handleSidebarDataChanged,
         handleModeChange,

@@ -107,6 +107,7 @@ export {
   Move,            // Move a place's pin (phone place page)
   Type,            // Rename a place (phone place page)
   Clock,           // Options: time zone (phone row)
+  Route,           // Tree: how is this person related to… (#256)
 } from 'lucide-react';
 
 export type { LucideIcon } from 'lucide-react';

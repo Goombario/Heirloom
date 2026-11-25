@@ -21,6 +21,7 @@ import PersonNode from './PersonNode';
 import PedigreeGapNode from './PedigreeGapNode';
 import PersonBarNode from './PersonBarNode';
 import { CoupleNode, CoupleBarNode, PartnerJoinNode } from './CoupleNode';
+import { relateRoles, type RelatePair } from '@/lib/tree/relate';
 import BranchEdge from './BranchEdge';
 import SpouseEdge from './SpouseEdge';
 import { useTreeLayoutMode } from './useTreeLayoutMode';
@@ -168,7 +169,7 @@ interface TreeVisualizationProps {
   orientation?: 'vertical' | 'horizontal';
   focusTrees?: FocusTrees;
   onReady?: (instance: ReactFlowInstance) => void;
-  onPersonClick?: (id: number) => void;
+  onPersonClick?: (id: number, opts?: { shift?: boolean }) => void;
   onPersonDoubleClick?: (id: number) => void;
   onPaneClick?: () => void;
   sidebarSelectedId?: number | null;
@@ -186,6 +187,9 @@ interface TreeVisualizationProps {
   arrangement?: TreeArrangement;
   /** The Display menu's Partners (#248), a layout input; Own cards is today's. */
   partners?: TreePartners;
+  /** "How are they related?" (#256): the two people and the path between them
+   *  (empty until it is known). Decoration only; never a layout input. */
+  relate?: { pair: RelatePair; path: number[] };
   /** The Display menu's "Under the name" (#12) and the facts it reads. */
   underName?: TreeUnderName;
   cardFacts?: Record<number, TreeCardFacts>;
@@ -210,7 +214,7 @@ interface TreeVisualizationProps {
  * - Smooth edge connections
  * - Minimap and controls
  */
-function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, spacing = 'normal', arrangement = 'compact', partners = 'own', barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
+function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, spacing = 'normal', arrangement = 'compact', partners = 'own', relate, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
   const [debugMode, setDebugMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -374,14 +378,30 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         ...(node.data.partner ? { partnerView: partnerViewData(node.data.partner.id, selectedId, secondName ? secondNameType : null, cardNames, underName, cardFacts) } : {}),
       },
     }));
-    setNodes(nodesWithCallback);
+    // The comparison (#256): roles on the cards, the path's lines in copper.
+    const roles = relate ? relateRoles(nodesWithCallback, layoutEdges, relate.pair, relate.path) : null;
+    setNodes(roles ? nodesWithCallback.map((node) => {
+      const r = roles.node.get(node.id);
+      const pr = roles.partner.get(node.id);
+      if (!r && !pr) return node;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          ...(r ? { relate: r } : {}),
+          ...(pr && node.data.partnerView ? { partnerView: { ...node.data.partnerView, relate: pr } } : {}),
+        },
+      };
+    }) : nodesWithCallback);
 
     // Inject colorblindMode into branch edges so the custom edge renderer can show/hide shapes
-    const edgesWithMode = layoutEdges.map((edge) =>
-      edge.type === 'branch'
-        ? { ...edge, data: { ...edge.data, colorblindMode } }
-        : edge
-    );
+    const edgesWithMode = layoutEdges.map((edge) => {
+      const withMode = edge.type === 'branch' ? { ...edge, data: { ...edge.data, colorblindMode } } : edge;
+      const r = roles?.edge.get(edge.id);
+      if (r === 'on') return { ...withMode, zIndex: 1, style: { ...withMode.style, stroke: 'var(--color-primary)', strokeWidth: 3, strokeDasharray: undefined } };
+      if (r === 'dim') return { ...withMode, className: 'tree-edge--dim' };
+      return withMode;
+    });
     setEdges(edgesWithMode);
 
     // Only fitView when the parent explicitly requests it (non-silent reloads)
@@ -394,7 +414,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         requestAnimationFrame(() => setIsPositioned(true));
       }, 50);
     }
-  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, secondName, secondNameType, cardNames, underName, cardFacts, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
+  }, [layoutNodes, layoutEdges, setNodes, setEdges, onPersonClick, onPersonDoubleClick, colorblindMode, showAgeIndicator, showStatusMark, secondName, secondNameType, cardNames, underName, cardFacts, relate, barZoomThreshold, fitViewVersion, fitViewWithAnchor]);
 
   // Surgical selection update: flip isSidebarSelected only on the nodes whose
   // selection state actually changed (previously- and newly-selected), leaving

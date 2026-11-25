@@ -9,6 +9,7 @@ import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
 import { StatusMark } from '../ui/StatusMark';
+import { RelateBadge } from './RelateMark';
 
 /**
  * One couple card (#248, Display › Partners › One couple card): a person with one
@@ -26,6 +27,7 @@ const BAR_AVATAR = 20;
 
 type Half = {
     person: TreeNode | Spouse;
+    relate?: FlowNodeData['relate'];
     picked: boolean;
     target: boolean;
     secondName?: string | null;
@@ -37,21 +39,26 @@ type Half = {
 function halves(data: FlowNodeData): [Half, Half] {
     const pv = data.partnerView;
     return [
-        { person: data.person, picked: !!data.isSidebarSelected, target: !!data.isSelected, secondName: data.secondName, mainName: data.mainName, underText: data.underText },
-        { person: data.partner!, picked: !!pv?.isSidebarSelected, target: false, secondName: pv?.secondName, mainName: pv?.mainName, underText: pv?.underText },
+        { person: data.person, relate: data.relate, picked: !!data.isSidebarSelected, target: !!data.isSelected, secondName: data.secondName, mainName: data.mainName, underText: data.underText },
+        { person: data.partner!, relate: pv?.relate, picked: !!pv?.isSidebarSelected, target: false, secondName: pv?.secondName, mainName: pv?.mainName, underText: pv?.underText },
     ];
 }
 
 function useHalfHandlers(data: FlowNodeData, personId: number) {
     return {
-        onClick: () => { if (personId && data.onPersonClick) data.onPersonClick(personId); },
+        onClick: (e: React.MouseEvent) => { if (personId && data.onPersonClick) data.onPersonClick(personId, { shift: e.shiftKey }); },
         onDoubleClick: (e: React.MouseEvent) => {
             if (personId && data.onPersonDoubleClick) { e.stopPropagation(); data.onPersonDoubleClick(personId); }
         },
     };
 }
 
-const halfClass = (h: Half) => `tree-couple-half${h.picked ? ' tree-couple-half--picked' : h.target ? ' tree-couple-half--target' : ''}`;
+const halfClass = (h: Half) => `tree-couple-half${
+    h.relate === 'first' || h.relate === 'second' ? ' tree-couple-half--path-end' : h.relate === 'on' ? ' tree-couple-half--path'
+    : h.picked ? ' tree-couple-half--picked' : h.target ? ' tree-couple-half--target' : ''}`;
+
+/** The couple card fades only when neither half is on the path. */
+const coupleClass = (data: FlowNodeData) => (data.relate === 'dim' && (!data.partnerView?.relate || data.partnerView.relate === 'dim') ? ' tree-card--dim' : '');
 
 /** The rings on the divider: the two are a couple. Decorative. */
 function Rings() {
@@ -138,8 +145,10 @@ const CoupleNodeInner: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
             <Handle type="source" position={Position.Top} id="top" style={{ opacity: 0 }} />
             <Handle type="source" position={Position.Bottom} id="bottom" style={{ opacity: 0 }} />
             <Handle type="target" position={Position.Bottom} id="bottom-target" style={{ opacity: 0, left: '25%' }} />
+            <RelateBadge relate={a.relate} />
+            <RelateBadge relate={b.relate} className="tree-relate-badge--right" />
             <div
-                className="tree-couple bg-card rounded-lg shadow-md overflow-hidden border border-border"
+                className={`tree-couple bg-card rounded-lg shadow-md overflow-hidden border border-border${coupleClass(data)}`}
                 style={{ width: COUPLE_CARD_WIDTH, height: personCardHeight(secondNameOn), display: 'flex', position: 'relative' }}
             >
                 <PortraitHalf half={a} data={data} secondNameOn={secondNameOn} isZoomedOut={isZoomedOut} />
@@ -205,8 +214,10 @@ const CoupleBarNodeInner: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
             <Handle type="source" position={Position.Left} id="left-source" style={{ opacity: 0 }} />
             <Handle type="source" position={Position.Right} id="right" style={{ opacity: 0 }} />
             <Handle type="target" position={Position.Right} id="right-target" style={{ opacity: 0, top: '25%' }} />
+            <RelateBadge relate={a.relate} />
+            <RelateBadge relate={b.relate} className="tree-relate-badge--lower" />
             <div
-                className="tree-couple bg-card rounded-lg shadow-md overflow-hidden border border-border"
+                className={`tree-couple bg-card rounded-lg shadow-md overflow-hidden border border-border${coupleClass(data)}`}
                 style={{ width: BAR_CARD_WIDTH, height: COUPLE_BAR_HEIGHT, display: 'flex', flexDirection: 'column' }}
             >
                 <BarRow half={a} data={data} isZoomedOut={isZoomedOut} />

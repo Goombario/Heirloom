@@ -489,7 +489,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     // partner's card (partner 1's join sits in the gap after it).
     if (kind === 'split') {
       const gap = geometry.spouseGap;
-      const ids = personData.spouses.map((_sp, idx) => {
+      const ids = personData.spouses.map((sp, idx) => {
         const id = `join-${pending.size}-${idx}`;
         joinOf.set(id, { main: mainId, n: idx + 1 });
         const centre = idx === 0 ? mainX - gap / 2 : mainX + idx * step0 - gap / 2;
@@ -497,7 +497,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
           id,
           rawX: centre - PARTNER_JOIN_SIZE / 2,
           rawY: rawY + cardDepth / 2 - PARTNER_JOIN_SIZE / 2,
-          data: { person: { id: 0, name: '', photoMediaId: null, spouses: [] }, joinNumber: idx + 1 },
+          data: { person: { id: 0, name: '', photoMediaId: null, spouses: [] }, joinNumber: idx + 1, joinOf: [personData.id, sp.id] },
           isSpouseNode: false,
           kind: 'join',
         });

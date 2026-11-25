@@ -15,9 +15,11 @@ interface PersonSidebarProps {
   onClose: () => void;
   onFocusPerson: (id: number) => void;
   onDataChanged?: () => void;
+  /** "How is … related to…" (#256): desktop panel only. */
+  onRelate?: (id: number) => void;
 }
 
-export default function PersonSidebar({ personId, onClose, onFocusPerson, onDataChanged }: PersonSidebarProps) {
+export default function PersonSidebar({ personId, onClose, onFocusPerson, onDataChanged, onRelate }: PersonSidebarProps) {
   const t = useTranslations('treeSidebar');
   const tCommon = useTranslations('common');
   const editor = useTreePersonEditor({ personId, onClose, onDataChanged });
@@ -118,7 +120,7 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
           <InlineDataError message={mediaError} retryLabel={tCommon('retry')} onRetry={retryMedia} />
         </div>
       )}
-      <SidebarContent editor={editor} personId={personId} onFocusPerson={onFocusPerson} panel={panel} onClose={panel ? handleClose : undefined} />
+      <SidebarContent editor={editor} personId={personId} onFocusPerson={onFocusPerson} onRelate={panel ? onRelate : undefined} panel={panel} onClose={panel ? handleClose : undefined} />
     </>
   );
 

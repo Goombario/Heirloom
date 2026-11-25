@@ -3200,7 +3200,16 @@
     "partners_own": "Own cards",
     "partners_couple": "One couple card",
     "partners_help": "One card per couple, partners side by side. Click a half to open that person.",
-    "partners_focus_na": "Focus view keeps its own cards."
+    "partners_focus_na": "Focus view keeps its own cards.",
+    "relate_title": "How they’re related",
+    "relate_pair": "{a} and {b}",
+    "relate_clear": "Clear (Esc)",
+    "relate_failed": "Couldn’t work out the relationship",
+    "relate_not_drawn": "The path goes through {names}, who isn’t drawn here.",
+    "relate_show_whole": "Show the whole path",
+    "relate_pick": "Click someone to see how they’re related to {name}",
+    "relate_cancel": "Cancel (Esc)",
+    "relate_shift_hint": "Holding Shift: click a second person. Esc clears."
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",
@@ -3457,7 +3466,8 @@
     "note": "Note",
     "quick_edit": "Quick edit",
     "close_prompt_title": "Save your changes?",
-    "close_prompt_body": "Your changes to {name} aren’t saved yet."
+    "close_prompt_body": "Your changes to {name} aren’t saved yet.",
+    "relate_button": "How is {name} related to…"
   },
   "dateInput": {
     "kind_label": "Kind of date",
@@ -5609,7 +5619,10 @@
     "always_label": "Always on",
     "always_desc": "Shortcuts with <mod></mod> and <esc></esc> stay on: search, save, post, show the list, close.",
     "show_all": "Show all shortcuts",
-    "photo_zoom": "Zoom in, zoom out, fit"
+    "photo_zoom": "Zoom in, zoom out, fit",
+    "group_tree": "On the tree",
+    "tree_relate": "How two people are related",
+    "key_click": "click"
   },
   "jobs": {
     "title": "Uploading photos",

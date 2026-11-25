@@ -13,7 +13,8 @@ import PersonAvatar from '@/app/components/PersonAvatar';
 import { useLanguage } from '@/app/components/LanguageProvider';
 import { Button, FieldLabel, Input, LeadText, Lifespan, SegmentedControl, SelectField, fieldClass } from '@/app/components/ui';
 import { prefetchPerson } from '@/app/people/view/personCache';
-import { ChevronDown, Target, X } from '@/lib/icons';
+import { ChevronDown, Route, Target, X } from '@/lib/icons';
+import { IconButton } from '@/app/components/ui/IconButton';
 import { getDataClient } from '@/lib/data';
 import type { Note } from '@/lib/data/types';
 import { OwnerNotesCard, NoteCount, biographyNote, visibleNotes } from '@/app/components/notes/OwnerNotesCard';
@@ -24,10 +25,12 @@ type Editor = ReturnType<typeof useTreePersonEditor>;
 const inputClass = fieldClass('sm');
 const readClass = 'text-sm text-text';
 
-export function SidebarContent({ editor, personId, onFocusPerson, panel = false, onClose }: {
+export function SidebarContent({ editor, personId, onFocusPerson, onRelate, panel = false, onClose }: {
     editor: Editor;
     personId: number;
     onFocusPerson: (id: number) => void;
+    /** "How is … related to…" (#256): the desktop panel's icon button, then a click on someone. */
+    onRelate?: (id: number) => void;
     /** The v1.1 desktop person panel (#71, lg and up): navy head, preferred note,
      *  two fields to a row, Sex as a select, a pinned footer. Below lg: as before. */
     panel?: boolean;
@@ -391,6 +394,14 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                     icon={<Target className="w-3.5 h-3.5" aria-hidden="true" />}>
                     {t('focus_person')}
                 </Button>
+                {onRelate && (
+                    <IconButton
+                        className="w-8 h-8 border border-border rounded-lg"
+                        label={t('relate_button', { name: displayName })}
+                        icon={<Route className="w-4 h-4" aria-hidden="true" />}
+                        onClick={() => onRelate(personId)}
+                    />
+                )}
             </div>
 
             {leadNote && !notesExpanded && (

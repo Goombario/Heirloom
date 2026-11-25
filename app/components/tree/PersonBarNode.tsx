@@ -9,6 +9,7 @@ import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
 import { RepeatPill, useJumpToCard } from './RepeatPill';
+import { RelateBadge, relateClass } from './RelateMark';
 import { StatusMark } from '../ui/StatusMark';
 
 /**
@@ -46,9 +47,9 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
 
   const repeatOf = data.repeatOf;
   const jumpToFull = useJumpToCard(repeatOf);
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (repeatOf) { jumpToFull(); return; }
-    if (personId && data.onPersonClick) data.onPersonClick(personId);
+    if (personId && data.onPersonClick) data.onPersonClick(personId, { shift: e.shiftKey });
   };
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (repeatOf) { e.stopPropagation(); return; }
@@ -73,12 +74,13 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
       <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />
 
       {repeatOf && <RepeatPill onJump={jumpToFull} />}
+      <RelateBadge relate={data.relate} />
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border gap-2 px-2.5 ${
           repeatOf ? 'tree-card--repeat' : data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
-        }`}
+        }${relateClass(data.relate)}`}
         style={{
           width: `${BAR_CARD_WIDTH}px`,
           height: `${BAR_CARD_HEIGHT}px`,

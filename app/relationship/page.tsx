@@ -297,7 +297,8 @@ export default function RelationshipPage() {
                         {ancestor && (
                             <p className="m-0 mt-3.5 flex flex-wrap items-baseline gap-x-1.5 text-sm text-text-secondary">
                                 <span>{t('shared_ancestor', { name: ancestor.name })}</span>
-                                <Link href={`/tree?rootId=${ancestor.id}`} className="text-link underline">{t('show_in_tree')}</Link>
+                                {/* Opens the tree with the two people compared on it (#256). */}
+                                <Link href={`/tree?rootId=${ancestor.id}&mode=descendants&relate=${path[0].id},${path[path.length - 1].id}`} className="text-link underline">{t('show_in_tree')}</Link>
                             </p>
                         )}
                     </Card>

@@ -39,11 +39,12 @@ export const CREATE_SHORTCUTS: readonly CreateShortcut[] = [
 export type SequencePrefix = 'g' | 'n';
 
 /** One key in a shortcut as the cheatsheet shows it; `mod` is Ctrl, or ⌘ on a Mac. */
-export type KeyToken = { key: string } | { sep: 'then' | 'or' | 'plus' };
+/** `word` is a mouse action named in words (`shortcuts.key_click`), not a key. */
+export type KeyToken = { key: string } | { sep: 'then' | 'or' | 'plus' } | { word: 'key_click' };
 
 /** One cheatsheet row: its label key (in `shortcuts`, or `nav` for Go to) and keys. */
 interface CheatRow { id: string; labelKey: string; labelNs: 'shortcuts' | 'nav'; keys: KeyToken[]; letters?: boolean }
-export interface CheatGroup { id: 'go' | 'create' | 'anywhere' | 'editing' | 'photo'; titleKey: string; rows: CheatRow[] }
+export interface CheatGroup { id: 'go' | 'create' | 'anywhere' | 'editing' | 'photo' | 'tree'; titleKey: string; rows: CheatRow[] }
 
 const K = (key: string): KeyToken => ({ key });
 const THEN: KeyToken = { sep: 'then' };
@@ -85,6 +86,13 @@ export function cheatsheet(mac: boolean): CheatGroup[] {
                 { id: 'photo-move', labelKey: 'photo_move', labelNs: 'shortcuts', keys: [K('←'), K('→')] },
                 { id: 'photo-tags', labelKey: 'photo_tags', labelNs: 'shortcuts', keys: [K('t')], letters: true },
                 { id: 'photo-zoom', labelKey: 'photo_zoom', labelNs: 'shortcuts', keys: [K('+'), K('−'), K('0')], letters: true },
+            ],
+        },
+        {
+            // #256: Shift-click two people to see how they're related.
+            id: 'tree', titleKey: 'group_tree',
+            rows: [
+                { id: 'tree-relate', labelKey: 'tree_relate', labelNs: 'shortcuts', keys: [K('Shift'), PLUS, { word: 'key_click' }] },
             ],
         },
     ];

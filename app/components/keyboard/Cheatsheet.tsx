@@ -58,7 +58,7 @@ export function Cheatsheet({ open, onClose, lettersOn }: { open: boolean; onClos
                                 <dd className="m-0 flex items-center gap-1.5">
                                     {r.keys.map((k, i) => (
                                         <Fragment key={i}>
-                                            {'key' in k ? <Kbd>{k.key}</Kbd> : <span className="text-meta text-text-muted">{sep(k.sep)}</span>}
+                                            {'key' in k ? <Kbd>{k.key}</Kbd> : 'word' in k ? <span className="text-meta text-text">{t(k.word)}</span> : <span className="text-meta text-text-muted">{sep(k.sep)}</span>}
                                         </Fragment>
                                     ))}
                                 </dd>
