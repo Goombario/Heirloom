@@ -827,6 +827,9 @@ exports[`tree layout parity > focus mode — Stage D three-tree composition with
     },
     {
       "dash": undefined,
+      "data": {
+        "snapTo": -82,
+      },
       "id": "edge-person-121-person-100",
       "source": "person-121",
       "sourceHandle": "bottom",

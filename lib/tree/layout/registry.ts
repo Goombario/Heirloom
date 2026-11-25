@@ -12,6 +12,7 @@
 import type { TreeNode, FocusTrees, LayoutOutput } from '@/app/components/tree/types';
 import { computeStandardLayout } from './standardLayout';
 import { computeFocusLayout } from './focusLayout';
+import { snapParentDrops } from './snapDrops';
 
 export interface TreeLayoutInput {
   /** Single-hierarchy input (descendants / ancestors). */
@@ -49,7 +50,9 @@ const MODES: Record<string, TreeLayoutMode> = {
   },
 };
 
-/** Resolve a layout mode; unknown IDs fall back to descendants. */
+/** Resolve a layout mode; unknown IDs fall back to descendants. Every mode's
+ *  output gets the near-child drop snap (#15). */
 export function getLayoutMode(id: string): TreeLayoutMode {
-  return MODES[id] ?? MODES.descendants;
+  const mode = MODES[id] ?? MODES.descendants;
+  return { id: mode.id, compute: (input) => snapParentDrops(mode.compute(input)) };
 }

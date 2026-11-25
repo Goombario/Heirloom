@@ -195,6 +195,9 @@ export interface BranchEdgeData {
   /** Spouse-connector lane axis: 'x' = horizontal lanes (vertical layout,
    *  default), 'y' = vertical lanes (horizontal layout, spouses stacked). */
   laneAxis?: 'x' | 'y';
+  /** Parent lines: the drop leaves the parent here (the bracket's axis) instead
+   *  of the card's middle, onto a child just off it (#15). */
+  snapTo?: number;
 }
 
 /**

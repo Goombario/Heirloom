@@ -39,9 +39,10 @@ function ShapeMarker({ index, x, y, color, scale = 1 }: { index: number; x: numb
 }
 
 /**
- * Custom React Flow edge for parent-child connections where the parent has multiple spouses.
- * Renders the same smoothstep path as the built-in type, and optionally overlays a shape
- * marker at the midpoint of the edge when colorblind mode is enabled.
+ * Custom React Flow edge for parent-child connections. Renders the same smoothstep path
+ * as the built-in type (it is registered for 'smoothstep' too), moving the drop to
+ * `data.snapTo` when set (#15), and, for a parent with several partners, overlays a
+ * shape marker when colorblind mode is on.
  */
 export default function BranchEdge({
   id,
@@ -54,9 +55,14 @@ export default function BranchEdge({
   style = {},
   data,
 }: EdgeProps<BranchEdgeData>) {
+  const horizontal =
+    sourcePosition === Position.Left || sourcePosition === Position.Right ||
+    targetPosition === Position.Left || targetPosition === Position.Right;
+  // A drop snapped onto a near child (#15) leaves the parent there instead.
+  const snap = data?.snapTo;
   const [edgePath] = getSmoothStepPath({
-    sourceX,
-    sourceY,
+    sourceX: snap !== undefined && !horizontal ? snap : sourceX,
+    sourceY: snap !== undefined && horizontal ? snap : sourceY,
     sourcePosition,
     targetPosition,
     targetX,
@@ -71,16 +77,15 @@ export default function BranchEdge({
   // along Y (top/bottom handles); horizontal layouts stalk along X (left/right
   // handles) and use half-size markers to suit the shorter horizontal segments.
   const STALK_OFFSET = 15;
-  const horizontal =
-    sourcePosition === Position.Left || sourcePosition === Position.Right ||
-    targetPosition === Position.Left || targetPosition === Position.Right;
   const markerScale = horizontal ? 0.5 : 1;
 
+  const dropX = snap !== undefined && !horizontal ? snap : sourceX;
+  const dropY = snap !== undefined && horizontal ? snap : sourceY;
   const sourceMarkerX = horizontal
     ? (sourcePosition === Position.Right ? sourceX + STALK_OFFSET : sourceX - STALK_OFFSET)
-    : sourceX;
+    : dropX;
   const sourceMarkerY = horizontal
-    ? sourceY
+    ? dropY
     : (sourcePosition === Position.Bottom ? sourceY + STALK_OFFSET : sourceY - STALK_OFFSET);
   const targetMarkerX = horizontal
     ? (targetPosition === Position.Left ? targetX - STALK_OFFSET : targetX + STALK_OFFSET)

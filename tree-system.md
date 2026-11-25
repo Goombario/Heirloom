@@ -333,6 +333,10 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 
 ---
 
+## Near-child drop snap (#15)
+
+`getLayoutMode(...).compute` runs every mode's output through `snapParentDrops` (`lib/tree/layout/snapDrops.ts`). When one of a parent's children sits within `SNAP_TOLERANCE` (24px) of the parent's middle, and that point is still under the parent's card, every line from that parent gets `data.snapTo` and `BranchEdge` (registered for `smoothstep` too) drops from there instead, so the two stalks no longer sit side by side as a wiggle. Cards never move. Measured on the synthetic tree (2026-11-25): one such pair, a 20px jog (11px in bars).
+
 ## Repeat cards (#13)
 
 A repeat card (`FlowNodeData.repeatOf` set) is drawn faded with a dashed outline (`.tree-card--repeat`) and an "Also in this tree" chip above it (`RepeatPill.tsx`). The chip, and a click anywhere on the card, pans to the full card (`useJumpToCard`, at least `READABLE_ZOOM`). A repeat opens no sidebar, so it has no Add or Edit of its own, and never shows the selected outline. Its lines still go to its own place in the tree, so every person's parents stay directly above them. Locked mockup: option B in every view (issue #13).

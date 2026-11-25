@@ -119,6 +119,8 @@ const nodeTypes: NodeTypes = {
  */
 const edgeTypes: EdgeTypes = {
   branch: BranchEdge,
+  // The built-in smoothstep path, plus the near-child drop snap (#15).
+  smoothstep: BranchEdge,
   spouse: SpouseEdge,
 };
 
