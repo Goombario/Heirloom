@@ -84,6 +84,7 @@ export function cheatsheet(mac: boolean): CheatGroup[] {
             rows: [
                 { id: 'photo-move', labelKey: 'photo_move', labelNs: 'shortcuts', keys: [K('←'), K('→')] },
                 { id: 'photo-tags', labelKey: 'photo_tags', labelNs: 'shortcuts', keys: [K('t')], letters: true },
+                { id: 'photo-zoom', labelKey: 'photo_zoom', labelNs: 'shortcuts', keys: [K('+'), K('−'), K('0')], letters: true },
             ],
         },
     ];

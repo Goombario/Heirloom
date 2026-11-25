@@ -62,7 +62,8 @@ export {
   Eye,             // Show names/boxes toggle
   EyeOff,          // Hide names/boxes toggle
   Lock,            // Locked / can't untag indicator
-  Plus,            // Add / tag a face
+  Plus,            // Add / tag a face; zoom in (#252)
+  Minus,           // Zoom out (lightbox, #252)
   Download,        // Download action
   Upload,          // Choose a file to import
   Cloud,           // Google Drive backup section

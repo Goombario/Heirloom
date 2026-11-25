@@ -324,7 +324,16 @@
     "current_family_photo": "Family photo",
     "stop_family_photo": "Stop using as family photo",
     "family_photo_set": "Family photo set",
-    "family_photo_removed": "Family photo removed"
+    "family_photo_removed": "Family photo removed",
+    "zoom_group": "Zoom",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "zoom_fit": "Fit",
+    "zoom_percent": "{percent}%",
+    "zoom_toggle": "Switch between fit and 100%",
+    "zoom_toast": "{percent}% · Double-tap to fit",
+    "zoom_hint": "Drag to move · Double-click or 0 to fit · + − to zoom",
+    "tag_mode_zoom_hint": "Scroll or + − to zoom, hold the space bar and drag to move."
   },
   "faceTags": {
     "tag_people": "Tag people",
@@ -5575,7 +5584,8 @@
     "letters_off_note": "Letter shortcuts are off. The list is still under Show all shortcuts, or press <mod></mod> + <slash></slash>.",
     "always_label": "Always on",
     "always_desc": "Shortcuts with <mod></mod> and <esc></esc> stay on: search, save, post, show the list, close.",
-    "show_all": "Show all shortcuts"
+    "show_all": "Show all shortcuts",
+    "photo_zoom": "Zoom in, zoom out, fit"
   },
   "jobs": {
     "title": "Uploading photos",

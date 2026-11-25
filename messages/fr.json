@@ -324,7 +324,16 @@
     "current_family_photo": "Photo de famille",
     "stop_family_photo": "Ne plus utiliser comme photo de famille",
     "family_photo_set": "Photo de famille définie",
-    "family_photo_removed": "Photo de famille retirée"
+    "family_photo_removed": "Photo de famille retirée",
+    "zoom_group": "Zoom",
+    "zoom_in": "Zoomer",
+    "zoom_out": "Dézoomer",
+    "zoom_fit": "Ajuster",
+    "zoom_percent": "{percent} %",
+    "zoom_toggle": "Basculer entre ajusté et 100 %",
+    "zoom_toast": "{percent} % · Touchez deux fois pour ajuster",
+    "zoom_hint": "Faites glisser pour déplacer · Double-cliquez ou 0 pour ajuster · + − pour zoomer",
+    "tag_mode_zoom_hint": "Faites défiler ou + − pour zoomer, maintenez la barre d’espace et faites glisser pour déplacer."
   },
   "faceTags": {
     "tag_people": "Identifier des personnes",
@@ -5575,7 +5584,8 @@
     "letters_off_note": "Les raccourcis lettres sont désactivés. La liste reste sous Afficher tous les raccourcis, ou appuyez sur <mod></mod> + <slash></slash>.",
     "always_label": "Toujours actifs",
     "always_desc": "Les raccourcis avec <mod></mod> et <esc></esc> restent actifs : rechercher, enregistrer, publier, afficher la liste, fermer.",
-    "show_all": "Afficher tous les raccourcis"
+    "show_all": "Afficher tous les raccourcis",
+    "photo_zoom": "Zoomer, dézoomer, ajuster"
   },
   "jobs": {
     "title": "Envoi des photos",

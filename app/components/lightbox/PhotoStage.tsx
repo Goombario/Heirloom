@@ -8,7 +8,12 @@ import { isPdfMedia } from '@/lib/media/allowed-extensions';
 import DocumentStage from './DocumentStage';
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion';
 import { Button } from '@/app/components/ui/Button';
-import { ChevronLeft, ChevronRight, X, Check, ScanFace } from '@/lib/icons';
+import { ChevronLeft, ChevronRight, X, Check, ScanFace, Plus, Minus } from '@/lib/icons';
+import { isTypingTarget, readLetterShortcuts } from '@/lib/keyboard/shortcuts';
+import {
+    FIT, ZOOM_STEP, actualSizeScale, clampPan, isZoomed, maxScale, panBy, wheelFactor, zoomAt, zoomPercent,
+    type Zoom, type ZoomBox,
+} from '@/lib/media/zoom';
 import { snapThumbSize } from '@/lib/media-url';
 import type { Media } from '@/lib/db/schema';
 import type { LightboxTag, DrawRect, FaceRegionInput } from './types';
@@ -58,6 +63,14 @@ interface PhotoStageProps {
 }
 
 const HOLD_MS = 500;
+/** Two taps this close in time and space are a double-tap (phone zoom, #252). */
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_PX = 30;
+/** A press that moves further than this is a pan, so its click must not follow a face link. */
+const PAN_SLOP_PX = 4;
+/** Arrow keys pan a zoomed photo by this much. */
+const KEY_PAN_PX = 80;
+const ZOOM_TOAST_MS = 1200;
 
 export default function PhotoStage(props: PhotoStageProps) {
     const { items, index, onChangeIndex, treeId, alt, tags, overlayTags, tagMode,
@@ -82,7 +95,14 @@ export default function PhotoStage(props: PhotoStageProps) {
     // reduced-motion rule in globals.css never touches it.
     const reducedMotion = usePrefersReducedMotion();
     const scrollDuration = reducedMotion ? 0 : 16;
-    const [emblaRef, emblaApi] = useEmblaCarousel({ watchDrag: !tagMode, loop: false, duration: scrollDuration });
+    //
+    // While a photo is zoomed (#252) a drag pans it instead, so Embla asks before
+    // every drag. The callback reads refs, so its identity never changes and Embla
+    // is not re-created on each zoom step.
+    const tagModeRef = useRef(tagMode);
+    const zoomRef = useRef<Zoom>(FIT);
+    const allowDrag = useCallback(() => !tagModeRef.current && !isZoomed(zoomRef.current), []);
+    const [emblaRef, emblaApi] = useEmblaCarousel({ watchDrag: allowDrag, loop: false, duration: scrollDuration });
 
     // Thumbnail strip — Embla again rather than a second scroll mechanism (#88).
     // The native `overflow-x-auto` strip this replaces hid its scrollbar in both
@@ -157,10 +177,33 @@ export default function PhotoStage(props: PhotoStageProps) {
         if (emblaApi && emblaApi.selectedScrollSnap() !== index) emblaApi.scrollTo(index, true);
     }, [emblaApi, index]);
 
-    // Toggle drag when entering/leaving tag mode.
+    // Zoom (#252). Scale 1 is Fit; see lib/media/zoom.ts for the transform's maths.
+    const [zoom, setZoomState] = useState<Zoom>(FIT);
+    const [animateZoom, setAnimateZoom] = useState(false);
+    const zoomed = isZoomed(zoom);
+    const activeIsPdf = items[index] ? isPdfMedia(items[index]) : false;
+    // The fitted image size and its actual-size scale, measured once it has loaded.
+    const [fitted, setFitted] = useState<{ imgW: number; imgH: number; oneToOne: number } | null>(null);
+    const fittedRef = useRef(fitted);
+    const stageBoxRef = useRef<{ w: number; h: number } | null>(null);
+    useEffect(() => { tagModeRef.current = tagMode; }, [tagMode]);
+    useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+    useEffect(() => { fittedRef.current = fitted; }, [fitted]);
+
+    // A new photo always opens at Fit.
+    const zoomScope = `${index}:${items[index]?.Id ?? ''}`;
+    const [zoomScopeSeen, setZoomScopeSeen] = useState(zoomScope);
+    if (zoomScopeSeen !== zoomScope) {
+        setZoomScopeSeen(zoomScope);
+        setZoomState(FIT);
+        setFitted(null);
+    }
+
+    // Toggle drag when entering/leaving tag mode or zoom. reInit also ends a drag
+    // Embla had already started (a pinch that began with one finger).
     useEffect(() => {
-        emblaApi?.reInit({ watchDrag: !tagMode, loop: false, duration: scrollDuration });
-    }, [emblaApi, tagMode, scrollDuration]);
+        emblaApi?.reInit({ watchDrag: allowDrag, loop: false, duration: scrollDuration });
+    }, [emblaApi, tagMode, zoomed, allowDrag, scrollDuration]);
 
     // Keep the active thumbnail centred on index change. The reInit hook matters
     // because the strip is measured before its images have laid out; without a
@@ -191,11 +234,211 @@ export default function PhotoStage(props: PhotoStageProps) {
             const cr = entries[0]?.contentRect;
             // Never cap to 0 — a transient 0-height measurement (e.g. before layout
             // settles) must fall back to '100%', never hide the image.
-            if (cr && cr.width > 0 && cr.height > 0) setStageBox({ w: cr.width, h: cr.height });
+            if (cr && cr.width > 0 && cr.height > 0) {
+                stageBoxRef.current = { w: cr.width, h: cr.height };
+                setStageBox({ w: cr.width, h: cr.height });
+            }
         });
         ro.observe(el);
         return () => ro.disconnect();
     }, []);
+
+    // Measure the fitted image whenever it loads or the stage resizes. `load` does
+    // not bubble, but it does pass through ancestors in the capture phase.
+    useEffect(() => {
+        const el = imgRef.current;
+        if (!el) return;
+        const measure = () => {
+            const img = el.querySelector('img');
+            const imgW = el.offsetWidth, imgH = el.offsetHeight;
+            if (!img || !img.complete || !(imgW > 0) || !(imgH > 0)) return;
+            setFitted({ imgW, imgH, oneToOne: actualSizeScale(img.naturalWidth, imgW) });
+        };
+        const id = requestAnimationFrame(measure);
+        el.addEventListener('load', measure, true);
+        return () => { cancelAnimationFrame(id); el.removeEventListener('load', measure, true); };
+    }, [zoomScope, stageBox]);
+
+    // A resize can leave a zoomed photo panned past an edge; pull it back.
+    const zoomBox = useCallback((): ZoomBox | null => {
+        const f = fittedRef.current, b = stageBoxRef.current;
+        return f && b ? { stageW: b.w, stageH: b.h, imgW: f.imgW, imgH: f.imgH } : null;
+    }, []);
+    useEffect(() => {
+        const box = zoomBox();
+        if (!box || !isZoomed(zoomRef.current)) return;
+        const next = clampPan(zoomRef.current, box);
+        if (next.x !== zoomRef.current.x || next.y !== zoomRef.current.y) {
+            const id = requestAnimationFrame(() => setZoomState(next));
+            return () => cancelAnimationFrame(id);
+        }
+    }, [stageBox, fitted, zoomBox]);
+
+    // The phone has no zoom buttons, so a short label says how far in it is.
+    const [toast, setToast] = useState<number | null>(null);
+    const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+
+    /** Applies a zoom change. `animate` eases buttons, keys and double-clicks; gestures follow the hand. */
+    const applyZoom = useCallback((update: (z: Zoom, box: ZoomBox, max: number, oneToOne: number) => Zoom, animate: boolean) => {
+        const box = zoomBox();
+        const f = fittedRef.current;
+        if (!box || !f) return;
+        const next = update(zoomRef.current, box, maxScale(f.oneToOne), f.oneToOne);
+        zoomRef.current = next;
+        setAnimateZoom(animate && !reducedMotion);
+        setZoomState(next);
+        if (bare) {
+            if (toastTimer.current) clearTimeout(toastTimer.current);
+            if (isZoomed(next)) {
+                setToast(zoomPercent(next.scale, f.oneToOne));
+                toastTimer.current = setTimeout(() => setToast(null), ZOOM_TOAST_MS);
+            } else setToast(null);
+        }
+    }, [zoomBox, reducedMotion, bare]);
+
+    /** A point on screen measured from the stage centre, which is also the fitted image's centre. */
+    const fromCentre = useCallback((clientX: number, clientY: number) => {
+        const r = viewportRef.current?.getBoundingClientRect();
+        return r ? { x: clientX - (r.left + r.width / 2), y: clientY - (r.top + r.height / 2) } : { x: 0, y: 0 };
+    }, []);
+
+    const zoomStep = useCallback((dir: 1 | -1) => {
+        applyZoom((z, box, max) => zoomAt(z, dir > 0 ? z.scale * ZOOM_STEP : z.scale / ZOOM_STEP, { x: 0, y: 0 }, box, max), true);
+    }, [applyZoom]);
+    const zoomFit = useCallback(() => applyZoom(() => FIT, true), [applyZoom]);
+    /** Fit ↔ actual size, around a point (double-click, double-tap) or the centre (the % button). */
+    const zoomToggle = useCallback((focus: { x: number; y: number }) => {
+        applyZoom((z, box, max, oneToOne) => (isZoomed(z) ? FIT : zoomAt(FIT, oneToOne > 1.01 ? oneToOne : 2, focus, box, max)), true);
+    }, [applyZoom]);
+
+    // Wheel and trackpad pinch zoom around the pointer. A native listener, because
+    // React's wheel handler is passive and can't stop the page from scrolling.
+    useEffect(() => {
+        const el = viewportRef.current;
+        if (!el || activeIsPdf) return;
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const focus = fromCentre(e.clientX, e.clientY);
+            const factor = wheelFactor(e.deltaY, e.deltaMode, e.ctrlKey);
+            applyZoom((z, box, max) => zoomAt(z, z.scale * factor, focus, box, max), false);
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, [activeIsPdf, applyZoom, fromCentre]);
+
+    // Keys (desktop): + and − zoom, 0 fits. Character keys, so they follow the
+    // Options › Keyboard switch (#32). While zoomed the arrow keys pan rather than
+    // change photo, so they are taken in the capture phase before the lightbox sees them.
+    const [spaceHeld, setSpaceHeld] = useState(false);
+    const spaceRef = useRef(false);
+    useEffect(() => {
+        if (bare || activeIsPdf) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.metaKey || e.altKey || isTypingTarget(e.target)) return;
+            if (isZoomed(zoomRef.current) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const dx = e.key === 'ArrowLeft' ? KEY_PAN_PX : e.key === 'ArrowRight' ? -KEY_PAN_PX : 0;
+                const dy = e.key === 'ArrowUp' ? KEY_PAN_PX : e.key === 'ArrowDown' ? -KEY_PAN_PX : 0;
+                applyZoom((z, box) => panBy(z, dx, dy, box), true);
+                return;
+            }
+            // Space and drag moves a zoomed photo while tagging, where a plain drag draws.
+            if (e.code === 'Space' && tagModeRef.current) {
+                e.preventDefault();
+                spaceRef.current = true;
+                setSpaceHeld(true);
+                return;
+            }
+            if (!readLetterShortcuts()) return;
+            if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomStep(1); }
+            else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomStep(-1); }
+            else if (e.key === '0') { e.preventDefault(); zoomFit(); }
+        };
+        const onKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') { spaceRef.current = false; setSpaceHeld(false); }
+        };
+        const onBlur = () => { spaceRef.current = false; setSpaceHeld(false); };
+        window.addEventListener('keydown', onKey, true);
+        window.addEventListener('keyup', onKeyUp, true);
+        window.addEventListener('blur', onBlur);
+        return () => {
+            window.removeEventListener('keydown', onKey, true);
+            window.removeEventListener('keyup', onKeyUp, true);
+            window.removeEventListener('blur', onBlur);
+        };
+    }, [bare, activeIsPdf, applyZoom, zoomStep, zoomFit]);
+
+    // Pan (one pointer while zoomed) and pinch (two touches) on the active slide.
+    const pointers = useRef(new Map<number, { x: number; y: number }>());
+    const panRef = useRef<{ x: number; y: number; moved: number } | null>(null);
+    const pinchRef = useRef<{ d0: number; s0: number } | null>(null);
+    const suppressClick = useRef(false);
+    const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+    const [panning, setPanning] = useState(false);
+
+    function onSlidePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+        if (activeIsPdf) return;
+        if (e.pointerType === 'touch') {
+            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.current.size === 2 && !tagMode) {
+                const [a, b] = [...pointers.current.values()];
+                pinchRef.current = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: zoomRef.current.scale };
+                panRef.current = null;
+                return;
+            }
+        }
+        if (!isZoomed(zoomRef.current) || e.button > 0) return;
+        if (tagMode && !spaceRef.current) return;
+        if (startRef.current) return; // a face box is being drawn
+        panRef.current = { x: e.clientX, y: e.clientY, moved: 0 };
+        suppressClick.current = false;
+        setPanning(true);
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
+
+    function onSlidePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+        if (e.pointerType === 'touch' && pointers.current.has(e.pointerId)) {
+            pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            const pinch = pinchRef.current;
+            if (pinch && pointers.current.size >= 2) {
+                const [a, b] = [...pointers.current.values()];
+                const d = Math.hypot(a.x - b.x, a.y - b.y);
+                const focus = fromCentre((a.x + b.x) / 2, (a.y + b.y) / 2);
+                applyZoom((z, box, max) => zoomAt(z, pinch.s0 * (d / pinch.d0), focus, box, max), false);
+                suppressClick.current = true;
+                return;
+            }
+        }
+        const pan = panRef.current;
+        if (!pan) return;
+        const dx = e.clientX - pan.x, dy = e.clientY - pan.y;
+        pan.x = e.clientX; pan.y = e.clientY;
+        pan.moved += Math.abs(dx) + Math.abs(dy);
+        if (pan.moved > PAN_SLOP_PX) suppressClick.current = true;
+        applyZoom((z, box) => panBy(z, dx, dy, box), false);
+    }
+
+    function onSlidePointerUp(e: React.PointerEvent<HTMLDivElement>) {
+        const wasPinch = pinchRef.current != null;
+        if (e.pointerType === 'touch') {
+            pointers.current.delete(e.pointerId);
+            if (pointers.current.size < 2) pinchRef.current = null;
+        }
+        const pan = panRef.current;
+        panRef.current = null;
+        setPanning(false);
+        // Double-tap toggles Fit and actual size on the phone. Mice use dblclick.
+        if (e.pointerType === 'touch' && !wasPinch && !tagMode && !activeIsPdf && (!pan || pan.moved <= PAN_SLOP_PX) && e.type === 'pointerup') {
+            const now = e.timeStamp, prev = lastTap.current;
+            if (prev && now - prev.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < DOUBLE_TAP_PX) {
+                lastTap.current = null;
+                suppressClick.current = true;
+                zoomToggle(fromCentre(e.clientX, e.clientY));
+            } else lastTap.current = { t: now, x: e.clientX, y: e.clientY };
+        }
+    }
 
     function finishDraw() {
         const img = imgRef.current;
@@ -229,6 +472,31 @@ export default function PhotoStage(props: PhotoStageProps) {
         display: 'block' as const,
     };
 
+    // − / % / + / Fit at the right end of the top bar (#252 B). Same place browsing
+    // and tagging; while tagging, Done tagging sits just left of them.
+    const pct = fitted ? zoomPercent(zoom.scale, fitted.oneToOne) : null;
+    const zoomBtn = 'h-9 min-w-9 px-2 flex items-center justify-center text-white text-sm cursor-pointer transition-colors hover:bg-white/15 disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink-on-dark';
+    const zoomControls = !bare && !activeIsPdf ? (
+        <div role="group" aria-label={t('zoom_group')} className="flex items-center shrink-0 rounded-full bg-white/10 border border-white/20 overflow-hidden">
+            <button type="button" className={zoomBtn} onClick={() => zoomStep(-1)} disabled={!zoomed}
+                aria-label={t('zoom_out')} title={t('zoom_out')}>
+                <Minus className="w-4 h-4" aria-hidden="true" />
+            </button>
+            <button type="button" className={`${zoomBtn} tabular-nums min-w-[52px]`} onClick={() => zoomToggle({ x: 0, y: 0 })} disabled={!fitted}
+                title={t('zoom_toggle')}>
+                {pct != null ? t('zoom_percent', { percent: pct }) : '–'}
+            </button>
+            <button type="button" className={zoomBtn} onClick={() => zoomStep(1)} disabled={!fitted || (fitted != null && zoom.scale >= maxScale(fitted.oneToOne) - 0.001)}
+                aria-label={t('zoom_in')} title={t('zoom_in')}>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+            </button>
+            <span className="w-px h-5 bg-white/20" aria-hidden="true" />
+            <button type="button" className={zoomBtn} onClick={zoomFit} disabled={!zoomed}>
+                {t('zoom_fit')}
+            </button>
+        </div>
+    ) : null;
+
     return (
         <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
             {!bare && (
@@ -240,7 +508,7 @@ export default function PhotoStage(props: PhotoStageProps) {
                 // Its empty part is backdrop too (#253): a click there closes, the
                 // same guard as the stage below. Tag mode keeps backdrop close off.
                 <div data-testid="lightbox-top-bar" className="flex items-center gap-[14px] px-5 py-4 relative z-[5]"
-                    onClick={(e) => { if (!tagMode && e.target === e.currentTarget) onClose(); }}>
+                    onClick={(e) => { if (!tagMode && !zoomed && e.target === e.currentTarget) onClose(); }}>
                     {tagMode ? (
                         <>
                             <ScanFace className="w-5 h-5 text-white shrink-0" aria-hidden="true" />
@@ -250,6 +518,7 @@ export default function PhotoStage(props: PhotoStageProps) {
                                 className="ml-auto min-h-11 shrink-0">
                                 {t('done_tagging')}
                             </Button>
+                            {zoomControls}
                         </>
                     ) : (
                         <>
@@ -261,6 +530,7 @@ export default function PhotoStage(props: PhotoStageProps) {
                                 <div className="text-sm text-white/85 truncate">{ctxNoun}</div>
                                 <div className="tabular-nums text-xs text-white/40">{t('photo_counter', { current: counterCurrent, total: counterTotal })}</div>
                             </div>
+                            {zoomControls && <div className="ml-auto">{zoomControls}</div>}
                         </>
                     )}
                 </div>
@@ -269,23 +539,31 @@ export default function PhotoStage(props: PhotoStageProps) {
             {/* stage — Embla viewport bounds the image (#2) */}
             <div
                 className={bare ? 'flex-1 min-h-0 relative' : 'flex-1 min-h-0 relative px-10 pb-3'}
-                onClick={(e) => { if (!tagMode && e.target === e.currentTarget) onClose(); }}
+                onClick={(e) => { if (!tagMode && !zoomed && e.target === e.currentTarget) onClose(); }}
             >
+                {bare && toast != null && (
+                    <div role="status" className="absolute top-3 left-1/2 -translate-x-1/2 z-[4] pointer-events-none rounded-full bg-black/70 px-3 py-1 text-sm text-white tabular-nums">
+                        {t('zoom_toast', { percent: toast })}
+                    </div>
+                )}
                 {canPrev && (
                     <button type="button" aria-label={tc('previous')} title={tc('previous')} onClick={() => emblaApi?.scrollPrev()}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[3] w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center cursor-pointer transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-on-dark">
+                        disabled={zoomed}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-[3] w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center cursor-pointer transition-colors hover:bg-white/20 disabled:opacity-30 disabled:cursor-default disabled:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-on-dark">
                         <ChevronLeft className="w-6 h-6 text-white" aria-hidden="true" />
                     </button>
                 )}
                 {canNext && (
                     <button type="button" aria-label={tc('next')} title={tc('next')} onClick={() => emblaApi?.scrollNext()}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-[3] w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center cursor-pointer transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-on-dark">
+                        disabled={zoomed}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-[3] w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center cursor-pointer transition-colors hover:bg-white/20 disabled:opacity-30 disabled:cursor-default disabled:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-on-dark">
                         <ChevronRight className="w-6 h-6 text-white" aria-hidden="true" />
                     </button>
                 )}
 
                 <div className="overflow-hidden h-full" ref={(node) => { emblaRef(node); viewportRef.current = node; }}>
-                    <div className="flex h-full" style={{ touchAction: tagMode ? 'none' : 'pan-y pinch-zoom' }}>
+                    {/* No browser pinch-zoom: the stage zooms the photo itself (#252). */}
+                    <div className="flex h-full" style={{ touchAction: tagMode || zoomed ? 'none' : 'pan-y' }}>
                         {items.map((it, i) => {
                             const isActive = i === index;
                             const shouldLoad = Math.abs(i - index) <= 1;
@@ -296,7 +574,22 @@ export default function PhotoStage(props: PhotoStageProps) {
                                     // Click the dark area around the photo to dismiss (issue #161);
                                     // never while drawing a face tag, and only when the empty flex
                                     // area itself is clicked (not the image or its overlays).
-                                    onClick={(e) => { if (!tagMode && e.target === e.currentTarget) onClose(); }}
+                                    // While zoomed the dark area is part of the photo you can drag.
+                                    onClick={(e) => { if (!tagMode && !zoomed && e.target === e.currentTarget) onClose(); }}
+                                    {...(isActive ? {
+                                        onPointerDown: onSlidePointerDown,
+                                        onPointerMove: onSlidePointerMove,
+                                        onPointerUp: onSlidePointerUp,
+                                        onPointerCancel: onSlidePointerUp,
+                                        // A pan or pinch that ends over a face must not follow its link.
+                                        onClickCapture: (e: React.MouseEvent) => {
+                                            if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; }
+                                        },
+                                        onDoubleClick: (e: React.MouseEvent) => {
+                                            if (tagMode || activeIsPdf) return;
+                                            zoomToggle(fromCentre(e.clientX, e.clientY));
+                                        },
+                                    } : {})}
                                 >
                                     {/* One wrapper shape for every slide, active or not. The
                                         active slide used to render a <div> wrapper while the
@@ -308,22 +601,36 @@ export default function PhotoStage(props: PhotoStageProps) {
                                     <div
                                         ref={isActive ? imgRef : undefined}
                                         className="relative inline-block leading-[0] select-none"
+                                        data-testid={isActive ? 'photo-zoom-target' : undefined}
                                         style={{
-                                            cursor: isActive && tagMode ? 'crosshair' : 'default',
-                                            touchAction: isActive && tagMode ? 'none' : 'auto',
+                                            cursor: !isActive ? 'default'
+                                                : tagMode ? (spaceHeld && zoomed ? (panning ? 'grabbing' : 'grab') : 'crosshair')
+                                                : zoomed ? (panning ? 'grabbing' : 'grab') : 'default',
+                                            touchAction: isActive && (tagMode || zoomed) ? 'none' : 'auto',
+                                            ...(isActive && zoomed ? {
+                                                transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`,
+                                                transformOrigin: 'center center',
+                                                willChange: 'transform',
+                                            } : {}),
+                                            transition: isActive && animateZoom ? 'transform 140ms ease-out' : undefined,
                                         }}
                                         onPointerDown={(e) => {
-                                            if (!isActive || !tagMode || startRef.current) return;
+                                            // Space held: the slide pans instead (#252).
+                                            if (!isActive || !tagMode || startRef.current || spaceRef.current) return;
                                             e.preventDefault();
+                                            // The wrapper is scaled while zoomed; the box is kept in
+                                            // its own (fitted) pixels, which is what finishDraw expects.
                                             const r = e.currentTarget.getBoundingClientRect();
-                                            startRef.current = { x: e.clientX - r.left, y: e.clientY - r.top };
+                                            const k = zoomRef.current.scale;
+                                            startRef.current = { x: (e.clientX - r.left) / k, y: (e.clientY - r.top) / k };
                                             setRect(null);
                                             e.currentTarget.setPointerCapture(e.pointerId);
                                         }}
                                         onPointerMove={(e) => {
                                             const s = startRef.current; if (!isActive || !tagMode || !s) return;
                                             const r = e.currentTarget.getBoundingClientRect();
-                                            const dx = e.clientX - r.left - s.x, dy = e.clientY - r.top - s.y;
+                                            const k = zoomRef.current.scale;
+                                            const dx = (e.clientX - r.left) / k - s.x, dy = (e.clientY - r.top) / k - s.y;
                                             setRect({ x: Math.min(s.x, s.x + dx), y: Math.min(s.y, s.y + dy), w: Math.abs(dx), h: Math.abs(dy) });
                                         }}
                                         // Outside tag mode a release only drops the gesture, so a
@@ -446,6 +753,16 @@ export default function PhotoStage(props: PhotoStageProps) {
                 <div role="status" className="text-center text-white text-sm pb-3 px-6 leading-snug">
                     {drawTargetTagId != null && <span className="font-medium">{t('redraw_face')}: </span>}
                     {drawTargetTagId != null ? t('redraw_box_prompt') : t('draw_box_prompt')} <span className="text-white/55">{t('tag_mode_esc_hint')}</span>
+                    {!activeIsPdf && <> <span className="text-white/55">{t('tag_mode_zoom_hint')}</span></>}
+                </div>
+            )}
+
+            {!bare && !tagMode && !activeIsPdf && (
+                // The row is always there for photos so the stage doesn't jump when zoom starts.
+                <div className="text-center text-white/55 text-sm pb-3 px-6 leading-snug" aria-hidden={!zoomed}>
+                    {zoomed
+                        ? t('zoom_hint')
+                        : '\u00a0'}
                 </div>
             )}
 

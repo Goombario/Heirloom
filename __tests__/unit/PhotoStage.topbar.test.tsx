@@ -58,3 +58,24 @@ describe('PhotoStage top bar (#253)', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+describe('PhotoStage zoom controls (#252)', () => {
+  it('sits in the top bar while browsing and while tagging', () => {
+    renderStage(false);
+    expect(screen.getByRole('group', { name: 'zoom_group' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'zoom_in' })).toBeInTheDocument();
+  });
+
+  it('puts Done tagging just before the zoom buttons in tag mode', () => {
+    renderStage(true);
+    const done = screen.getByRole('button', { name: 'done_tagging' });
+    const group = screen.getByRole('group', { name: 'zoom_group' });
+    expect(done.nextElementSibling).toBe(group);
+  });
+
+  it('leaves zoom out and fit off at fit', () => {
+    renderStage(false);
+    expect(screen.getByRole('button', { name: 'zoom_out' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'zoom_fit' })).toBeDisabled();
+  });
+});
