@@ -376,6 +376,8 @@ export default function PhotoStage(props: PhotoStageProps) {
     const pinchRef = useRef<{ d0: number; s0: number } | null>(null);
     const suppressClick = useRef(false);
     const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+    // Chrome also fires dblclick after a touch double-tap; that one is already handled.
+    const touchToggledAt = useRef(-Infinity);
     const [panning, setPanning] = useState(false);
 
     function onSlidePointerDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -435,6 +437,7 @@ export default function PhotoStage(props: PhotoStageProps) {
             if (prev && now - prev.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - prev.x, e.clientY - prev.y) < DOUBLE_TAP_PX) {
                 lastTap.current = null;
                 suppressClick.current = true;
+                touchToggledAt.current = e.timeStamp;
                 zoomToggle(fromCentre(e.clientX, e.clientY));
             } else lastTap.current = { t: now, x: e.clientX, y: e.clientY };
         }
@@ -586,7 +589,7 @@ export default function PhotoStage(props: PhotoStageProps) {
                                             if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; }
                                         },
                                         onDoubleClick: (e: React.MouseEvent) => {
-                                            if (tagMode || activeIsPdf) return;
+                                            if (tagMode || activeIsPdf || e.timeStamp - touchToggledAt.current < 600) return;
                                             zoomToggle(fromCentre(e.clientX, e.clientY));
                                         },
                                     } : {})}
