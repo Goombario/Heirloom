@@ -3177,7 +3177,9 @@
     "display_title": "Вид дерева",
     "bring_into_view": "Вернуть в кадр",
     "bring_into_view_tip": "Прокрутить дерево обратно к {name}",
-    "find_in_tree": "Найти человека в дереве"
+    "find_in_tree": "Найти человека в дереве",
+    "repeat_pill": "Также в этом дереве",
+    "repeat_title": "Перейти к полной карточке этого человека"
   },
   "personDetail": {
     "family_eyebrow": "Семья {surname}",

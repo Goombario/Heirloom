@@ -2945,6 +2945,12 @@ html.dark .react-flow__minimap-mask {
    animating the outline in from currentColor flashed white in dark mode. */
 .tree-card--target { outline: 3px solid var(--color-primary); outline-offset: 1px; }
 .tree-card--picked { outline: 3px solid color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); outline-offset: 1px; }
+/* A repeat card (#13): the person is drawn in full elsewhere in this tree. The
+   contents fade, the card keeps a dashed outline, and a pill above it pans there. */
+.tree-card--repeat { box-shadow: none; outline: 2px dashed var(--color-text-muted); outline-offset: 3px; }
+.tree-card--repeat > * { opacity: 0.5; }
+.tree-repeat-chip { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); z-index: 1; white-space: nowrap; padding: 1px 8px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-card); color: var(--color-text-secondary); font-size: 11px; line-height: 16px; cursor: pointer; }
+.tree-repeat-chip:hover { color: var(--color-text); border-color: var(--color-text-muted); }
 /* Form dialogs (fix 10): joined segmented controls with dividers and a full-height
    selected segment, and the date precision folded into the date field. */
 .form-dialog [role='radiogroup'][aria-orientation='horizontal'] { gap: 0; padding: 0; overflow: hidden; border-radius: 8px; }

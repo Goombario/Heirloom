@@ -37,7 +37,7 @@ This document maps the complete tree visualization system. **Keep it up to date 
 | `lib/tree/layout/standardLayout.ts` | `computeStandardLayout(root, mode, orientation)` — descendants/ancestors: one engine pass + ancestor-mode sibling injection; when `orientation==='horizontal'` runs with bar geometry then transposes to a left-to-right bar layout |
 | `lib/tree/layout/focusLayout.ts` | `computeFocusLayout()` — focus view: three engine passes (left/right/center) + Pass 3/3b overlap correction + canonical-ID dedup + edge remapping |
 | `lib/tree/layout/registry.ts` | Layout-mode registry — one entry per display mode (`getLayoutMode(id)`, unknown → descendants). **Adding a new layout mode = one entry here + its compute module**; the renderer has no per-mode branching. |
-| `lib/tree/keys.ts` | `NodeKey` codec — the single encoder/parser for node IDs (`person-42`, `person-42-spouse1`, `person-42-sibling`, `left-\|right-\|center-` cluster prefixes) and the canonical dedup identity (`canonicalNodeId`). No other file builds or parses these strings. |
+| `lib/tree/keys.ts` | `NodeKey` codec — the single encoder/parser for node IDs (`person-42`, `person-42-spouse1-of7` (the spouse card beside person 7), `person-42-sibling`, `person-42-again1` (a repeat card, #13), `left-\|right-\|center-` cluster prefixes) and the canonical dedup identity (`canonicalNodeId`; a repeat card keeps its whole id, so focus dedup never folds it into the full card). No other file builds or parses these strings. |
 
 ### Hooks & Utilities
 
@@ -273,7 +273,8 @@ One engine pass (`computeColumnLayout`) does, in order:
      (#1180); only a multi-spouse parent's own lanes are coloured, one per partner
 6. `d3.tree().separation()` uses `columnSeparation()` (`_width` values + sibling/branch gaps; sibling vs cousin argument order and mirror handling live in that one exported function)
 7. Emit person + spouse cards and spouse/parent-child edges; orientation `'up'` (ancestors) inverts Y and flips edge handles
-8. Optional mirror (`mirrorLeftEdge`) and anchor shift
+8. Settle ids (#13): cards are emitted under provisional ids, then named. A spouse card names its partner (`-of<partner>`), so a woman who married two brothers in turn stands in full beside each. A person the service reached a second time (`TreeNode.repeat`, pedigree collapse: cousins marry, so their child sits under both) becomes a repeat card, `-again<n>`, with `data.repeatOf` = the id of their full card (their main card, else their first spouse card). Edges are rewritten to the settled ids
+9. Optional mirror (`mirrorLeftEdge`) and anchor shift
 
 `computeStandardLayout` then injects ancestor-mode sibling nodes + dashed sibling edges on top of the engine output.
 
@@ -331,6 +332,10 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 `FocusTrees.stage: 'A' | 'D'` — set by the API. `'D'` (at least one parent exists): CENTER is rooted at the father, side trees anchor at parent positions, `lineageOrder='last'`. `'A'` (no parents): CENTER is rooted at the focus person and `computeFocusLayout` returns after Pass 1 — no side trees, no dedup.
 
 ---
+
+## Repeat cards (#13)
+
+A repeat card (`FlowNodeData.repeatOf` set) is drawn faded with a dashed outline (`.tree-card--repeat`) and an "Also in this tree" chip above it (`RepeatPill.tsx`). The chip, and a click anywhere on the card, pans to the full card (`useJumpToCard`, at least `READABLE_ZOOM`). A repeat opens no sidebar, so it has no Add or Edit of its own, and never shows the selected outline. Its lines still go to its own place in the tree, so every person's parents stay directly above them. Locked mockup: option B in every view (issue #13).
 
 ## Multi-Spouse Rendering
 
@@ -536,6 +541,7 @@ What it prints:
 
 ## Layout regression tests
 
+- `__tests__/unit/tree-edge-invariants.pglite.test.ts` — six unusual family shapes (two brothers marry the same woman, first cousins marry, multi-spouse with a childless marriage, half-siblings, a child in two families, uncle marries niece) run through the real tree service and every layout mode; asserts unique node and edge ids, edges that end on real cards, no overlaps, spouses on one row, and that a person reached again is one repeat card pointing at a full card (#13).
 - `__tests__/unit/tree-layout-parity.test.ts` — golden snapshots of `useTreeLayoutMode` output (nodes, positions, edges, colors, handles) on fixture trees covering multi-spouse colors, birth-year sorting, the matrilineal edge-source rule, ancestor inversion + sibling injection, and Stage A/D focus composition — plus assertions on the declared `anchor`/`bounds` and the unknown-mode fallback. **Any intentional layout change must update these snapshots deliberately** (`vitest -u`) — an unexpected diff means behavior drifted.
 - `__tests__/unit/focus-tree-layout.test.ts` — geometry invariants driven through the real exported `columnSeparation()` / `mirrorLeftEdge()` (not replicas), plus Pass 3b LEFT↔RIGHT separation regression tests against `computeFocusLayout`.
 - `__tests__/unit/tree-node-keys.test.ts` — NodeKey codec round-trips and the historical canonical-ID semantics.

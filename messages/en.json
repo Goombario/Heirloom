@@ -3177,7 +3177,9 @@
     "display_title": "Tree display",
     "bring_into_view": "Bring into view",
     "bring_into_view_tip": "Scroll the tree back to {name}",
-    "find_in_tree": "Find a person in the tree"
+    "find_in_tree": "Find a person in the tree",
+    "repeat_pill": "Also in this tree",
+    "repeat_title": "Go to this person’s full card"
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",

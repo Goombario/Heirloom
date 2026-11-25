@@ -8,6 +8,7 @@ import { BAR_CARD_WIDTH, BAR_CARD_HEIGHT } from '@/lib/tree/geometry';
 import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
+import { RepeatPill, useJumpToCard } from './RepeatPill';
 import { StatusMark } from '../ui/StatusMark';
 
 /**
@@ -43,10 +44,14 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
 
   const personId = 'id' in person ? person.id : 0;
 
+  const repeatOf = data.repeatOf;
+  const jumpToFull = useJumpToCard(repeatOf);
   const handleClick = () => {
+    if (repeatOf) { jumpToFull(); return; }
     if (personId && data.onPersonClick) data.onPersonClick(personId);
   };
   const handleDoubleClick = (e: React.MouseEvent) => {
+    if (repeatOf) { e.stopPropagation(); return; }
     if (personId && data.onPersonDoubleClick) {
       e.stopPropagation();
       data.onPersonDoubleClick(personId);
@@ -67,11 +72,12 @@ const PersonBarNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
       <Handle type="source" position={Position.Left} id="left-source" style={{ opacity: 0 }} />
       <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />
 
+      {repeatOf && <RepeatPill onJump={jumpToFull} />}
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border gap-2 px-2.5 ${
-          data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
+          repeatOf ? 'tree-card--repeat' : data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
         }`}
         style={{
           width: `${BAR_CARD_WIDTH}px`,

@@ -255,7 +255,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
       return {
         id: p.Id, name: displayFullName(p), photoMediaId: photoMap.get(p.Id) ?? null,
         ...getFocal(p.Id), sex: p.Sex, lifespan: lifespanOf(p), age: computeAge(p),
-        birthYear: birthYearOf(p), spouses: [], otherParentId,
+        birthYear: birthYearOf(p), isDeceased: deceased(p.IsDeceased), spouses: [], otherParentId, repeat: true,
       };
     }
     visitedIds.add(p.Id);
@@ -313,7 +313,7 @@ export async function getTreeService(params: GetTreeServiceParams): Promise<Tree
       return {
         id: p.Id, name: displayFullName(p), photoMediaId: photoMap.get(p.Id) ?? null,
         ...getFocal(p.Id), sex: p.Sex, lifespan: lifespanOf(p), age: computeAge(p),
-        birthYear: birthYearOf(p), isDeceased: deceased(p.IsDeceased), spouses: [],
+        birthYear: birthYearOf(p), isDeceased: deceased(p.IsDeceased), spouses: [], repeat: true,
       };
     }
     visitedIds.add(p.Id);

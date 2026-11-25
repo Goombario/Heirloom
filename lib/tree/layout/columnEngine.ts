@@ -35,9 +35,12 @@ import {
   DEFAULT_LAYOUT_GEOMETRY,
   type LayoutGeometry,
 } from '@/lib/tree/geometry';
-import { nodeKeyToId, clusterPrefix, type FocusCluster } from '@/lib/tree/keys';
+import { nodeKeyToId, clusterPrefix, type FocusCluster, type NodeKey } from '@/lib/tree/keys';
 
 /** Layout metadata written onto the input nodes during a pass. */
+/** Placeholder id of a parent line until its cards' ids are settled. */
+const PARENT_EDGE = '\u0000parent';
+
 interface ExtendedTreeNode extends TreeNode {
   _width?: number;
   _branchColor?: string;
@@ -318,6 +321,21 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   const isSelectedFor = (personId: number, isRoot: boolean): boolean =>
     selectRoot ? isRoot : focusPersonId !== undefined && personId === focusPersonId;
 
+  // Ids are settled after every card is placed (#13): a person can be reached more
+  // than once (two brothers marry the same woman in turn, cousins marry), and React
+  // Flow keys nodes by id, so a second card with the same id swallowed the first.
+  // Cards get provisional ids here; the settle step below names the repeats
+  // (`-again<n>`) and rewrites the edges.
+  type Hier = typeof root;
+  const pending = new Map<string, { key: NodeKey; stub: boolean }>();
+  const mainTmp = new Map<Hier, string>();
+  const spouseTmp = new Map<Hier, string[]>();
+  const provisional = (key: NodeKey, stub: boolean): string => {
+    const id = `tmp-${pending.size}`;
+    pending.set(id, { key, stub });
+    return id;
+  };
+
   root.each((node) => {
     const personData = node.data;
     const d3X = node.x ?? 0;
@@ -326,8 +344,14 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     const mainX = d3X - geometry.spreadExtent / 2;
     const isRootNode = !node.parent;
 
+    const mainId = provisional({ personId: personData.id, role: 'person', cluster }, !!personData.repeat);
+    mainTmp.set(node, mainId);
+    const spouseIds = (personData.spouses ?? []).map((sp, idx) =>
+      provisional({ personId: sp.id, role: 'spouse', spouseIndex: idx, ofPartner: personData.id, cluster }, false));
+    spouseTmp.set(node, spouseIds);
+
     rawNodes.push({
-      id: nodeKeyToId({ personId: personData.id, role: 'person', cluster }),
+      id: mainId,
       rawX: mainX,
       rawY,
       data: {
@@ -349,7 +373,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
           : mainX + geometry.spreadExtent + geometry.spouseGap + idx * (geometry.spreadExtent + geometry.spouseGap);
 
         rawNodes.push({
-          id: nodeKeyToId({ personId: sp.id, role: 'spouse', spouseIndex: idx, cluster }),
+          id: spouseIds[idx],
           rawX: spouseX,
           rawY,
           data: {
@@ -377,8 +401,8 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
         // (mirrored trees pre-flip), so connectors always run right→left.
         edges.push({
           id: `${prefix}spouse-${personData.id}-${sp.id}-${idx}`,
-          source: nodeKeyToId({ personId: personData.id, role: 'person', cluster }),
-          target: nodeKeyToId({ personId: sp.id, role: 'spouse', spouseIndex: idx, cluster }),
+          source: mainId,
+          target: spouseIds[idx],
           type: 'spouse',
           style: { stroke: connectorColor, strokeWidth: 2, strokeDasharray: sp.hasChildren ? '0' : '5,5' },
           data: { spouseIndex: idx, totalSpouses },
@@ -395,14 +419,15 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
       const parentCB = spousesWithKids(parentData.spouses);
       const parentMultiSpouse = parentCB.length > 1;
 
-      let sourceId = nodeKeyToId({ personId: parentData.id, role: 'person', cluster });
+      const parentSpouseIds = spouseTmp.get(node.parent) ?? [];
+      let sourceId = mainTmp.get(node.parent)!;
       let shapeIndex = 0;
 
       if (parentMultiSpouse && childData.otherParentId && parentData.spouses) {
         // Multi-spouse: connect from the specific spouse so branches read apart.
         const spouseIdx = parentData.spouses.findIndex((s) => s.id === childData.otherParentId);
         if (spouseIdx !== -1) {
-          sourceId = nodeKeyToId({ personId: childData.otherParentId, role: 'spouse', spouseIndex: spouseIdx, cluster });
+          sourceId = parentSpouseIds[spouseIdx];
           shapeIndex = spouseIdx;
         }
       } else if (orientation === 'down' && !parentMultiSpouse && parentCB.length === 1) {
@@ -412,15 +437,15 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
         const sp = parentCB[0];
         const spIdx = parentData.spouses?.findIndex((s) => s.id === sp.id) ?? -1;
         if (parentData.sex !== 'F' && sp.sex === 'F') {
-          sourceId = nodeKeyToId({ personId: sp.id, role: 'spouse', spouseIndex: spIdx >= 0 ? spIdx : 0, cluster });
+          sourceId = parentSpouseIds[spIdx >= 0 ? spIdx : 0];
           shapeIndex = 0;
         }
       }
 
       edges.push({
-        id: `${prefix}edge-${sourceId}-person-${childData.id}`,
+        id: PARENT_EDGE,
         source: sourceId,
-        target: nodeKeyToId({ personId: childData.id, role: 'person', cluster }),
+        target: mainId,
         type: parentMultiSpouse ? 'branch' : 'smoothstep',
         style: { stroke: childData._branchColor || 'var(--color-tree-edge)', strokeWidth: 2 },
         ...(parentMultiSpouse ? { data: { shapeIndex } } : {}),
@@ -429,6 +454,44 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
       });
     }
   });
+
+  // ── Settle ids: a person reached again is a repeat card (#13) ─────────────
+  // The service stubs a person it reaches a second time (cousins marry, so their
+  // child sits under both parents). That stub is drawn as a faded repeat pointing
+  // at the person's full card: their main card, else their first spouse card. A
+  // spouse beside each of two partners (brothers marry the same woman in turn) is
+  // a full card beside each, named by the partner.
+  const fullFor = new Map<number, string>();
+  for (const [id, p] of pending) if (!p.stub && p.key.role === 'person' && !fullFor.has(p.key.personId)) fullFor.set(p.key.personId, id);
+  for (const [id, p] of pending) if (!p.stub && !fullFor.has(p.key.personId)) fullFor.set(p.key.personId, id);
+  const finalId = new Map<string, string>();
+  const againCount = new Map<number, number>();
+  const repeatOf = new Map<string, string>();
+  for (const [id, p] of pending) {
+    const full = fullFor.get(p.key.personId);
+    if (!p.stub || full === undefined) { finalId.set(id, nodeKeyToId(p.key)); continue; }
+    const n = (againCount.get(p.key.personId) ?? 0) + 1;
+    againCount.set(p.key.personId, n);
+    finalId.set(id, nodeKeyToId({ ...p.key, again: n }));
+    repeatOf.set(id, full);
+  }
+  for (const n of rawNodes) {
+    const full = repeatOf.get(n.id);
+    if (full) n.data = { ...n.data, repeatOf: finalId.get(full)!, isSelected: false };
+    n.id = finalId.get(n.id)!;
+  }
+  const edgeIds = new Set<string>();
+  for (const e of edges) {
+    e.source = finalId.get(e.source)!;
+    e.target = finalId.get(e.target)!;
+    // A parent line keeps its historical id shape: the source card, then the child
+    // without the cluster prefix.
+    if (e.id === PARENT_EDGE) e.id = `${prefix}edge-${e.source}-${e.target.slice(prefix.length)}`;
+    let id = e.id;
+    for (let k = 2; edgeIds.has(id); k++) id = `${e.id}-${k}`;
+    edgeIds.add(id);
+    e.id = id;
+  }
 
   // ── Mirror X (paternal/left focus tree) ───────────────────────────────────
   if (mirrorX) {
@@ -443,7 +506,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   if (shift) {
     const anchorId = shift.anchorPersonId ?? focusPersonId;
     const anchorNode =
-      rawNodes.find((n) => !n.isSpouseNode && (n.data.person as { id: number }).id === anchorId) ??
+      rawNodes.find((n) => !n.isSpouseNode && !n.data.repeatOf && (n.data.person as { id: number }).id === anchorId) ??
       rawNodes.find((n) => !n.isSpouseNode && (n.data.person as { id: number }).id === focusPersonId);
     shiftX = shift.targetX - (anchorNode?.rawX ?? 0);
     shiftY = (shift.targetY ?? 0) - (anchorNode?.rawY ?? 0);

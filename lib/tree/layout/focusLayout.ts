@@ -251,7 +251,9 @@ export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = f
     for (const node of result.nodes) {
       const cid = toCanonical(node.id);
       if (!nodeMap.has(cid)) {
-        nodeMap.set(cid, { ...node, id: cid });
+        // A repeat card points at its full card, which dedup renames too (#13).
+        const data = node.data.repeatOf ? { ...node.data, repeatOf: toCanonical(node.data.repeatOf) } : node.data;
+        nodeMap.set(cid, { ...node, id: cid, data });
         nodeCluster.set(cid, cluster);
       }
     }

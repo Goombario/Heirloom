@@ -3177,7 +3177,9 @@
     "display_title": "Affichage de l'arbre",
     "bring_into_view": "Ramener à l’écran",
     "bring_into_view_tip": "Faire défiler l’arbre jusqu’à {name}",
-    "find_in_tree": "Trouver une personne dans l’arbre"
+    "find_in_tree": "Trouver une personne dans l’arbre",
+    "repeat_pill": "Aussi dans cet arbre",
+    "repeat_title": "Aller à la carte complète de cette personne"
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",

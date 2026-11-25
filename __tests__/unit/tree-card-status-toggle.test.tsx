@@ -75,3 +75,27 @@ describe('portrait card second name line', () => {
         expect(container.querySelector('.tree-card-second-name')!.textContent).toBe('Dot');
     });
 });
+
+// A repeat card (#13): faded, an "Also in this tree" chip, and no editor of its own.
+describe('tree repeat card', () => {
+    for (const [name, Card] of [['portrait card', PersonNode], ['bar card', PersonBarNode]] as const) {
+        it(`${name}: shows the chip and opens nothing when clicked`, () => {
+            const onPersonClick = vi.fn();
+            const onPersonDoubleClick = vi.fn();
+            const { container, getByRole } = renderCard(Card, { repeatOf: 'person-7', onPersonClick, onPersonDoubleClick, isSelected: true });
+            const card = container.querySelector<HTMLElement>('.bg-card')!;
+            expect(card.className).toContain('tree-card--repeat');
+            expect(card.className).not.toContain('tree-card--target');
+            getByRole('button', { name: 'Also in this tree' }).click();
+            card.click();
+            card.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+            expect(onPersonClick).not.toHaveBeenCalled();
+            expect(onPersonDoubleClick).not.toHaveBeenCalled();
+        });
+
+        it(`${name}: a full card has no chip`, () => {
+            const { queryByRole } = renderCard(Card, {});
+            expect(queryByRole('button', { name: 'Also in this tree' })).toBeNull();
+        });
+    }
+});

@@ -36,6 +36,9 @@ export interface TreeNode {
   children?: TreeNode[];
   /** Populated only for the root in ancestor mode — siblings to display at the same generation */
   siblings?: SiblingInfo[];
+  /** The person was already reached elsewhere in this tree (pedigree collapse):
+   *  a stub with no spouses or relatives, drawn as a faded repeat card (#13). */
+  repeat?: true;
 }
 
 /**
@@ -152,6 +155,10 @@ export interface FlowNodeData {
   isSpouse?: boolean;
   spouseIndex?: number;
   parentPersonId?: number;
+  /** A later card for a person drawn in full elsewhere in this layout: the id of
+   *  that full card. The repeat is faded, has an "Also in this tree" pill that
+   *  pans there, and opens no editor of its own (#13). */
+  repeatOf?: string;
   isSelected?: boolean; // True for the root/leaf person being viewed
   isSidebarSelected?: boolean; // True for the person clicked to open sidebar
   onPersonClick?: (id: number) => void;
