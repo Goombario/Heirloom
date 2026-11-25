@@ -40,7 +40,8 @@
     "more_count": "ещё {count}",
     "fact_birth": "Рождение",
     "fact_death": "Смерть",
-    "fact_marriage": "Брак"
+    "fact_marriage": "Брак",
+    "untitled": "Без названия"
   },
   "eventMediaDraft": {
     "title": "Фотографии и документы",
