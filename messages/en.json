@@ -3209,7 +3209,7 @@
     "relate_show_whole": "Show the whole path",
     "relate_pick": "Click someone to see how they’re related to {name}",
     "relate_cancel": "Cancel (Esc)",
-    "relate_shift_hint": "Holding Shift: click a second person. Esc clears."
+    "relate_shift_hint": "Shift is held: click a second person. Esc clears."
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",

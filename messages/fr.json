@@ -3209,7 +3209,7 @@
     "relate_show_whole": "Afficher tout le chemin",
     "relate_pick": "Cliquez sur une personne pour voir son lien avec {name}",
     "relate_cancel": "Annuler (Échap)",
-    "relate_shift_hint": "Maj enfoncée : cliquez sur une deuxième personne. Échap efface."
+    "relate_shift_hint": "Maj est enfoncée : cliquez sur une deuxième personne. Échap efface."
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",
