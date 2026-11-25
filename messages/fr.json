@@ -1230,7 +1230,8 @@
     "empty_add_person": "Ajouter une personne",
     "part_of_chain": "Fait partie de {chain}",
     "no_records_here": "Aucun document ici pour l’instant.",
-    "rename_or_merge": "Renommer ou fusionner"
+    "rename_or_merge": "Renommer ou fusionner",
+    "explore_show_all": "Afficher les {count} lieux"
   },
   "mobilePlaces": {
     "filter_places": "Filtrer les lieux",

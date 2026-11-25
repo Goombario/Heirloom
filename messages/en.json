@@ -1230,7 +1230,8 @@
     "empty_add_person": "Add a person",
     "part_of_chain": "Part of {chain}",
     "no_records_here": "No records here yet.",
-    "rename_or_merge": "Rename or merge"
+    "rename_or_merge": "Rename or merge",
+    "explore_show_all": "Show all {count} places"
   },
   "mobilePlaces": {
     "filter_places": "Filter places",

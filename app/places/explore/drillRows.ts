@@ -54,6 +54,19 @@ export function levelRows(children: PlaceTreeNode[]): DrillRowData[] {
   return children.map((node) => ({ node, region: regionFromName(node.name) }));
 }
 
+/**
+ * A level renders at most this many rows until "Show all" (#4). On a 4× throttled
+ * phone, ~600 root rows made each filter keystroke take 300–400 ms; a big imported
+ * tree that hasn't been grouped has every one-part place at the root.
+ */
+export const DRILL_ROW_CAP = 200;
+
+/** The rows to draw and how many wait behind "Show all". Search results are never capped. */
+export function capDrillRows<T>(rows: readonly T[], showAll: boolean, searching: boolean): { shown: readonly T[]; hidden: number } {
+  if (showAll || searching || rows.length <= DRILL_ROW_CAP) return { shown: rows, hidden: 0 };
+  return { shown: rows.slice(0, DRILL_ROW_CAP), hidden: rows.length - DRILL_ROW_CAP };
+}
+
 /** Case-insensitive name match, used by the global search path. */
 export function matchesQuery(row: DrillRowData, query: string): boolean {
   return placeNameMatches(row.node.name, row.node.otherNames, query);

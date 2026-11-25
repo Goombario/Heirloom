@@ -1230,7 +1230,8 @@
     "empty_add_person": "Добавить человека",
     "part_of_chain": "Входит в {chain}",
     "no_records_here": "Здесь пока нет записей.",
-    "rename_or_merge": "Переименовать или объединить"
+    "rename_or_merge": "Переименовать или объединить",
+    "explore_show_all": "Показать все места ({count})"
   },
   "mobilePlaces": {
     "filter_places": "Фильтр мест",

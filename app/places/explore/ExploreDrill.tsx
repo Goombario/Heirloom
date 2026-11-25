@@ -8,14 +8,14 @@
 // so a hit in another branch shows without navigating there first (the other views still take
 // the pruned tree page.tsx builds).
 
-import { useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { ScrollArea } from '@/app/components/ui/ScrollArea';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from '@/lib/icons';
 import { usePrefetchPlaceDetail } from '@/lib/places/prefetch';
 import { PinMark, FaceStack } from '../PinMark';
-import { flattenWithAncestry, label, levelRows, matchesQuery, type DrillRowData } from './drillRows';
+import { capDrillRows, flattenWithAncestry, label, levelRows, matchesQuery, type DrillRowData } from './drillRows';
 import type { PlaceTreeNode } from '@/lib/places/hierarchy';
 import type { ExploreState } from './useExploreState';
 import { foldForSearch } from '@/lib/utils/search-fold';
@@ -187,7 +187,9 @@ function CrumbFold({ crumbs, onPick }: { crumbs: PlaceTreeNode[]; onPick: (id: n
 export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSearch, breadcrumbSlot }: ExploreDrillProps) {
   const t = useTranslations('places');
   const prefetch = usePrefetchPlaceDetail();
-  const q = foldForSearch(search.trim());
+  // Typing stays responsive while a big level catches up (#4).
+  const deferredSearch = useDeferredValue(search);
+  const q = foldForSearch(deferredSearch.trim());
   const [sort, setSort] = useExploreSort();
   // Search is GLOBAL: a query matches every place in the tree, not only the
   // jurisdiction you happen to be standing in. Matching the current subtree meant
@@ -199,6 +201,10 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
   const rows = sortRows(searching
     ? flattenWithAncestry(state.roots).filter((row) => matchesQuery(row, q))
     : levelRows(state.children), sort);
+  // A big level draws its first rows, then "Show all" (#4). Moving level starts capped again.
+  const levelKey = String(state.currentNode?.id ?? state.currentNode?.name ?? '');
+  const [showAllFor, setShowAllFor] = useState<string | null>(null);
+  const { shown, hidden } = capDrillRows(rows, showAllFor === levelKey, searching);
   // The count column widens for 4+ digits, the same width on every row of the level.
   const countWidth = `${Math.max(3, ...rows.map((r) => r.node.rolledCount.toLocaleString().length))}ch`;
 
@@ -362,17 +368,25 @@ export function ExploreDrill({ state, search, onRowClick, onRowHover, onClearSea
             )}
           </div>
         ) : (
-          rows.map(({ node, region }) => (
-            <DrillRow
-              key={node.id ?? node.name}
-              node={node}
-              region={region}
-              selected={state.selected?.id != null && state.selected.id === node.id}
-              onSelect={() => (onRowClick ? onRowClick(node) : state.select(node))}
-              prefetch={prefetch}
-              onHover={onRowHover}
-            />
-          ))
+          <>
+            {shown.map(({ node, region }) => (
+              <DrillRow
+                key={node.id ?? node.name}
+                node={node}
+                region={region}
+                selected={state.selected?.id != null && state.selected.id === node.id}
+                onSelect={() => (onRowClick ? onRowClick(node) : state.select(node))}
+                prefetch={prefetch}
+                onHover={onRowHover}
+              />
+            ))}
+            {hidden > 0 && (
+              <button type="button" onClick={() => setShowAllFor(levelKey)}
+                className="w-full rounded-md px-3 py-2.5 text-left text-sm text-link underline underline-offset-2 bg-transparent border-0 cursor-pointer hover:bg-hover-surface focus-ring-inset">
+                {t('explore_show_all', { count: rows.length })}
+              </button>
+            )}
+          </>
         )}
       </ScrollArea>
 
