@@ -5665,7 +5665,7 @@
     "show_fewer": "Show fewer",
     "retry_rest": "{count, plural, one {Retry the other #} other {Retry the other #}}",
     "see_space": "See what uses space",
-    "from_zip": "From {name}. If this tab is reloaded, choose it again on Import and export, under Photos."
+    "from_zip": "From {name}. If this tab is reloaded, choose it again on the import and export page, in its photos step."
   },
   "personMerge": {
     "title": "Merge two people",

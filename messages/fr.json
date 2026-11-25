@@ -5665,7 +5665,7 @@
     "show_fewer": "Afficher moins",
     "retry_rest": "{count, plural, one {Réessayer le dernier} other {Réessayer les # autres}}",
     "see_space": "Voir ce qui occupe l’espace",
-    "from_zip": "Depuis {name}. Si cet onglet est rechargé, choisissez-le à nouveau dans Import et export, sous Photos."
+    "from_zip": "Depuis {name}. Si cet onglet est rechargé, choisissez-le à nouveau sur la page d’import et d’export, à l’étape des photos."
   },
   "personMerge": {
     "title": "Fusionner deux personnes",
