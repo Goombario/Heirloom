@@ -8,7 +8,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { livingStatus } from '@/lib/living';
 import { compareText } from '@/lib/collation';
 import { Button, CopperPill, CoverBand, DataTable, EmptyState, ListToolbar, MobileListHeader, PageShell, TablePanel, type Column } from '@/app/components/ui';
-import { Plus } from '@/lib/icons';
+import { ListFilter, Plus } from '@/lib/icons';
 import type { PersonWithParentFamily } from '@/lib/db/queries/people';
 import { formatDateForDisplay, timestampMs } from '@/lib/date-utils';
 import { useLanguage } from '@/app/components/LanguageProvider';
@@ -28,7 +28,16 @@ import { errorToastKey } from '@/lib/utils/data-error';
 import { InlineDataError } from '@/app/components/ui';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import type { ListPeopleResult } from '@/lib/services/people';
-import { cycleTri, flagFromUrlFilter, matchesSexBucket, matchesTri, sexBucketsPresent, type SexBucket, type TriState } from './peopleFilters';
+import { cycleTri, flagFromUrlFilter, sexBucketsPresent, type SexBucket, type TriState } from './peopleFilters';
+import { activeQuery, conditionCount, decodeQuery, encodeQuery, EMPTY_QUERY, type SearchQuery } from '@/lib/search/people-query';
+import type { PersonResult } from '@/lib/db/schema';
+import { chipsFromQuery, isChipOnly, setChip } from './advanced/chipQuery';
+import { AdvancedSearchPanel } from './advanced/AdvancedSearchPanel';
+import { NoMatches, SearchSummary } from './advanced/SearchSummary';
+import { ManageSavedDialog, SaveSearchDialog, SavedSearchesMenu } from './advanced/SavedSearches';
+import { useSearchLookups } from './advanced/useSearchLookups';
+import { useSearchWords, type RecordNames } from './advanced/useSearchWords';
+import { showErrorToast, showSuccessToast } from '@/app/components/ui';
 import { foldForSearch } from '@/lib/utils/search-fold';
 import { useDocumentTitle } from '@/app/hooks/useDocumentTitle';
 import { AddPersonSheet } from './AddPersonSheet';
@@ -91,17 +100,47 @@ export default function PeoplePageClient({
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn>('name');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-    const [sexFilter, setSexFilter] = useState<SexBucket | null>(null);
-    const [hasParentsFilter, setHasParentsFilter] = useState<TriState>('off');
+    // Advanced search (#247): the query lives in `?q=`, and the chips are shortcuts
+    // into its first "match all" group (P1), so both read one state.
+    const qParam = searchParams.get('q');
+    const [query, setQueryState] = useState<SearchQuery>(() => decodeQuery(qParam));
+    const queryRef = useRef(query);
+    useEffect(() => {
+        if ((qParam ?? null) !== encodeQuery(queryRef.current)) {
+            const next = decodeQuery(qParam);
+            queryRef.current = next;
+            setQueryState(next);
+        }
+    }, [qParam]);
+    function setQuery(next: SearchQuery) {
+        queryRef.current = next;
+        setQueryState(next);
+        const rest = new URLSearchParams(window.location.search);
+        const enc = encodeQuery(next);
+        if (enc) rest.set('q', enc); else rest.delete('q');
+        router.replace(rest.size > 0 ? `/people?${rest}` : '/people', { scroll: false });
+    }
+    const chips = chipsFromQuery(query);
+    const sexFilter = chips.sex;
+    const setSexFilter = (v: SexBucket | null) => setQuery(setChip(queryRef.current, 'sex', v));
+    const hasParentsFilter = chips.parents;
+    const setHasParentsFilter = (v: TriState) => setQuery(setChip(queryRef.current, 'parents', v));
+    const [advancedOpen, setAdvancedOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [managing, setManaging] = useState(false);
     // A home suggestion's people, which only the server can find (#794).
     const urlFlag = flagFromUrlFilter(searchParams.get('filter'));
     const [flag, setFlag] = useState(urlFlag);
-    const [hasChildrenFilter, setHasChildrenFilter] = useState<TriState>('off');
-    const [hasPhotoFilter, setHasPhotoFilter] = useState<TriState>('off');
+    const hasChildrenFilter = chips.children;
+    const setHasChildrenFilter = (v: TriState) => setQuery(setChip(queryRef.current, 'children', v));
+    const hasPhotoFilter = chips.photo;
+    const setHasPhotoFilter = (v: TriState) => setQuery(setChip(queryRef.current, 'photo', v));
     // Living and deceased were two chips asking one question. One tri-state chip:
     // off = everyone, yes = living, no = deceased.
-    const [livingFilter, setLivingFilter] = useState<TriState>('off');
-    const [surnameFilter, setSurnameFilter] = useState<string | null>(null);
+    const livingFilter = chips.living;
+    const setLivingFilter = (v: TriState) => setQuery(setChip(queryRef.current, 'living', v));
+    const surnameFilter = chips.surname;
+    const setSurnameFilter = (v: string | null) => setQuery(setChip(queryRef.current, 'surname', v));
     const [showSurnamePicker, setShowSurnamePicker] = useState(false);
     const [surnamePickerPos, setSurnamePickerPos] = useState<{ top: number; left: number } | null>(null);
     const surnameChipRef = useRef<HTMLDivElement>(null);
@@ -164,7 +203,18 @@ export default function PeoplePageClient({
         () => flag === 'duplicates' && flagged.data ? new Map(flagged.data.flatMap((group, g) => group.map(id => [id, g] as const))) : undefined,
         [flag, flagged.data],
     );
-    const listError = error ?? (flag ? flagged.error : null);
+    const active = useMemo(() => activeQuery(query), [query]);
+    const activeKey = encodeQuery(active);
+    const search = useCachedResource(
+        currentUserId === null || activeKey === null ? null : `people:search:tree=${activeTreeId ?? 'default'}:${activeKey}`,
+        async () => (await getDataClient()).search.people(active, activeTreeId, { explain: true }),
+    );
+    // While a changed query is counted, the list keeps the last answer rather than flashing.
+    const [lastSearch, setLastSearch] = useState(search.data);
+    useEffect(() => { if (search.data) setLastSearch(search.data); }, [search.data]);
+    const searchResult = activeKey === null ? null : (search.data ?? lastSearch ?? null);
+    const matchSet = useMemo(() => (searchResult?.ids ? new Set(searchResult.ids) : null), [searchResult]);
+    const listError = error ?? (flag ? flagged.error : null) ?? (activeKey ? search.error : null);
 
     useEffect(() => {
         if (listError) redirectIfUnauthorized(listError);
@@ -174,7 +224,7 @@ export default function PeoplePageClient({
     // hosted mode, before /api/users/me resolves) as loading — otherwise the
     // null cache key makes useCachedResource report loading=false and the page
     // paints its empty "No people yet" state into the prerendered HTML.
-    const phase = useLoadPhase(currentUserId === null || loading || (flag !== null && flagged.loading), { delay: 0 });
+    const phase = useLoadPhase(currentUserId === null || loading || (flag !== null && flagged.loading) || (activeKey !== null && searchResult === null && search.loading), { delay: 0 });
 
     useDocumentTitle(t('title'));
     const treeName = useActiveTreeName();
@@ -190,7 +240,7 @@ export default function PeoplePageClient({
         // the active tree switches (a smaller tree would otherwise strand the user
         // on a now-out-of-range page showing an empty list).
         setCurrentPage(1);
-    }, [searchQuery, sortColumn, sortDirection, sexFilter, hasParentsFilter, hasChildrenFilter, surnameFilter, hasPhotoFilter, livingFilter, flag, activeTreeId]);
+    }, [searchQuery, sortColumn, sortDirection, activeKey, flag, activeTreeId]);
 
     const blankLast = (a: string, b: string): number | null => {
         if (!a && !b) return 0;
@@ -221,21 +271,8 @@ export default function PeoplePageClient({
             });
         }
 
-        // One classifier for the chip cycle and the predicate, so the label can never
-        // name a bucket the filter does not actually apply (#427).
-        if (effectiveSex) r = r.filter(p => matchesSexBucket(effectiveSex, p.Sex));
-
-        // Tri-state: 'off' matches everyone, 'yes' the predicate, 'no' its negation.
-        // The parent test includes surnames: a GEDCOM parent recorded as `/Smith/`
-        // has no first name, and under negation that would positively assert the
-        // child has no parents rather than merely omitting them.
-        r = r.filter(p =>
-            matchesTri(hasParentsFilter, !!(p.FatherFirstName || p.FatherLastName || p.MotherFirstName || p.MotherLastName))
-            && matchesTri(hasChildrenFilter, (p.ChildrenCount ?? 0) > 0)
-            && matchesTri(hasPhotoFilter, !!p.PrimaryMediaId)
-            && matchesTri(livingFilter, livingStatus(p) !== 'deceased'));
-
-        if (surnameFilter) r = r.filter(p => (p.LastName ?? '').toLowerCase() === surnameFilter.toLowerCase());
+        // The chips and the advanced panel are one query, evaluated on the server (#247).
+        if (matchSet) r = r.filter(p => matchSet.has(p.Id));
 
         r.sort((a, b) => {
             let cmp = 0;
@@ -290,7 +327,7 @@ export default function PeoplePageClient({
         });
 
         return r;
-    }, [people, locale, flag, flaggedRank, searchQuery, sortColumn, sortDirection, effectiveSex, hasParentsFilter, hasChildrenFilter, surnameFilter, hasPhotoFilter, livingFilter]);
+    }, [people, locale, flag, flaggedRank, searchQuery, sortColumn, sortDirection, matchSet]);
 
     const availableSurnames = useMemo(() => {
         const set = new Map<string, number>();
@@ -339,8 +376,8 @@ export default function PeoplePageClient({
         : sexAddLabel;
     const surnameAddLabel = t('filter_add_surname');
     const surnameLabel = surnameFilter ? t('filter_surname_active', { name: surnameFilter }) : surnameAddLabel;
-    const anyFilter = flag !== null || effectiveSex !== null || surnameFilter !== null
-        || hasParentsFilter !== 'off' || hasChildrenFilter !== 'off' || hasPhotoFilter !== 'off' || livingFilter !== 'off';
+    const conditions = conditionCount(query);
+    const anyFilter = flag !== null || conditions > 0;
 
     // One reset for both the "clear all" chip and the empty state — they used to
     // clear different subsets, so the empty state could leave a filter applied.
@@ -352,13 +389,46 @@ export default function PeoplePageClient({
 
     function clearAllFilters() {
         clearFlag();
-        setSexFilter(null);
-        setSurnameFilter(null);
-        setHasParentsFilter('off');
-        setHasChildrenFilter('off');
-        setHasPhotoFilter('off');
-        setLivingFilter('off');
+        setQuery(EMPTY_QUERY);
     }
+
+    // ---- Advanced search (#247) ----
+    const words = useSearchWords();
+    const lookups = useSearchLookups(activeTreeId, advancedOpen || active.groups.some((g) => g.conds.some((c) => c.field === 'sources' || c.field === 'cases')));
+    const names: RecordNames = useMemo(() => ({
+        person: (id) => { const p = people.find((x) => x.Id === id); return p ? String(displayFullName(p) || t('unnamed')) : null; },
+        source: (id) => lookups.sources.find((x) => x.id === id)?.title || null,
+        caseTitle: (id) => lookups.cases.find((x) => x.id === id)?.title || null,
+    }), [people, lookups, t]);
+    const personFor = (id: number) => (people.find((x) => x.Id === id) as unknown as PersonResult | undefined) ?? null;
+    const showSummary = !advancedOpen && activeKey !== null && !isChipOnly(active);
+    const saved = useCachedResource(
+        currentUserId === null ? null : `people:saved-searches:tree=${activeTreeId ?? 'default'}`,
+        async () => (await getDataClient()).search.listSaved(activeTreeId),
+    );
+    const currentSaved = saved.data?.find((x) => encodeQuery(x.query) === activeKey)?.id ?? null;
+    const sentence = words.summary(query, names).map((p) => `${p.joiner ? `${p.joiner} ` : ''}${p.open ? '(' : ''}${p.text}${p.close ? ')' : ''}`).join(' ');
+    async function copyLink() {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            showSuccessToast(String(words.t('link_copied')));
+        } catch {
+            showErrorToast(String(words.t('link_copy_failed')));
+        }
+    }
+    const advancedButton = (
+        <Button
+            variant="outline"
+            size="md"
+            aria-expanded={advancedOpen}
+            className={advancedOpen ? 'border-text shadow-[inset_0_0_0_1px_var(--color-text)]' : undefined}
+            icon={<ListFilter className="w-4 h-4" aria-hidden="true" />}
+            onClick={() => setAdvancedOpen((o) => !o)}
+        >
+            {words.t('advanced')}
+            {conditions > 0 && <span className="ml-1 text-xs font-semibold leading-none bg-segment-on text-on-segment rounded-full px-1.5 py-[3px]" aria-label={String(words.t('conditions_count', { count: conditions }))}>{conditions}</span>}
+        </Button>
+    );
 
     const emptyState = people.length === 0 ? (
         <EmptyState
@@ -538,7 +608,18 @@ export default function PeoplePageClient({
                         onSearchChange={setSearchQuery}
                         searchLabel={t('search_placeholder_full')}
                         // One create path per screen (FL-2): the floating pill takes over below md.
-                        action={canEdit ? <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</Button> : undefined}
+                        action={<>
+                            <SavedSearchesMenu
+                                saved={saved.data ?? []}
+                                current={currentSaved}
+                                canCopy={activeKey !== null}
+                                onOpen={(x) => { setQuery(x.query); setAdvancedOpen(false); }}
+                                onCopy={copyLink}
+                                onManage={() => setManaging(true)}
+                            />
+                            {advancedButton}
+                            {canEdit && <Button variant="primary" size="md" icon={<Plus className="w-4 h-4" aria-hidden="true" />} onClick={() => setAdding(true)}>{t('add_person')}</Button>}
+                        </>}
                         filters={<>
                         {flag && (
                             <FilterChip
@@ -658,7 +739,39 @@ export default function PeoplePageClient({
                             </div>
                         </>
                     )}
+                    {advancedOpen && (
+                        <div className="mt-3">
+                            <AdvancedSearchPanel
+                                query={query}
+                                onChange={setQuery}
+                                count={activeKey === null ? people.length : search.data ? (search.data.ids?.length ?? people.length) : null}
+                                onHide={() => setAdvancedOpen(false)}
+                                onClear={() => setQuery(EMPTY_QUERY)}
+                                onSave={activeKey !== null ? () => setSaving(true) : undefined}
+                                lookups={lookups}
+                                personFor={personFor}
+                                treeId={activeTreeId}
+                            />
+                        </div>
+                    )}
+                    {showSummary && (
+                        <SearchSummary
+                            className="mt-2.5"
+                            query={query}
+                            names={names}
+                            onEdit={() => setAdvancedOpen(true)}
+                            onSave={() => setSaving(true)}
+                            onClear={() => setQuery(EMPTY_QUERY)}
+                        />
+                    )}
                 </div>
+
+                {/* Phone: a shared link's search, in words (the phone builder comes later) */}
+                {showSummary && (
+                    <div className="md:hidden px-4 pt-2">
+                        <SearchSummary query={query} names={names} onClear={() => setQuery(EMPTY_QUERY)} />
+                    </div>
+                )}
 
                 {/* Loading skeleton */}
                 {phase === 'loading' && (
@@ -681,7 +794,17 @@ export default function PeoplePageClient({
 
                 {/* Empty state */}
                 {phase === 'ready' && listError == null && filtered.length === 0 && (
-                    <div className="mt-1.5 max-md:px-4">{emptyState}</div>
+                    <div className="mt-1.5 max-md:px-4">
+                        {people.length > 0 && activeKey !== null && !searchQuery.trim() && flag === null && searchResult?.ids?.length === 0
+                            ? <NoMatches
+                                query={query}
+                                without={searchResult.without}
+                                names={names}
+                                onRemove={(gi, ci) => setQuery({ groups: query.groups.map((g, i) => (i === gi ? { ...g, conds: g.conds.filter((_, j) => j !== ci) } : g)).filter((g) => g.conds.length > 0) })}
+                                onClear={() => setQuery(EMPTY_QUERY)}
+                            />
+                            : emptyState}
+                    </div>
                 )}
 
                 {/* Content: mobile cards + desktop table */}
@@ -740,6 +863,22 @@ export default function PeoplePageClient({
                     onMerged={() => { setMerging(null); retry(); flagged.retry(); }}
                 />
             )}
+            <SaveSearchDialog
+                open={saving}
+                onClose={() => setSaving(false)}
+                sentence={sentence}
+                onSave={async (name) => {
+                    await (await getDataClient()).search.save(name, active, activeTreeId);
+                    saved.retry();
+                    showSuccessToast(String(words.t('saved_toast')));
+                }}
+            />
+            <ManageSavedDialog
+                open={managing}
+                onClose={() => setManaging(false)}
+                saved={saved.data ?? []}
+                onDelete={async (x) => { await (await getDataClient()).search.removeSaved(x.id, activeTreeId); saved.retry(); }}
+            />
             {canEdit && (phone
                 ? <AddPersonSheet open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />
                 : <AddPersonDialog open={adding} onClose={() => setAdding(false)} treeId={activeTreeId} />)}

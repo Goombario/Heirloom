@@ -6,6 +6,8 @@ export {
   Heart,           // Families (the union glyph ⚭ was rejected — too light)
   Network,         // Tree + tree switcher
   BookOpen,        // Library
+  Bookmark,        // People: saved searches (#247)
+  ListFilter,      // People: advanced search (#247)
   Paperclip,       // Attach image to a journal entry
   MapPin,          // Places
   Map as MapIcon,  // Place cover: Full map
