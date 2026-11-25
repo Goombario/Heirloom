@@ -3185,7 +3185,11 @@
     "under_name_occupation": "Occupation",
     "under_name_residence": "Last residence",
     "under_name_birthplace": "Birthplace",
-    "under_name_help": "Each person on this device picks their own."
+    "under_name_help": "Each person on this device picks their own.",
+    "spacing": "Spacing",
+    "spacing_tight": "Tight",
+    "spacing_normal": "Normal",
+    "spacing_roomy": "Roomy"
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",

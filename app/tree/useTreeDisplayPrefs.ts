@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { TREE_SPACINGS, type TreeSpacing } from '@/lib/tree/geometry';
 import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 
 /** A stored "Second name" choice, or null for none (also for anything unrecognised). */
@@ -13,6 +14,11 @@ function parseUnderName(value: string | null): TreeUnderName {
     return (TREE_UNDER_NAME as readonly string[]).includes(value ?? '') ? value as TreeUnderName : 'dates';
 }
 
+/** A stored Spacing choice (#249); Normal (today's gaps) for anything unrecognised. */
+function parseSpacing(value: string | null): TreeSpacing {
+    return (TREE_SPACINGS as readonly string[]).includes(value ?? '') ? value as TreeSpacing : 'normal';
+}
+
 /** Tree display preferences, loaded from localStorage on mount. */
 export function useTreeDisplayPrefs() {
     const [colorblindMode, setColorblindModeState] = useState(false);
@@ -20,6 +26,7 @@ export function useTreeDisplayPrefs() {
     const [showStatusMark, setShowStatusMarkState] = useState(true);
     const [secondNameType, setSecondNameTypeState] = useState<TreeSecondNameType | null>(null);
     const [underName, setUnderNameState] = useState<TreeUnderName>('dates');
+    const [spacing, setSpacingState] = useState<TreeSpacing>('normal');
 
     // Read persisted prefs after mount (server render + first client paint use the
     // defaults, so there is no hydration mismatch).
@@ -31,6 +38,7 @@ export function useTreeDisplayPrefs() {
             setShowStatusMarkState(localStorage.getItem('treeShowStatusMark') !== 'false');
             setSecondNameTypeState(parseSecondNameType(localStorage.getItem('treeSecondName')));
             setUnderNameState(parseUnderName(localStorage.getItem('treeUnderName')));
+            setSpacingState(parseSpacing(localStorage.getItem('treeSpacing')));
             // Debug-only card styles with no switch anywhere, removed by #271.
             localStorage.removeItem('treeRoundedPhotos');
             localStorage.removeItem('treeGreyscaleMode');
@@ -71,7 +79,15 @@ export function useTreeDisplayPrefs() {
         else localStorage.setItem('treeUnderName', value);
     }, []);
 
+    // Spacing (#249): a layout input, per device; Normal is today's gaps.
+    const setSpacing = useCallback((value: TreeSpacing) => {
+        setSpacingState(value);
+        if (value === 'normal') localStorage.removeItem('treeSpacing');
+        else localStorage.setItem('treeSpacing', value);
+    }, []);
+
     return {
+        spacing, setSpacing,
         underName, setUnderName,
         colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
         secondNameType, setSecondNameType,

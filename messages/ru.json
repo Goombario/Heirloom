@@ -3185,7 +3185,11 @@
     "under_name_occupation": "Род занятий",
     "under_name_residence": "Последнее место жительства",
     "under_name_birthplace": "Место рождения",
-    "under_name_help": "Каждый на этом устройстве выбирает своё."
+    "under_name_help": "Каждый на этом устройстве выбирает своё.",
+    "spacing": "Интервалы",
+    "spacing_tight": "Плотно",
+    "spacing_normal": "Обычно",
+    "spacing_roomy": "Просторно"
   },
   "personDetail": {
     "family_eyebrow": "Семья {surname}",

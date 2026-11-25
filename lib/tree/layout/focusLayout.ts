@@ -16,12 +16,11 @@
 import type { FocusTrees, TreeNode, FlowNode, FlowEdge, LayoutOutput } from '@/app/components/tree/types';
 import {
   PERSON_CARD_WIDTH,
-  MIN_BRANCH_GAP,
   FOCUS_Y,
   CENTER_X,
   INNER_GAP,
-  DEFAULT_LAYOUT_GEOMETRY,
-  SECOND_NAME_LAYOUT_GEOMETRY,
+  layoutGeometry,
+  type TreeSpacing,
   personCardHeight,
 } from '@/lib/tree/geometry';
 import { nodeKeyToId, canonicalNodeId } from '@/lib/tree/keys';
@@ -38,14 +37,15 @@ const RIGHT_X = CENTER_X + PERSON_CARD_WIDTH + INNER_GAP;  // = +108
 // mother-as-spouse inside CENTER against the mother-as-leaf inside RIGHT.
 const toCanonical = canonicalNodeId;
 
-export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = false): LayoutOutput {
+export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = false, spacing: TreeSpacing = 'normal'): LayoutOutput {
   if (!focusTrees) {
     return { nodes: [], edges: [], bounds: null, anchor: null };
   }
 
   // The second name line makes every card taller and every generation further
   // apart; all three passes share it so their rows still line up.
-  const geometry = secondName ? SECOND_NAME_LAYOUT_GEOMETRY : DEFAULT_LAYOUT_GEOMETRY;
+  // The Spacing preset (#249) sets the gaps; Normal is today's.
+  const geometry = layoutGeometry({ horizontal: false, secondName, spacing });
   const dims = { width: PERSON_CARD_WIDTH, height: personCardHeight(secondName) };
 
   const focusId = focusTrees.focusPersonId;
@@ -178,7 +178,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = f
       const c = centerByY.get(y);
       if (c) {
         leftOverlap = Math.max(leftOverlap,
-          n.position.x + PERSON_CARD_WIDTH + MIN_BRANCH_GAP - c.minX);
+          n.position.x + PERSON_CARD_WIDTH + geometry.minBranchGap - c.minX);
       }
     }
 
@@ -189,7 +189,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = f
       const c = centerByY.get(y);
       if (c) {
         rightOverlap = Math.max(rightOverlap,
-          c.maxX + MIN_BRANCH_GAP - n.position.x);
+          c.maxX + geometry.minBranchGap - n.position.x);
       }
     }
 
@@ -223,7 +223,7 @@ export function computeFocusLayout(focusTrees: FocusTrees | null, secondName = f
         const y = Math.round(n.position.y);
         const leftMaxX = leftMaxXByY.get(y);
         if (leftMaxX !== undefined) {
-          crossOverlap = Math.max(crossOverlap, leftMaxX + MIN_BRANCH_GAP - n.position.x);
+          crossOverlap = Math.max(crossOverlap, leftMaxX + geometry.minBranchGap - n.position.x);
         }
       }
 

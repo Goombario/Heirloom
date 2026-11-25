@@ -273,8 +273,9 @@ One engine pass (`computeColumnLayout`) does, in order:
      (#1180); only a multi-spouse parent's own lanes are coloured, one per partner
 6. `d3.tree().separation()` uses `columnSeparation()` (`_width` values + sibling/branch gaps; sibling vs cousin argument order and mirror handling live in that one exported function)
 7. Emit person + spouse cards and spouse/parent-child edges; orientation `'up'` (ancestors) inverts Y and flips edge handles
-8. Settle ids (#13): cards are emitted under provisional ids, then named. A spouse card names its partner (`-of<partner>`), so a woman who married two brothers in turn stands in full beside each. A person the service reached a second time (`TreeNode.repeat`, pedigree collapse: cousins marry, so their child sits under both) becomes a repeat card, `-again<n>`, with `data.repeatOf` = the id of their full card (their main card, else their first spouse card). Edges are rewritten to the settled ids
-9. Optional mirror (`mirrorLeftEdge`) and anchor shift
+8. Root room (#249, descendants only, `rootRoom`): when the start person has two or more partners with children, each such partner's card centres over their own children (kept a partner gap apart, in partner order), partners without children follow the last, and the start person sits just before the first partner. One partner keeps the usual stack. This applies at every Spacing step
+9. Settle ids (#13): cards are emitted under provisional ids, then named. A spouse card names its partner (`-of<partner>`), so a woman who married two brothers in turn stands in full beside each. A person the service reached a second time (`TreeNode.repeat`, pedigree collapse: cousins marry, so their child sits under both) becomes a repeat card, `-again<n>`, with `data.repeatOf` = the id of their full card (their main card, else their first spouse card). Edges are rewritten to the settled ids
+10. Optional mirror (`mirrorLeftEdge`) and anchor shift
 
 `computeStandardLayout` then injects ancestor-mode sibling nodes + dashed sibling edges on top of the engine output.
 
@@ -355,6 +356,7 @@ A repeat card (`FlowNodeData.repeatOf` set) is drawn faded with a dashed outline
 | `treeColorblindMode` | Shape markers on branch edges |
 | `treeShowAgeIndicator` | "Show ages" in the Display controls (the desktop Display menu and the Display sheet below lg, #271): the age beside each card's status mark |
 | `tree:orientation` | `vertical` (portrait cards) or `horizontal` (bar cards); descendants/ancestors only. Unlike the others, this is a **layout input**, not a post-layout decoration. |
+| `treeSpacing` | "Spacing" in the Display controls (#249): `tight` or `roomy`; absent = Normal (today's gaps). A **layout input**: `layoutGeometry({ horizontal, secondName, spacing })` in `lib/tree/geometry.ts` builds the engine geometry. Horizontal gaps (generation pitch / siblings / cousins / partners): Tight 224 / 20 / 52 / 8, Normal 260 / 34 / 84 / 12, Roomy 300 / 50 / 120 / 18; vertical takes the same steps from its own constants (gaps between rows 38 / 76 / 118, siblings 35 / 60 / 88, cousins 87 / 140 / 200, partners 13 / 20 / 30). Focus view uses it too, including its side-tree overlap gap. |
 | `treeUnderName` | "Under the name" in the Display controls (#12): `occupation`, `residence` (last residence) or `birthplace` replaces the dates line on portrait and bar cards; absent = Dates (today's cards). Post-layout decoration only. |
 | `treeSecondName` | "Second name" in the Display controls: a NameVariant type (`Nickname`, `Maiden`, `Married`, `Anglicized`, `Alias`, `Given`) shown as a 12px second line under the portrait card's name; absent = None (today's cards). Vertical cards only (focus included); the dropdown is disabled in horizontal. Also a **layout input**: on, every portrait card is 168px (`personCardHeight(true)`) and generations are 244px apart (`SECOND_NAME_LAYOUT_GEOMETRY`), so the gap between rows is unchanged. |
 

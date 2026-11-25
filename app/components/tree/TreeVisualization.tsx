@@ -22,6 +22,7 @@ import PersonBarNode from './PersonBarNode';
 import BranchEdge from './BranchEdge';
 import SpouseEdge from './SpouseEdge';
 import { useTreeLayoutMode } from './useTreeLayoutMode';
+import type { TreeSpacing } from '@/lib/tree/geometry';
 import { TreeNode, FocusTrees, TreeCardNames, TreeSecondNameType, type TreeUnderName, type TreeCardFacts } from './types';
 import { PERSON_CARD_WIDTH, BAR_CARD_WIDTH, BAR_CARD_HEIGHT, personCardHeight } from '@/lib/tree/geometry';
 import { naturalFitZoom, READABLE_ZOOM } from '@/lib/tree/fitView';
@@ -154,6 +155,8 @@ interface TreeVisualizationProps {
   secondNameType?: TreeSecondNameType | null;
   /** Each person's names for the second line (from the tree payload). */
   cardNames?: Record<number, TreeCardNames>;
+  /** The Display menu's Spacing (#249), a layout input; Normal is today's gaps. */
+  spacing?: TreeSpacing;
   /** The Display menu's "Under the name" (#12) and the facts it reads. */
   underName?: TreeUnderName;
   cardFacts?: Record<number, TreeCardFacts>;
@@ -178,7 +181,7 @@ interface TreeVisualizationProps {
  * - Smooth edge connections
  * - Minimap and controls
  */
-function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
+function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, spacing = 'normal', barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
   const [debugMode, setDebugMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -204,7 +207,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
   const secondName = secondNameType != null && (layoutModeId === 'focus' || orientation === 'vertical');
   const { nodes: layoutNodes, edges: layoutEdges, bounds, anchor } = useTreeLayoutMode(
     layoutModeId,
-    { tree: focusTrees ? null : treeData, focusTrees, orientation, secondName },
+    { tree: focusTrees ? null : treeData, focusTrees, orientation, secondName, spacing },
   );
 
   // React Flow state management

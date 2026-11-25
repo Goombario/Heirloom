@@ -17,8 +17,9 @@ export function useTreeLayoutMode(modeId: string, input: TreeLayoutInput): Layou
   const focusTrees = input.focusTrees ?? null;
   const orientation = input.orientation ?? 'vertical';
   const secondName = input.secondName ?? false;
+  const spacing = input.spacing ?? 'normal';
   return useMemo(
-    () => getLayoutMode(modeId).compute({ tree, focusTrees, orientation, secondName }),
-    [modeId, tree, focusTrees, orientation, secondName],
+    () => getLayoutMode(modeId).compute({ tree, focusTrees, orientation, secondName, spacing }),
+    [modeId, tree, focusTrees, orientation, secondName, spacing],
   );
 }

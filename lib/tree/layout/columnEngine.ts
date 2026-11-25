@@ -83,6 +83,13 @@ export interface ColumnLayoutOptions {
    * constants; horizontal mode passes bar geometry. See lib/tree/geometry.ts.
    */
   geometry?: LayoutGeometry;
+  /**
+   * Give the start person's partners room (#249): when the root has two or more
+   * partners with children, each sits over the middle of their own children and
+   * the root just before the first, instead of all stacked tight around the root.
+   * Descendants mode only; ignored in mirrored trees.
+   */
+  rootRoom?: boolean;
 }
 
 /**
@@ -137,7 +144,7 @@ export function layoutBounds(
  * vertical, so spouses stack), retype nodes to `personBar`, and rewrite edge
  * handles (parent→child left↔right, spouse connectors top↔bottom).
  *
- * The engine must have been run with HORIZONTAL_BAR_GEOMETRY so the pre-swap
+ * The engine must have been run with horizontal bar geometry (layoutGeometry) so the pre-swap
  * spread extent already carries the bar height.
  *
  * `mirror` (ancestors): the naive swap lands the root on the right; reflect the
@@ -202,6 +209,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     shift,
     lineageOrder = 'first',
     geometry = DEFAULT_LAYOUT_GEOMETRY,
+    rootRoom = false,
   } = opts;
   const prefix = clusterPrefix(cluster);
 
@@ -318,6 +326,38 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   const rawNodes: RawNode[] = [];
   const edges: FlowEdge[] = [];
 
+  // ── Root room (#249) ──────────────────────────────────────────────────────
+  // Left edges for the root's card and each partner card, or null to keep the
+  // usual stack. A partner with children centres over them; each card keeps a
+  // partner gap from the one before; partners without children follow the last.
+  const rootPlan = ((): { mainX: number; spouseX: number[] } | null => {
+    const spouses = root.data.spouses ?? [];
+    if (!rootRoom || mirrorX || spousesWithKids(spouses).length < 2) return null;
+    const ext = geometry.spreadExtent;
+    const step = ext + geometry.spouseGap;
+    const centres = spouses.map((sp) => {
+      const xs = (root.children ?? []).filter((c) => c.data.otherParentId === sp.id).map((c) => c.x ?? 0);
+      return xs.length > 0 ? (Math.min(...xs) + Math.max(...xs)) / 2 : null;
+    });
+    const placed: number[] = new Array(spouses.length);
+    let last = -Infinity;
+    centres.forEach((c, i) => {
+      if (c === null) return;
+      placed[i] = Math.max(c, last + step);
+      last = placed[i];
+    });
+    centres.forEach((c, i) => {
+      if (c !== null) return;
+      placed[i] = last + step;
+      last = placed[i];
+    });
+    const first = Math.min(...placed);
+    return {
+      mainX: first - ext - 2 * geometry.spouseGap - ext / 2,
+      spouseX: placed.map((c) => c - ext / 2),
+    };
+  })();
+
   const isSelectedFor = (personId: number, isRoot: boolean): boolean =>
     selectRoot ? isRoot : focusPersonId !== undefined && personId === focusPersonId;
 
@@ -341,8 +381,8 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     const d3X = node.x ?? 0;
     const rawY0 = node.y ?? 0;
     const rawY = orientation === 'up' ? maxY - rawY0 : rawY0;
-    const mainX = d3X - geometry.spreadExtent / 2;
     const isRootNode = !node.parent;
+    const mainX = isRootNode && rootPlan ? rootPlan.mainX : d3X - geometry.spreadExtent / 2;
 
     const mainId = provisional({ personId: personData.id, role: 'person', cluster }, !!personData.repeat);
     mainTmp.set(node, mainId);
@@ -368,7 +408,9 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
       personData.spouses.forEach((sp, idx) => {
         // Pre-mirror frame: spouses extend left in mirrored trees so the
         // X-flip lands them to the right of their main card, same as normal.
-        const spouseX = mirrorX
+        const spouseX = isRootNode && rootPlan
+          ? rootPlan.spouseX[idx]
+          : mirrorX
           ? mainX - (idx + 1) * (geometry.spreadExtent + geometry.spouseGap)
           : mainX + geometry.spreadExtent + geometry.spouseGap + idx * (geometry.spreadExtent + geometry.spouseGap);
 

@@ -10,6 +10,7 @@
  * TreeLeftRail.tsx to list it — both are data/UI concerns, not layout ones.
  */
 import type { TreeNode, FocusTrees, LayoutOutput } from '@/app/components/tree/types';
+import type { TreeSpacing } from '@/lib/tree/geometry';
 import { computeStandardLayout } from './standardLayout';
 import { computeFocusLayout } from './focusLayout';
 import { snapParentDrops } from './snapDrops';
@@ -24,6 +25,8 @@ export interface TreeLayoutInput {
   /** Portrait cards carry the Display menu's second name line (taller cards,
    *  generations further apart). Vertical cards only; bars ignore it. */
   secondName?: boolean;
+  /** The Display menu's Spacing (#249); Normal (today's gaps) when left out. */
+  spacing?: TreeSpacing;
 }
 
 export interface TreeLayoutMode {
@@ -34,19 +37,19 @@ export interface TreeLayoutMode {
 const MODES: Record<string, TreeLayoutMode> = {
   descendants: {
     id: 'descendants',
-    compute: ({ tree, orientation, secondName }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName),
+    compute: ({ tree, orientation, secondName, spacing }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName, spacing),
   },
   ancestors: {
     id: 'ancestors',
-    compute: ({ tree, orientation, secondName }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName),
+    compute: ({ tree, orientation, secondName, spacing }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName, spacing),
   },
   focus: {
     id: 'focus',
     // Focus is vertical-only (Phase 1) — it ignores `orientation`. Focus without
     // focusTrees (shouldn't happen — the API populates them for mode=focus)
     // falls back to a descendants layout of whatever tree we have.
-    compute: ({ tree, focusTrees, secondName }) =>
-      focusTrees ? computeFocusLayout(focusTrees, secondName) : computeStandardLayout(tree ?? null, 'descendants', 'vertical', secondName),
+    compute: ({ tree, focusTrees, secondName, spacing }) =>
+      focusTrees ? computeFocusLayout(focusTrees, secondName, spacing) : computeStandardLayout(tree ?? null, 'descendants', 'vertical', secondName, spacing),
   },
 };
 

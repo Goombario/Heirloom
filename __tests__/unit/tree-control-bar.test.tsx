@@ -14,7 +14,7 @@ const display: TreeDisplayProps = {
     orientation: 'vertical', onOrientationChange: vi.fn(), orientationDisabled: false,
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 3, maxDepth: 3, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(), showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
-    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(),
+    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), spacing: 'normal', onSpacingChange: vi.fn(),
 };
 
 function search(): ReturnType<typeof useTreeSearch> {

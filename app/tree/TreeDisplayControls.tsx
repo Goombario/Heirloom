@@ -6,6 +6,7 @@ import { SegmentedControl } from '@/app/components/ui/SegmentedControl';
 import { SelectField } from '@/app/components/ui/Select';
 import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 import { cx } from '@/app/components/ui/cx';
+import { TREE_SPACINGS, type TreeSpacing } from '@/lib/tree/geometry';
 
 /** Mini pedigree glyph flowing downward — the vertical (portrait-card) layout. */
 function TreeIconVertical() {
@@ -61,6 +62,9 @@ export interface TreeDisplayProps {
     /** The card's line under the name (#12): dates or one fact. */
     underName: TreeUnderName;
     onUnderNameChange: (v: TreeUnderName) => void;
+    /** Gaps between cards and generations (#249); Normal is today's. */
+    spacing: TreeSpacing;
+    onSpacingChange: (v: TreeSpacing) => void;
 }
 
 /** Each "Second name" choice's label: the person page's own name-type words. */
@@ -83,7 +87,7 @@ export function TreeDisplayControls({
     barZoomThreshold, onBarZoomThresholdChange,
     depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
     colorblind, onColorblindChange, secondNameType, onSecondNameTypeChange,
-    underName, onUnderNameChange,
+    underName, onUnderNameChange, spacing, onSpacingChange,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
     const tNames = useTranslations('personDetail');
@@ -128,6 +132,17 @@ export function TreeDisplayControls({
                 {orientationDisabled && (
                     <div className="muted text-xs mt-1">{t('orientation_focus_na')}</div>
                 )}
+            </div>
+
+            <div>
+                <div className="eyebrow mb-2">{t('spacing')}</div>
+                <SegmentedControl
+                    fullWidth
+                    aria-label={t('spacing')}
+                    value={spacing}
+                    onChange={(v) => onSpacingChange(v as TreeSpacing)}
+                    options={TREE_SPACINGS.map((v) => ({ v, l: t(`spacing_${v}`) }))}
+                />
             </div>
 
             {showDepth && (

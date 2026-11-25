@@ -3185,7 +3185,11 @@
     "under_name_occupation": "Profession",
     "under_name_residence": "Dernière résidence",
     "under_name_birthplace": "Lieu de naissance",
-    "under_name_help": "Chaque personne sur cet appareil choisit le sien."
+    "under_name_help": "Chaque personne sur cet appareil choisit le sien.",
+    "spacing": "Espacement",
+    "spacing_tight": "Serré",
+    "spacing_normal": "Normal",
+    "spacing_roomy": "Aéré"
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",
