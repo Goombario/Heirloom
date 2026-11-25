@@ -3432,7 +3432,9 @@
     "person_not_found": "Человек не найден",
     "unknown_person": "Неизвестно",
     "note": "Заметка",
-    "quick_edit": "Быстрое изменение"
+    "quick_edit": "Быстрое изменение",
+    "close_prompt_title": "Сохранить изменения?",
+    "close_prompt_body": "Изменения для {name} ещё не сохранены."
   },
   "dateInput": {
     "kind_label": "Вид даты",

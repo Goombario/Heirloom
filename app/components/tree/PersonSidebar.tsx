@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { X } from '@/lib/icons';
 import { InlineDataError } from '@/app/components/ui';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
 import { useFocusTrap } from '@/app/hooks/useFocusTrap';
 import { useIsMobile } from '@/app/hooks/useIsMobile';
 import { useTreePersonEditor } from './person-sidebar/useTreePersonEditor';
@@ -32,6 +33,8 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
     showLoadingOverlay,
     handleClose,
     displayName,
+    closePrompt,
+    saving,
   } = editor;
   // Only the mobile bottom sheet is truly modal (it has a backdrop). The desktop
   // panel is a non-modal side editor — the tree behind it stays interactive — so
@@ -40,14 +43,51 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
   // lg and up: the v1.1 person panel (#71), with its close button in the navy head.
   const panel = !useIsMobile('lg') && !isMobile;
 
-  // Escape closes the sidebar (honoring the unsaved-changes confirm in handleClose).
+  // Escape closes the sidebar, asking first when there are edits (#255). An Escape
+  // that closes something open first (a dropdown, the pin popover, a menu, or a
+  // dialog over the tree) closes only that; the next one closes the sidebar. The
+  // check runs in the capture phase, before those widgets have closed themselves.
+  const escapeTaken = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') handleClose();
+    function onKeyCapture(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      const target = e.target instanceof Element ? e.target : null;
+      // A modal over the tree traps focus, so the key comes from inside it.
+      const modal = target?.closest('[aria-modal="true"], [role="alertdialog"]');
+      const modalOver = modal != null && modal !== trapRef.current;
+      escapeTaken.current = modalOver
+        || target?.closest('[aria-expanded="true"]') != null
+        || (trapRef.current ?? panelRef.current)?.querySelector('[aria-expanded="true"]') != null;
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape' || e.defaultPrevented || escapeTaken.current) return;
+      handleClose();
+    }
+    window.addEventListener('keydown', onKeyCapture, true);
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [handleClose]);
+    return () => {
+      window.removeEventListener('keydown', onKeyCapture, true);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [handleClose, trapRef]);
+
+  const prompt = (
+    <ConfirmDialog
+      open={closePrompt}
+      variant="calm"
+      elevated
+      title={t('close_prompt_title')}
+      body={t('close_prompt_body', { name: displayName })}
+      cancelLabel={tCommon('keep_editing')}
+      secondaryLabel={t('discard')}
+      onSecondary={editor.handlePromptDiscard}
+      confirmLabel={tCommon('save')}
+      busy={saving}
+      onConfirm={editor.handlePromptSave}
+      onCancel={editor.handlePromptKeepEditing}
+    />
+  );
 
   // A failed person read can leave the previously loaded form mounted while the
   // sidebar reports the current error. Do not let the delayed loading veil cover
@@ -115,12 +155,14 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
             {body}
           </div>
         </div>
+        {prompt}
       </>
     );
   }
 
   return (
     <div
+      ref={panelRef}
       role="dialog"
       aria-label={displayName}
       className={`absolute top-0 right-0 h-full z-40 bg-card shadow-xl border-l border-border overflow-y-auto transition-transform duration-300 ease-in-out ${
@@ -138,6 +180,7 @@ export default function PersonSidebar({ personId, onClose, onFocusPerson, onData
       )}
       {loadingOverlay}
       {body}
+      {prompt}
     </div>
   );
 }

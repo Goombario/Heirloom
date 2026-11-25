@@ -23,6 +23,12 @@ interface ConfirmDialogProps {
     /** When true, portals the underlying Modal above stacking contexts (z-80).
      *  Default false — all existing callers are unaffected. */
     elevated?: boolean;
+    /**
+     * Calm variant only: a third choice between Cancel and the confirm, such as
+     * Discard in a Save / Discard / Keep editing prompt (#255).
+     */
+    secondaryLabel?: string;
+    onSecondary?: () => void;
     onConfirm: () => void | Promise<void>;
     onCancel: () => void;
 }
@@ -40,6 +46,8 @@ function ConfirmDialogInner({
     confirmPhrase,
     busy = false,
     elevated = false,
+    secondaryLabel,
+    onSecondary,
     onConfirm,
     onCancel,
 }: Omit<ConfirmDialogProps, 'open'>) {
@@ -77,6 +85,11 @@ function ConfirmDialogInner({
                         <Button variant="outline" onClick={onCancel} disabled={busy} className="flex-1 justify-center">
                             {cancelLabel ?? tc('cancel')}
                         </Button>
+                        {secondaryLabel && onSecondary && (
+                            <Button variant="outline" onClick={onSecondary} disabled={busy} className="flex-1 justify-center">
+                                {secondaryLabel}
+                            </Button>
+                        )}
                         <Button variant={confirmVariant} onClick={() => onConfirm()} disabled={confirmDisabled} className="flex-1 justify-center">
                             {confirmLabel}
                         </Button>

@@ -3432,7 +3432,9 @@
     "person_not_found": "Person not found",
     "unknown_person": "Unknown",
     "note": "Note",
-    "quick_edit": "Quick edit"
+    "quick_edit": "Quick edit",
+    "close_prompt_title": "Save your changes?",
+    "close_prompt_body": "Your changes to {name} aren’t saved yet."
   },
   "dateInput": {
     "kind_label": "Kind of date",

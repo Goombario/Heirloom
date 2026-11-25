@@ -3432,7 +3432,9 @@
     "person_not_found": "Personne introuvable",
     "unknown_person": "Inconnu",
     "note": "Note",
-    "quick_edit": "Modification rapide"
+    "quick_edit": "Modification rapide",
+    "close_prompt_title": "Enregistrer vos modifications ?",
+    "close_prompt_body": "Vos modifications de {name} ne sont pas encore enregistrées."
   },
   "dateInput": {
     "kind_label": "Type de date",

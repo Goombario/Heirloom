@@ -292,15 +292,16 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
     const [confirmClearDeath, setConfirmClearDeath] = useState(false);
 
     // Batch-save all current form fields
-    async function handleSave(clearDeath = false) {
+    /** Saves the form; resolves true once it is saved, false when it wasn't (or needs a confirm first). */
+    async function handleSave(clearDeath = false): Promise<boolean> {
         // While the previous person is held on screen (see holdingPrevious), the form
         // is theirs but personId is the next person's: never save it under that id.
-        if (isReadOnly || loadedPersonId !== personId || loadedTreeId !== activeTreeId) return;
+        if (isReadOnly || loadedPersonId !== personId || loadedTreeId !== activeTreeId) return false;
         const original = originalFormRef.current;
         if (!clearDeath && form.IsDeceased !== original.IsDeceased
             && statusDropsDeath(form.IsDeceased, { DeathDate: original.DeathDate, DeathPlace: original.DeathPlace, DeathCause: person?.DeathCause })) {
             setConfirmClearDeath(true);
-            return;
+            return false;
         }
         setConfirmClearDeath(false);
         setSaving(true);
@@ -334,8 +335,10 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
             originalFormRef.current = form;
             setIsDirty(false);
             onDataChanged?.();
+            return true;
         } catch (e) {
             reportError(e);
+            return false;
         } finally {
             setSaving(false);
         }
@@ -354,8 +357,21 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
         setPlaceIds(savedPlaceIds);
     }
 
+    // Closing with unsaved edits asks in the app, with Save as well as Discard (#255).
+    // The browser confirm it replaces could only discard or stay.
+    const [closePrompt, setClosePrompt] = useState(false);
     function handleClose() {
-        if (!guardNavigation()) return;
+        if (isReadOnly || !(isDirty || hasPendingResolution)) { onClose(); return; }
+        setClosePrompt(true);
+    }
+    async function handlePromptSave() {
+        const saved = await handleSave();
+        setClosePrompt(false);
+        if (saved) onClose();
+    }
+    function handlePromptDiscard() {
+        handleDiscard();
+        setClosePrompt(false);
         onClose();
     }
 
@@ -410,6 +426,10 @@ export function useTreePersonEditor({ personId, onClose, onDataChanged }: Params
         },
         handleDiscard,
         handleClose,
+        closePrompt,
+        handlePromptSave: () => { void handlePromptSave(); },
+        handlePromptDiscard,
+        handlePromptKeepEditing: () => setClosePrompt(false),
         guardNavigation,
         handleDeceasedChange,
     };
