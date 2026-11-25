@@ -13,6 +13,7 @@ import type { TreeNode, FlowNode, FlowEdge, LayoutOutput } from '@/app/component
 import {
   layoutGeometry,
   type TreeSpacing,
+  type TreeArrangement,
   PERSON_CARD_WIDTH,
   personCardHeight,
   BAR_CARD_WIDTH,
@@ -29,6 +30,8 @@ export function computeStandardLayout(
   secondName = false,
   /** The Display menu's Spacing (#249); Normal is today's gaps. */
   spacing: TreeSpacing = 'normal',
+  /** The Display menu's Arrangement (#250); Compact is today's packing. */
+  arrangement: TreeArrangement = 'compact',
 ): LayoutOutput {
   if (!rootNode) {
     return { nodes: [], edges: [], bounds: null, anchor: null };
@@ -44,6 +47,7 @@ export function computeStandardLayout(
     geometry,
     // Each of the start person's partners sits beside their own children (#249).
     rootRoom: mode === 'descendants',
+    arrangement,
   });
 
   // Ancestor mode: place the root person's siblings at the same generation,

@@ -34,7 +34,9 @@ import {
   BRANCH_COLORS,
   DEFAULT_LAYOUT_GEOMETRY,
   type LayoutGeometry,
+  type TreeArrangement,
 } from '@/lib/tree/geometry';
+import { placeBands, placePedigree, type PedigreeGap } from './evenArrangement';
 import { nodeKeyToId, clusterPrefix, type FocusCluster, type NodeKey } from '@/lib/tree/keys';
 
 /** Layout metadata written onto the input nodes during a pass. */
@@ -90,6 +92,12 @@ export interface ColumnLayoutOptions {
    * Descendants mode only; ignored in mirrored trees.
    */
   rootRoom?: boolean;
+  /**
+   * The Display menu's Arrangement (#250). 'even' replaces d3's packing: bands in
+   * descendants ('down'), fixed pedigree slots in ancestors ('up'). Ignored in
+   * focus clusters and mirrored trees. See evenArrangement.ts.
+   */
+  arrangement?: TreeArrangement;
 }
 
 /**
@@ -163,7 +171,7 @@ export function transposeToHorizontal(
 ): LayoutResult {
   const nodes: FlowNode[] = result.nodes.map((n) => ({
     ...n,
-    type: 'personBar',
+    type: n.type === 'pedigreeGap' ? 'pedigreeGapBar' : 'personBar',
     position: opts.mirror
       ? { x: -(n.position.y + BAR_CARD_WIDTH), y: n.position.x }
       : { x: n.position.y, y: n.position.x },
@@ -210,6 +218,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     lineageOrder = 'first',
     geometry = DEFAULT_LAYOUT_GEOMETRY,
     rootRoom = false,
+    arrangement = 'compact',
   } = opts;
   const prefix = clusterPrefix(cluster);
 
@@ -304,7 +313,18 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
       mirrorX,
       { sibling: geometry.minSiblingGap, branch: geometry.minBranchGap },
     ));
-  treeLayout(root);
+  const even = arrangement === 'even' && !mirrorX && !cluster;
+  let pedigreeGaps: PedigreeGap[] = [];
+  if (even && orientation === 'up') {
+    // A person with two parent families can't sit in fixed slots: keep Compact.
+    const gaps = placePedigree(root, geometry);
+    if (gaps) pedigreeGaps = gaps;
+    else treeLayout(root);
+  } else if (even) {
+    placeBands(root, geometry);
+  } else {
+    treeLayout(root);
+  }
 
   // Ancestors mode: collect max Y so rows can be inverted (deepest on top).
   let maxY = 0;
@@ -535,6 +555,20 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     e.id = id;
   }
 
+  // ── Empty pedigree slots (#250) ───────────────────────────────────────────
+  // Faint dashed slots for unknown parents in the Even ancestors chart: no
+  // person, no lines, nothing to click.
+  for (const g of pedigreeGaps) {
+    const y0 = g.depth * geometry.generationSpacing;
+    rawNodes.push({
+      id: `${prefix}gap-${g.childId}-${g.slot}`,
+      rawX: g.x - geometry.spreadExtent / 2,
+      rawY: orientation === 'up' ? maxY - y0 : y0,
+      data: { person: { id: 0, name: '', photoMediaId: null, spouses: [] }, placeholder: true },
+      isSpouseNode: false,
+    });
+  }
+
   // ── Mirror X (paternal/left focus tree) ───────────────────────────────────
   if (mirrorX) {
     for (const n of rawNodes) {
@@ -556,9 +590,10 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
 
   const nodes: FlowNode[] = rawNodes.map((n) => ({
     id: n.id,
-    type: 'person',
+    type: n.data.placeholder ? 'pedigreeGap' : 'person',
     position: { x: n.rawX + shiftX, y: n.rawY + shiftY },
     data: n.data,
+    ...(n.data.placeholder ? { selectable: false, focusable: false, draggable: false } : {}),
   }));
 
   return { nodes, edges };

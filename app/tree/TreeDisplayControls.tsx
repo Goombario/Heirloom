@@ -6,7 +6,7 @@ import { SegmentedControl } from '@/app/components/ui/SegmentedControl';
 import { SelectField } from '@/app/components/ui/Select';
 import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 import { cx } from '@/app/components/ui/cx';
-import { TREE_SPACINGS, type TreeSpacing } from '@/lib/tree/geometry';
+import { TREE_SPACINGS, TREE_ARRANGEMENTS, type TreeSpacing, type TreeArrangement } from '@/lib/tree/geometry';
 
 /** Mini pedigree glyph flowing downward — the vertical (portrait-card) layout. */
 function TreeIconVertical() {
@@ -65,6 +65,11 @@ export interface TreeDisplayProps {
     /** Gaps between cards and generations (#249); Normal is today's. */
     spacing: TreeSpacing;
     onSpacingChange: (v: TreeSpacing) => void;
+    /** Compact (today) or Even (#250); the help line follows the view. */
+    arrangement: TreeArrangement;
+    onArrangementChange: (v: TreeArrangement) => void;
+    /** The tree's view, for the Arrangement help line; focus has no arrangement. */
+    view: 'descendants' | 'ancestors' | 'focus';
 }
 
 /** Each "Second name" choice's label: the person page's own name-type words. */
@@ -87,7 +92,7 @@ export function TreeDisplayControls({
     barZoomThreshold, onBarZoomThresholdChange,
     depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
     colorblind, onColorblindChange, secondNameType, onSecondNameTypeChange,
-    underName, onUnderNameChange, spacing, onSpacingChange,
+    underName, onUnderNameChange, spacing, onSpacingChange, arrangement, onArrangementChange, view,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
     const tNames = useTranslations('personDetail');
@@ -132,6 +137,21 @@ export function TreeDisplayControls({
                 {orientationDisabled && (
                     <div className="muted text-xs mt-1">{t('orientation_focus_na')}</div>
                 )}
+            </div>
+
+            <div>
+                <div className="eyebrow mb-2">{t('arrangement')}</div>
+                <SegmentedControl
+                    fullWidth
+                    aria-label={t('arrangement')}
+                    disabled={view === 'focus'}
+                    value={arrangement}
+                    onChange={(v) => onArrangementChange(v as TreeArrangement)}
+                    options={TREE_ARRANGEMENTS.map((v) => ({ v, l: t(`arrangement_${v}`) }))}
+                />
+                <div className="muted text-xs mt-1">
+                    {view === 'focus' ? t('arrangement_focus_na') : view === 'ancestors' ? t('arrangement_help_ancestors') : t('arrangement_help_descendants')}
+                </div>
             </div>
 
             <div>

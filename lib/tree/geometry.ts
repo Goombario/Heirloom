@@ -140,3 +140,8 @@ export function layoutGeometry(opts: { horizontal: boolean; secondName?: boolean
     minBranchGap: g.branch,
   };
 }
+
+/** The Display menu's Arrangement (#250): Compact is today's packing; Even is
+ *  bands in descendants and fixed pedigree slots in ancestors. */
+export const TREE_ARRANGEMENTS = ['compact', 'even'] as const;
+export type TreeArrangement = typeof TREE_ARRANGEMENTS[number];

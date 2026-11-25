@@ -2948,6 +2948,8 @@ html.dark .react-flow__minimap-mask {
    animating the outline in from currentColor flashed white in dark mode. */
 .tree-card--target { outline: 3px solid var(--color-primary); outline-offset: 1px; }
 .tree-card--picked { outline: 3px solid color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); outline-offset: 1px; }
+/* An empty slot in the Even ancestors chart (#250): an unknown parent. */
+.tree-pedigree-gap { border: 1.5px dashed var(--color-border); border-radius: 8px; opacity: 0.8; pointer-events: none; }
 /* A repeat card (#13): the person is drawn in full elsewhere in this tree. The
    contents fade, the card keeps a dashed outline, and a pill above it pans there. */
 .tree-card--repeat { box-shadow: none; outline: 2px dashed var(--color-text-muted); outline-offset: 3px; }

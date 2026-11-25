@@ -175,6 +175,9 @@ export interface FlowNodeData {
    *  that full card. The repeat is faded, has an "Also in this tree" pill that
    *  pans there, and opens no editor of its own (#13). */
   repeatOf?: string;
+  /** An empty slot in the Even ancestors chart (#250): an unknown parent, drawn
+   *  as a faint dashed box with nothing to click. `person` is a blank stand-in. */
+  placeholder?: true;
   isSelected?: boolean; // True for the root/leaf person being viewed
   isSidebarSelected?: boolean; // True for the person clicked to open sidebar
   onPersonClick?: (id: number) => void;

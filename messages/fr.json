@@ -3189,7 +3189,13 @@
     "spacing": "Espacement",
     "spacing_tight": "Serré",
     "spacing_normal": "Normal",
-    "spacing_roomy": "Aéré"
+    "spacing_roomy": "Aéré",
+    "arrangement": "Disposition",
+    "arrangement_compact": "Compacte",
+    "arrangement_even": "Régulière",
+    "arrangement_help_descendants": "Chaque lignée garde sa propre colonne : personne ne se retrouve au-dessus d’enfants qui ne sont pas les siens.",
+    "arrangement_help_ancestors": "Chaque ancêtre garde une place fixe, comme sur un arbre généalogique imprimé. Les parents inconnus laissent un vide.",
+    "arrangement_focus_na": "La vue centrée garde sa propre disposition."
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",

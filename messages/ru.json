@@ -3189,7 +3189,13 @@
     "spacing": "Интервалы",
     "spacing_tight": "Плотно",
     "spacing_normal": "Обычно",
-    "spacing_roomy": "Просторно"
+    "spacing_roomy": "Просторно",
+    "arrangement": "Расположение",
+    "arrangement_compact": "Компактно",
+    "arrangement_even": "Ровно",
+    "arrangement_help_descendants": "У каждой линии потомков своя колонка, и никто не оказывается над чужими детьми.",
+    "arrangement_help_ancestors": "У каждого предка постоянное место, как в печатной родословной. Неизвестные родители оставляют пустое место.",
+    "arrangement_focus_na": "В режиме фокуса своё расположение."
   },
   "personDetail": {
     "family_eyebrow": "Семья {surname}",

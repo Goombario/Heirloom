@@ -10,7 +10,7 @@ const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
     showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
-    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), spacing: 'normal', onSpacingChange: vi.fn(), ...over,
+    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), spacing: 'normal', onSpacingChange: vi.fn(), arrangement: 'compact', onArrangementChange: vi.fn(), view: 'descendants', ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
     <NextIntlClientProvider locale="en" messages={en}><TreeDisplayControls {...p} /></NextIntlClientProvider>,
@@ -81,6 +81,22 @@ describe('TreeDisplayControls', () => {
         fireEvent.click(screen.getByRole('combobox', { name: en.treeView.second_name }));
         fireEvent.click(screen.getByRole('option', { name: en.treeView.second_name_none }));
         expect(q.onSecondNameTypeChange).toHaveBeenCalledWith(null);
+    });
+
+    // #250: Compact (today) or Even, with a help line for the view; none in focus.
+    it('picks an arrangement and explains it for the view', () => {
+        const p = props();
+        const { unmount } = renderControls(p);
+        const group = screen.getByRole('radiogroup', { name: en.treeView.arrangement });
+        expect(screen.getByText(en.treeView.arrangement_help_descendants)).toBeTruthy();
+        fireEvent.click(within(group).getByRole('radio', { name: en.treeView.arrangement_even }));
+        expect(p.onArrangementChange).toHaveBeenCalledWith('even');
+        unmount();
+        const a = renderControls(props({ view: 'ancestors' }));
+        expect(screen.getByText(en.treeView.arrangement_help_ancestors)).toBeTruthy();
+        a.unmount();
+        renderControls(props({ view: 'focus' }));
+        expect(screen.getByText(en.treeView.arrangement_focus_na)).toBeTruthy();
     });
 
     // #249: Tight, Normal (today's gaps) and Roomy.

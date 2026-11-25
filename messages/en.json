@@ -3189,7 +3189,13 @@
     "spacing": "Spacing",
     "spacing_tight": "Tight",
     "spacing_normal": "Normal",
-    "spacing_roomy": "Roomy"
+    "spacing_roomy": "Roomy",
+    "arrangement": "Arrangement",
+    "arrangement_compact": "Compact",
+    "arrangement_even": "Even",
+    "arrangement_help_descendants": "Each line of descent keeps its own column, so no one sits above children who aren’t theirs.",
+    "arrangement_help_ancestors": "Every ancestor keeps a fixed place, like a printed pedigree chart. Unknown parents leave a gap.",
+    "arrangement_focus_na": "Focus view keeps its own arrangement."
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",

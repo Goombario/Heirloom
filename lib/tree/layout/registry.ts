@@ -10,7 +10,7 @@
  * TreeLeftRail.tsx to list it — both are data/UI concerns, not layout ones.
  */
 import type { TreeNode, FocusTrees, LayoutOutput } from '@/app/components/tree/types';
-import type { TreeSpacing } from '@/lib/tree/geometry';
+import type { TreeSpacing, TreeArrangement } from '@/lib/tree/geometry';
 import { computeStandardLayout } from './standardLayout';
 import { computeFocusLayout } from './focusLayout';
 import { snapParentDrops } from './snapDrops';
@@ -27,6 +27,8 @@ export interface TreeLayoutInput {
   secondName?: boolean;
   /** The Display menu's Spacing (#249); Normal (today's gaps) when left out. */
   spacing?: TreeSpacing;
+  /** The Display menu's Arrangement (#250); focus view has none of its own. */
+  arrangement?: TreeArrangement;
 }
 
 export interface TreeLayoutMode {
@@ -37,11 +39,11 @@ export interface TreeLayoutMode {
 const MODES: Record<string, TreeLayoutMode> = {
   descendants: {
     id: 'descendants',
-    compute: ({ tree, orientation, secondName, spacing }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName, spacing),
+    compute: ({ tree, orientation, secondName, spacing, arrangement }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName, spacing, arrangement),
   },
   ancestors: {
     id: 'ancestors',
-    compute: ({ tree, orientation, secondName, spacing }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName, spacing),
+    compute: ({ tree, orientation, secondName, spacing, arrangement }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName, spacing, arrangement),
   },
   focus: {
     id: 'focus',

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { TREE_SPACINGS, type TreeSpacing } from '@/lib/tree/geometry';
+import { TREE_SPACINGS, TREE_ARRANGEMENTS, type TreeSpacing, type TreeArrangement } from '@/lib/tree/geometry';
 import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 
 /** A stored "Second name" choice, or null for none (also for anything unrecognised). */
@@ -27,6 +27,7 @@ export function useTreeDisplayPrefs() {
     const [secondNameType, setSecondNameTypeState] = useState<TreeSecondNameType | null>(null);
     const [underName, setUnderNameState] = useState<TreeUnderName>('dates');
     const [spacing, setSpacingState] = useState<TreeSpacing>('normal');
+    const [arrangement, setArrangementState] = useState<TreeArrangement>('compact');
 
     // Read persisted prefs after mount (server render + first client paint use the
     // defaults, so there is no hydration mismatch).
@@ -39,6 +40,8 @@ export function useTreeDisplayPrefs() {
             setSecondNameTypeState(parseSecondNameType(localStorage.getItem('treeSecondName')));
             setUnderNameState(parseUnderName(localStorage.getItem('treeUnderName')));
             setSpacingState(parseSpacing(localStorage.getItem('treeSpacing')));
+            const storedArrangement = localStorage.getItem('treeArrangement');
+            setArrangementState((TREE_ARRANGEMENTS as readonly string[]).includes(storedArrangement ?? '') ? storedArrangement as TreeArrangement : 'compact');
             // Debug-only card styles with no switch anywhere, removed by #271.
             localStorage.removeItem('treeRoundedPhotos');
             localStorage.removeItem('treeGreyscaleMode');
@@ -86,7 +89,15 @@ export function useTreeDisplayPrefs() {
         else localStorage.setItem('treeSpacing', value);
     }, []);
 
+    // Arrangement (#250): a layout input, per device; Compact is today's packing.
+    const setArrangement = useCallback((value: TreeArrangement) => {
+        setArrangementState(value);
+        if (value === 'compact') localStorage.removeItem('treeArrangement');
+        else localStorage.setItem('treeArrangement', value);
+    }, []);
+
     return {
+        arrangement, setArrangement,
         spacing, setSpacing,
         underName, setUnderName,
         colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
