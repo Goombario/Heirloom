@@ -167,6 +167,8 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                         treeId={activeTreeId}
                         className={inputClass}
                         placeholder={t('place_placeholder')}
+                        // Nothing under the box at rest; the pin row shows while editing (#254).
+                        quietAtRest
                     />
                 )}
             </FieldLabel>
@@ -220,6 +222,8 @@ export function SidebarContent({ editor, personId, onFocusPerson, panel = false,
                         treeId={activeTreeId}
                         className={inputClass}
                         placeholder={t('place_placeholder')}
+                        // Nothing under the box at rest; the pin row shows while editing (#254).
+                        quietAtRest
                     />
                 )}
             </FieldLabel>

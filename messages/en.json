@@ -948,7 +948,6 @@
     "keep_off": "Keep off"
   },
   "locationField": {
-    "map_pinned_to": "Map pinned to {place}",
     "edit": "Edit",
     "dependent_notice": "{count, plural, one {# other place inherits this pin.} other {# other places inherit this pin.}}",
     "search_placeholder": "Search for a different place…",
@@ -964,14 +963,13 @@
     "in_your_tree": "In your tree",
     "from_the_map": "From the map",
     "nothing_found": "Nothing in your tree matches. Leave the field to keep it as a new place.",
-    "written_as": "Written as {name} · counts for {place}",
-    "place_in": "{place}, part of {parent}",
-    "not_this": "Not this {place}?",
-    "new_place": "New place",
     "done": "Done",
     "part_of": "Part of {place}",
     "close_spelling": "Close spelling",
-    "other_name_of": "Other name of {place}"
+    "other_name_of": "Other name of {place}",
+    "edit_map_pin": "Edit map pin",
+    "pinned_at": "Pinned at {place}",
+    "counts_for": "Counts for {place}"
   },
   "places": {
     "title": "Places",

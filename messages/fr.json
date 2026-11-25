@@ -948,7 +948,6 @@
     "keep_off": "Laisser désactivé"
   },
   "locationField": {
-    "map_pinned_to": "Carte épinglée à {place}",
     "edit": "Modifier",
     "dependent_notice": "{count, plural, one {# autre lieu hérite de ce repère.} other {# autres lieux héritent de ce repère.}}",
     "search_placeholder": "Rechercher un autre lieu…",
@@ -964,14 +963,13 @@
     "in_your_tree": "Dans votre arbre",
     "from_the_map": "Sur la carte",
     "nothing_found": "Rien ne correspond dans votre arbre. Quittez le champ pour le garder comme nouveau lieu.",
-    "written_as": "Écrit {name} · compte pour {place}",
-    "place_in": "{place}, dans {parent}",
-    "not_this": "Pas ce {place} ?",
-    "new_place": "Nouveau lieu",
     "done": "OK",
     "part_of": "Fait partie de {place}",
     "close_spelling": "Orthographe proche",
-    "other_name_of": "Autre nom de {place}"
+    "other_name_of": "Autre nom de {place}",
+    "edit_map_pin": "Modifier l’épingle",
+    "pinned_at": "Épinglé à {place}",
+    "counts_for": "Compte pour {place}"
   },
   "places": {
     "title": "Lieux",

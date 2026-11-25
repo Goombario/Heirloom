@@ -948,7 +948,6 @@
     "keep_off": "Не включать"
   },
   "locationField": {
-    "map_pinned_to": "Карта привязана к: {place}",
     "edit": "Изменить",
     "dependent_notice": "{count, plural, one {# другое место наследует эту метку.} few {# других места наследуют эту метку.} many {# других мест наследуют эту метку.} other {# других мест наследуют эту метку.}}",
     "search_placeholder": "Найти другое место…",
@@ -964,14 +963,13 @@
     "in_your_tree": "В вашем древе",
     "from_the_map": "С карты",
     "nothing_found": "В вашем древе ничего не найдено. Оставьте поле, чтобы сохранить новое место.",
-    "written_as": "Записано как {name} · относится к {place}",
-    "place_in": "{place}, входит в {parent}",
-    "not_this": "Не тот {place}?",
-    "new_place": "Новое место",
     "done": "Готово",
     "part_of": "Входит в {place}",
     "close_spelling": "Похожее написание",
-    "other_name_of": "Другое название места {place}"
+    "other_name_of": "Другое название места {place}",
+    "edit_map_pin": "Изменить метку на карте",
+    "pinned_at": "Метка: {place}",
+    "counts_for": "Относится к {place}"
   },
   "places": {
     "title": "Места",

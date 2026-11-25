@@ -20,9 +20,11 @@ vi.mock('@/lib/geocode/prefs', () => ({
 }));
 
 // Mock next-intl — not testing translations here. Interpolates {placeholders}
-// the way real next-intl does so "Map pinned to {place}" resolves.
+// the way real next-intl does so "Pinned at {place}" resolves.
 const translations: Record<string, string> = {
-  map_pinned_to: 'Map pinned to {place}',
+  edit_map_pin: 'Edit map pin',
+  pinned_at: 'Pinned at {place}',
+  counts_for: 'Counts for {place}',
   edit: 'Edit',
   set_map_pin: 'Set a map pin',
   search_placeholder: 'Search for a different place…',
@@ -105,7 +107,7 @@ describe('LocationField', () => {
     expect(onChange).toHaveBeenLastCalledWith('67 Folkestone Road, Dover, Kent, England');
   });
 
-  it('shows a "Map pinned to" badge naming the resolved ancestor after typing triggers a fallback resolve', async () => {
+  it('shows a borrowed pin naming the resolved ancestor after typing triggers a fallback resolve', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ type: 'FeatureCollection', features: [] }) }) // full string fails
@@ -125,10 +127,10 @@ describe('LocationField', () => {
     render(<Wrapper />);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '67 Folkestone Road, Dover, Kent, England' } });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); }); // past DEBOUNCE_MS
-    await waitFor(() => expect(screen.getByText(/Map pinned to/)).toBeInTheDocument());
-    // Badge now names the geocoder's canonical name (displayName), which omits the
-    // county — not the raw typed text or the hierarchy node's bare name.
-    expect(screen.getByText(/Dover, England, United Kingdom/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Edit map pin|Pinned at/)).toBeInTheDocument());
+    // The street has no coordinates of its own, so the pin is borrowed from Dover,
+    // named by its short name only (#254).
+    expect(screen.getByText('Pinned at Dover')).toBeInTheDocument();
     expect(onResolve).toHaveBeenCalled();
   });
 
@@ -139,7 +141,7 @@ describe('LocationField', () => {
     render(<LocationField value="Dover, Kent, England" onChange={() => {}} />);
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.queryByText(/Map pinned to/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Edit map pin|Pinned at/)).not.toBeInTheDocument();
   });
 
   it('shows no badge when nothing resolves', async () => {
@@ -152,7 +154,7 @@ describe('LocationField', () => {
     render(<Wrapper />);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Nowhere Real, Nonexistentshire' } });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
-    await waitFor(() => expect(screen.queryByText(/Map pinned to/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Edit map pin|Pinned at/)).not.toBeInTheDocument());
   });
 
   it('Edit opens a picker; selecting a result sets the leaf\'s own pin and never touches the typed text', async () => {
@@ -189,10 +191,10 @@ describe('LocationField', () => {
     fireEvent.change(screen.getByPlaceholderText(/search for a different place/i), { target: { value: 'Oshawa' } });
     await flushDebouncedSearch();
     fireEvent.click(screen.getByText(/Oshawa, Ontario, Canada/));
-    expect(screen.getByText(/Map pinned to Oshawa/)).toBeInTheDocument();
+    expect(screen.getByText(/Edit map pin/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Lakeridge Health, Oshawa' } });
-    expect(screen.queryByText(/Map pinned to/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Edit map pin|Pinned at/)).not.toBeInTheDocument();
     expect(onResolve).toHaveBeenLastCalledWith(undefined);
   });
 
@@ -210,7 +212,7 @@ describe('LocationField', () => {
     await flushDebouncedSearch();
     expect(screen.getByText(/Foord/)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/Foord/));
-    expect(screen.getByText(/Map pinned to/)).toBeInTheDocument();
+    expect(screen.getByText(/Edit map pin|Pinned at/)).toBeInTheDocument();
     // An explicit pick always becomes the leaf's own pin — solid dot, not the
     // dashed-diamond "inherited" shape (covered by the shape-differentiation test below).
     expect(document.querySelector('[data-pin-kind]')).toHaveAttribute('data-pin-kind', 'own');
@@ -219,7 +221,7 @@ describe('LocationField', () => {
     fireEvent.click(screen.getByText(/Remove pin/i));
     expect(onRemove).toHaveBeenCalledTimes(1);
     expect(onChange).not.toHaveBeenCalled(); // Remove pin never touches the typed text either
-    expect(screen.queryByText(/Map pinned to/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Edit map pin|Pinned at/)).not.toBeInTheDocument();
   });
 
   it('treats a value too short to resolve as "no pending change" (undefined), not an explicit removal', async () => {
@@ -270,7 +272,7 @@ describe('LocationField', () => {
     render(<Wrapper />);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '67 Folkestone Road, Dover, Kent, England' } });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
-    await waitFor(() => expect(screen.getByText(/Map pinned to/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin|Pinned at/)).toBeInTheDocument());
     const marker = document.querySelector('[data-pin-kind]');
     expect(marker).toHaveAttribute('data-pin-kind', 'inherited');
   });
@@ -289,10 +291,10 @@ describe('LocationField', () => {
         ]}
       />
     );
-    await waitFor(() => expect(screen.getByText(/Map pinned to/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin|Pinned at/)).toBeInTheDocument());
     // Badge names the leaf's canonical displayName, flowing through the SAME
     // resolvePin the live path uses — not the raw typed value.
-    expect(screen.getByText(/Map pinned to Dover, England, United Kingdom/)).toBeInTheDocument();
+    expect(screen.getByText(/Edit map pin/)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(document.querySelector('[data-pin-kind]')).toHaveAttribute('data-pin-kind', 'own');
   });
@@ -311,10 +313,10 @@ describe('LocationField', () => {
         ]}
       />
     );
-    await waitFor(() => expect(screen.getByText(/Map pinned to/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin|Pinned at/)).toBeInTheDocument());
     // The leaf owns no coordinate; resolvePin walks up to Kent, so the badge names
     // the ANCESTOR's displayName and the marker is the inherited (dashed-diamond) shape.
-    expect(screen.getByText(/Map pinned to Kent, England, United Kingdom/)).toBeInTheDocument();
+    expect(screen.getByText(/^Pinned at Kent$/)).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(document.querySelector('[data-pin-kind]')).toHaveAttribute('data-pin-kind', 'inherited');
   });
@@ -335,7 +337,7 @@ describe('LocationField', () => {
         ]}
       />
     );
-    await waitFor(() => expect(screen.getByText(/Map pinned to London, England, United Kingdom/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin/)).toBeInTheDocument());
     expect(fetchMock).not.toHaveBeenCalled();
     expect(document.querySelector('[data-pin-kind]')).toHaveAttribute('data-pin-kind', 'own');
   });
@@ -366,13 +368,13 @@ describe('LocationField', () => {
       );
     }
     render(<Wrapper />);
-    await waitFor(() => expect(screen.getByText(/Map pinned to Dover, England, United Kingdom/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin/)).toBeInTheDocument());
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '1 High Street, Folkestone, Kent, England' } });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     // The live resolve supersedes the seed: the badge now names the resolved place
     // (Folkestone) and the seed (Dover) is gone.
-    await waitFor(() => expect(screen.getByText(/Map pinned to .*Folkestone/)).toBeInTheDocument());
-    expect(screen.queryByText(/Dover/)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Edit map pin|Pinned at/)).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it('typing then clearing back below the resolve threshold does not resurrect the initialChain-seeded badge', async () => {
@@ -389,12 +391,12 @@ describe('LocationField', () => {
       );
     }
     render(<Wrapper />);
-    await waitFor(() => expect(screen.getByText(/Map pinned to Dover, England, United Kingdom/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin/)).toBeInTheDocument());
     // < 3 chars short-circuits handleChange before any resolve — this is the one
     // path where `userTouched` alone (not a fresh `levels` value) must suppress
     // the seed, since the `initialChain` prop is still present and unchanged.
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Do' } });
-    await waitFor(() => expect(screen.queryByText(/Map pinned to/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Edit map pin|Pinned at/)).not.toBeInTheDocument());
   });
 
   it('Escape closes the Edit popover', async () => {
@@ -449,10 +451,10 @@ describe('LocationField', () => {
         initialChain={[{ name: 'Dover, Kent, England', latitude: 51.1, longitude: 1.2, pinSuppressed: false, displayName: 'Dover, England, United Kingdom' }]}
       />
     );
-    await waitFor(() => expect(screen.getByText(/Map pinned to Dover, England, United Kingdom/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Edit map pin/)).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: /edit|set a map pin/i }));
     expect(screen.getByPlaceholderText(/search for a different place/i)).toBeInTheDocument();
-    expect(screen.getByText(/Map pinned to Dover, England, United Kingdom/)).toBeInTheDocument();
+    expect(screen.getByText(/Edit map pin/)).toBeInTheDocument();
   });
 
   it('shows no pin chrome until something is pinned — a bare "Set a map pin" link, not an EDIT badge', async () => {
@@ -465,7 +467,7 @@ describe('LocationField', () => {
     render(<Wrapper />);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Nowhere Real, Nonexistentshire' } });
     await act(async () => { await vi.advanceTimersByTimeAsync(500); });
-    await waitFor(() => expect(screen.queryByText(/Map pinned to/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Edit map pin|Pinned at/)).not.toBeInTheDocument());
     // No badge, and no bare EDIT beside nothing — but the popover stays reachable,
     // because manual lat/lng is the only recourse for a place Photon can't resolve.
     expect(screen.getByText('Set a map pin')).toBeInTheDocument();

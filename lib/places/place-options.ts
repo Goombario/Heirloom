@@ -110,8 +110,3 @@ export function settlePlaceText(options: readonly PlaceOption[], typed: string):
     const own = options.filter((o) => !o.isOtherName && o.text === text).sort(byUse)[0];
     return own ?? options.find((o) => o.isOtherName && o.text === text) ?? null;
 }
-
-/** How many places share `option`'s own name; above one, the field offers "Not this …?". */
-export function sameNamePlaces(options: readonly PlaceOption[], option: PlaceOption): number {
-    return options.filter((o) => !o.isOtherName && o.placeName === option.placeName).length;
-}

@@ -81,20 +81,24 @@ describe('place picker', () => {
     expect(box).not.toHaveAttribute('aria-activedescendant');
   });
 
-  it('links an exact name to its most-used place on Tab, and offers the other one', async () => {
+  it('links an exact name to its most-used place on Tab, and typing lists the other one', async () => {
     const user = userEvent.setup();
     const onPlaceId = vi.fn();
     Field({ onPlaceId });
-    await user.type(screen.getByRole('combobox'), 'Paris');
+    const box = screen.getByRole('combobox');
+    await user.type(box, 'Paris');
     await user.tab();
     expect(onPlaceId).toHaveBeenLastCalledWith(2);
-    expect(screen.getByText('Paris, part of France')).toBeInTheDocument();
+    // The box already names the place, so nothing under it repeats it, and there is
+    // no "Not this Paris?" (#254).
+    expect(screen.queryByText(/part of/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Not this/ })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Not this Paris?' }));
+    await user.click(box);
+    await user.type(box, '{Backspace}s');
     const ontario = within(screen.getByRole('listbox')).getAllByRole('option')[1];
     await user.click(ontario);
     expect(onPlaceId).toHaveBeenLastCalledWith(4);
-    expect(screen.getByText('Paris, part of Ontario')).toBeInTheDocument();
   });
 
   it('keeps any other text as a new place', async () => {
@@ -106,7 +110,9 @@ describe('place picker', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('combobox')).toHaveValue('Toulouse');
     expect(onPlaceId).toHaveBeenLastCalledWith(null);
-    expect(screen.getByText('New place')).toBeInTheDocument();
+    // A new place shows only the control to pin it (#254).
+    expect(screen.queryByText('New place')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: en.locationField.set_map_pin })).toBeInTheDocument();
   });
 
   it('says which place another name counts for', async () => {
@@ -117,7 +123,7 @@ describe('place picker', () => {
     expect(within(screen.getByRole('listbox')).getByRole('option')).toHaveTextContent('Other name of Lviv');
     await user.tab();
     expect(onPlaceId).toHaveBeenLastCalledWith(5);
-    expect(screen.getByText('Written as Lemberg · counts for Lviv')).toBeInTheDocument();
+    expect(screen.getByText('Counts for Lviv')).toBeInTheDocument();
   });
 
   it('picks a row with the arrow keys and Enter, and Enter never submits the form', async () => {
@@ -153,8 +159,25 @@ describe('place picker', () => {
   });
 
   it('shows the held place, not the most-used one, for a saved fact', () => {
+    // Paris, Ontario has no pin, so its field offers to set one; Paris, France
+    // already has its pin and would offer nothing.
     Field({ initial: 'Paris', initialId: 4 });
-    expect(screen.getByText('Paris, part of Ontario')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: en.locationField.set_map_pin })).toBeInTheDocument();
+  });
+
+  it('names the linked place once when the box holds shorter text', () => {
+    cleanup();
+    OPTIONS.push(option({ placeId: 9, text: 'Mountnessing, Brentwood, England', parentName: 'Brentwood, England', count: 2 }));
+    try {
+      Field({ initial: 'mountnessing,  brentwood, england', initialId: 9 });
+      // Case and spacing aside it is the full name, so nothing repeats it.
+      expect(screen.queryByText('Mountnessing, Brentwood, England')).not.toBeInTheDocument();
+      cleanup();
+      Field({ initial: 'Mountnessing', initialId: 9 });
+      expect(screen.getByText('Mountnessing, Brentwood, England')).toBeInTheDocument();
+    } finally {
+      OPTIONS.pop();
+    }
   });
 
   it('on a phone, opens a sheet and Done keeps what was typed', () => {
@@ -168,5 +191,26 @@ describe('place picker', () => {
     // The sheet animates away; the row behind it now names the place.
     expect(screen.getByRole('button', { name: 'Lviv', hidden: true })).toHaveAttribute('aria-haspopup', 'dialog');
     expect(onPlaceId).toHaveBeenLastCalledWith(5);
+  });
+});
+
+describe('place field in the tree sidebar (#254 option 3)', () => {
+  afterEach(() => cleanup());
+
+  it('shows nothing under the box at rest, and the pin row while editing', async () => {
+    const user = userEvent.setup();
+    function Wrapper() {
+      const [value, setValue] = useState('Toulouse');
+      return <><LocationField value={value} onChange={setValue} treeId={1} label="Birth place" quietAtRest /><button type="button">Next</button></>;
+    }
+    render(<NextIntlClientProvider locale="en" messages={en}><Wrapper /></NextIntlClientProvider>);
+    expect(screen.queryByRole('button', { name: en.locationField.set_map_pin })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('combobox'));
+    const pinButton = screen.getByRole('button', { name: en.locationField.set_map_pin });
+    // Focus can move from the box to the pin control without the row going away.
+    await user.tab();
+    expect(pinButton).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.queryByRole('button', { name: en.locationField.set_map_pin })).not.toBeInTheDocument();
   });
 });
