@@ -14,6 +14,7 @@ import {
   layoutGeometry,
   type TreeSpacing,
   type TreeArrangement,
+  type TreePartners,
   PERSON_CARD_WIDTH,
   personCardHeight,
   BAR_CARD_WIDTH,
@@ -32,6 +33,8 @@ export function computeStandardLayout(
   spacing: TreeSpacing = 'normal',
   /** The Display menu's Arrangement (#250); Compact is today's packing. */
   arrangement: TreeArrangement = 'compact',
+  /** The Display menu's Partners (#248); Own cards is today's. */
+  partners: TreePartners = 'own',
 ): LayoutOutput {
   if (!rootNode) {
     return { nodes: [], edges: [], bounds: null, anchor: null };
@@ -48,6 +51,8 @@ export function computeStandardLayout(
     // Each of the start person's partners sits beside their own children (#249).
     rootRoom: mode === 'descendants',
     arrangement,
+    partners,
+    cardDepth: horizontal ? BAR_CARD_WIDTH : personCardHeight(tall),
   });
 
   // Ancestor mode: place the root person's siblings at the same generation,

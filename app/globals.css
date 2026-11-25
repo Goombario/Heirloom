@@ -2956,6 +2956,21 @@ html.dark .react-flow__minimap-mask {
 .tree-card--repeat > * { opacity: 0.5; }
 .tree-repeat-chip { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); z-index: 1; white-space: nowrap; padding: 1px 8px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-card); color: var(--color-text-secondary); font-size: 11px; line-height: 16px; cursor: pointer; }
 .tree-repeat-chip:hover { color: var(--color-text); border-color: var(--color-text-muted); }
+/* One couple card (#248): two halves, each its own click target, a divider and the
+   rings between them; a selected half is marked inside the card. */
+.tree-couple-half { cursor: pointer; position: relative; }
+.tree-couple-half:hover { background: var(--color-hover-surface); }
+.tree-couple-half--target { box-shadow: inset 0 0 0 3px var(--color-primary); }
+.tree-couple-half--picked { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); }
+.tree-couple-divider { flex: 0 0 1px; align-self: stretch; margin: 6px 0; background: var(--color-border); }
+.tree-couple-divider--row { margin: 0 8px; }
+.tree-couple-rings { position: absolute; left: 50%; top: 72px; transform: translate(-50%, -50%); display: grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-card); pointer-events: none; }
+.tree-couple-rings svg { fill: none; stroke: var(--color-text-secondary); stroke-width: 1.1; }
+.tree-couple-bar-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-couple-bar-initials { font-size: 9px; }
+.tree-couple-bar-meta { flex-shrink: 0; font-size: 11px; color: var(--color-text-muted); white-space: nowrap; max-width: 64px; overflow: hidden; text-overflow: ellipsis; }
+/* The numbered join between a person and one of several partners (#248). */
+.tree-partner-join { display: grid; place-items: center; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text-secondary); font-size: 10px; font-weight: 600; line-height: 1; pointer-events: none; }
 /* Form dialogs (fix 10): joined segmented controls with dividers and a full-height
    selected segment, and the date precision folded into the date field. */
 .form-dialog [role='radiogroup'][aria-orientation='horizontal'] { gap: 0; padding: 0; overflow: hidden; border-radius: 8px; }

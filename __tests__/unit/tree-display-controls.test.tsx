@@ -10,7 +10,7 @@ const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
     showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
-    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), spacing: 'normal', onSpacingChange: vi.fn(), arrangement: 'compact', onArrangementChange: vi.fn(), view: 'descendants', ...over,
+    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), spacing: 'normal', onSpacingChange: vi.fn(), arrangement: 'compact', onArrangementChange: vi.fn(), partners: 'own', onPartnersChange: vi.fn(), view: 'descendants', ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
     <NextIntlClientProvider locale="en" messages={en}><TreeDisplayControls {...p} /></NextIntlClientProvider>,
@@ -97,6 +97,19 @@ describe('TreeDisplayControls', () => {
         a.unmount();
         renderControls(props({ view: 'focus' }));
         expect(screen.getByText(en.treeView.arrangement_focus_na)).toBeTruthy();
+    });
+
+    // #248: Own cards (today) or One couple card; focus keeps its own cards.
+    it('picks how partners are drawn', () => {
+        const p = props();
+        const { unmount } = renderControls(p);
+        const group = screen.getByRole('radiogroup', { name: en.treeView.partners });
+        expect(screen.getByText(en.treeView.partners_help)).toBeTruthy();
+        fireEvent.click(within(group).getByRole('radio', { name: en.treeView.partners_couple }));
+        expect(p.onPartnersChange).toHaveBeenCalledWith('couple');
+        unmount();
+        renderControls(props({ view: 'focus' }));
+        expect(screen.getByText(en.treeView.partners_focus_na)).toBeTruthy();
     });
 
     // #249: Tight, Normal (today's gaps) and Roomy.

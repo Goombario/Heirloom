@@ -178,6 +178,14 @@ export interface FlowNodeData {
   /** An empty slot in the Even ancestors chart (#250): an unknown parent, drawn
    *  as a faint dashed box with nothing to click. `person` is a blank stand-in. */
   placeholder?: true;
+  /** One couple card (#248): the person's one partner, drawn as the card's right
+   *  half (the lower row of a horizontal bar). Each half opens its own person. */
+  partner?: Spouse;
+  /** The partner half's display data, decorated like the person's own. */
+  partnerView?: PartnerView;
+  /** A numbered join between a person and one of several partners (#248): the
+   *  marriage's number. Its children's lines leave from it. */
+  joinNumber?: number;
   isSelected?: boolean; // True for the root/leaf person being viewed
   isSidebarSelected?: boolean; // True for the person clicked to open sidebar
   onPersonClick?: (id: number) => void;
@@ -199,6 +207,14 @@ export interface FlowNodeData {
   /** DEBUG (horizontal bar review): zoom level below which the bar switches to
    *  zoomed-out mode (name-only, scaled). Default 0.6. */
   barZoomThreshold?: number;
+}
+
+/** What a couple card's partner half shows, beside the person's own fields. */
+export interface PartnerView {
+  isSidebarSelected: boolean;
+  secondName?: string | null;
+  mainName?: string;
+  underText?: string | null;
 }
 
 /**

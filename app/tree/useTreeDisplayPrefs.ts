@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { TREE_SPACINGS, TREE_ARRANGEMENTS, type TreeSpacing, type TreeArrangement } from '@/lib/tree/geometry';
+import { TREE_SPACINGS, TREE_ARRANGEMENTS, TREE_PARTNERS, type TreeSpacing, type TreeArrangement, type TreePartners } from '@/lib/tree/geometry';
 import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 
 /** A stored "Second name" choice, or null for none (also for anything unrecognised). */
@@ -28,6 +28,7 @@ export function useTreeDisplayPrefs() {
     const [underName, setUnderNameState] = useState<TreeUnderName>('dates');
     const [spacing, setSpacingState] = useState<TreeSpacing>('normal');
     const [arrangement, setArrangementState] = useState<TreeArrangement>('compact');
+    const [partners, setPartnersState] = useState<TreePartners>('own');
 
     // Read persisted prefs after mount (server render + first client paint use the
     // defaults, so there is no hydration mismatch).
@@ -42,6 +43,8 @@ export function useTreeDisplayPrefs() {
             setSpacingState(parseSpacing(localStorage.getItem('treeSpacing')));
             const storedArrangement = localStorage.getItem('treeArrangement');
             setArrangementState((TREE_ARRANGEMENTS as readonly string[]).includes(storedArrangement ?? '') ? storedArrangement as TreeArrangement : 'compact');
+            const storedPartners = localStorage.getItem('treePartners');
+            setPartnersState((TREE_PARTNERS as readonly string[]).includes(storedPartners ?? '') ? storedPartners as TreePartners : 'own');
             // Debug-only card styles with no switch anywhere, removed by #271.
             localStorage.removeItem('treeRoundedPhotos');
             localStorage.removeItem('treeGreyscaleMode');
@@ -96,8 +99,16 @@ export function useTreeDisplayPrefs() {
         else localStorage.setItem('treeArrangement', value);
     }, []);
 
+    // Partners (#248): a layout input, per device; Own cards is today's.
+    const setPartners = useCallback((value: TreePartners) => {
+        setPartnersState(value);
+        if (value === 'own') localStorage.removeItem('treePartners');
+        else localStorage.setItem('treePartners', value);
+    }, []);
+
     return {
         arrangement, setArrangement,
+        partners, setPartners,
         spacing, setSpacing,
         underName, setUnderName,
         colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,

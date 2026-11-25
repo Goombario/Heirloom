@@ -33,8 +33,13 @@ import {
   MIN_BRANCH_GAP,
   BRANCH_COLORS,
   DEFAULT_LAYOUT_GEOMETRY,
+  COUPLE_CARD_WIDTH,
+  COUPLE_BAR_HEIGHT,
+  PARTNER_JOIN_SIZE,
+  coupleExtent,
   type LayoutGeometry,
   type TreeArrangement,
+  type TreePartners,
 } from '@/lib/tree/geometry';
 import { placeBands, placePedigree, type PedigreeGap } from './evenArrangement';
 import { nodeKeyToId, clusterPrefix, type FocusCluster, type NodeKey } from '@/lib/tree/keys';
@@ -45,6 +50,9 @@ const PARENT_EDGE = '\u0000parent';
 
 interface ExtendedTreeNode extends TreeNode {
   _width?: number;
+  /** How far the node's cards reach left of its main card's usual left edge: a
+   *  couple card is centred on the node, a partner on the left sits before it. */
+  _lead?: number;
   _branchColor?: string;
 }
 
@@ -98,6 +106,16 @@ export interface ColumnLayoutOptions {
    * focus clusters and mirrored trees. See evenArrangement.ts.
    */
   arrangement?: TreeArrangement;
+  /**
+   * The Display menu's Partners (#248). 'couple' draws a person with one partner
+   * as one couple card (children drop from its middle), and a person with more as
+   * their own card between partner 1 (left) and partner 2 (right), each marriage a
+   * numbered join its children drop from. Ignored in focus clusters and mirrored trees.
+   */
+  partners?: TreePartners;
+  /** The card's size along the generation axis (its height before a transpose),
+   *  to centre the partner joins on the row. */
+  cardDepth?: number;
 }
 
 /**
@@ -138,10 +156,13 @@ export function layoutBounds(
   if (nodes.length === 0) return null;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const n of nodes) {
+    // A couple card (#248) is wider (portrait) or taller (bar) than a card.
+    const w = n.type === 'couple' ? COUPLE_CARD_WIDTH : dims.width;
+    const h = n.type === 'coupleBar' ? COUPLE_BAR_HEIGHT : dims.height;
     if (n.position.x < minX) minX = n.position.x;
     if (n.position.y < minY) minY = n.position.y;
-    if (n.position.x + dims.width > maxX) maxX = n.position.x + dims.width;
-    if (n.position.y + dims.height > maxY) maxY = n.position.y + dims.height;
+    if (n.position.x + w > maxX) maxX = n.position.x + w;
+    if (n.position.y + h > maxY) maxY = n.position.y + h;
   }
   return { minX, minY, maxX, maxY };
 }
@@ -169,13 +190,19 @@ export function transposeToHorizontal(
   result: LayoutResult,
   opts: { mirror: boolean },
 ): LayoutResult {
-  const nodes: FlowNode[] = result.nodes.map((n) => ({
-    ...n,
-    type: n.type === 'pedigreeGap' ? 'pedigreeGapBar' : 'personBar',
-    position: opts.mirror
-      ? { x: -(n.position.y + BAR_CARD_WIDTH), y: n.position.x }
-      : { x: n.position.y, y: n.position.x },
-  }));
+  const barType = (t: string | undefined): string =>
+    t === 'pedigreeGap' ? 'pedigreeGapBar' : t === 'couple' ? 'coupleBar' : t === 'partnerJoin' ? 'partnerJoin' : 'personBar';
+  const nodes: FlowNode[] = result.nodes.map((n) => {
+    // The reflection keeps each node's own footprint along the generation axis.
+    const depth = n.type === 'partnerJoin' ? PARTNER_JOIN_SIZE : BAR_CARD_WIDTH;
+    return {
+      ...n,
+      type: barType(n.type),
+      position: opts.mirror
+        ? { x: -(n.position.y + depth), y: n.position.x }
+        : { x: n.position.y, y: n.position.x },
+    };
+  });
 
   const xById = new Map(nodes.map((n) => [n.id, n.position.x]));
   const edges: FlowEdge[] = result.edges.map((e) => {
@@ -219,8 +246,23 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     geometry = DEFAULT_LAYOUT_GEOMETRY,
     rootRoom = false,
     arrangement = 'compact',
+    partners = 'own',
+    cardDepth = PERSON_CARD_HEIGHT,
   } = opts;
   const prefix = clusterPrefix(cluster);
+
+  // ── Partners (#248) ───────────────────────────────────────────────────────
+  // 'couple': a person with one partner is one couple card; with more, partner 1
+  // sits left of the person and the others right, with numbered joins.
+  const couples = partners === 'couple' && !mirrorX && !cluster;
+  const partnerKind = (d: TreeNode): 'own' | 'couple' | 'split' => {
+    const n = d.spouses?.length ?? 0;
+    if (!couples || n === 0) return 'own';
+    return n === 1 ? 'couple' : 'split';
+  };
+  const ext0 = geometry.spreadExtent;
+  const step0 = ext0 + geometry.spouseGap;
+  const coupleW = coupleExtent(geometry);
 
   const root = hierarchy<ExtendedTreeNode>(rootNode as ExtendedTreeNode, (d) => d.children);
 
@@ -275,7 +317,9 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   // ── Width annotation ──────────────────────────────────────────────────────
   root.each((node) => {
     const count = node.data.spouses?.length || 0;
-    node.data._width = geometry.spreadExtent + count * (geometry.spreadExtent + geometry.spouseGap);
+    const kind = partnerKind(node.data);
+    node.data._width = kind === 'couple' ? coupleW : geometry.spreadExtent + count * (geometry.spreadExtent + geometry.spouseGap);
+    node.data._lead = kind === 'couple' ? (coupleW - ext0) / 2 : kind === 'split' ? step0 : 0;
   });
 
   // ── Branch-color annotation ───────────────────────────────────────────────
@@ -306,13 +350,19 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   // ── d3 tree layout ────────────────────────────────────────────────────────
   const treeLayout = tree<ExtendedTreeNode>()
     .nodeSize([1, geometry.generationSpacing])
-    .separation((a, b) => columnSeparation(
-      a.data._width || geometry.spreadExtent,
-      b.data._width || geometry.spreadExtent,
-      a.parent === b.parent,
-      mirrorX,
-      { sibling: geometry.minSiblingGap, branch: geometry.minBranchGap },
-    ));
+    .separation((a, b) => {
+      const sibling = a.parent === b.parent;
+      // Cards reaching left of the main card (#248) push the node right of its
+      // neighbour: d3 passes siblings right-then-left, cousins left-then-right.
+      const [left, right] = sibling ? [b, a] : [a, b];
+      return columnSeparation(
+        a.data._width || geometry.spreadExtent,
+        b.data._width || geometry.spreadExtent,
+        sibling,
+        mirrorX,
+        { sibling: geometry.minSiblingGap, branch: geometry.minBranchGap },
+      ) + (right.data._lead ?? 0) - (left.data._lead ?? 0);
+    });
   const even = arrangement === 'even' && !mirrorX && !cluster;
   let pedigreeGaps: PedigreeGap[] = [];
   if (even && orientation === 'up') {
@@ -342,6 +392,8 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     rawY: number;
     data: FlowNode['data'];
     isSpouseNode: boolean;
+    /** A couple card or a partner join (#248); else a person card. */
+    kind?: 'couple' | 'join';
   }
   const rawNodes: RawNode[] = [];
   const edges: FlowEdge[] = [];
@@ -352,7 +404,7 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   // partner gap from the one before; partners without children follow the last.
   const rootPlan = ((): { mainX: number; spouseX: number[] } | null => {
     const spouses = root.data.spouses ?? [];
-    if (!rootRoom || mirrorX || spousesWithKids(spouses).length < 2) return null;
+    if (!rootRoom || mirrorX || couples || spousesWithKids(spouses).length < 2) return null;
     const ext = geometry.spreadExtent;
     const step = ext + geometry.spouseGap;
     const centres = spouses.map((sp) => {
@@ -390,6 +442,11 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
   const pending = new Map<string, { key: NodeKey; stub: boolean }>();
   const mainTmp = new Map<Hier, string>();
   const spouseTmp = new Map<Hier, string[]>();
+  // A couple card's partner has no card of their own: their key names the couple
+  // card, so a repeat of the partner points there. Joins are named from the card.
+  const aliasOf = new Map<string, string>();
+  const joinTmp = new Map<Hier, string[]>();
+  const joinOf = new Map<string, { main: string; n: number }>();
   const provisional = (key: NodeKey, stub: boolean): string => {
     const id = `tmp-${pending.size}`;
     pending.set(id, { key, stub });
@@ -402,13 +459,17 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     const rawY0 = node.y ?? 0;
     const rawY = orientation === 'up' ? maxY - rawY0 : rawY0;
     const isRootNode = !node.parent;
-    const mainX = isRootNode && rootPlan ? rootPlan.mainX : d3X - geometry.spreadExtent / 2;
+    const kind = partnerKind(personData);
+    const mainX = isRootNode && rootPlan
+      ? rootPlan.mainX
+      : d3X - geometry.spreadExtent / 2 - (kind === 'couple' ? (coupleW - ext0) / 2 : 0);
 
     const mainId = provisional({ personId: personData.id, role: 'person', cluster }, !!personData.repeat);
     mainTmp.set(node, mainId);
     const spouseIds = (personData.spouses ?? []).map((sp, idx) =>
       provisional({ personId: sp.id, role: 'spouse', spouseIndex: idx, ofPartner: personData.id, cluster }, false));
     spouseTmp.set(node, spouseIds);
+    if (kind === 'couple') aliasOf.set(spouseIds[0], mainId);
 
     rawNodes.push({
       id: mainId,
@@ -418,18 +479,43 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
         person: personData,
         isSpouse: false,
         isSelected: isSelectedFor(personData.id, isRootNode),
+        ...(kind === 'couple' ? { partner: personData.spouses[0] } : {}),
       },
       isSpouseNode: false,
+      ...(kind === 'couple' ? { kind: 'couple' as const } : {}),
     });
 
-    // Spouse cards + connectors
-    if (personData.spouses && personData.spouses.length > 0) {
+    // Partner joins (#248): one per marriage, centred in the gap before the
+    // partner's card (partner 1's join sits in the gap after it).
+    if (kind === 'split') {
+      const gap = geometry.spouseGap;
+      const ids = personData.spouses.map((_sp, idx) => {
+        const id = `join-${pending.size}-${idx}`;
+        joinOf.set(id, { main: mainId, n: idx + 1 });
+        const centre = idx === 0 ? mainX - gap / 2 : mainX + idx * step0 - gap / 2;
+        rawNodes.push({
+          id,
+          rawX: centre - PARTNER_JOIN_SIZE / 2,
+          rawY: rawY + cardDepth / 2 - PARTNER_JOIN_SIZE / 2,
+          data: { person: { id: 0, name: '', photoMediaId: null, spouses: [] }, joinNumber: idx + 1 },
+          isSpouseNode: false,
+          kind: 'join',
+        });
+        return id;
+      });
+      joinTmp.set(node, ids);
+    }
+
+    // Spouse cards + connectors (a couple card holds its partner itself)
+    if (kind !== 'couple' && personData.spouses && personData.spouses.length > 0) {
       const totalSpouses = personData.spouses.length;
       personData.spouses.forEach((sp, idx) => {
         // Pre-mirror frame: spouses extend left in mirrored trees so the
         // X-flip lands them to the right of their main card, same as normal.
         const spouseX = isRootNode && rootPlan
           ? rootPlan.spouseX[idx]
+          : kind === 'split'
+          ? (idx === 0 ? mainX - step0 : mainX + idx * step0)
           : mirrorX
           ? mainX - (idx + 1) * (geometry.spreadExtent + geometry.spouseGap)
           : mainX + geometry.spreadExtent + geometry.spouseGap + idx * (geometry.spreadExtent + geometry.spouseGap);
@@ -460,14 +546,20 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
           : 'var(--color-tree-edge)';
 
         // Spouse cards always end up to the RIGHT of their main card on canvas
-        // (mirrored trees pre-flip), so connectors always run right→left.
+        // (mirrored trees pre-flip), so connectors always run right→left. Split
+        // partners (#248): partner 1 is on the left, so its line runs into the
+        // person; the two beside the person draw straight through their joins.
+        const leftPartner = kind === 'split' && idx === 0;
+        const lane = kind === 'split'
+          ? (idx <= 1 ? { spouseIndex: 0, totalSpouses: 1 } : { spouseIndex: idx, totalSpouses })
+          : { spouseIndex: idx, totalSpouses };
         edges.push({
           id: `${prefix}spouse-${personData.id}-${sp.id}-${idx}`,
-          source: mainId,
-          target: spouseIds[idx],
+          source: leftPartner ? spouseIds[idx] : mainId,
+          target: leftPartner ? mainId : spouseIds[idx],
           type: 'spouse',
           style: { stroke: connectorColor, strokeWidth: 2, strokeDasharray: sp.hasChildren ? '0' : '5,5' },
-          data: { spouseIndex: idx, totalSpouses },
+          data: lane,
           sourceHandle: 'right',
           targetHandle: 'left',
         });
@@ -482,10 +574,20 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
       const parentMultiSpouse = parentCB.length > 1;
 
       const parentSpouseIds = spouseTmp.get(node.parent) ?? [];
+      const parentKind = partnerKind(parentData);
       let sourceId = mainTmp.get(node.parent)!;
       let shapeIndex = 0;
 
-      if (parentMultiSpouse && childData.otherParentId && parentData.spouses) {
+      if (parentKind === 'split') {
+        // Each marriage's children drop from its own join (#248).
+        const spouseIdx = childData.otherParentId ? parentData.spouses.findIndex((s) => s.id === childData.otherParentId) : -1;
+        if (spouseIdx !== -1) {
+          sourceId = joinTmp.get(node.parent)![spouseIdx];
+          shapeIndex = spouseIdx;
+        }
+      } else if (parentKind === 'couple') {
+        // The couple card: the line leaves its middle, where the two meet.
+      } else if (parentMultiSpouse && childData.otherParentId && parentData.spouses) {
         // Multi-spouse: connect from the specific spouse so branches read apart.
         const spouseIdx = parentData.spouses.findIndex((s) => s.id === childData.otherParentId);
         if (spouseIdx !== -1) {
@@ -537,6 +639,8 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
     finalId.set(id, nodeKeyToId({ ...p.key, again: n }));
     repeatOf.set(id, full);
   }
+  for (const [alias, card] of aliasOf) finalId.set(alias, finalId.get(card)!);
+  for (const [id, j] of joinOf) finalId.set(id, `${finalId.get(j.main)}-join${j.n}`);
   for (const n of rawNodes) {
     const full = repeatOf.get(n.id);
     if (full) n.data = { ...n.data, repeatOf: finalId.get(full)!, isSelected: false };
@@ -590,10 +694,10 @@ export function computeColumnLayout(rootNode: TreeNode, opts: ColumnLayoutOption
 
   const nodes: FlowNode[] = rawNodes.map((n) => ({
     id: n.id,
-    type: n.data.placeholder ? 'pedigreeGap' : 'person',
+    type: n.data.placeholder ? 'pedigreeGap' : n.kind === 'couple' ? 'couple' : n.kind === 'join' ? 'partnerJoin' : 'person',
     position: { x: n.rawX + shiftX, y: n.rawY + shiftY },
     data: n.data,
-    ...(n.data.placeholder ? { selectable: false, focusable: false, draggable: false } : {}),
+    ...(n.data.placeholder || n.kind === 'join' ? { selectable: false, focusable: false, draggable: false } : {}),
   }));
 
   return { nodes, edges };

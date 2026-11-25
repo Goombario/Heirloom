@@ -24,6 +24,8 @@ interface Placeable {
   repeat?: true;
   /** Main card plus partner cards along the spread axis. */
   _width?: number;
+  /** How far its cards reach left of the main card's usual left edge (#248). */
+  _lead?: number;
   children?: unknown[];
 }
 
@@ -41,10 +43,11 @@ export function placeBands<T extends Placeable>(root: Node<T>, geometry: LayoutG
   const band = new Map<Node<T>, { width: number; centre: number; childLeft: number[] }>();
   const measure = (n: Node<T>): void => {
     const own = n.data._width || ext;
+    const lead = n.data._lead ?? 0;
     const kids = n.children ?? [];
     kids.forEach(measure);
     if (kids.length === 0) {
-      band.set(n, { width: own, centre: ext / 2, childLeft: [] });
+      band.set(n, { width: own, centre: lead + ext / 2, childLeft: [] });
       return;
     }
     const childLeft: number[] = [];
@@ -62,10 +65,10 @@ export function placeBands<T extends Placeable>(root: Node<T>, geometry: LayoutG
     let centre = (firstCentre + lastCentre) / 2;
     // The parent's own cards (main card, then partners to its right) may reach past
     // the children's band on either side: widen the band, shifting the children.
-    const ownLeft = centre - ext / 2;
+    const ownLeft = centre - ext / 2 - lead;
     const shift = ownLeft < 0 ? -ownLeft : 0;
     centre += shift;
-    const width = Math.max(cursor + shift, centre - ext / 2 + own);
+    const width = Math.max(cursor + shift, centre - ext / 2 - lead + own);
     band.set(n, { width, centre, childLeft: childLeft.map((l) => l + shift) });
   };
   measure(root);

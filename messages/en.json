@@ -3195,7 +3195,12 @@
     "arrangement_even": "Even",
     "arrangement_help_descendants": "Each line of descent keeps its own column, so no one sits above children who aren’t theirs.",
     "arrangement_help_ancestors": "Every ancestor keeps a fixed place, like a printed pedigree chart. Unknown parents leave a gap.",
-    "arrangement_focus_na": "Focus view keeps its own arrangement."
+    "arrangement_focus_na": "Focus view keeps its own arrangement.",
+    "partners": "Partners",
+    "partners_own": "Own cards",
+    "partners_couple": "One couple card",
+    "partners_help": "One card per couple, partners side by side. Click a half to open that person.",
+    "partners_focus_na": "Focus view keeps its own cards."
   },
   "personDetail": {
     "family_eyebrow": "{surname} family",

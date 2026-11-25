@@ -145,3 +145,23 @@ export function layoutGeometry(opts: { horizontal: boolean; secondName?: boolean
  *  bands in descendants and fixed pedigree slots in ancestors. */
 export const TREE_ARRANGEMENTS = ['compact', 'even'] as const;
 export type TreeArrangement = typeof TREE_ARRANGEMENTS[number];
+
+// ── Partners (#248) ──────────────────────────────────────────────────────────
+
+/** The Display menu's Partners: Own cards is today's; One couple card draws a
+ *  person with one partner as a single card, the two side by side. */
+export const TREE_PARTNERS = ['own', 'couple'] as const;
+export type TreePartners = typeof TREE_PARTNERS[number];
+
+/** The portrait couple card: two halves, a little narrower than two cards. */
+export const COUPLE_CARD_WIDTH = 2 * PERSON_CARD_WIDTH - 16;
+/** The horizontal couple bar: two 31px rows, one per partner. */
+export const COUPLE_BAR_HEIGHT = 62;
+/** The numbered join between a person and one of several partners. */
+export const PARTNER_JOIN_SIZE = 18;
+
+/** The couple card's footprint along the spread axis for a geometry: the bar's
+ *  height in horizontal mode, the portrait card's width otherwise. */
+export function coupleExtent(geometry: LayoutGeometry): number {
+  return geometry.spreadExtent === BAR_CARD_HEIGHT ? COUPLE_BAR_HEIGHT : COUPLE_CARD_WIDTH;
+}

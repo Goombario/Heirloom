@@ -20,11 +20,12 @@ import { Search } from '@/lib/icons';
 import PersonNode from './PersonNode';
 import PedigreeGapNode from './PedigreeGapNode';
 import PersonBarNode from './PersonBarNode';
+import { CoupleNode, CoupleBarNode, PartnerJoinNode } from './CoupleNode';
 import BranchEdge from './BranchEdge';
 import SpouseEdge from './SpouseEdge';
 import { useTreeLayoutMode } from './useTreeLayoutMode';
-import type { TreeSpacing, TreeArrangement } from '@/lib/tree/geometry';
-import { TreeNode, FocusTrees, TreeCardNames, TreeSecondNameType, type TreeUnderName, type TreeCardFacts } from './types';
+import type { TreeSpacing, TreeArrangement, TreePartners } from '@/lib/tree/geometry';
+import { TreeNode, FocusTrees, TreeCardNames, TreeSecondNameType, type TreeUnderName, type TreeCardFacts, type PartnerView } from './types';
 import { PERSON_CARD_WIDTH, BAR_CARD_WIDTH, BAR_CARD_HEIGHT, personCardHeight } from '@/lib/tree/geometry';
 import { naturalFitZoom, READABLE_ZOOM } from '@/lib/tree/fitView';
 import DebugOverlay from './DebugOverlay';
@@ -119,12 +120,33 @@ function underNameData(
   return { underName, underText: cardFacts?.[personId]?.[underName] ?? null };
 }
 
+/** A couple card's partner half (#248): the same decoration as a card of their own. */
+function partnerViewData(
+  partnerId: number,
+  selectedId: number | null | undefined,
+  type: TreeSecondNameType | null,
+  cardNames: Record<number, TreeCardNames> | undefined,
+  underName: TreeUnderName,
+  cardFacts: Record<number, TreeCardFacts> | undefined,
+): PartnerView {
+  const names = secondNameData(partnerId, type, cardNames);
+  return {
+    isSidebarSelected: selectedId != null && partnerId === selectedId,
+    ...(names.secondNameOn ? { secondName: names.secondName } : {}),
+    ...(names.mainName ? { mainName: names.mainName } : {}),
+    ...(underName !== 'dates' ? { underText: underNameData(partnerId, underName, cardFacts).underText ?? null } : {}),
+  };
+}
+
 /**
  * Register custom node types
  */
 const nodeTypes: NodeTypes = {
   person: PersonNode,
   personBar: PersonBarNode,
+  couple: CoupleNode,
+  coupleBar: CoupleBarNode,
+  partnerJoin: PartnerJoinNode,
   pedigreeGap: PedigreeGapNode,
   pedigreeGapBar: PedigreeGapNode,
 };
@@ -162,6 +184,8 @@ interface TreeVisualizationProps {
   spacing?: TreeSpacing;
   /** The Display menu's Arrangement (#250), a layout input; Compact is today's. */
   arrangement?: TreeArrangement;
+  /** The Display menu's Partners (#248), a layout input; Own cards is today's. */
+  partners?: TreePartners;
   /** The Display menu's "Under the name" (#12) and the facts it reads. */
   underName?: TreeUnderName;
   cardFacts?: Record<number, TreeCardFacts>;
@@ -186,7 +210,7 @@ interface TreeVisualizationProps {
  * - Smooth edge connections
  * - Minimap and controls
  */
-function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, spacing = 'normal', arrangement = 'compact', barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
+function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 'vertical', focusTrees, onReady, onPersonClick, onPersonDoubleClick, onPaneClick, sidebarSelectedId, colorblindMode = false, showAgeIndicator = false, showStatusMark = true, secondNameType = null, cardNames, underName = 'dates', cardFacts, spacing = 'normal', arrangement = 'compact', partners = 'own', barZoomThreshold = 0.6, fitViewVersion = 0, isExporting = false }: TreeVisualizationProps) {
   const [debugMode, setDebugMode] = React.useState(false);
 
   React.useEffect(() => {
@@ -212,7 +236,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
   const secondName = secondNameType != null && (layoutModeId === 'focus' || orientation === 'vertical');
   const { nodes: layoutNodes, edges: layoutEdges, bounds, anchor } = useTreeLayoutMode(
     layoutModeId,
-    { tree: focusTrees ? null : treeData, focusTrees, orientation, secondName, spacing, arrangement },
+    { tree: focusTrees ? null : treeData, focusTrees, orientation, secondName, spacing, arrangement, partners },
   );
 
   // React Flow state management
@@ -347,6 +371,7 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
         barZoomThreshold,
         ...secondNameData(node.data.person.id, secondName ? secondNameType : null, cardNames),
         ...underNameData(node.data.person.id, underName, cardFacts),
+        ...(node.data.partner ? { partnerView: partnerViewData(node.data.partner.id, selectedId, secondName ? secondNameType : null, cardNames, underName, cardFacts) } : {}),
       },
     }));
     setNodes(nodesWithCallback);
@@ -379,8 +404,13 @@ function TreeVisualizationInner({ treeData, mode = 'descendants', orientation = 
     setNodes((nds) =>
       nds.map((node) => {
         const selected = sidebarSelectedId != null && node.data.person.id === sidebarSelectedId;
-        if (!!node.data.isSidebarSelected === selected) return node;
-        return { ...node, data: { ...node.data, isSidebarSelected: selected } };
+        const pv = node.data.partnerView;
+        const partnerSelected = sidebarSelectedId != null && node.data.partner?.id === sidebarSelectedId;
+        if (!!node.data.isSidebarSelected === selected && (!pv || pv.isSidebarSelected === partnerSelected)) return node;
+        return {
+          ...node,
+          data: { ...node.data, isSidebarSelected: selected, ...(pv ? { partnerView: { ...pv, isSidebarSelected: partnerSelected } } : {}) },
+        };
       }),
     );
   }, [sidebarSelectedId, setNodes]);

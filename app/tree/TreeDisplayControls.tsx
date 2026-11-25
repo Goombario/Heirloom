@@ -6,7 +6,7 @@ import { SegmentedControl } from '@/app/components/ui/SegmentedControl';
 import { SelectField } from '@/app/components/ui/Select';
 import { TREE_SECOND_NAME_TYPES, TREE_UNDER_NAME, type TreeSecondNameType, type TreeUnderName } from '@/app/components/tree/types';
 import { cx } from '@/app/components/ui/cx';
-import { TREE_SPACINGS, TREE_ARRANGEMENTS, type TreeSpacing, type TreeArrangement } from '@/lib/tree/geometry';
+import { TREE_SPACINGS, TREE_ARRANGEMENTS, TREE_PARTNERS, type TreeSpacing, type TreeArrangement, type TreePartners } from '@/lib/tree/geometry';
 
 /** Mini pedigree glyph flowing downward — the vertical (portrait-card) layout. */
 function TreeIconVertical() {
@@ -68,6 +68,9 @@ export interface TreeDisplayProps {
     /** Compact (today) or Even (#250); the help line follows the view. */
     arrangement: TreeArrangement;
     onArrangementChange: (v: TreeArrangement) => void;
+    /** Own cards (today) or One couple card (#248); focus keeps own cards. */
+    partners: TreePartners;
+    onPartnersChange: (v: TreePartners) => void;
     /** The tree's view, for the Arrangement help line; focus has no arrangement. */
     view: 'descendants' | 'ancestors' | 'focus';
 }
@@ -92,7 +95,7 @@ export function TreeDisplayControls({
     barZoomThreshold, onBarZoomThresholdChange,
     depth, maxDepth, onDepthCommit, showAges, onShowAgesChange, showStatus, onShowStatusChange,
     colorblind, onColorblindChange, secondNameType, onSecondNameTypeChange,
-    underName, onUnderNameChange, spacing, onSpacingChange, arrangement, onArrangementChange, view,
+    underName, onUnderNameChange, spacing, onSpacingChange, arrangement, onArrangementChange, partners, onPartnersChange, view,
 }: TreeDisplayProps) {
     const t = useTranslations('treeView');
     const tNames = useTranslations('personDetail');
@@ -163,6 +166,19 @@ export function TreeDisplayControls({
                     onChange={(v) => onSpacingChange(v as TreeSpacing)}
                     options={TREE_SPACINGS.map((v) => ({ v, l: t(`spacing_${v}`) }))}
                 />
+            </div>
+
+            <div>
+                <div className="eyebrow mb-2">{t('partners')}</div>
+                <SegmentedControl
+                    fullWidth
+                    aria-label={t('partners')}
+                    disabled={view === 'focus'}
+                    value={partners}
+                    onChange={(v) => onPartnersChange(v as TreePartners)}
+                    options={TREE_PARTNERS.map((v) => ({ v, l: t(`partners_${v}`) }))}
+                />
+                <div className="muted text-xs mt-1">{view === 'focus' ? t('partners_focus_na') : t('partners_help')}</div>
             </div>
 
             {showDepth && (

@@ -3195,7 +3195,12 @@
     "arrangement_even": "Régulière",
     "arrangement_help_descendants": "Chaque lignée garde sa propre colonne : personne ne se retrouve au-dessus d’enfants qui ne sont pas les siens.",
     "arrangement_help_ancestors": "Chaque ancêtre garde une place fixe, comme sur un arbre généalogique imprimé. Les parents inconnus laissent un vide.",
-    "arrangement_focus_na": "La vue centrée garde sa propre disposition."
+    "arrangement_focus_na": "La vue centrée garde sa propre disposition.",
+    "partners": "Partenaires",
+    "partners_own": "Cartes séparées",
+    "partners_couple": "Une carte par couple",
+    "partners_help": "Une carte par couple, les partenaires côte à côte. Cliquez sur une moitié pour ouvrir cette personne.",
+    "partners_focus_na": "La vue Focus garde ses propres cartes."
   },
   "personDetail": {
     "family_eyebrow": "Famille {surname}",

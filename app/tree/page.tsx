@@ -69,6 +69,7 @@ function TreePageContent() {
   const {
     colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
     secondNameType, setSecondNameType, underName, setUnderName, spacing, setSpacing, arrangement, setArrangement,
+    partners, setPartners,
   } = useTreeDisplayPrefs();
 
   const phase = useLoadPhase(loading);
@@ -128,6 +129,8 @@ function TreePageContent() {
     onSpacingChange: setSpacing,
     arrangement,
     onArrangementChange: setArrangement,
+    partners,
+    onPartnersChange: setPartners,
     view: mode,
   };
 
@@ -222,6 +225,7 @@ function TreePageContent() {
               underName={underName}
               spacing={spacing}
               arrangement={arrangement}
+              partners={partners}
               cardFacts={treeData.cardFacts}
               barZoomThreshold={barZoomThreshold}
               fitViewVersion={fitViewVersion}

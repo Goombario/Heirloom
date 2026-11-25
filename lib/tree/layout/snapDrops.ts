@@ -12,7 +12,7 @@
  * Pure, over a finished LayoutOutput; the edge renderer reads `data.snapTo`.
  */
 import type { FlowEdge, FlowNode, LayoutOutput } from '@/app/components/tree/types';
-import { BAR_CARD_HEIGHT, PERSON_CARD_WIDTH } from '@/lib/tree/geometry';
+import { BAR_CARD_HEIGHT, PERSON_CARD_WIDTH, COUPLE_BAR_HEIGHT, COUPLE_CARD_WIDTH } from '@/lib/tree/geometry';
 
 /** A child this close to the parent's middle gets the drop. */
 export const SNAP_TOLERANCE = 24;
@@ -26,9 +26,20 @@ export function snapParentDrops(out: LayoutOutput): LayoutOutput {
   const byId = new Map<string, FlowNode>(out.nodes.map((n) => [n.id, n]));
   // The cross axis is the one the bracket runs along: x for portrait cards,
   // y for horizontal bars.
-  const span = (n: FlowNode): [number, number] =>
-    n.type === 'personBar' ? [n.position.y, n.position.y + BAR_CARD_HEIGHT] : [n.position.x, n.position.x + PERSON_CARD_WIDTH];
+  const bar = (n: FlowNode) => n.type === 'personBar' || n.type === 'coupleBar';
+  const span = (n: FlowNode): [number, number] => {
+    const { x, y } = n.position;
+    if (n.type === 'coupleBar') return [y, y + COUPLE_BAR_HEIGHT];
+    if (n.type === 'personBar') return [y, y + BAR_CARD_HEIGHT];
+    return [x, x + (n.type === 'couple' ? COUPLE_CARD_WIDTH : PERSON_CARD_WIDTH)];
+  };
   const mid = (n: FlowNode) => { const [a, b] = span(n); return (a + b) / 2; };
+  // A line lands on a couple card's blood relative, its first half (#248).
+  const landing = (n: FlowNode) => {
+    if (n.type !== 'couple' && n.type !== 'coupleBar') return mid(n);
+    const [a, b] = span(n);
+    return a + (b - a) / 4;
+  };
 
   const bySource = new Map<string, FlowEdge[]>();
   for (const e of out.edges) if (isParentLine(e)) bySource.set(e.source, [...(bySource.get(e.source) ?? []), e]);
@@ -36,14 +47,15 @@ export function snapParentDrops(out: LayoutOutput): LayoutOutput {
   const snapTo = new Map<string, number>();
   for (const [sourceId, lines] of bySource) {
     const source = byId.get(sourceId);
-    if (!source) continue;
+    // A partner join (#248) is a point, not a card to stay under.
+    if (!source || source.type === 'partnerJoin') continue;
     const s = mid(source);
     const [lo, hi] = span(source);
     let best: number | null = null;
     for (const e of lines) {
       const target = byId.get(e.target);
-      if (!target || target.type !== source.type) continue;
-      const t = mid(target);
+      if (!target || bar(target) !== bar(source)) continue;
+      const t = landing(target);
       const d = Math.abs(t - s);
       if (d < 0.5 || d > SNAP_TOLERANCE || t < lo + CARD_INSET || t > hi - CARD_INSET) continue;
       if (best === null || d < Math.abs(best - s)) best = t;
