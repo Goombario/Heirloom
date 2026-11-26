@@ -22,6 +22,8 @@ const countsSrc = readFileSync(resolve(root, 'lib/services/tree-counts.ts'), 'ut
 
 /** Junction tables cleared as a side effect of their parent; they hold no rows alone. */
 const JUNCTION_TABLES = new Set(['FamilyPerson']);
+/** Cleared with the tree but not tree records: a member's saved search queries (#247). */
+const NOT_RECORDS = new Set(['SavedSearch']);
 
 function overwriteDeleteBlock(src: string): string {
     const start = src.indexOf("if (mode === 'overwrite') {");
@@ -50,7 +52,7 @@ describe('tree-counts stays in lockstep with the overwrite DELETE block', () => 
     });
 
     it('counts every table the overwrite import deletes', () => {
-        const uncounted = [...deleted].filter((t) => !counted.has(t) && !JUNCTION_TABLES.has(t));
+        const uncounted = [...deleted].filter((t) => !counted.has(t) && !JUNCTION_TABLES.has(t) && !NOT_RECORDS.has(t));
         expect(
             uncounted,
             `These tables are deleted by an overwrite import but not counted by getTreeCountsService, ` +
