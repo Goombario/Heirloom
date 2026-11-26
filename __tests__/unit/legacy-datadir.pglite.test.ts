@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { ensureSchema } from '@/lib/db/ensure-schema';
 import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 import { convertLegacyDatadir, tarPgMajor } from '@/lib/db/legacy-datadir';
+import { inspectBackupLogical } from '@/lib/db/connection.pglite';
 
 // #235: a database written by PGlite 0.4 (Postgres 17) is converted for 0.5
 // (Postgres 18) with every row, its photo bytes and its sequences intact.
@@ -66,5 +67,12 @@ describe('PGlite 0.4 to 0.5 conversion (#235)', () => {
     } finally {
       await db.close();
     }
+  }, 120_000);
+
+  it('restores a raw .tar backup from 0.4 by converting it, and refuses a file that is neither', async () => {
+    const { datadir, totals } = await inspectBackupLogical(await legacyTree());
+    expect(totals).toEqual({ trees: 1, people: 2, families: 0, media: 1 });
+    expect(await tarPgMajor(datadir)).toBe(18);
+    await expect(inspectBackupLogical(new Blob(['not a backup at all']))).rejects.toThrow(/Unrecognized backup format/);
   }, 120_000);
 });
