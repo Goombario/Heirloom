@@ -10,6 +10,7 @@ import TreeSwitcher from './TreeSwitcher';
 import UserMenu from '../UserMenu';
 import BackupStatusChip from '../backup/BackupStatusChip';
 import UpdateChip from '../updates/UpdateChip';
+import { useUpdates } from '../updates/UpdateProvider';
 import BackgroundJobsChip from '../media/BackgroundJobsChip';
 import { useBackgroundJobs } from '../media/backgroundMedia';
 
@@ -28,9 +29,11 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
     window.addEventListener('scroll', update, { passive: true });
     return () => window.removeEventListener('scroll', update);
   }, []);
-  // The photo-work chip (#207) needs room: while it shows, search and backup drop
-  // their words and keep their icons, as they do below xl.
-  const compact = useBackgroundJobs().length > 0;
+  // The photo-work chip (#207) and the update chip (#24) need room: while either
+  // shows, search and backup drop their words and keep their icons, as below xl.
+  const jobs = useBackgroundJobs().length > 0;
+  const { available } = useUpdates();
+  const compact = jobs || available !== null;
   const searchHint = mac ? '⌘K' : 'Ctrl+K';
   const openSearch = () => document.dispatchEvent(new CustomEvent('open-global-search'));
 
