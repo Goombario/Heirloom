@@ -29,7 +29,7 @@ import { InlineDataError } from '@/app/components/ui';
 import { useErrorToast } from '@/app/components/useErrorToast';
 import type { ListPeopleResult } from '@/lib/services/people';
 import { cycleTri, flagFromUrlFilter, sexBucketsPresent, type SexBucket, type TriState } from './peopleFilters';
-import { activeQuery, conditionCount, decodeQuery, encodeQuery, EMPTY_QUERY, type SearchQuery } from '@/lib/search/people-query';
+import { activeQuery, conditionCount, decodeQuery, encodeQuery, EMPTY_QUERY, normalizeQuery, type SearchQuery } from '@/lib/search/people-query';
 import type { PersonResult } from '@/lib/db/schema';
 import { chipsFromQuery, isChipOnly, setChip } from './advanced/chipQuery';
 import { AdvancedSearchPanel } from './advanced/AdvancedSearchPanel';
@@ -105,8 +105,13 @@ export default function PeoplePageClient({
     const qParam = searchParams.get('q');
     const [query, setQueryState] = useState<SearchQuery>(() => decodeQuery(qParam));
     const queryRef = useRef(query);
+    // The `?q=` values this page wrote itself: one arriving late (typing outruns
+    // router.replace) is not an outside change and must not roll the query back.
+    const written = useRef(new Set<string | null>());
     useEffect(() => {
-        if ((qParam ?? null) !== encodeQuery(queryRef.current)) {
+        const q = qParam ?? null;
+        if (written.current.has(q)) { written.current.delete(q); return; }
+        if (q !== encodeQuery(queryRef.current)) {
             const next = decodeQuery(qParam);
             queryRef.current = next;
             setQueryState(next);
@@ -117,6 +122,7 @@ export default function PeoplePageClient({
         setQueryState(next);
         const rest = new URLSearchParams(window.location.search);
         const enc = encodeQuery(next);
+        if ((rest.get('q') ?? null) !== enc) written.current.add(enc);
         if (enc) rest.set('q', enc); else rest.delete('q');
         router.replace(rest.size > 0 ? `/people?${rest}` : '/people', { scroll: false });
     }
@@ -406,7 +412,9 @@ export default function PeoplePageClient({
         currentUserId === null ? null : `people:saved-searches:tree=${activeTreeId ?? 'default'}`,
         async () => (await getDataClient()).search.listSaved(activeTreeId),
     );
-    const currentSaved = saved.data?.find((x) => encodeQuery(x.query) === activeKey)?.id ?? null;
+    // Saved rows come back normalized, so compare like with like.
+    const normalKey = activeKey === null ? null : encodeQuery(activeQuery(normalizeQuery(active)));
+    const currentSaved = saved.data?.find((x) => encodeQuery(activeQuery(x.query)) === normalKey)?.id ?? null;
     const sentence = words.summary(query, names).map((p) => `${p.joiner ? `${p.joiner} ` : ''}${p.open ? '(' : ''}${p.text}${p.close ? ')' : ''}`).join(' ');
     async function copyLink() {
         try {

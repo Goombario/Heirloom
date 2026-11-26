@@ -100,6 +100,8 @@ export interface SavedSearch {
 
 const PAGE = 'people';
 const NAME_MAX = 120;
+/** Each listing re-runs every saved search, so a member keeps a bounded number per tree. */
+const SAVED_MAX = 50;
 
 /** GET /api/saved-searches logic: the member's own saved searches, each with a live count. */
 export async function listSavedSearchesService(params: SearchScopeParams, load: PeopleSearchIndexLoader = defaultLoader): Promise<SavedSearch[]> {
@@ -128,6 +130,9 @@ export async function saveSearchService(params: SearchScopeParams & { name: unkn
     if (name.length > NAME_MAX) throw new ValidationError(`name must be ${NAME_MAX} characters or fewer`);
     const query = normalizeQuery(params.query);
     if (conditionCount(query) === 0) throw new ValidationError('query has no conditions');
+    if ((await listSavedSearches(params.currentUserId, scope.treeId, PAGE)).length >= SAVED_MAX) {
+        throw new ValidationError(`a member can keep up to ${SAVED_MAX} saved searches in a tree`);
+    }
     const row = await insertSavedSearch(params.currentUserId, scope.treeId, PAGE, name, JSON.stringify(query));
     return { id: row.Id };
 }

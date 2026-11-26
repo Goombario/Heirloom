@@ -101,5 +101,9 @@ describe('advanced search service (#247)', () => {
 
         await deleteSavedSearchService({ ...scope(), id });
         expect(await listSavedSearchesService(scope())).toEqual([]);
+
+        // A member keeps at most 50 per tree.
+        for (let i = 0; i < 50; i++) await saveSearchService({ ...scope(), name: `S${i}`, query: smiths });
+        await expect(saveSearchService({ ...scope(), name: 'One more', query: smiths })).rejects.toThrow(/up to 50/);
     });
 });

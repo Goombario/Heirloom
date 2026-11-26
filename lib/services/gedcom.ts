@@ -1969,6 +1969,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
       await client.query('DELETE FROM "Citation" WHERE "TreeId" = $1', [scope.treeId]);
       // Confirmations name the replaced tree's people and dates (#830).
       await client.query('DELETE FROM "DataCheckConfirmations" WHERE "TreeId" = $1', [scope.treeId]);
+      // Saved searches can name the replaced tree's people, sources and cases (#247).
+      await client.query('DELETE FROM "SavedSearch" WHERE "TreeId" = $1', [scope.treeId]);
       // NoteLink rows cascade when their Note is deleted (FK ON DELETE CASCADE).
       await client.query('DELETE FROM "Note" WHERE "TreeId" = $1', [scope.treeId]);
       await client.query('DELETE FROM "Sources" WHERE "TreeId" = $1', [scope.treeId]);
@@ -3527,6 +3529,8 @@ export async function resetService(params: ResetParams): Promise<{ success: true
     storedFiles = media.rows.map((r) => r.FilePath);
     await client.query('DELETE FROM "Cases" WHERE "UserId" = $1', [currentUserId]);
     await client.query('DELETE FROM "DataCheckConfirmations" WHERE "UserId" = $1', [currentUserId]);
+    // Every member's saved searches on these trees name records that are going (#247).
+    await client.query('DELETE FROM "SavedSearch" WHERE "TreeId" IN (SELECT "Id" FROM "Trees" WHERE "OwnerId" = $1)', [currentUserId]);
     await client.query('DELETE FROM "AuditLog" WHERE "TreeOwnerId" = $1', [currentUserId]);
     await client.query('DELETE FROM "TreeSharing" WHERE "OwnerId" = $1', [currentUserId]);
     await client.query('DELETE FROM "PendingShares" WHERE "OwnerId" = $1', [currentUserId]);
