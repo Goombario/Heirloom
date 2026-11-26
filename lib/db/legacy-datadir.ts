@@ -120,15 +120,18 @@ async function rowCounts(db: Db): Promise<Map<string, number>> {
 }
 
 /**
- * Convert a Postgres 17 data directory tarball (from 0.4's `dumpDataDir`) into
- * a Postgres 18 one for 0.5. Throws, leaving nothing behind, if the converted
- * copy doesn't hold the same rows in every table.
+ * Convert a Postgres 17 data directory into a Postgres 18 one for 0.5: either a
+ * tarball (a raw `.tar` backup) or a 0.4 data directory in IndexedDB, opened in
+ * place so the database isn't held in memory twice. Throws, changing nothing,
+ * if the converted copy doesn't hold the same rows in every table.
  */
-export async function convertLegacyDatadir(legacy: Blob): Promise<Blob> {
+export async function convertLegacyDatadir(legacy: Blob | { dataDir: string }): Promise<Blob> {
   const { PGlite: LegacyPGlite } = await import('pglite-pg17');
   const { PGlite } = await import('@electric-sql/pglite');
   const { pgDump } = await import('@electric-sql/pglite-tools/pg_dump');
-  const old = await LegacyPGlite.create({ loadDataDir: legacy });
+  const old = legacy instanceof Blob
+    ? await LegacyPGlite.create({ loadDataDir: legacy })
+    : await LegacyPGlite.create(legacy.dataDir);
   // The engine has its own copy now; let the blob go before the dump.
   legacy = null as unknown as Blob;
   let next: Awaited<ReturnType<typeof PGlite.create>> | null = null;

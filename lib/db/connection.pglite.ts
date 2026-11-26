@@ -230,9 +230,10 @@ async function ensureSchemaOnLeader(db: PGliteInterface): Promise<void> {
 async function upgradeLegacyDatabase(): Promise<void> {
   const live = async () => {
     const existing = await listIdbDatabases();
-    if (!existing) return null;
+    // A browser that can't list its databases: read the pointed one directly
+    // (reading a name that doesn't exist creates nothing).
     const { open } = resolveDataDir(readPointer(), existing);
-    if (!existing.has(idbDatabaseName(open))) return null;
+    if (existing && !existing.has(idbDatabaseName(open))) return null;
     return (await idbPgMajor(idbDatabaseName(open))) === LEGACY_PG_MAJOR ? open : null;
   };
   if (!(await live())) return;
@@ -240,21 +241,34 @@ async function upgradeLegacyDatabase(): Promise<void> {
     // Again under the lock: another tab may have upgraded it meanwhile.
     const dir = await live();
     if (!dir) return;
+    if (!(await hasRoomForUpgrade())) throw new Error('Not enough storage to upgrade the local database; free some space and reload');
     console.info('Upgrading the local database for this version of Heirloom…');
-    const { PGlite: LegacyPGlite } = await import('pglite-pg17');
-    const old = await LegacyPGlite.create(dir);
-    let physical: Blob;
-    try {
-      physical = await old.dumpDataDir('none');
-    } finally {
-      await old.close();
-    }
-    const datadir = await convertLegacyDatadir(physical);
+    const datadir = await convertLegacyDatadir({ dataDir: dir });
     await restoreIntoOtherDataDir(await otherDirSteps(), dir, datadir);
   };
   const locks = webLocks();
-  if (locks) await locks.request(TAB_LOCK, { mode: 'exclusive' }, run);
-  else await run();
+  if (!locks) return run();
+  const ran = await locks.request(TAB_LOCK, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+    if (!lock) return false;
+    await run();
+    return true;
+  });
+  if (ran) return;
+  // A tab still on the old build has the database open; it would keep writing to
+  // the old copy, so wait for it to close.
+  console.warn('Waiting for other Heirloom tabs to close before upgrading the local database…');
+  await locks.request(TAB_LOCK, { mode: 'exclusive' }, run);
+}
+
+/** Whether the storage has room for the upgraded copy next to the old one, which is most of what's used. */
+async function hasRoomForUpgrade(): Promise<boolean> {
+  try {
+    const estimate = typeof navigator !== 'undefined' && navigator.storage?.estimate ? await navigator.storage.estimate() : null;
+    if (estimate?.quota == null || estimate.usage == null) return true;
+    return estimate.quota - estimate.usage > estimate.usage * 1.2;
+  } catch {
+    return true;
+  }
 }
 
 /** Lazily create the PGlite instance and run schema init exactly once. */
@@ -611,7 +625,11 @@ async function inspectRawDatadir(tar: Blob): Promise<{ datadir: Blob; totals: Da
   const probe = await PGlite.create({ loadDataDir: datadir });
   try {
     await assertSchemaNotNewer(probe);
-    return { datadir, totals: (await probe.query<DatabaseTotals>(DATABASE_TOTALS_SQL)).rows[0] };
+    // A Postgres data directory that isn't a Heirloom database.
+    const totals = await probe.query<DatabaseTotals>(DATABASE_TOTALS_SQL).catch(() => {
+      throw new Error('Unrecognized backup format');
+    });
+    return { datadir, totals: totals.rows[0] };
   } finally {
     await probe.close();
   }
