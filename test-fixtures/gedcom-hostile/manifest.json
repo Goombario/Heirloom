@@ -845,7 +845,7 @@
     },
     {
       "file": "genealogy/name-pieces.ged",
-      "covers": "NAME pieces given only as sub-tags (NPFX, NSFX, SPFX, TYPE, FONE) ride the primary name's passthrough and export back under it; NICK is a nickname, and a 2 SOUR after it still cites the name",
+      "covers": "NAME pieces given only as sub-tags: NPFX, NSFX and SPFX become the name's parts (#37) and export back in the spec's order with the NAME line rebuilt; TYPE and FONE ride the passthrough; NICK is a nickname, and a 2 SOUR after it still cites the name",
       "issue": 964,
       "outcome": "imports",
       "people": [
@@ -856,8 +856,8 @@
         "PersonName: p. 1"
       ],
       "exported": [
-        "2 SURN Baratheon\n2 NICK Bob\n2 TYPE birth\n2 NPFX King\n2 NSFX I\n2 SOUR @S1@\n3 PAGE p. 1",
-        "2 SURN Beethoven\n2 SPFX van\n2 FONE Lud-vig\n3 TYPE kana"
+        "1 NAME King Robert /Baratheon/ I\n2 NPFX King\n2 GIVN Robert\n2 SURN Baratheon\n2 NSFX I\n2 NICK Bob\n2 TYPE birth\n2 SOUR @S1@\n3 PAGE p. 1",
+        "1 NAME Ludwig /van Beethoven/\n2 GIVN Ludwig\n2 SPFX van\n2 SURN Beethoven\n2 FONE Lud-vig\n3 TYPE kana"
       ],
       "warnings": []
     },
