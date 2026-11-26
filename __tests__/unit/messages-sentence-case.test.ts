@@ -15,6 +15,8 @@ const PROPER_NOUNS = new Set([
     'Esc', 'Enter',
     // Page names referenced in running text ("from the Library", "in Options")
     'Library', 'Options',
+    // The system folder an update's backup goes to (#24)
+    'Downloads',
     // Countries and institutions the record sites name (#1026)
     'England', 'Wales', 'Congress', 'Australia', 'Canadian', 'Nova', 'Scotia', 'Dutch', 'Belgian',
     // Example places (#1185: "like Lemberg for Lviv")

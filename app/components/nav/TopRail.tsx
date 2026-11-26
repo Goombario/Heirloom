@@ -9,6 +9,7 @@ import DesktopNav from './DesktopNav';
 import TreeSwitcher from './TreeSwitcher';
 import UserMenu from '../UserMenu';
 import BackupStatusChip from '../backup/BackupStatusChip';
+import UpdateChip from '../updates/UpdateChip';
 import BackgroundJobsChip from '../media/BackgroundJobsChip';
 import { useBackgroundJobs } from '../media/backgroundMedia';
 
@@ -66,6 +67,9 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
               <Search className="w-[18px] h-[18px]" aria-hidden="true" />
               <kbd className={`hidden ${compact ? '' : 'xl:inline'} px-1.5 py-0.5 text-xs bg-black/20 text-white rounded font-mono`}>{searchHint}</kbd>
             </button>
+
+            {/* A newer release after Later (#24): the desktop app only */}
+            <span className="hidden md:block"><UpdateChip /></span>
 
             {/* Backup status: desktop only (mobile backup lives in the nav rebuild) */}
             <span className="hidden md:block"><BackupStatusChip compact={compact} /></span>

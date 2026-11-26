@@ -7,6 +7,7 @@ export {
   Network,         // Tree + tree switcher
   BookOpen,        // Library
   Bookmark,        // People: saved searches (#247)
+  Database,        // Update dialog: the backup before installing (#24)
   ListFilter,      // People: advanced search (#247)
   Paperclip,       // Attach image to a journal entry
   MapPin,          // Places

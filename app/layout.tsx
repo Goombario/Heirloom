@@ -12,6 +12,7 @@ import GlobalSearch from "./components/GlobalSearch";
 import KeyboardShortcuts from "./components/keyboard/KeyboardShortcuts";
 import LocalFirstRunNotice from "./components/LocalFirstRunNotice";
 import WhatsNewOnUpdate from "./components/whats-new/WhatsNewOnUpdate";
+import { UpdateProvider } from "./components/updates/UpdateProvider";
 import BackupNudge from "./components/backup/BackupNudge";
 import { PageNoticeProvider } from "./components/ui/PageNotice";
 import DbWarmup from "./components/DbWarmup";
@@ -132,6 +133,7 @@ export default function RootLayout({
           <ThemeProvider>
             <TreeProvider>
               <UnsavedChangesProvider>
+              <UpdateProvider>
                 <SkipLink />
                 <div className="app-shell">
                   <Navbar />
@@ -161,6 +163,7 @@ export default function RootLayout({
                 <WhatsNewOnUpdate />
                 <AppToaster />
                 <BackgroundJobsTab />
+              </UpdateProvider>
               </UnsavedChangesProvider>
             </TreeProvider>
           </ThemeProvider>

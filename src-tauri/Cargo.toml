@@ -16,3 +16,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+# Desktop updates (#24): the updater is registered only when a build carries its
+# signing public key (see main.rs); process restarts the app after an install.
+tauri-plugin-updater = "~2.12"
+tauri-plugin-process = "~2.3"

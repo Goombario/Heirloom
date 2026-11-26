@@ -9,11 +9,13 @@ import { DATA_MODE, getDataClient } from '@/lib/data';
 import { useTree } from '@/app/contexts/TreeContext';
 import { useMyTrees } from '@/app/hooks/useMyTrees';
 import { Banner, Button, Card, CoverBand, PageShell, SegmentedControl, SelectField } from '@/app/components/ui';
-import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, FlaskConical, HardDrive, Keyboard, Languages, Monitor, Moon, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
+import { Accessibility, AlertTriangle, CalendarDays, CheckCircle2, Download, FlaskConical, HardDrive, Keyboard, Languages, Monitor, Moon, Palette, Sun, Trash2, TreeDeciduous, type LucideIcon } from '@/lib/icons';
 import { readStatusSymbols, writeStatusSymbols } from '@/lib/utils/status-symbols';
 import LocalDataSection from '@/app/components/LocalDataSection';
 import TreesSection from '@/app/components/options/TreesSection';
 import KeyboardSection from '@/app/components/options/KeyboardSection';
+import UpdatesSection from '@/app/components/options/UpdatesSection';
+import { useUpdates } from '@/app/components/updates/UpdateProvider';
 import EraseAllSummary from '@/app/components/options/EraseAllSummary';
 import { isGeocodingEnabled, setGeocodingEnabled } from '@/lib/geocode/prefs';
 import ConfirmDialog from '@/app/components/ConfirmDialog';
@@ -25,12 +27,14 @@ import { useDesktopMode } from '@/app/hooks/useDesktopMode';
 import { aboutInfo } from '@/lib/about';
 
 /** The settings nav, in page order. Local data only exists in the local build. */
-const NAV: { href: string; key: string; Icon: LucideIcon; danger?: boolean }[] = [
+const NAV: { href: string; key: string; Icon: LucideIcon; danger?: boolean; desktopOnly?: boolean }[] = [
     { href: '#appearance', key: 'nav_appearance', Icon: Palette },
     { href: '#accessibility', key: 'nav_accessibility', Icon: Accessibility },
     { href: '#language', key: 'nav_language', Icon: Languages },
     { href: '#keyboard', key: 'nav_keyboard', Icon: Keyboard },
     { href: '#date-preferences', key: 'nav_date_format', Icon: CalendarDays },
+    // Desktop app only (#24): shown when useUpdates() says so.
+    { href: '#updates', key: 'nav_updates', Icon: Download, desktopOnly: true },
     { href: '#trees', key: 'nav_trees', Icon: TreeDeciduous },
     { href: '#experimental', key: 'nav_experimental', Icon: FlaskConical },
     ...(DATA_MODE === 'local' ? [{ href: '#local-data', key: 'local_data_title', Icon: HardDrive }] : []),
@@ -132,6 +136,7 @@ export default function OptionsPage() {
     const [statusSymbols, setStatusSymbols] = useState(false);
     const [detectedTimezone, setDetectedTimezone] = useState('UTC');
     const [citePinsInTabOrder, setCitePinsInTabOrder] = useState(false);
+    const updates = useUpdates();
     const [geocoding, setGeocoding] = useState(true);
     const isMobile = useIsMobile();
 
@@ -231,7 +236,7 @@ export default function OptionsPage() {
                     <Card role="navigation" pad={false} className="p-6 lg:sticky lg:top-4">
                         <p className="eyebrow mb-3">{t('sidebar_settings')}</p>
                         <ul className="space-y-1">
-                            {NAV.map(({ href, key, Icon, danger }) => (
+                            {NAV.filter((n) => !n.desktopOnly || updates.desktop).map(({ href, key, Icon, danger }) => (
                                 <li key={href}>
                                     <a
                                         href={href}
@@ -360,6 +365,8 @@ export default function OptionsPage() {
                                 <p className="mt-2 text-xs text-text-muted">{t('timezone_note')}</p>
                             </div>
                         </Card>
+
+                        <UpdatesSection />
 
                         <TreesSection />
 
