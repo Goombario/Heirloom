@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { isDesktopApp } from '@/lib/desktop';
 import { aboutInfo } from '@/lib/about';
-import { DEFAULT_SOURCE_URL } from '@/lib/about/build-env';
 import {
     checkIsDue, fetchLatestRelease, isNewer, knownLatest, markPrompted, recordCheck, repoFromSourceUrl,
     setUpdateChecksEnabled, shouldPrompt, updateChecksEnabled, type LatestRelease,
@@ -32,9 +31,9 @@ const UpdateContext = createContext<UpdateContextValue | null>(null);
 const noSubscribe = () => () => {};
 const storage = () => { try { return window.localStorage; } catch { return null; } };
 
-/** The repository to ask: the build's source link, or the project's own. */
+/** The repository to ask: the build's source link (a fork's own, or the project's). */
 function repo(): string | null {
-    return repoFromSourceUrl(aboutInfo().sourceUrl || DEFAULT_SOURCE_URL);
+    return repoFromSourceUrl(aboutInfo().sourceUrl);
 }
 
 /**
