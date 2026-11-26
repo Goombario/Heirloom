@@ -80,7 +80,7 @@
     "@electric-sql/pglite-tools": "~0.4.17",
     "@serwist/next": "^9.5.13",
     "@swc/helpers": "^0.5.20",
-    "@tauri-apps/api": "~2.11.0",
+    "@tauri-apps/api": "~2.12.0",
     "@tauri-apps/plugin-opener": "^2.7.0",
     "@tauri-apps/plugin-process": "~2.3.1",
     "@tauri-apps/plugin-updater": "~2.12.0",
@@ -111,7 +111,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@tauri-apps/cli": "~2.11.3",
+    "@tauri-apps/cli": "~2.12.5",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
