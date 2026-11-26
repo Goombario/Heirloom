@@ -3822,6 +3822,11 @@
         "coverage": "Recensements de 1825 à 1931, dossiers de la Première Guerre mondiale, immigration et terres",
         "searches": "Bases de données généalogiques",
         "note": "Gratuit, sans compte. Cherche dans ses bases de données généalogiques"
+      },
+      "laccensus": {
+        "coverage": "Tous les recensements canadiens de 1825 à 1931",
+        "searches": "Recherche dans les recensements",
+        "note": "Gratuit, sans compte. Recopiez les détails dans sa recherche de recensements"
       }
     },
     "cite_from": "Ajouter une source depuis {site}",

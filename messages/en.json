@@ -3822,6 +3822,11 @@
         "coverage": "Censuses 1825 to 1931, First World War files, immigration and land records",
         "searches": "Genealogy databases",
         "note": "Free, no account. Searches its Genealogy databases"
+      },
+      "laccensus": {
+        "coverage": "Every Canadian census from 1825 to 1931",
+        "searches": "Census search",
+        "note": "Free, no account. Copy the details into its census search"
       }
     },
     "cite_from": "Add a source from {site}",
