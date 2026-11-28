@@ -1,5 +1,40 @@
 [
   {
+    "version": "1.3.0",
+    "items": [
+      {
+        "en": "Advanced search on the People page: combine conditions, then save a search and share it by its link.",
+        "fr": "Recherche avancée sur la page Personnes : combinez des conditions, puis enregistrez une recherche et partagez-la par son lien.",
+        "ru": "Расширенный поиск на странице «Люди»: сочетайте условия, сохраняйте поиск и делитесь им по ссылке."
+      },
+      {
+        "en": "New tree display settings: spacing, an Even arrangement, one card per couple, and a choice of what shows under each name.",
+        "fr": "Nouveaux réglages d'affichage de l'arbre : espacement, disposition Régulière, une carte par couple et le choix de ce qui s'affiche sous chaque nom.",
+        "ru": "Новые настройки вида древа: интервалы, ровное расположение, одна карточка на пару и выбор того, что показано под именем."
+      },
+      {
+        "en": "Shift-click two people on the tree to see how they're related.",
+        "fr": "Cliquez sur deux personnes de l'arbre en maintenant Maj pour voir leur lien de parenté.",
+        "ru": "Щёлкните двух людей на древе с нажатой Shift, чтобы увидеть, как они связаны."
+      },
+      {
+        "en": "A person's name can have a prefix, a surname prefix and a suffix.",
+        "fr": "Le nom d'une personne peut avoir un préfixe, une particule et un suffixe.",
+        "ru": "У имени человека могут быть префикс, приставка к фамилии и суффикс."
+      },
+      {
+        "en": "Zoom and pan photos in the viewer.",
+        "fr": "Zoomez et déplacez-vous dans les photos de la visionneuse.",
+        "ru": "Фотографии в просмотрщике можно увеличивать и перемещать."
+      },
+      {
+        "en": "The desktop app tells you when an update is out and offers to back up your tree first.",
+        "fr": "L'application de bureau vous signale une mise à jour et propose d'abord de sauvegarder votre arbre.",
+        "ru": "Приложение для компьютера сообщает о новой версии и предлагает сначала сделать резервную копию древа."
+      }
+    ]
+  },
+  {
     "version": "1.2.0",
     "items": [
       {
