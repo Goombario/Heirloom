@@ -63,7 +63,9 @@ jobs:
 
   build-flatpak:
     needs: build-deb
-    runs-on: ubuntu-latest
+    # Pinned like build-deb: on ubuntu-latest (26.04) flatpak-builder in this
+    # container fails to update the GNOME SDK ("Invalid cross-device link").
+    runs-on: ubuntu-24.04
     container:
       # Must match runtime-version in flatpak/com.heirloom.desktop.yml.
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
