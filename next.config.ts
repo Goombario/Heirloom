@@ -134,7 +134,7 @@ const nextConfig: NextConfig = {
       );
     }
     if (!isServer) {
-      // PGlite 0.5 imports `node:module` in a Node-only branch (#235). Webpack
+      // PGlite 0.5+ imports `node:module` in a Node-only branch (#235). Webpack
       // can't read the `node:` scheme, so drop it and let the fallbacks below
       // stub the bare name for the browser.
       config.plugins.push(
