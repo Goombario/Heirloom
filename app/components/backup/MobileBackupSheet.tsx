@@ -100,7 +100,7 @@ export function MobileBackupSheet({ open, onClose }: { open: boolean; onClose: (
                         disabled={driveBusy} onClick={() => { void backUpToDrive(); }} />
                 )}
 
-                <input ref={file.fileInputRef} type="file" accept=".hlbak" className="hidden" onChange={file.onFileChange} />
+                <input ref={file.fileInputRef} type="file" accept=".hlbak,.tar" className="hidden" onChange={file.onFileChange} />
                 <MobileRow divided icon={reading ? <Loader2 className="animate-spin" /> : <RotateCcw />} label={t('restore')}
                     sub={reading ? to('restore_reading') : file.restoreError ?? t(desktop ? 'restore_sub_desktop' : 'restore_sub')}
                     disabled={reading || file.restoreStatus === 'restoring'} onClick={file.chooseFile} />

@@ -8,6 +8,8 @@ import { PERSON_CARD_WIDTH, personCardHeight } from '@/lib/tree/geometry';
 import { personCardModel, getZoomedOutFontSize } from './personCardModel';
 import { TreeCardLifespan } from './TreeCardLifespan';
 import { avatarClass } from '@/lib/utils/avatar';
+import { RepeatPill, useJumpToCard } from './RepeatPill';
+import { RelateBadge, relateClass } from './RelateMark';
 import { StatusMark } from '../ui/StatusMark';
 
 const PHOTO_HEIGHT = 72;
@@ -47,13 +49,17 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
   const statusLabel = tc(status);
   const { lifespan } = person;
 
-  const handleClick = () => {
+  const repeatOf = data.repeatOf;
+  const jumpToFull = useJumpToCard(repeatOf);
+  const handleClick = (e: React.MouseEvent) => {
+    if (repeatOf) { jumpToFull(); return; }
     if (personId && data.onPersonClick) {
-      data.onPersonClick(personId);
+      data.onPersonClick(personId, { shift: e.shiftKey });
     }
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
+    if (repeatOf) { e.stopPropagation(); return; }
     if (personId && data.onPersonDoubleClick) {
       e.stopPropagation();
       data.onPersonDoubleClick(personId);
@@ -71,12 +77,14 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
       <Handle type="target" position={Position.Left} id="left" style={{ opacity: 0 }} />
 
       {/* Person Card */}
+      {repeatOf && <RepeatPill onJump={jumpToFull} />}
+      <RelateBadge relate={data.relate} />
       <div
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         className={`bg-card rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow overflow-hidden border border-border ${
-          data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
-        }`}
+          repeatOf ? 'tree-card--repeat' : data.isSidebarSelected ? 'tree-card--picked' : data.isSelected ? 'tree-card--target' : ''
+        }${relateClass(data.relate)}`}
         style={{ width: `${PERSON_CARD_WIDTH}px`, height: `${personCardHeight(secondNameOn)}px`, display: 'flex', flexDirection: 'column', position: 'relative' }}
       >
         {/* Photo Area */}
@@ -147,7 +155,14 @@ const PersonNode: React.FC<NodeProps<FlowNodeData>> = ({ data }) => {
               {data.secondName}
             </p>
           )}
-          {!isZoomedOut && lifespan && (lifespan.birth || lifespan.death) && (
+          {/* Under the name (#12): a chosen fact in the normal font, or a blank line
+              that keeps the card its size when the person has none. */}
+          {!isZoomedOut && data.underName && (
+            <p className="tree-card-dates tree-card-under" title={data.underText ?? undefined}>
+              {data.underText ?? '\u00a0'}
+            </p>
+          )}
+          {!isZoomedOut && !data.underName && lifespan && (lifespan.birth || lifespan.death) && (
             <p
               // 11px, like the bar card (#1215): at 12px the widest lifespan
               // ("~1796 – ~1819") fit in its 88px with only 4px to spare, and a fallback

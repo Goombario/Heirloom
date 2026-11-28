@@ -297,7 +297,7 @@ function RecentlyEdited({ people, treeId, canEdit, loading }: { people: RecentPe
                             <li key={p.Id}>
                                 <GuardedLink href={`/people/view?id=${p.Id}`}
                                     className="flex items-center gap-3 border-t border-border-light px-2 py-3 text-text no-underline transition-colors hover:bg-hover-surface focus-ring">
-                                    <PersonAvatar as="span" size={36} mediaId={p.PrimaryMediaId} treeId={treeId} name={name} sex={p.Sex}
+                                    <PersonAvatar decorative as="span" size={36} mediaId={p.PrimaryMediaId} treeId={treeId} name={name} sex={p.Sex}
                                         initials={getInitials(p.FirstName, p.LastName)} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius} />
                                     <span className="grid min-w-0 flex-1">
                                         <span className="serif text-md font-semibold truncate">{name}</span>

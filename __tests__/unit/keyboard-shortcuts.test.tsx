@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import { CREATE_SHORTCUTS, GO_SHORTCUTS, cheatsheet, isTypingTarget, letterOf, writeLetterShortcuts } from '@/lib/keyboard/shortcuts';
 
 // Keyboard shortcuts (#32): g/n sequences on physical keys, ? and Ctrl/⌘ + /,
@@ -103,6 +103,40 @@ describe('KeyboardShortcuts (#32)', () => {
     expect(h.push).not.toHaveBeenCalled();
     press('KeyG'); press('Escape', { key: 'Escape' }); press('KeyP');
     expect(h.push).not.toHaveBeenCalled();
+  });
+
+  it('keeps the next-key card open while the pointer is over it (#243)', () => {
+    render(<KeyboardShortcuts />);
+    press('KeyG');
+    const card = screen.getByRole('status');
+    fireEvent.pointerEnter(card);
+    act(() => { vi.advanceTimersByTime(5000); });
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    // Pressing a letter while hovered still runs the command.
+    press('KeyP');
+    expect(h.push).toHaveBeenCalledWith('/people');
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('resumes a short countdown when the pointer leaves the card (#243)', () => {
+    render(<KeyboardShortcuts />);
+    press('KeyG');
+    act(() => { vi.advanceTimersByTime(1400); });
+    fireEvent.pointerEnter(screen.getByRole('status'));
+    act(() => { vi.advanceTimersByTime(2000); });
+    fireEvent.pointerLeave(screen.getByRole('status'));
+    act(() => { vi.advanceTimersByTime(700); });
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('Esc closes the card while it is hovered (#243)', () => {
+    render(<KeyboardShortcuts />);
+    press('KeyG');
+    fireEvent.pointerEnter(screen.getByRole('status'));
+    press('Escape', { key: 'Escape' });
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('ignores keys typed in a field', () => {

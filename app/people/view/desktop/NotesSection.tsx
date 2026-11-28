@@ -32,7 +32,6 @@ interface About {
 }
 
 const endKey = (end: NoteLinkEnd) => `${end.ownerTable}:${end.ownerId}:${end.ownerFact ?? ''}`;
-const excerpt = (text: string) => (text.length > 40 ? `${text.slice(0, 40)}…` : text);
 
 /**
  * The desktop person page's Notes (#49): everything written about the person,
@@ -272,11 +271,12 @@ export function NotesSection({ person, treeId, canEdit, canDelete, run, refreshK
                         data-note-row={key}
                         disabled={!canEdit}
                         onClick={() => start(r)}
-                        aria-label={canEdit ? tn('edit_for', { excerpt: excerpt(r.note.Text) }) : undefined}
                         className="note-list__btn focus-ring"
                       >
                         <span className="note-list__label">{r.label}</span>
                         <span className="block text-base leading-[1.5] text-text whitespace-pre-wrap break-words line-clamp-4">{r.note.Text}</span>
+                        {/* The visible words, then the action, so voice control can say them (WCAG 2.5.3, #21). */}
+                        {canEdit && <span className="sr-only">{tn('row_edit')}</span>}
                       </button>
                     )}
                   </li>

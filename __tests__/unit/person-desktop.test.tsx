@@ -158,6 +158,23 @@ describe('desktop Edit person (#49)', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
+  // #37 (layout A2): "More name parts" under the names, closed unless a part has a value.
+  it('opens More name parts and saves the parts', async () => {
+    const { run } = dialog();
+    expect(screen.queryByRole('textbox', { name: 'Prefix' })).toBeNull();
+    expect(screen.queryByText('A first or a last name is enough.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More name parts' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Before last name' }), { target: { value: 'af ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await vi.waitFor(() => expect(run).toHaveBeenCalled());
+    expect(update).toHaveBeenLastCalledWith(10, expect.objectContaining({ NamePrefix: null, SurnamePrefix: 'af', NameSuffix: null }), 1);
+  });
+
+  it('starts open with a part recorded', () => {
+    wrap(<EditPersonDialog open onClose={() => {}} person={{ ...anna, NameSuffix: 'Jr.' }} treeId={1} language="en" run={vi.fn()} onEditVital={vi.fn()} />);
+    expect(screen.getByRole('textbox', { name: 'Suffix' })).toHaveValue('Jr.');
+  });
+
   it('asks before marking a person with a death living, and deletes the death only when told to', async () => {
     const { run } = dialog();
     fireEvent.click(screen.getByRole('radio', { name: 'Living' }));

@@ -73,7 +73,7 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
                             return (
                                 <li key={p.personId} className="min-w-0">
                                     <Link href={`/people/view?id=${p.personId}`} className="group grid justify-items-center gap-1.5 text-center rounded-card p-1 no-underline focus-ring">
-                                        <PersonAvatar
+                                        <PersonAvatar decorative
                                             as="span"
                                             mediaId={p.primaryMediaId}
                                             treeId={treeId}
@@ -155,7 +155,7 @@ export function PlaceRail({ detail, people, placeName, treeId, canEdit, pinned, 
                                             <ActionLink kind="expand" onClick={() => setAllNames(true)}>{t('names_more', { count: names.length - NAMES_FIRST })}</ActionLink>
                                         )}
                                         {canEdit && (
-                                            <ActionLink onClick={onEditNames} aria-label={t('edit_other_names')}>
+                                            <ActionLink onClick={onEditNames} aria-label={names.length === 0 ? undefined : t('edit_other_names')}>
                                                 {names.length === 0 ? tp('add_a_name') : t('edit')}
                                             </ActionLink>
                                         )}

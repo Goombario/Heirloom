@@ -250,7 +250,7 @@ export function AboutCaseSheet({ open, caseData, treeId, canEdit, onEdit, onAddP
                                 return (
                                     <li key={p.Id}>
                                         <Link href={`/people/view?id=${p.Id}`} className="flex items-center gap-2.5 min-h-11 text-base text-text no-underline focus-ring rounded-sm">
-                                            <PersonAvatar as="span" size={32} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
+                                            <PersonAvatar decorative as="span" size={32} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
                                                 sex={p.Sex} name={name} initials={initialsFromName(name)} />
                                             <span className="serif min-w-0 truncate">{name}</span>
                                         </Link>

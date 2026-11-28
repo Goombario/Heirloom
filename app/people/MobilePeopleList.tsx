@@ -322,7 +322,7 @@ function PersonListRow({ person, treeId, column, duplicates, divided }: {
             divided={divided}
             className="min-h-[62px] py-2.5"
             lead={(
-                <PersonAvatar
+                <PersonAvatar decorative
                     as="span"
                     mediaId={person.PrimaryMediaId}
                     treeId={treeId}

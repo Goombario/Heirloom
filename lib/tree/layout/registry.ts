@@ -10,8 +10,10 @@
  * TreeLeftRail.tsx to list it — both are data/UI concerns, not layout ones.
  */
 import type { TreeNode, FocusTrees, LayoutOutput } from '@/app/components/tree/types';
+import type { TreeSpacing, TreeArrangement, TreePartners } from '@/lib/tree/geometry';
 import { computeStandardLayout } from './standardLayout';
 import { computeFocusLayout } from './focusLayout';
+import { snapParentDrops } from './snapDrops';
 
 export interface TreeLayoutInput {
   /** Single-hierarchy input (descendants / ancestors). */
@@ -23,6 +25,12 @@ export interface TreeLayoutInput {
   /** Portrait cards carry the Display menu's second name line (taller cards,
    *  generations further apart). Vertical cards only; bars ignore it. */
   secondName?: boolean;
+  /** The Display menu's Spacing (#249); Normal (today's gaps) when left out. */
+  spacing?: TreeSpacing;
+  /** The Display menu's Arrangement (#250); focus view has none of its own. */
+  arrangement?: TreeArrangement;
+  /** The Display menu's Partners (#248); focus view keeps its own cards. */
+  partners?: TreePartners;
 }
 
 export interface TreeLayoutMode {
@@ -33,23 +41,25 @@ export interface TreeLayoutMode {
 const MODES: Record<string, TreeLayoutMode> = {
   descendants: {
     id: 'descendants',
-    compute: ({ tree, orientation, secondName }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName),
+    compute: ({ tree, orientation, secondName, spacing, arrangement, partners }) => computeStandardLayout(tree ?? null, 'descendants', orientation, secondName, spacing, arrangement, partners),
   },
   ancestors: {
     id: 'ancestors',
-    compute: ({ tree, orientation, secondName }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName),
+    compute: ({ tree, orientation, secondName, spacing, arrangement, partners }) => computeStandardLayout(tree ?? null, 'ancestors', orientation, secondName, spacing, arrangement, partners),
   },
   focus: {
     id: 'focus',
     // Focus is vertical-only (Phase 1) — it ignores `orientation`. Focus without
     // focusTrees (shouldn't happen — the API populates them for mode=focus)
     // falls back to a descendants layout of whatever tree we have.
-    compute: ({ tree, focusTrees, secondName }) =>
-      focusTrees ? computeFocusLayout(focusTrees, secondName) : computeStandardLayout(tree ?? null, 'descendants', 'vertical', secondName),
+    compute: ({ tree, focusTrees, secondName, spacing }) =>
+      focusTrees ? computeFocusLayout(focusTrees, secondName, spacing) : computeStandardLayout(tree ?? null, 'descendants', 'vertical', secondName, spacing),
   },
 };
 
-/** Resolve a layout mode; unknown IDs fall back to descendants. */
+/** Resolve a layout mode; unknown IDs fall back to descendants. Every mode's
+ *  output gets the near-child drop snap (#15). */
 export function getLayoutMode(id: string): TreeLayoutMode {
-  return MODES[id] ?? MODES.descendants;
+  const mode = MODES[id] ?? MODES.descendants;
+  return { id: mode.id, compute: (input) => snapParentDrops(mode.compute(input)) };
 }

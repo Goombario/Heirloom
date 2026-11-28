@@ -527,10 +527,11 @@ export function OwnerNotesCard({
                         data-note-open
                         onClick={() => startEdit(n)}
                         disabled={busy}
-                        aria-label={t('edit_for', { excerpt: excerpt(n.Text) })}
                         className="block w-full text-left bg-transparent border-0 pl-[15px] pr-2.5 py-2 font-[inherit] cursor-pointer hover:bg-hover-surface focus-ring-inset disabled:cursor-default"
                     >
                         {body}
+                        {/* The visible words, then the action, so voice control can say them (WCAG 2.5.3, #21). */}
+                        <span className="sr-only">{t('row_edit')}</span>
                     </button>
                 ) : (
                     <div className="pl-[15px] pr-2.5 py-2">{body}</div>

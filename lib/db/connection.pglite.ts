@@ -3,7 +3,8 @@ import { LeaderChangedError, PGliteWorker } from '@electric-sql/pglite/worker';
 import { DatabaseInterruptedError } from '@/lib/data/errors';
 import { SCHEMA_VERSION } from './init-schema';
 import { ensureSchema } from './ensure-schema';
-import { encodeContainer, decodeContainer, type MediaRecord } from './backup-container';
+import { BACKUP_CONTAINER_MAGIC, encodeContainer, decodeContainer, type MediaRecord } from './backup-container';
+import { convertLegacyDatadir, idbPgMajor, LEGACY_PG_MAJOR, tarPgMajor } from './legacy-datadir';
 import { RestoreRefusedError } from './restore-errors';
 import { refreshPlannerStatsIfStale } from './planner-stats';
 import { DURABLE_FLUSH_CHANNEL } from './durable-sync';
@@ -215,6 +216,61 @@ async function ensureSchemaOnLeader(db: PGliteInterface): Promise<void> {
   }
 }
 
+/**
+ * Move a database written by PGlite 0.4 (Postgres 17) to this engine, once
+ * (#235). Postgres 18 can't open it, so it is read with the 0.4 engine,
+ * converted, and switched in the way a restore is (#951): the copy goes into the
+ * other data directory, is read back, the pointer moves, and only then is the
+ * old one deleted. A failure at any step leaves the old database as it was, and
+ * the next open tries again.
+ *
+ * It holds the tab lock exclusively, so it waits for any tab still running the
+ * old build to close: that tab could otherwise write to the old copy afterwards.
+ */
+async function upgradeLegacyDatabase(): Promise<void> {
+  const live = async () => {
+    const existing = await listIdbDatabases();
+    // A browser that can't list its databases: read the pointed one directly
+    // (reading a name that doesn't exist creates nothing).
+    const { open } = resolveDataDir(readPointer(), existing);
+    if (existing && !existing.has(idbDatabaseName(open))) return null;
+    return (await idbPgMajor(idbDatabaseName(open))) === LEGACY_PG_MAJOR ? open : null;
+  };
+  if (!(await live())) return;
+  const run = async () => {
+    // Again under the lock: another tab may have upgraded it meanwhile.
+    const dir = await live();
+    if (!dir) return;
+    if (!(await hasRoomForUpgrade())) throw new Error('Not enough storage to upgrade the local database; free some space and reload');
+    console.info('Upgrading the local database for this version of Heirloom…');
+    const datadir = await convertLegacyDatadir({ dataDir: dir });
+    await restoreIntoOtherDataDir(await otherDirSteps(), dir, datadir);
+  };
+  const locks = webLocks();
+  if (!locks) return run();
+  const ran = await locks.request(TAB_LOCK, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+    if (!lock) return false;
+    await run();
+    return true;
+  });
+  if (ran) return;
+  // A tab still on the old build has the database open; it would keep writing to
+  // the old copy, so wait for it to close.
+  console.warn('Waiting for other Heirloom tabs to close before upgrading the local database…');
+  await locks.request(TAB_LOCK, { mode: 'exclusive' }, run);
+}
+
+/** Whether the storage has room for the upgraded copy next to the old one, which is most of what's used. */
+async function hasRoomForUpgrade(): Promise<boolean> {
+  try {
+    const estimate = typeof navigator !== 'undefined' && navigator.storage?.estimate ? await navigator.storage.estimate() : null;
+    if (estimate?.quota == null || estimate.usage == null) return true;
+    return estimate.quota - estimate.usage > estimate.usage * 1.2;
+  } catch {
+    return true;
+  }
+}
+
 /** Lazily create the PGlite instance and run schema init exactly once. */
 function getDb(): Promise<PGliteInterface> {
   // A query issued mid-restore (a background refetch, say) would re-open the
@@ -222,7 +278,10 @@ function getDb(): Promise<PGliteInterface> {
   if (restoring) return Promise.reject(new Error('The local database is being restored'));
   if (!dbPromise) {
     dbPromise = (async () => {
-      if (!injectedDb) await holdTabLock();
+      if (!injectedDb) {
+        await upgradeLegacyDatabase();
+        await holdTabLock();
+      }
       const db = await createDb();
       await ensureSchemaOnLeader(db);
       if (!injectedDb) scheduleStaleStatsRefresh();
@@ -543,8 +602,37 @@ const DATABASE_TOTALS_SQL = `SELECT
  * without rebuilding it a second time.
  */
 export async function inspectBackupLogical(container: Blob): Promise<{ datadir: Blob; totals: DatabaseTotals }> {
+  if (!(await isBackupContainer(container))) return inspectRawDatadir(container);
   const { datadir, totals } = await rebuildDatadir(container, true);
   return { datadir, totals: totals! };
+}
+
+async function isBackupContainer(blob: Blob): Promise<boolean> {
+  const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  return String.fromCharCode(...head) === BACKUP_CONTAINER_MAGIC;
+}
+
+/**
+ * A raw `.tar` backup (a data directory, from before `.hlbak`). One written by
+ * PGlite 0.4 is converted for this engine first (#235). Anything else that isn't
+ * a data directory is refused as an unrecognized backup, as before.
+ */
+async function inspectRawDatadir(tar: Blob): Promise<{ datadir: Blob; totals: DatabaseTotals }> {
+  const major = await tarPgMajor(tar);
+  if (major === null) throw new Error('Unrecognized backup format');
+  const datadir = major === LEGACY_PG_MAJOR ? await convertLegacyDatadir(tar) : tar;
+  const { PGlite } = await import('@electric-sql/pglite');
+  const probe = await PGlite.create({ loadDataDir: datadir });
+  try {
+    await assertSchemaNotNewer(probe);
+    // A Postgres data directory that isn't a Heirloom database.
+    const totals = await probe.query<DatabaseTotals>(DATABASE_TOTALS_SQL).catch(() => {
+      throw new Error('Unrecognized backup format');
+    });
+    return { datadir, totals: totals.rows[0] };
+  } finally {
+    await probe.close();
+  }
 }
 
 /**
@@ -722,9 +810,10 @@ export async function loadDatabase(dump: Blob): Promise<void> {
   await loadInPlace(dump);
 }
 
-async function loadIntoOtherDataDir(dump: Blob): Promise<void> {
+/** Restore's storage steps on this engine (#951), shared with the 0.4 upgrade (#235). */
+async function otherDirSteps(): Promise<RestoreSteps> {
   const { PGlite } = await import('@electric-sql/pglite');
-  const steps: RestoreSteps = {
+  return {
     deleteDb: (dir) => deleteIdbDatabase(idbDatabaseName(dir)),
     writeDb: async (dir, datadir) => {
       const db = await PGlite.create(dir, { loadDataDir: datadir });
@@ -743,7 +832,10 @@ async function loadIntoOtherDataDir(dump: Blob): Promise<void> {
     },
     writePointer: (dir) => writePointer(dir),
   };
+}
 
+async function loadIntoOtherDataDir(dump: Blob): Promise<void> {
+  const steps = await otherDirSteps();
   const endRestore = beginRestore();
   try {
     await closePool();

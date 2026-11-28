@@ -1627,6 +1627,9 @@ html[data-status-symbols="on"] .status-mark[data-size="tree"] { --status-size: 1
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Display › Under the name (#12): a fact in the dates' place, in the normal font
+   and secondary ink, so it never reads as a date. */
+.tree-card-under { font-family: inherit; color: var(--color-text-secondary); }
 /* The tree card's optional second name line (Display › Second name, vertical cards).
    12px secondary text 4px under the name, one line, cut with an ellipsis. It borrows
    3px of the strip's side padding like the dates. The fixed height keeps the line
@@ -2945,6 +2948,49 @@ html.dark .react-flow__minimap-mask {
    animating the outline in from currentColor flashed white in dark mode. */
 .tree-card--target { outline: 3px solid var(--color-primary); outline-offset: 1px; }
 .tree-card--picked { outline: 3px solid color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); outline-offset: 1px; }
+/* An empty slot in the Even ancestors chart (#250): an unknown parent. */
+.tree-pedigree-gap { border: 1.5px dashed var(--color-border); border-radius: 8px; opacity: 0.8; pointer-events: none; }
+/* A repeat card (#13): the person is drawn in full elsewhere in this tree. The
+   contents fade, the card keeps a dashed outline, and a pill above it pans there. */
+.tree-card--repeat { box-shadow: none; outline: 2px dashed var(--color-text-muted); outline-offset: 3px; }
+.tree-card--repeat > * { opacity: 0.5; }
+.tree-repeat-chip { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); z-index: 1; white-space: nowrap; padding: 1px 8px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-card); color: var(--color-text-secondary); font-size: 11px; line-height: 16px; cursor: pointer; }
+.tree-repeat-chip:hover { color: var(--color-text); border-color: var(--color-text-muted); }
+/* One couple card (#248): two halves, each its own click target, a divider and the
+   rings between them; a selected half is marked inside the card. */
+.tree-couple-half { cursor: pointer; position: relative; }
+.tree-couple-half:hover { background: var(--color-hover-surface); }
+.tree-couple-half--target { box-shadow: inset 0 0 0 3px var(--color-primary); }
+.tree-couple-half--picked { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-hero-bg) 70%, var(--color-text)); }
+.tree-couple-divider { flex: 0 0 1px; align-self: stretch; margin: 6px 0; background: var(--color-border); }
+.tree-couple-divider--row { margin: 0 8px; }
+.tree-couple-rings { position: absolute; left: 50%; top: 72px; transform: translate(-50%, -50%); display: grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-card); pointer-events: none; }
+.tree-couple-rings svg { fill: none; stroke: var(--color-text-secondary); stroke-width: 1.1; }
+.tree-couple-bar-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-couple-bar-initials { font-size: 9px; }
+.tree-couple-bar-meta { flex-shrink: 0; font-size: 11px; color: var(--color-text-muted); white-space: nowrap; max-width: 64px; overflow: hidden; text-overflow: ellipsis; }
+/* "How are they related?" (#256): the path in copper, the two people with a 1 and 2
+   badge and a thick outline, people between a thin one, everyone else faded. */
+.tree-card--path { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.tree-card--path-end { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.tree-card--dim { opacity: 0.32; }
+.tree-couple-half--path { box-shadow: inset 0 0 0 2px var(--color-primary); }
+.tree-couple-half--path-end { box-shadow: inset 0 0 0 3px var(--color-primary); }
+.tree-relate-badge { position: absolute; left: -11px; top: -11px; z-index: 2; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; background: var(--color-primary); color: #fff; font-size: 12px; font-weight: 700; box-shadow: 0 0 0 2px var(--color-surface); pointer-events: none; }
+.tree-relate-badge--right { left: auto; right: -11px; }
+.tree-relate-badge--lower { top: auto; bottom: -11px; }
+.react-flow__edge.tree-edge--dim { opacity: 0.32; }
+.tree-relate-card { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 6; width: min(600px, calc(100% - 32px)); overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-card); box-shadow: 0 12px 30px rgba(28, 25, 23, 0.18); }
+.tree-relate-card__top { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; padding: 16px 18px 12px; }
+.tree-relate-chain { display: flex; align-items: center; gap: 4px; margin: 0; padding: 0 18px 14px; list-style: none; overflow-x: auto; }
+.tree-relate-chain li { display: inline-flex; align-items: center; gap: 4px; }
+.tree-relate-chip { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 14px; background: var(--color-card-alt); color: var(--color-text); font-size: 12.5px; font-weight: 500; white-space: nowrap; text-decoration: none; }
+.tree-relate-chip:hover { text-decoration: underline; }
+.tree-relate-card__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 18px; border-top: 1px solid var(--color-border); background: var(--color-card-alt); font-size: 12.5px; color: var(--color-text-muted); }
+.tree-relate-hint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 6; display: inline-flex; align-items: center; gap: 12px; padding: 6px 8px 6px 14px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-card); box-shadow: 0 4px 14px rgba(28, 25, 23, 0.12); font-size: 13px; color: var(--color-text); }
+.tree-relate-hint--quiet { padding: 6px 14px; color: var(--color-text-secondary); pointer-events: none; }
+/* The numbered join between a person and one of several partners (#248). */
+.tree-partner-join { display: grid; place-items: center; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text-secondary); font-size: 10px; font-weight: 600; line-height: 1; pointer-events: none; }
 /* Form dialogs (fix 10): joined segmented controls with dividers and a full-height
    selected segment, and the date precision folded into the date field. */
 .form-dialog [role='radiogroup'][aria-orientation='horizontal'] { gap: 0; padding: 0; overflow: hidden; border-radius: 8px; }

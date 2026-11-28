@@ -249,7 +249,7 @@ async function scanTablet(browser) {
 
     try {
       await gotoReady(page, '/options');
-      await page.locator('input[type="file"][accept=".hlbak"]').first().setInputFiles(TABLET_FIXTURE);
+      await page.locator('input[type="file"][accept*=".hlbak"]').first().setInputFiles(TABLET_FIXTURE);
       await page.getByRole('button', { name: 'Restore', exact: true }).click({ timeout: NAV_TIMEOUT_MS });
       await page.waitForEvent('load', { timeout: NAV_TIMEOUT_MS });
     } catch (e) {

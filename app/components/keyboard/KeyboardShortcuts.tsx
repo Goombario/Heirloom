@@ -16,6 +16,11 @@ import { Kbd } from './Kbd';
 
 /** How long the next-key card waits for the second key. */
 const SEQUENCE_MS = 1500;
+/** After the pointer leaves the card, it stays at least this long (#243). */
+const LEAVE_MS = 800;
+
+/** The draining bar: how full it is and how long it takes to empty from there. */
+interface Bar { fraction: number; ms: number }
 
 /** True while a modal dialog other than our own is open: its keys are its own. */
 function modalOpen(): boolean {
@@ -37,6 +42,39 @@ export default function KeyboardShortcuts() {
     const [pending, setPending] = useState<SequencePrefix | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
     const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // When the pending sequence ends, and how long was left when the pointer paused it (#243).
+    const deadline = useRef(0);
+    const pausedLeft = useRef<number | null>(null);
+    const [bar, setBar] = useState<Bar>({ fraction: 1, ms: 0 });
+    const barFrame = useRef<number | null>(null);
+
+    /** Starts (or resumes) the wait: the card hides after `ms`, and the bar drains from `ms`'s share. */
+    const arm = useCallback((ms: number) => {
+        if (timer.current) clearTimeout(timer.current);
+        if (barFrame.current != null) cancelAnimationFrame(barFrame.current);
+        deadline.current = performance.now() + ms;
+        pausedLeft.current = null;
+        timer.current = setTimeout(() => { timer.current = null; setPending(null); }, ms);
+        // Jump the bar to the time left, then drain it on the next frame.
+        setBar({ fraction: Math.min(1, ms / SEQUENCE_MS), ms: 0 });
+        barFrame.current = requestAnimationFrame(() => { barFrame.current = null; setBar({ fraction: 0, ms }); });
+    }, []);
+
+    // The pointer over the card holds it open; leaving resumes the countdown.
+    const pause = useCallback(() => {
+        if (!timer.current) return;
+        clearTimeout(timer.current);
+        timer.current = null;
+        if (barFrame.current != null) { cancelAnimationFrame(barFrame.current); barFrame.current = null; }
+        const left = Math.max(0, deadline.current - performance.now());
+        pausedLeft.current = left;
+        setBar({ fraction: left / SEQUENCE_MS, ms: 0 });
+    }, []);
+    const resume = useCallback(() => {
+        const left = pausedLeft.current;
+        if (left == null) return;
+        arm(Math.max(left, LEAVE_MS));
+    }, [arm]);
 
     useEffect(() => {
         const onOpen = () => setSheetOpen(true);
@@ -47,6 +85,7 @@ export default function KeyboardShortcuts() {
     const cancel = useCallback(() => {
         if (timer.current) clearTimeout(timer.current);
         timer.current = null;
+        pausedLeft.current = null;
         setPending(null);
     }, []);
 
@@ -100,36 +139,38 @@ export default function KeyboardShortcuts() {
             if (!e.shiftKey && (letter === 'g' || letter === 'n')) {
                 e.preventDefault();
                 setPending(letter);
-                if (timer.current) clearTimeout(timer.current);
-                timer.current = setTimeout(() => { timer.current = null; setPending(null); }, SEQUENCE_MS);
+                arm(SEQUENCE_MS);
             }
         }
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
-    }, [letters, pending, sheetOpen, cancel, go, create]);
+    }, [letters, pending, sheetOpen, cancel, go, create, arm]);
 
-    useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+    useEffect(() => () => {
+        if (timer.current) clearTimeout(timer.current);
+        if (barFrame.current != null) cancelAnimationFrame(barFrame.current);
+    }, []);
 
     return (
         <>
-            {pending && <NextKeyCard prefix={pending} />}
+            {pending && <NextKeyCard prefix={pending} bar={bar} onPointerEnter={pause} onPointerLeave={resume} />}
             <Cheatsheet open={sheetOpen} onClose={() => setSheetOpen(false)} lettersOn={letters} />
         </>
     );
 }
 
 /** The card after `g` or `n` (#32, hint option A): the next letters, Esc, and `?`. */
-function NextKeyCard({ prefix }: { prefix: SequencePrefix }) {
+function NextKeyCard({ prefix, bar, onPointerEnter, onPointerLeave }: {
+    prefix: SequencePrefix; bar: Bar; onPointerEnter: () => void; onPointerLeave: () => void;
+}) {
     const t = useTranslations('shortcuts');
     const tn = useTranslations('nav');
-    const [run, setRun] = useState(false);
-    // The bar empties over the wait, so the time left is visible.
-    useEffect(() => { const id = requestAnimationFrame(() => setRun(true)); return () => cancelAnimationFrame(id); }, []);
     const items = prefix === 'g'
         ? GO_SHORTCUTS.map((s) => ({ letter: s.letter, label: tn(s.labelKey) }))
         : CREATE_SHORTCUTS.map((s) => ({ letter: s.letter, label: t(s.hintKey) }));
     return (
-        <div role="status" aria-live="polite"
+        // The pointer over the card pauses the wait (#243), so the letters can be read.
+        <div role="status" aria-live="polite" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}
             className="hidden md:block fixed left-6 bottom-6 z-[85] w-[380px] overflow-hidden rounded-[14px] border border-border bg-card text-text shadow-lg">
             <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2.5">
                 <Kbd strong>{prefix}</Kbd>
@@ -138,7 +179,8 @@ function NextKeyCard({ prefix }: { prefix: SequencePrefix }) {
             </div>
             <div className="h-0.5 bg-border" aria-hidden="true">
                 <div className="h-0.5 bg-segment-on motion-reduce:hidden"
-                    style={{ width: run ? '0%' : '100%', transition: `width ${SEQUENCE_MS}ms linear` }} />
+                    // The bar empties over the wait, so the time left is visible, and stops with it.
+                    style={{ width: `${bar.fraction * 100}%`, transition: bar.ms ? `width ${bar.ms}ms linear` : 'none' }} />
             </div>
             <ul className="m-0 grid list-none grid-cols-2 gap-x-3 gap-y-0.5 px-4 pt-2.5 pb-3">
                 {items.map((it) => (

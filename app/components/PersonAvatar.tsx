@@ -25,6 +25,9 @@ export interface PersonAvatarProps {
   mediaId?: number | null;
   /** Accessible name for the photo + used only for `alt`. */
   name?: string;
+  /** The name is printed right beside the avatar, so the photo is decorative
+   *  (`alt=""`) and a screen reader doesn't say the name twice (#21). */
+  decorative?: boolean;
   /** Pre-computed initials shown in the fallback disc. */
   initials?: string;
   /** Render this node centered instead of a photo/initials (e.g. a generic
@@ -62,6 +65,7 @@ export interface PersonAvatarProps {
 export default function PersonAvatar({
   mediaId,
   name = '',
+  decorative = false,
   initials = '',
   icon,
   sex = null,
@@ -122,7 +126,7 @@ export default function PersonAvatar({
           <ProfileImage
             mediaId={mediaId}
             treeId={treeId ?? undefined}
-            alt={name}
+            alt={decorative ? '' : name}
             focalX={focalX ?? 50}
             focalY={focalY ?? 50}
             focalRadius={focalRadius ?? null}

@@ -22,7 +22,7 @@ describe('LedgerTimeline (v1.1 person board)', () => {
   it('folds after five rows into "N more events" with the hidden years, keeping the pinned rows in view', () => {
     ledger(['Death', 'Occupation']);
     expect(titles()).toEqual(['Birth', 'Confirmation', 'Emigration', 'Marriage', 'Child 1', 'Death', 'Occupation']);
-    const fold = screen.getByRole('button', { name: /Show 3 more events/ });
+    const fold = screen.getByRole('button', { name: /3 more events/ });
     expect(fold).toHaveTextContent('1922 – 1940');
     fireEvent.click(fold);
     expect(titles()).toHaveLength(10);

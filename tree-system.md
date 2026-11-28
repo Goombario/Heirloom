@@ -22,6 +22,7 @@ This document maps the complete tree visualization system. **Keep it up to date 
 | `app/components/tree/TreeVisualization.tsx` | React Flow wrapper — renders nodes/edges, handles fit-view. `nodeTypes` registers `person` + `personBar`. |
 | `app/components/tree/PersonNode.tsx` | 104×152px portrait card with a 72px photo (104×168 with the Display menu's second name line; #184) (vertical orientation) with photo, status mark, name, dates (anatomy below) |
 | `app/components/tree/PersonBarNode.tsx` | 188×44px compact bar card (horizontal orientation) — avatar chip + name + dates, then the age (when on) and status mark at the right end |
+| `app/components/tree/CoupleNode.tsx` | Display › Partners › One couple card (#248): `CoupleNode` (192-wide portrait couple card, two halves, divider and rings), `CoupleBarNode` (two-row 188×62 bar) and `PartnerJoinNode` (the numbered join between a person and one of several partners). Each half opens its own person |
 | `app/components/tree/personCardModel.ts` | Shared derivation (name abbreviation, initials, living status, shown age) consumed by both `PersonNode` and `PersonBarNode` so the two cards never drift |
 | `app/components/tree/TreeCardLifespan.tsx` | Both cards' (and the descendants panel's) life span: the payload's `lifespan` through the shared `Lifespan` (#808). The standard card's lifespan line is 11px mono, like the bar card, and borrows 3px of side padding, so the widest case ("~1796 – ~1819", 77px; 86px if the mono font falls back and draws thin spaces full width) fits its 88px without an ellipsis (#934, #1215) |
 | `app/components/tree/PersonSidebar.tsx` | Slide-in editor panel — inline edits, focus-person, photo display |
@@ -37,7 +38,7 @@ This document maps the complete tree visualization system. **Keep it up to date 
 | `lib/tree/layout/standardLayout.ts` | `computeStandardLayout(root, mode, orientation)` — descendants/ancestors: one engine pass + ancestor-mode sibling injection; when `orientation==='horizontal'` runs with bar geometry then transposes to a left-to-right bar layout |
 | `lib/tree/layout/focusLayout.ts` | `computeFocusLayout()` — focus view: three engine passes (left/right/center) + Pass 3/3b overlap correction + canonical-ID dedup + edge remapping |
 | `lib/tree/layout/registry.ts` | Layout-mode registry — one entry per display mode (`getLayoutMode(id)`, unknown → descendants). **Adding a new layout mode = one entry here + its compute module**; the renderer has no per-mode branching. |
-| `lib/tree/keys.ts` | `NodeKey` codec — the single encoder/parser for node IDs (`person-42`, `person-42-spouse1`, `person-42-sibling`, `left-\|right-\|center-` cluster prefixes) and the canonical dedup identity (`canonicalNodeId`). No other file builds or parses these strings. |
+| `lib/tree/keys.ts` | `NodeKey` codec — the single encoder/parser for node IDs (`person-42`, `person-42-spouse1-of7` (the spouse card beside person 7), `person-42-sibling`, `person-42-again1` (a repeat card, #13), `left-\|right-\|center-` cluster prefixes) and the canonical dedup identity (`canonicalNodeId`; a repeat card keeps its whole id, so focus dedup never folds it into the full card). No other file builds or parses these strings. |
 
 ### Hooks & Utilities
 
@@ -273,7 +274,9 @@ One engine pass (`computeColumnLayout`) does, in order:
      (#1180); only a multi-spouse parent's own lanes are coloured, one per partner
 6. `d3.tree().separation()` uses `columnSeparation()` (`_width` values + sibling/branch gaps; sibling vs cousin argument order and mirror handling live in that one exported function)
 7. Emit person + spouse cards and spouse/parent-child edges; orientation `'up'` (ancestors) inverts Y and flips edge handles
-8. Optional mirror (`mirrorLeftEdge`) and anchor shift
+8. Root room (#249, descendants only, `rootRoom`): when the start person has two or more partners with children, each such partner's card centres over their own children (kept a partner gap apart, in partner order), partners without children follow the last, and the start person sits just before the first partner. One partner keeps the usual stack. This applies at every Spacing step
+9. Settle ids (#13): cards are emitted under provisional ids, then named. A spouse card names its partner (`-of<partner>`), so a woman who married two brothers in turn stands in full beside each. A person the service reached a second time (`TreeNode.repeat`, pedigree collapse: cousins marry, so their child sits under both) becomes a repeat card, `-again<n>`, with `data.repeatOf` = the id of their full card (their main card, else their first spouse card). Edges are rewritten to the settled ids
+10. Optional mirror (`mirrorLeftEdge`) and anchor shift
 
 `computeStandardLayout` then injects ancestor-mode sibling nodes + dashed sibling edges on top of the engine output.
 
@@ -332,6 +335,18 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 
 ---
 
+## Near-child drop snap (#15)
+
+`getLayoutMode(...).compute` runs every mode's output through `snapParentDrops` (`lib/tree/layout/snapDrops.ts`). When one of a parent's children sits within `SNAP_TOLERANCE` (24px) of the parent's middle, and that point is still under the parent's card, every line from that parent gets `data.snapTo` and `BranchEdge` (registered for `smoothstep` too) drops from there instead, so the two stalks no longer sit side by side as a wiggle. Cards never move. Measured on the synthetic tree (2026-11-25): one such pair, a 20px jog (11px in bars).
+
+## Repeat cards (#13)
+
+A repeat card (`FlowNodeData.repeatOf` set) is drawn faded with a dashed outline (`.tree-card--repeat`) and an "Also in this tree" chip above it (`RepeatPill.tsx`). The chip, and a click anywhere on the card, pans to the full card (`useJumpToCard`, at least `READABLE_ZOOM`). A repeat opens no sidebar, so it has no Add or Edit of its own, and never shows the selected outline. Its lines still go to its own place in the tree, so every person's parents stay directly above them. Locked mockup: option B in every view (issue #13).
+
+## How two people are related (#256)
+
+Desktop only. Shift-click a card (the person open in the panel is person 1, so one Shift-click is enough; Shift-clicking person 2 again takes them off; a third person replaces person 2), or press the panel's route icon button (`SidebarContent` `onRelate`) and click someone. `app/tree/useTreeRelate.ts` holds the pair and asks `client.relationship.get` (the Relationship tool's walk); `lib/tree/relate.ts` holds the click rules and `relateRoles`, which marks cards `first` / `second` / `on` / `dim` (`data.relate`, and `partnerView.relate` for a couple card's partner half) and lines `on` (copper, 3px) or `dim`. A line counts as on the path when the people its two cards stand for are consecutive on the path; a partner card stands for the couple, a join for its marriage (`data.joinOf`). Decoration only: it never re-runs the layout. `TreeRelateCard` at the canvas foot says the relationship, the steps, the path's people and the shared ancestor; when the path runs through someone not drawn it names them and offers a Descendants view from the shared ancestor (`wholePathRoot`). Esc, the card's ×, a plain click or the empty tree clears it. The Relationship tool's "Show in the tree" opens `/tree?rootId=<shared ancestor>&mode=descendants&relate=<p1>,<p2>`.
+
 ## Multi-Spouse Rendering
 
 - **BranchEdge**: drawn for each child; color = `_branchColor`; in colorblind mode a shape marker is drawn at the midpoint cycling square→circle→triangle→diamond
@@ -346,6 +361,10 @@ The left tree is x-flipped so it fans leftward. After the flip, spouse cards end
 | `treeColorblindMode` | Shape markers on branch edges |
 | `treeShowAgeIndicator` | "Show ages" in the Display controls (the desktop Display menu and the Display sheet below lg, #271): the age beside each card's status mark |
 | `tree:orientation` | `vertical` (portrait cards) or `horizontal` (bar cards); descendants/ancestors only. Unlike the others, this is a **layout input**, not a post-layout decoration. |
+| `treeArrangement` | "Arrangement" in the Display controls (#250): `even`; absent = Compact (d3's tidy packing, today). A **layout input** for descendants and ancestors (focus keeps its own; the control is disabled there). Even replaces `tree()(root)` with `lib/tree/layout/evenArrangement.ts`: descendants get **bands** (`placeBands`: each subtree its own column band, parent centred over its children, two leaves a sibling gap apart and any other pair a cousin gap, so nothing is tucked into a neighbour's space; about a quarter wider), ancestors get **pedigree slots** (`placePedigree`: generation g has 2^g fixed slots at a pitch of card + sibling gap at the deepest generation; father's line first, by sex, then the record's partner order; a known, non-repeat person's unknown parent inside the chart's depth gets an empty `pedigreeGap` / `pedigreeGapBar` node, a dashed box with no lines and nothing to click, id `gap-<childId>-<0 father\|1 mother>`). A person shown with more than two parents can't sit in fixed slots, so that tree keeps Compact. |
+| `treePartners` | "Partners" in the Display controls (#248): `couple`; absent = Own cards (today). A **layout input** for descendants and ancestors (focus keeps own cards; the control is disabled there). In the column engine (`partners: 'couple'`): a person with **one** partner is one `couple` node (`coupleBar` once transposed) under the person's own id, `data.partner` the partner, 192 wide (`COUPLE_CARD_WIDTH`) or a 62px two-row bar (`COUPLE_BAR_HEIGHT`), centred on the d3 node; no spouse card or connector. Its top target handle sits at 25% so a parent's line lands on the blood relative; children leave the middle. A person with **two or more** partners keeps own cards but partner 1 moves left of the person (`_lead` = one partner step, which the d3 separation and Even bands account for), the rest stay right, and each marriage gets a numbered `partnerJoin` node (`<person card id>-join<n>`, 18px, centred in the gap before the partner, partner 1's in the gap after it) that its children's lines leave from. A repeat of a couple's partner points at the couple card. `TreeVisualization` decorates the partner half as `data.partnerView` (selection, second name, under-the-name). |
+| `treeSpacing` | "Spacing" in the Display controls (#249): `tight` or `roomy`; absent = Normal (today's gaps). A **layout input**: `layoutGeometry({ horizontal, secondName, spacing })` in `lib/tree/geometry.ts` builds the engine geometry. Horizontal gaps (generation pitch / siblings / cousins / partners): Tight 224 / 20 / 52 / 8, Normal 260 / 34 / 84 / 12, Roomy 300 / 50 / 120 / 18; vertical takes the same steps from its own constants (gaps between rows 38 / 76 / 118, siblings 35 / 60 / 88, cousins 87 / 140 / 200, partners 13 / 20 / 30). Focus view uses it too, including its side-tree overlap gap. |
+| `treeUnderName` | "Under the name" in the Display controls (#12): `occupation`, `residence` (last residence) or `birthplace` replaces the dates line on portrait and bar cards; absent = Dates (today's cards). Post-layout decoration only. |
 | `treeSecondName` | "Second name" in the Display controls: a NameVariant type (`Nickname`, `Maiden`, `Married`, `Anglicized`, `Alias`, `Given`) shown as a 12px second line under the portrait card's name; absent = None (today's cards). Vertical cards only (focus included); the dropdown is disabled in horizontal. Also a **layout input**: on, every portrait card is 168px (`personCardHeight(true)`) and generations are 244px apart (`SECOND_NAME_LAYOUT_GEOMETRY`), so the gap between rows is unchanged. |
 
 Node names use each person's **primary name** (the `NameVariant` marked
@@ -362,6 +381,15 @@ nickname. With Nickname chosen, `TreeVisualization` passes `original` as the car
 `mainName`, so the nickname appears once, on its own line. A person with no name of the
 chosen type keeps an empty line so a row stays level. The portrait card's dates sit on
 its bottom edge (`.tree-card-dates`, margin-top auto) whether the name takes one line or two.
+
+The line under the name reads `TreeData.cardFacts` (`getTreeCardFacts` in
+`lib/db/queries/tree-card-facts.ts`, shaped by `buildCardFacts` in `lib/services/tree.ts`):
+per person, the value of the latest OCCU event, the place of the latest RESI event that
+has one, and the birth place, both places cut to the town (`townOf`, the part before the
+first comma). "Latest" is by `SortableYear`, then the newest record. `TreeVisualization`
+stamps `underName` and `underText` on each card; the card shows the text in the dates'
+place in the normal font (`.tree-card-under`), or a blank line when the person has none,
+so the card keeps its size and one row never mixes two kinds of fact (no fallback to dates).
 
 The debug-only `treeRoundedPhotos` and `treeGreyscaleMode` prefs were removed (#271);
 `useTreeDisplayPrefs` clears their stale keys.
@@ -536,6 +564,7 @@ What it prints:
 
 ## Layout regression tests
 
+- `__tests__/unit/tree-edge-invariants.pglite.test.ts` — six unusual family shapes (two brothers marry the same woman, first cousins marry, multi-spouse with a childless marriage, half-siblings, a child in two families, uncle marries niece) run through the real tree service and every layout mode; asserts unique node and edge ids, edges that end on real cards, no overlaps, spouses on one row, and that a person reached again is one repeat card pointing at a full card (#13).
 - `__tests__/unit/tree-layout-parity.test.ts` — golden snapshots of `useTreeLayoutMode` output (nodes, positions, edges, colors, handles) on fixture trees covering multi-spouse colors, birth-year sorting, the matrilineal edge-source rule, ancestor inversion + sibling injection, and Stage A/D focus composition — plus assertions on the declared `anchor`/`bounds` and the unknown-mode fallback. **Any intentional layout change must update these snapshots deliberately** (`vitest -u`) — an unexpected diff means behavior drifted.
 - `__tests__/unit/focus-tree-layout.test.ts` — geometry invariants driven through the real exported `columnSeparation()` / `mirrorLeftEdge()` (not replicas), plus Pass 3b LEFT↔RIGHT separation regression tests against `computeFocusLayout`.
 - `__tests__/unit/tree-node-keys.test.ts` — NodeKey codec round-trips and the historical canonical-ID semantics.

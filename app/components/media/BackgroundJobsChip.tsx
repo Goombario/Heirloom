@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
+import { Button, buttonClass } from '@/app/components/ui';
 import { useLocale, useTranslations } from 'next-intl';
 import { Check, Clock } from '@/lib/icons';
 import {
-  dismissBackgroundJobs, isJobActive, stopBackgroundJob, summarizeJobs, useBackgroundJobs,
+  dismissBackgroundJobs, isJobActive, retryBackgroundJob, stopBackgroundJob, summarizeJobs, useBackgroundJobs,
   type BackgroundJobView,
 } from './backgroundMedia';
 
@@ -124,27 +126,33 @@ export default function BackgroundJobsChip() {
   );
 }
 
-/** One job: its label and count, a bar, what it is doing or why it stopped, and Stop. */
+/** The first names of the photos that weren't added; the rest behind Show N more. */
+const NAMES_SHOWN = 3;
+
+/**
+ * One job: its label and count, a bar, what it is doing, and Stop. A stopped job
+ * (#236, row A) says why in plain words, where the photos were going, which ones
+ * weren't added, and offers Retry for the rest, skipping the ones already added.
+ */
 function JobRow({ job }: { job: BackgroundJobView }) {
   const t = useTranslations('jobs');
   const clock = useClockTime();
+  const [showAll, setShowAll] = useState(false);
   const pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
-  const rest = Math.max(0, job.total - job.done);
-  const tail = job.kind === 'add' ? t('rest_add', { count: rest }) : t('rest_import');
+  const stopped = job.status === 'stopped';
+  const redo = job.notAdded.filter((n) => !n.tooLarge).length || Math.max(0, job.total - job.done);
   let detail: React.ReactNode;
   switch (job.status) {
     case 'queued': detail = t('queued'); break;
     case 'running': detail = t('running'); break;
     case 'waiting': detail = t('waiting', { time: clock(job.waitUntil ?? 0) }); break;
     case 'done': detail = t('done'); break;
-    case 'stopped':
-      detail = job.signIn
-        ? <>{t('sign_in_expired')} <a href={SIGN_IN_HREF} target="_blank" rel="noopener" className="text-link font-medium hover:underline focus-ring rounded-sm">{t('sign_in')}</a>. {tail}</>
-        : <>{job.reason ? `${job.reason} ` : ''}{t('stopped', { done: job.done, total: job.total })} {tail}</>;
-      break;
+    case 'stopped': detail = <StopReason job={job} />; break;
   }
+  const names = showAll ? job.notAdded : job.notAdded.slice(0, NAMES_SHOWN);
+  const more = job.notAdded.length - NAMES_SHOWN;
   return (
-    <li className="flex items-center gap-3 border-t border-border py-3 pl-4 pr-3">
+    <li className="flex items-start gap-3 border-t border-border py-3 pl-4 pr-3">
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <div className="flex justify-between gap-2 text-sm">
           <span className="font-medium truncate">{job.label}</span>
@@ -153,7 +161,49 @@ function JobRow({ job }: { job: BackgroundJobView }) {
         <div className="h-1 overflow-hidden rounded-full bg-border" aria-hidden="true">
           <div className={`h-1 ${job.status === 'waiting' ? 'bg-text-muted' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
         </div>
-        <span className={`text-meta ${job.status === 'stopped' ? 'text-text-secondary' : 'text-text-muted'}`}>{detail}</span>
+        <span className={`text-meta ${stopped ? 'text-text-secondary' : 'text-text-muted'}`}>{detail}</span>
+        {stopped && job.target && (
+          <span className="text-meta text-text-secondary">
+            {t.rich('going_to', { name: job.target.name, a: (chunks) => <Link href={job.target!.href} className="text-link underline focus-ring rounded-sm">{chunks}</Link> })}
+          </span>
+        )}
+        {stopped && job.zipName && (
+          <span className="text-meta text-text-secondary">{t('from_zip', { name: job.zipName })}</span>
+        )}
+        {stopped && job.notAdded.length > 0 && (
+          <div className="text-meta text-text-secondary">
+            <span>{t('not_added', { count: job.notAdded.length })}</span>
+            <ul className="m-0 mt-0.5 list-none p-0">
+              {names.map((n, i) => (
+                <li key={`${n.name}-${i}`} className="flex gap-1.5 min-w-0">
+                  <span className="truncate font-mono text-xs text-text">{n.name}</span>
+                  {n.tooLarge && <span className="shrink-0 text-xs text-warning-text">{t('too_large_tag')}</span>}
+                </li>
+              ))}
+            </ul>
+            {more > 0 && (
+              <button type="button" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}
+                className="mt-0.5 text-link text-meta hover:underline focus-ring rounded-sm">
+                {showAll ? t('show_fewer') : t('show_more', { count: more })}
+              </button>
+            )}
+          </div>
+        )}
+        {stopped && (job.canRetry || job.cause === 'storage' || job.signIn) && (
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {job.cause === 'storage' && (
+              <Link href="/library" className={buttonClass({ variant: 'outline', size: 'sm' })}>{t('see_space')}</Link>
+            )}
+            {job.signIn && (
+              <a href={SIGN_IN_HREF} target="_blank" rel="noopener" className={buttonClass({ variant: 'outline', size: 'sm' })}>{t('sign_in')}</a>
+            )}
+            {(job.canRetry || job.cause === 'storage') && (
+              <Button variant="primary" size="sm" disabled={!job.canRetry} onClick={() => retryBackgroundJob(job.id)}>
+                {t('retry_rest', { count: redo })}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       {isJobActive(job) && (
         <button type="button" onClick={() => stopBackgroundJob(job.id)}
@@ -163,4 +213,19 @@ function JobRow({ job }: { job: BackgroundJobView }) {
       )}
     </li>
   );
+}
+
+/** Why a job stopped, in plain words (#236). The worded error, when there is one, follows. */
+function StopReason({ job }: { job: BackgroundJobView }) {
+  const t = useTranslations('jobs');
+  const n = { done: job.done, total: job.total };
+  const rest = job.notAdded.filter((x) => !x.tooLarge).length;
+  switch (job.cause) {
+    case 'sign_in': return <>{t('why_sign_in')}</>;
+    case 'network': return <>{t('why_network', n)}</>;
+    case 'storage': return <>{t('why_storage')}{job.reason ? ` ${job.reason}` : ''}</>;
+    case 'too_large': return <>{job.reason ? `${job.reason} ` : ''}{t('why_too_large', { count: rest })}</>;
+    case 'server': return <>{t('why_server', n)}</>;
+    default: return <>{t('why_you', n)}</>;
+  }
 }

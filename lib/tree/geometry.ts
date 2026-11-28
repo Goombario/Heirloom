@@ -89,25 +89,79 @@ export const DEFAULT_LAYOUT_GEOMETRY: LayoutGeometry = {
   minBranchGap: MIN_BRANCH_GAP,
 };
 
+/* The second name line and the horizontal bars no longer have fixed geometries
+   of their own: layoutGeometry() below builds them for the Spacing preset (#249). */
+
+// ── Spacing presets (#249) ───────────────────────────────────────────────────
+
+/** The Display menu's Spacing: Normal is today's gaps. */
+export const TREE_SPACINGS = ['tight', 'normal', 'roomy'] as const;
+export type TreeSpacing = typeof TREE_SPACINGS[number];
+
+/** The gaps a preset sets: between generations (the empty space between rows,
+ *  not the row pitch), brothers and sisters, cousins, and partners. */
+interface SpacingGaps { generation: number; sibling: number; branch: number; spouse: number }
+
 /**
- * Portrait cards with the second name line: generations move apart by the same
- * 16px the cards grow, so the gap between rows (where the edges run) is unchanged.
+ * Horizontal bars, as locked on #249 (generation pitch 224 / 260 / 300 less the
+ * 188px bar). Vertical takes the same three steps scaled from its own constants
+ * by the same ratio per gap, rounded.
  */
-export const SECOND_NAME_LAYOUT_GEOMETRY: LayoutGeometry = {
-  ...DEFAULT_LAYOUT_GEOMETRY,
-  generationSpacing: VERTICAL_SPACING + SECOND_NAME_LINE_HEIGHT,
+const SPACING_GAPS: Record<'vertical' | 'horizontal', Record<TreeSpacing, SpacingGaps>> = {
+  horizontal: {
+    tight: { generation: 224 - BAR_CARD_WIDTH, sibling: 20, branch: 52, spouse: 8 },
+    normal: { generation: 260 - BAR_CARD_WIDTH, sibling: 34, branch: 84, spouse: 12 },
+    roomy: { generation: 300 - BAR_CARD_WIDTH, sibling: 50, branch: 120, spouse: 18 },
+  },
+  vertical: {
+    tight: { generation: 38, sibling: 35, branch: 87, spouse: 13 },
+    normal: { generation: VERTICAL_SPACING - PERSON_CARD_HEIGHT, sibling: MIN_SIBLING_GAP, branch: MIN_BRANCH_GAP, spouse: SPOUSE_GAP },
+    roomy: { generation: 118, sibling: 88, branch: 200, spouse: 30 },
+  },
 };
 
 /**
- * Horizontal bars: the spread axis (which becomes vertical after the transpose)
- * carries the bar HEIGHT, and generations are spaced for the bar WIDTH. Gaps are
- * smaller than portrait mode because bars are short along the spread axis.
- * Values are an initial pass — tune visually.
+ * The geometry a layout runs against: card footprint for the orientation (and the
+ * second name line on portrait cards), gaps for the Spacing preset. Normal returns
+ * exactly the fixed geometries above, so a tree at Normal doesn't move.
  */
-export const HORIZONTAL_BAR_GEOMETRY: LayoutGeometry = {
-  spreadExtent: BAR_CARD_HEIGHT,
-  generationSpacing: BAR_CARD_WIDTH + 72, // ≈260
-  spouseGap: 12,
-  minSiblingGap: 34,
-  minBranchGap: 84,
-};
+export function layoutGeometry(opts: { horizontal: boolean; secondName?: boolean; spacing?: TreeSpacing }): LayoutGeometry {
+  const spacing = opts.spacing ?? 'normal';
+  if (opts.horizontal) {
+    const g = SPACING_GAPS.horizontal[spacing];
+    return { spreadExtent: BAR_CARD_HEIGHT, generationSpacing: BAR_CARD_WIDTH + g.generation, spouseGap: g.spouse, minSiblingGap: g.sibling, minBranchGap: g.branch };
+  }
+  const g = SPACING_GAPS.vertical[spacing];
+  return {
+    spreadExtent: PERSON_CARD_WIDTH,
+    generationSpacing: personCardHeight(!!opts.secondName) + g.generation,
+    spouseGap: g.spouse,
+    minSiblingGap: g.sibling,
+    minBranchGap: g.branch,
+  };
+}
+
+/** The Display menu's Arrangement (#250): Compact is today's packing; Even is
+ *  bands in descendants and fixed pedigree slots in ancestors. */
+export const TREE_ARRANGEMENTS = ['compact', 'even'] as const;
+export type TreeArrangement = typeof TREE_ARRANGEMENTS[number];
+
+// ── Partners (#248) ──────────────────────────────────────────────────────────
+
+/** The Display menu's Partners: Own cards is today's; One couple card draws a
+ *  person with one partner as a single card, the two side by side. */
+export const TREE_PARTNERS = ['own', 'couple'] as const;
+export type TreePartners = typeof TREE_PARTNERS[number];
+
+/** The portrait couple card: two halves, a little narrower than two cards. */
+export const COUPLE_CARD_WIDTH = 2 * PERSON_CARD_WIDTH - 16;
+/** The horizontal couple bar: two 31px rows, one per partner. */
+export const COUPLE_BAR_HEIGHT = 62;
+/** The numbered join between a person and one of several partners. */
+export const PARTNER_JOIN_SIZE = 18;
+
+/** The couple card's footprint along the spread axis for a geometry: the bar's
+ *  height in horizontal mode, the portrait card's width otherwise. */
+export function coupleExtent(geometry: LayoutGeometry): number {
+  return geometry.spreadExtent === BAR_CARD_HEIGHT ? COUPLE_BAR_HEIGHT : COUPLE_CARD_WIDTH;
+}

@@ -8,7 +8,6 @@ import type { Note } from '@/lib/data/types';
 import { AddRow, Card, InlinePanel, SectionHeader, cx, fieldClass } from '@/app/components/ui';
 import type { RunChange } from '@/app/people/view/mobile/useChange';
 
-const excerpt = (text: string) => (text.length > 40 ? `${text.slice(0, 40)}…` : text);
 
 /**
  * The desktop place page's Notes (#56), in the main column: every note on the
@@ -133,10 +132,11 @@ export function PlaceNotes({ placeId, treeId, canEdit, canDelete, run, refreshKe
                                             data-note-row={n.Id}
                                             disabled={!canEdit}
                                             onClick={() => start(n)}
-                                            aria-label={canEdit ? tn('edit_for', { excerpt: excerpt(n.Text) }) : undefined}
                                             className="block w-full text-left rounded-btn border-0 bg-transparent px-2 py-2.5 enabled:hover:bg-hover-surface enabled:cursor-pointer focus-ring disabled:cursor-default"
                                         >
                                             <span className="block text-base leading-[1.6] text-text whitespace-pre-wrap break-words line-clamp-4">{n.Text}</span>
+                                            {/* The visible words, then the action, so voice control can say them (WCAG 2.5.3, #21). */}
+                                            {canEdit && <span className="sr-only">{tn('row_edit')}</span>}
                                         </button>
                                     )}
                                 </li>

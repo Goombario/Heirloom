@@ -54,7 +54,7 @@ describe('desktop person Notes (#49)', () => {
 
   it('moves a note with its About select', async () => {
     const run = section();
-    fireEvent.click(await screen.findByRole('button', { name: /Edit note: Ask aunt Maj/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Ask aunt Maj.*Edit note/ }));
     const panel = screen.getByRole('group', { name: 'Edit note' });
     fireEvent.click(within(panel).getByRole('combobox', { name: 'About' }));
     fireEvent.click(screen.getByRole('option', { name: 'Census · 1880' }));

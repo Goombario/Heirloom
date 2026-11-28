@@ -88,6 +88,8 @@ export function PersonIdentity({
         mediaId={mediaId}
         treeId={treeId}
         name={name}
+        // The name is printed beside it (#21).
+        decorative
         initials={initials}
         sex={sex}
         size={AVATAR_PX[size]}

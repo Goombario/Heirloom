@@ -174,11 +174,15 @@ export function FamilyRail({ family, partner1, partner2, partner1Families, partn
           <SectionHeader level="label" as="h3" headingId="rail-lived" title={t('where_they_lived')} />
           {stops.length > 0 ? (
             // The whole block opens the full map of the family's places (board B).
-            <button type="button" onClick={() => setShowMap(true)} aria-label={t('open_places_map')}
+            <button type="button" onClick={() => setShowMap(true)}
               className="family-places-link block w-full p-0 text-left bg-transparent border-0 cursor-pointer rounded-card focus-ring">
               <JourneySketch stops={sketch} />
               <span className="flex items-center gap-2 mt-2">
-                <span className="flex-1 text-sm text-text-secondary">{t('places_n', { count: seen.size })}</span>
+                <span className="flex-1 text-sm text-text-secondary">
+                  {t('places_n', { count: seen.size })}
+                  {/* The visible words, then the action, so voice control can say them (WCAG 2.5.3, #21). */}
+                  <span className="sr-only">, {t('open_places_map')}</span>
+                </span>
                 <ArrowUpRight className="w-3.5 h-3.5 text-link" aria-hidden="true" />
               </span>
             </button>

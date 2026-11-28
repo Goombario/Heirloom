@@ -31,6 +31,8 @@ import type { CaseChange, CaseClaimDecision, CaseClaimEvidence, CaseInformation,
 import type { FaceSuggestionSnapshot } from '@/lib/db/queries/media-faces';
 import type { MediaDeleteBatchResult } from '@/lib/services/media';
 import type { PeopleFlag } from '@/lib/db/queries/data-quality';
+import type { PeopleSearchResponse, SavedSearch } from '@/lib/services/advanced-search';
+import type { SearchQuery } from '@/lib/search/people-query';
 export type { MediaDeleteBatchResult } from '@/lib/services/media';
 export type { MediaImportItem } from '@/lib/db/schema';
 export type { FaceConfirmBatchResult, FaceGroup };
@@ -68,7 +70,12 @@ export interface CreatePersonInput {
 }
 
 /** Partial update for a person — same fields as create, all optional. */
-export type UpdatePersonInput = CreatePersonInput;
+export type UpdatePersonInput = CreatePersonInput & {
+  /** The name prefix, surname prefix and suffix (#37, ADR 0053); null clears one. */
+  NamePrefix?: string | null;
+  SurnamePrefix?: string | null;
+  NameSuffix?: string | null;
+};
 
 /** A row of the `NameVariant` table as returned by the API. */
 export interface NameVariant {
@@ -1229,8 +1236,19 @@ export interface AccountClient {
   setLastSeenVersion(version: string): Promise<void>;
 }
 
+// ---- Advanced search (#247) ----
+/** Advanced search and the member's own saved searches. Saving changes nothing the data cache keeps. */
+export interface SearchClient {
+  /** The people a query matches; `explain` adds, when none do, the counts without each condition. */
+  people(query: SearchQuery, treeId?: number | null, options?: { explain?: boolean }): Promise<PeopleSearchResponse>;
+  listSaved(treeId?: number | null): Promise<SavedSearch[]>;
+  save(name: string, query: SearchQuery, treeId?: number | null): Promise<{ id: number }>;
+  removeSaved(id: number, treeId?: number | null): Promise<void>;
+}
+
 export interface DataClient {
   account: AccountClient;
+  search: SearchClient;
   people: PeopleClient;
   relationship: RelationshipClient;
   places: PlacesClient;

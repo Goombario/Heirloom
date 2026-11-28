@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useRef } from 'react';
+import { Suspense, useCallback, useMemo, useRef } from 'react';
 import type { ReactFlowInstance } from 'reactflow';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -22,6 +22,9 @@ import type { TreeRootFace } from './TreeControlBar';
 import type { TreeNode } from '@/app/components/tree/types';
 import { READABLE_ZOOM } from '@/lib/tree/fitView';
 import { openQuickAdd } from '@/app/components/QuickAddHost';
+import { useTreeRelate } from './useTreeRelate';
+import { TreeRelateCard, TreeRelateHint } from './TreeRelateCard';
+import { drawnPeople } from '@/lib/tree/relate';
 
 const TreeVisualization = dynamic(() => import('@/app/components/tree/TreeVisualization'), {
   ssr: false,
@@ -41,7 +44,7 @@ function TreePageContent() {
   const {
     treeData, loading, error, retry, mode, selectedRootId, selectedPersonId, isSavingTree,
     isExporting, fitViewVersion, containerRef, selectPerson, setSelectedPersonId,
-    handlePersonClick, handleSidebarDataChanged, handleModeChange, handleExport, setReactFlowInstance,
+    handlePersonClick, navigateTree, handleSidebarDataChanged, handleModeChange, handleExport, setReactFlowInstance,
     displayTree, displayFocusTrees, depth, maxDepth, setDepth,
     orientation, setOrientation,
     barZoomThreshold, setBarZoomThreshold,
@@ -60,15 +63,21 @@ function TreePageContent() {
     selectPerson(personId);
     return true;
   }, [guardNavigation, selectPerson]);
-  const guardedSidebarSelect = useCallback((personId: number) => {
+  // "How are they related?" (#256): Shift-click, or the panel's button then a click.
+  // Desktop only: the phone tree has no panel button and no Shift key.
+  const { activeTreeId } = useTree();
+  const relating = useTreeRelate({ panelId: selectedPersonId, treeId: activeTreeId });
+  const guardedSidebarSelect = useCallback((personId: number, opts?: { shift?: boolean }) => {
+    if (!isMobile && relating.onCardClick(personId, !!opts?.shift)) return;
     if (!guardNavigation()) return;
     handlePersonClick(personId);
-  }, [guardNavigation, handlePersonClick]);
+  }, [guardNavigation, handlePersonClick, relating, isMobile]);
   const search = useTreeSearch(treeData?.allPeople, guardedPersonSelect);
   const { setShowDropdown } = search;
   const {
     colorblindMode, setColorblindMode, showAgeIndicator, setShowAgeIndicator, showStatusMark, setShowStatusMark,
-    secondNameType, setSecondNameType,
+    secondNameType, setSecondNameType, underName, setUnderName, spacing, setSpacing, arrangement, setArrangement,
+    partners, setPartners,
   } = useTreeDisplayPrefs();
 
   const phase = useLoadPhase(loading);
@@ -91,6 +100,9 @@ function TreePageContent() {
   }, [selectedRootId]);
 
   const currentPersonInfo = treeData?.allPeople?.find(p => p.id === selectedRootId);
+  const allPeople = treeData?.allPeople;
+  const nameOf = useCallback((id: number) => allPeople?.find((p) => p.id === id)?.name ?? '', [allPeople]);
+  const drawn = useMemo(() => drawnPeople(displayFocusTrees ?? displayTree ?? treeData?.tree), [displayFocusTrees, displayTree, treeData]);
   const rootFace: TreeRootFace | null = findInTree(treeData?.tree, selectedRootId);
   // The chrome renders before the data does, so its controls must read as
   // "not yet" rather than as "unavailable": without this, the mode buttons were
@@ -122,6 +134,15 @@ function TreePageContent() {
     onColorblindChange: setColorblindMode,
     secondNameType,
     onSecondNameTypeChange: setSecondNameType,
+    underName,
+    onUnderNameChange: setUnderName,
+    spacing,
+    onSpacingChange: setSpacing,
+    arrangement,
+    onArrangementChange: setArrangement,
+    partners,
+    onPartnersChange: setPartners,
+    view: mode,
   };
 
   return (
@@ -157,6 +178,7 @@ function TreePageContent() {
               onClose={() => setSelectedPersonId(null)}
               onFocusPerson={guardedPersonSelect}
               onDataChanged={handleSidebarDataChanged}
+              onRelate={relating.startPicking}
             />
           )}
 
@@ -205,17 +227,34 @@ function TreePageContent() {
               onReady={onFlowReady}
               onPersonClick={guardedSidebarSelect}
               onPersonDoubleClick={guardedPersonSelect}
-              onPaneClick={() => setShowDropdown(false)}
+              onPaneClick={() => { setShowDropdown(false); if (relating.relate) relating.clear(); }}
               sidebarSelectedId={selectedPersonId}
               colorblindMode={colorblindMode}
               showAgeIndicator={showAgeIndicator}
               showStatusMark={showStatusMark}
               secondNameType={secondNameType}
               cardNames={treeData.cardNames}
+              underName={underName}
+              spacing={spacing}
+              arrangement={arrangement}
+              partners={partners}
+              relate={isMobile ? undefined : relating.relate}
+              cardFacts={treeData.cardFacts}
               barZoomThreshold={barZoomThreshold}
               fitViewVersion={fitViewVersion}
               isExporting={isExporting}
             />
+            {!isMobile && (
+              <>
+                <TreeRelateHint
+                  picking={relating.picking != null}
+                  shiftHeld={relating.shiftHeld && relating.picking == null && relating.pair.second == null}
+                  firstName={relating.picking != null ? nameOf(relating.picking) : null}
+                  onCancel={relating.clear}
+                />
+                <TreeRelateCard pair={relating.pair} result={relating.result} drawn={drawn} nameOf={nameOf} onClear={relating.clear} onShowWhole={(id) => navigateTree(id, 'descendants')} />
+              </>
+            )}
           </>
           )}
         </div>

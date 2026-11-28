@@ -166,11 +166,15 @@ export function FamilyRail({ person, portrait, treeId, canEdit, canDelete, journ
         <section aria-labelledby="rail-journey">
           <SectionHeader level="label" as="h3" headingId="rail-journey" title={t('journey')} />
           {/* The whole block opens the full journey map, as the family rail's Where they lived. */}
-          <button type="button" onClick={onShowJourney} aria-label={t('journey_open')}
+          <button type="button" onClick={onShowJourney}
             className="block w-full p-0 text-left bg-transparent border-0 cursor-pointer rounded-card focus-ring">
             <JourneySketch stops={journey} />
             <span className="flex items-center gap-2 mt-2">
-              <span className="flex-1 text-sm text-text-secondary">{t('journey_places', { count: journey.length })}</span>
+              <span className="flex-1 text-sm text-text-secondary">
+                {t('journey_places', { count: journey.length })}
+                {/* The visible words, then the action, so voice control can say them (WCAG 2.5.3, #21). */}
+                <span className="sr-only">, {t('journey_open')}</span>
+              </span>
               <ArrowUpRight className="w-3.5 h-3.5 text-link" aria-hidden="true" />
             </span>
           </button>

@@ -6,6 +6,9 @@ export {
   Heart,           // Families (the union glyph ⚭ was rejected — too light)
   Network,         // Tree + tree switcher
   BookOpen,        // Library
+  Bookmark,        // People: saved searches (#247)
+  Database,        // Update dialog: the backup before installing (#24)
+  ListFilter,      // People: advanced search (#247)
   Paperclip,       // Attach image to a journal entry
   MapPin,          // Places
   Map as MapIcon,  // Place cover: Full map
@@ -62,7 +65,8 @@ export {
   Eye,             // Show names/boxes toggle
   EyeOff,          // Hide names/boxes toggle
   Lock,            // Locked / can't untag indicator
-  Plus,            // Add / tag a face
+  Plus,            // Add / tag a face; zoom in (#252)
+  Minus,           // Zoom out (lightbox, #252)
   Download,        // Download action
   Upload,          // Choose a file to import
   Cloud,           // Google Drive backup section
@@ -106,6 +110,7 @@ export {
   Move,            // Move a place's pin (phone place page)
   Type,            // Rename a place (phone place page)
   Clock,           // Options: time zone (phone row)
+  Route,           // Tree: how is this person related to… (#256)
 } from 'lucide-react';
 
 export type { LucideIcon } from 'lucide-react';

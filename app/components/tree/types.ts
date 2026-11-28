@@ -36,6 +36,9 @@ export interface TreeNode {
   children?: TreeNode[];
   /** Populated only for the root in ancestor mode — siblings to display at the same generation */
   siblings?: SiblingInfo[];
+  /** The person was already reached elsewhere in this tree (pedigree collapse):
+   *  a stub with no spouses or relatives, drawn as a faded repeat card (#13). */
+  repeat?: true;
 }
 
 /**
@@ -130,6 +133,22 @@ export interface TreeData {
    * keyed by person id. Only people with something to show are listed.
    */
   cardNames?: Record<number, TreeCardNames>;
+  /** Facts for the cards' line under the name (#12), keyed by person id. Only
+   *  people with at least one are listed. */
+  cardFacts?: Record<number, TreeCardFacts>;
+}
+
+/** What the Display menu's "Under the name" puts on the card's line under the name (#12). */
+export const TREE_UNDER_NAME = ['dates', 'occupation', 'residence', 'birthplace'] as const;
+export type TreeUnderName = typeof TREE_UNDER_NAME[number];
+
+/** One person's facts for the line under the name. Places are the town only. */
+export interface TreeCardFacts {
+  occupation?: string;
+  /** Town of the latest residence event. */
+  residence?: string;
+  /** Town of the birth place. */
+  birthplace?: string;
 }
 
 /** The name types the Display menu's "Second name" can show (NameVariant types). */
@@ -152,9 +171,29 @@ export interface FlowNodeData {
   isSpouse?: boolean;
   spouseIndex?: number;
   parentPersonId?: number;
+  /** A later card for a person drawn in full elsewhere in this layout: the id of
+   *  that full card. The repeat is faded, has an "Also in this tree" pill that
+   *  pans there, and opens no editor of its own (#13). */
+  repeatOf?: string;
+  /** An empty slot in the Even ancestors chart (#250): an unknown parent, drawn
+   *  as a faint dashed box with nothing to click. `person` is a blank stand-in. */
+  placeholder?: true;
+  /** One couple card (#248): the person's one partner, drawn as the card's right
+   *  half (the lower row of a horizontal bar). Each half opens its own person. */
+  partner?: Spouse;
+  /** The partner half's display data, decorated like the person's own. */
+  partnerView?: PartnerView;
+  /** A numbered join between a person and one of several partners (#248): the
+   *  marriage's number. Its children's lines leave from it. */
+  joinNumber?: number;
+  /** A join's two people: the person and that marriage's partner. */
+  joinOf?: [number, number];
+  /** "How are they related?" (#256): this card is person 1, person 2, on the path
+   *  between them, or faded. The partner half of a couple card has its own. */
+  relate?: 'first' | 'second' | 'on' | 'dim';
   isSelected?: boolean; // True for the root/leaf person being viewed
   isSidebarSelected?: boolean; // True for the person clicked to open sidebar
-  onPersonClick?: (id: number) => void;
+  onPersonClick?: (id: number, opts?: { shift?: boolean }) => void;
   onPersonDoubleClick?: (id: number) => void;
   showAgeIndicator?: boolean;
   /** The living-status mark on the card (#68); hidden only when false. */
@@ -166,9 +205,22 @@ export interface FlowNodeData {
   secondName?: string | null;
   /** Replaces the main line (the original name when Nickname is the second name). */
   mainName?: string;
+  /** The Display menu's "Under the name" (#12): set when it isn't dates. The card
+   *  shows `underText` there in the normal font, or a blank line when it's null. */
+  underName?: Exclude<TreeUnderName, 'dates'>;
+  underText?: string | null;
   /** DEBUG (horizontal bar review): zoom level below which the bar switches to
    *  zoomed-out mode (name-only, scaled). Default 0.6. */
   barZoomThreshold?: number;
+}
+
+/** What a couple card's partner half shows, beside the person's own fields. */
+export interface PartnerView {
+  isSidebarSelected: boolean;
+  relate?: 'first' | 'second' | 'on' | 'dim';
+  secondName?: string | null;
+  mainName?: string;
+  underText?: string | null;
 }
 
 /**
@@ -188,6 +240,9 @@ export interface BranchEdgeData {
   /** Spouse-connector lane axis: 'x' = horizontal lanes (vertical layout,
    *  default), 'y' = vertical lanes (horizontal layout, spouses stacked). */
   laneAxis?: 'x' | 'y';
+  /** Parent lines: the drop leaves the parent here (the bracket's axis) instead
+   *  of the card's middle, onto a child just off it (#15). */
+  snapTo?: number;
 }
 
 /**

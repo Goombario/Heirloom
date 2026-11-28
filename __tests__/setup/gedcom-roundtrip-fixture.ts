@@ -80,6 +80,9 @@ interface PersonExtras {
   BirthRawGedcom?: string;
   DeathRawGedcom?: string;
   NameRawGedcom?: string;
+  NamePrefix?: string;
+  SurnamePrefix?: string;
+  NameSuffix?: string;
 }
 
 export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
@@ -107,6 +110,7 @@ export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
       DeathDate: extra.DeathDate ?? null, DeathPlace: extra.DeathPlace ?? null, DeathCause: extra.DeathCause ?? null,
       IsDeceased: extra.IsDeceased ? 1 : 0, RawGedcom: extra.RawGedcom ?? null,
       BirthRawGedcom: extra.BirthRawGedcom ?? null, DeathRawGedcom: extra.DeathRawGedcom ?? null, NameRawGedcom: extra.NameRawGedcom ?? null,
+      NamePrefix: extra.NamePrefix ?? null, SurnamePrefix: extra.SurnamePrefix ?? null, NameSuffix: extra.NameSuffix ?? null,
     });
     personIds[key] = Id;
     return Id;
@@ -123,8 +127,10 @@ export async function seedRoundTripFixture(db: PGlite): Promise<FixtureIds> {
     // DEAT sub-tag the parser still does not model (#423) — must re-emit nested
     // under "1 DEAT", not dangling at the end of the record.
     DeathRawGedcom: '2 AGNC County archive',
-    // NAME pieces the app doesn't model ride under the primary `1 NAME` (#964).
-    NameRawGedcom: '2 NPFX Dr\n2 NSFX PhD',
+    // The NAME pieces the app doesn't model ride under the primary `1 NAME` (#964);
+    // the prefix, surname prefix and suffix are person fields (#37).
+    NameRawGedcom: '2 TYPE birth',
+    NamePrefix: 'Dr', SurnamePrefix: 'de', NameSuffix: 'PhD',
   });
   // No stored GedcomId — forces a fresh xref alongside the stored ones.
   const fresh = await insertPerson('fresh', 'John', 'Doe', 'M', null, {

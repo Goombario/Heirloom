@@ -32,14 +32,7 @@ updates:
       # reaches lib/db/connection.ts through the local data client.
       - dependency-name: pg
         versions: ['>8.20.0']
-      # PGlite 0.5 is Postgres 18; 0.4 is Postgres 17. Postgres 18 refuses a
-      # Postgres 17 data directory ("database files are incompatible with
-      # server"), which PGlite reports as "failed to initialize properly"
-      # (1.1.0-rc.8, #205). Every existing browser and desktop database is a 17
-      # data directory, so 0.5 needs a one-time migration first (read with 0.4,
-      # dump, load into 0.5). .hlbak backups are SQL and load into 0.5 as they are.
-      # pglite-tools pairs with pglite.
-      - dependency-name: '@electric-sql/pglite'
-        versions: ['>=0.5.0']
-      - dependency-name: '@electric-sql/pglite-tools'
-        versions: ['>=0.4.0']
+      # The PGlite 0.4 engine (Postgres 17) under an alias, kept only to read
+      # databases and .tar backups written before 0.5 and convert them (#235).
+      # It must stay a Postgres 17 build.
+      - dependency-name: pglite-pg17

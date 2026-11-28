@@ -11,9 +11,10 @@
  */
 import type { TreeNode, FlowNode, FlowEdge, LayoutOutput } from '@/app/components/tree/types';
 import {
-  DEFAULT_LAYOUT_GEOMETRY,
-  HORIZONTAL_BAR_GEOMETRY,
-  SECOND_NAME_LAYOUT_GEOMETRY,
+  layoutGeometry,
+  type TreeSpacing,
+  type TreeArrangement,
+  type TreePartners,
   PERSON_CARD_WIDTH,
   personCardHeight,
   BAR_CARD_WIDTH,
@@ -28,6 +29,12 @@ export function computeStandardLayout(
   orientation: 'vertical' | 'horizontal' = 'vertical',
   /** Second name line on the portrait cards (vertical only; bars ignore it). */
   secondName = false,
+  /** The Display menu's Spacing (#249); Normal is today's gaps. */
+  spacing: TreeSpacing = 'normal',
+  /** The Display menu's Arrangement (#250); Compact is today's packing. */
+  arrangement: TreeArrangement = 'compact',
+  /** The Display menu's Partners (#248); Own cards is today's. */
+  partners: TreePartners = 'own',
 ): LayoutOutput {
   if (!rootNode) {
     return { nodes: [], edges: [], bounds: null, anchor: null };
@@ -35,12 +42,17 @@ export function computeStandardLayout(
 
   const horizontal = orientation === 'horizontal';
   const tall = !horizontal && secondName;
-  const geometry = horizontal ? HORIZONTAL_BAR_GEOMETRY : tall ? SECOND_NAME_LAYOUT_GEOMETRY : DEFAULT_LAYOUT_GEOMETRY;
+  const geometry = layoutGeometry({ horizontal, secondName: tall, spacing });
 
   const { nodes, edges } = computeColumnLayout(rootNode, {
     orientation: mode === 'ancestors' ? 'up' : 'down',
     selectRoot: true,
     geometry,
+    // Each of the start person's partners sits beside their own children (#249).
+    rootRoom: mode === 'descendants',
+    arrangement,
+    partners,
+    cardDepth: horizontal ? BAR_CARD_WIDTH : personCardHeight(tall),
   });
 
   // Ancestor mode: place the root person's siblings at the same generation,

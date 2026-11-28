@@ -36,7 +36,10 @@ vi.mock('@/app/components/date-input/aliases', () => ({ useDateQualifierWords: (
 vi.mock('@/app/components/useCachedResource', () => ({
   useCachedResource: (key: string | null) => key?.startsWith('people:flagged:')
     ? { data: flaggedGroups, loading: false, error: null, retry: vi.fn() }
-    : { data: { people: [noParentsPerson, hasParentsPerson] }, loading: false, error: null, retry: vi.fn() },
+    // Advanced search's reads (#247) have nothing to say in these tests.
+    : key === null || key.startsWith('search:') || key.startsWith('people:saved-searches') || key.startsWith('people:search')
+      ? { data: undefined, loading: false, error: null, retry: vi.fn() }
+      : { data: { people: [noParentsPerson, hasParentsPerson] }, loading: false, error: null, retry: vi.fn() },
 }));
 vi.mock('@/app/components/useLoadPhase', () => ({ useLoadPhase: () => 'ready' }));
 vi.mock('@/lib/data', () => ({ getDataClient: vi.fn() }));

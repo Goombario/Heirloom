@@ -9,6 +9,7 @@ import { livingStatus } from '@/lib/living';
 import { useDateQualifierWords } from '@/app/components/date-input/aliases';
 import { DEATH_DETAILS_CLEARED } from '@/app/components/person-form/vitalEvent';
 import { ActionLink, Button, FieldColumn, FieldColumns, FormBlock, FormDialog, Input, SegmentedControl, WarningLine } from '@/app/components/ui';
+import { NamePartsFields, namePartsBody, namePartsChanged, namePartsDraft } from '@/app/components/person-form/NamePartsFields';
 import { hasDeathFact } from '../derive';
 import { nameBarParts } from '../mobile/model';
 import type { LivingChoice } from '../mobile/panes';
@@ -48,14 +49,14 @@ function Body({ open, onClose, person, treeId, language, run, onEditVital }: Par
   const tm = useTranslations('mobilePerson');
   const tc = useTranslations('common');
   const words = useDateQualifierWords();
-  const saved = { first: person.FirstName ?? '', last: person.LastName ?? '', sex: asSex(person.Sex), status: livingStatus(person) as LivingChoice };
+  const saved = { first: person.FirstName ?? '', last: person.LastName ?? '', parts: namePartsDraft(person), sex: asSex(person.Sex), status: livingStatus(person) as LivingChoice };
   const [draft, setDraft] = useState(saved);
   // Living or Unknown with a death recorded: null until the person answers.
   const [dropDeath, setDropDeath] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const hasDeath = hasDeathFact(person);
   const asking = hasDeath && draft.status !== 'deceased' && dropDeath == null;
-  const dirty = draft.first.trim() !== saved.first.trim() || draft.last.trim() !== saved.last.trim()
+  const dirty = draft.first.trim() !== saved.first.trim() || draft.last.trim() !== saved.last.trim() || namePartsChanged(draft.parts, saved.parts)
     || draft.sex !== saved.sex || draft.status !== saved.status;
   const noName = !draft.first.trim() && !draft.last.trim();
   const sex = { sex: draft.sex || 'U' };
@@ -84,6 +85,7 @@ function Body({ open, onClose, person, treeId, language, run, onEditVital }: Par
       return client.people.update(person.Id, {
         FirstName: draft.first.trim() || null,
         LastName: draft.last.trim() || null,
+        ...(namePartsChanged(draft.parts, saved.parts) ? namePartsBody(draft.parts) : {}),
         Sex: draft.sex || null,
         // Keeping the death keeps the person deceased: a recorded death outranks the flag (#895).
         ...(statusChanged && !(hasDeath && dropDeath === false) ? { IsDeceased } : {}),
@@ -116,7 +118,8 @@ function Body({ open, onClose, person, treeId, language, run, onEditVital }: Par
             <Input label={tp('last_name')} value={draft.last} maxLength={200} autoComplete="off"
               placeholder={tp('last_name_placeholder')} onChange={(e) => setDraft((d) => ({ ...d, last: e.target.value }))} />
           </FieldColumns>
-          <p className="m-0 text-meta text-text-muted">{noName ? t('name_needed') : t('name_hint')}</p>
+          <NamePartsFields value={draft.parts} onChange={(parts) => setDraft((d) => ({ ...d, parts }))} />
+          {noName && <p className="m-0 text-meta text-text-muted">{t('name_needed')}</p>}
         </FormBlock>
         <FormBlock title={tp('field_sex')}>
           <SegmentedControl

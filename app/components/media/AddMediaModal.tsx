@@ -8,7 +8,8 @@ import MediaImg from '@/app/components/MediaImg';
 import { Banner, Button, DialogHeader, EmptyState, InlineDataError, ScrollArea, SegmentedControl, showSuccessToast, cx } from '@/app/components/ui';
 import { Input } from '@/app/components/ui/Input';
 import { withWriteBatch } from '@/lib/data';
-import { addInBackground } from './backgroundMedia';
+import { addInBackground, type JobTarget } from './backgroundMedia';
+import { librarySourceHref } from '@/app/library/links';
 import { FileTooLargeError, RateLimitError, StorageLimitError, UnauthorizedError } from '@/lib/data/errors';
 import { errorToastKey } from '@/lib/utils/data-error';
 import { isPdfMedia } from '@/lib/media/allowed-extensions';
@@ -318,45 +319,87 @@ export default function AddMediaModal({
      */
     function addLater() {
         const rows = toUpload.map(row => ({ input: uploadInput(row), name: row.file.name }));
-        const links = linkIds;
+        const titleOf = (id: number) => library.all?.find((m) => m.Id === id)?.Title || to('untitled');
+        startBackground(rows, linkIds.map((id) => ({ id, name: titleOf(id) })));
+        onAdded();
+    }
+
+    /** Where the photos are going, for the job row's "Going to" link (#236). */
+    function jobTarget(): JobTarget | undefined {
+        if (!targetName) return undefined;
+        if (target.kind === 'case') return { name: targetName, href: `/cases/view?id=${target.caseId}` };
+        if (target.kind !== 'owner') return undefined;
+        const personId = target.ownerTable === 'People' ? target.ownerId : target.galleryPersonId;
+        if (personId != null) return { name: targetName, href: `/people/view?id=${personId}` };
+        if (target.ownerId == null) return undefined;
+        if (target.ownerTable === 'Families') return { name: targetName, href: `/families/view?id=${target.ownerId}` };
+        if (target.ownerTable === 'Sources') return { name: targetName, href: librarySourceHref(target.ownerId) };
+        return undefined;
+    }
+
+    /**
+     * One background job for these photos and library picks. When it stops, Retry
+     * (#236) queues what it hadn't done as a new job: the photos already added are
+     * skipped, and so is a file the server refused as too large.
+     */
+    function startBackground(rows: { input: ReturnType<typeof uploadInput>; name: string }[], links: { id: number; name: string }[]) {
         const owner = target.kind === 'owner' && target.ownerId != null ? target : null;
         const caseSource = target.kind === 'case' ? target.source : null;
         let facesFound = 0;
         let lastRefresh = 0;
         let current: string | null = null;
+        const doneRows = new Set<number>();
+        const tooLarge = new Set<number>();
+        let linksDone = 0;
         const refresh = (force = false) => {
             const now = Date.now();
             if (!force && now - lastRefresh < 1000) return;
             lastRefresh = now;
             onMediaChanged?.();
         };
+        const leftRows = () => rows.filter((_r, i) => !doneRows.has(i));
+        const leftLinks = () => links.slice(linksDone);
         void addInBackground({
             kind: 'add',
             label: targetName ? tj('label_add', { name: targetName }) : tj('label_add_plain'),
             total: rows.length + links.length,
+            target: jobTarget(),
             describe: (e) => (e instanceof UnauthorizedError ? '' : describeFailure(e, current)),
+            notAdded: () => [
+                ...rows.flatMap((r, i) => (doneRows.has(i) ? [] : [{ name: r.name, ...(tooLarge.has(i) ? { tooLarge: true } : {}) }])),
+                ...leftLinks().map((l) => ({ name: l.name })),
+            ],
+            retry: () => startBackground(leftRows().filter((r) => !tooLarge.has(rows.indexOf(r))), leftLinks()),
             run: async ({ added, step, stopped }) => {
                 try {
                     // One IndexedDB flush for the whole batch (#1259), which also asks
                     // before the page is left while it runs.
                     await withWriteBatch(async (client) => {
-                        for (const row of rows) {
+                        for (const [i, row] of rows.entries()) {
                             if (stopped()) return;
                             current = row.name;
-                            const media = await step(() => client.media.upload(row.input, treeId));
-                            facesFound += media.FacesFound ?? 0;
+                            try {
+                                const media = await step(() => client.media.upload(row.input, treeId));
+                                facesFound += media.FacesFound ?? 0;
+                            } catch (e) {
+                                if (e instanceof FileTooLargeError) tooLarge.add(i);
+                                throw e;
+                            }
+                            doneRows.add(i);
                             added();
                             refresh();
                         }
                         current = null;
                         if (stopped()) return;
                         if (caseSource && links.length > 0) {
-                            await step(() => caseSource.attach(links));
+                            await step(() => caseSource.attach(links.map((l) => l.id)));
+                            linksDone = links.length;
                             for (let i = 0; i < links.length; i++) added();
                         } else if (owner) {
-                            for (const id of links) {
+                            for (const link of links) {
                                 if (stopped()) return;
-                                await step(() => client.media.linkToOwner(id, owner.ownerTable, owner.ownerId!, treeId, owner.ownerFact));
+                                await step(() => client.media.linkToOwner(link.id, owner.ownerTable, owner.ownerId!, treeId, owner.ownerFact));
+                                linksDone++;
                                 added();
                             }
                         }
@@ -367,7 +410,6 @@ export default function AddMediaModal({
                 }
             },
         });
-        onAdded();
     }
 
     const quotaWarning = storageSummary?.quotaMode === 'tree'
@@ -470,6 +512,12 @@ export default function AddMediaModal({
             <p className="font-semibold">{tu('batch_stopped')}</p>
             <p className="mt-0.5">{t('batch_partial', { done: failure.done, remaining: pickedCount })}</p>
             <p className="mt-0.5">{failure.rateLimited ? tu('batch_rate_limited') : failure.message}</p>
+            {/* #236: the same Retry as the jobs panel, for the photos still picked. */}
+            {pickedCount > 0 && (
+                <Button variant="primary" size="sm" className="mt-2" disabled={busy} onClick={() => void add()}>
+                    {tj('retry_rest', { count: pickedCount })}
+                </Button>
+            )}
         </Banner>
     );
 

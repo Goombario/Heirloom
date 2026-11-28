@@ -43,7 +43,7 @@ export default function FileBackupSection() {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".hlbak"
+          accept=".hlbak,.tar"
           className="hidden"
           onChange={handleFileChange}
         />

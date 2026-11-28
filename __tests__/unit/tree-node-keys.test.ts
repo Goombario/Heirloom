@@ -7,6 +7,8 @@ describe('tree NodeKey codec', () => {
     expect(nodeKeyToId({ personId: 42, role: 'spouse', spouseIndex: 1 })).toBe('person-42-spouse1');
     expect(nodeKeyToId({ personId: 42, role: 'spouse' })).toBe('person-42-spouse0');
     expect(nodeKeyToId({ personId: 42, role: 'sibling' })).toBe('person-42-sibling');
+    expect(nodeKeyToId({ personId: 42, role: 'spouse', spouseIndex: 0, ofPartner: 7 })).toBe('person-42-spouse0-of7');
+    expect(nodeKeyToId({ personId: 42, role: 'person', again: 1 })).toBe('person-42-again1');
     expect(nodeKeyToId({ personId: 42, role: 'person', cluster: 'left' })).toBe('left-person-42');
     expect(nodeKeyToId({ personId: 7, role: 'spouse', spouseIndex: 0, cluster: 'center' })).toBe('center-person-7-spouse0');
   });
@@ -18,6 +20,9 @@ describe('tree NodeKey codec', () => {
       { personId: 5, role: 'sibling' as const },
       { personId: 9, role: 'person' as const, cluster: 'right' as const },
       { personId: 9, role: 'spouse' as const, spouseIndex: 0, cluster: 'center' as const },
+      { personId: 9, role: 'spouse' as const, spouseIndex: 0, ofPartner: 4 },
+      { personId: 9, role: 'person' as const, again: 2 },
+      { personId: 9, role: 'spouse' as const, spouseIndex: 1, ofPartner: 4, again: 1, cluster: 'left' as const },
     ];
     for (const key of keys) {
       expect(parseNodeId(nodeKeyToId(key))).toEqual(key);
@@ -40,6 +45,11 @@ describe('tree NodeKey codec', () => {
     expect(canonicalNodeId('person-8-spouse2')).toBe('person-8');
     // Sibling suffix preserved (ancestors mode never dedups):
     expect(canonicalNodeId('person-5-sibling')).toBe('person-5-sibling');
+    // A partner-named spouse card still dedups to the person (#13):
+    expect(canonicalNodeId('center-person-8-spouse0-of3')).toBe('person-8');
+    // A repeat card is never folded into the full card (#13):
+    expect(canonicalNodeId('center-person-8-again1')).toBe('center-person-8-again1');
+    expect(canonicalNodeId('person-8-spouse0-of3-again2')).toBe('person-8-spouse0-of3-again2');
     // Unparseable IDs pass through unchanged:
     expect(canonicalNodeId('some-other-id')).toBe('some-other-id');
   });

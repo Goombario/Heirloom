@@ -18,7 +18,7 @@ import { cx } from '@/app/components/ui/cx';
 import { ChevronRight, Globe, Search, Plus, MapPin, Tag } from '@/lib/icons';
 import { useNoAutofill } from '@/app/hooks/useNoAutofill';
 import { foldForSearch } from '@/lib/utils/search-fold';
-import { matchPlaceOptions, sameNamePlaces, settlePlaceText, type PlaceMatch } from '@/lib/places/place-options';
+import { matchPlaceOptions, settlePlaceText, type PlaceMatch } from '@/lib/places/place-options';
 import { useTreePlaceOptions } from './useTreePlaceOptions';
 
 export interface LocationFieldProps {
@@ -57,6 +57,12 @@ export interface LocationFieldProps {
   variant?: 'inline' | 'sheet';
   /** The sheet's title and the list's name: the field's label. */
   label?: string;
+  /**
+   * The tree sidebar (#254 option 3): nothing under the box at rest. The row
+   * appears while the field (or its pin popover) has focus, or once its text has
+   * changed, so the pin control stays reachable while editing.
+   */
+  quietAtRest?: boolean;
 }
 
 const DEBOUNCE_MS = 350;
@@ -86,9 +92,15 @@ type Row = { kind: 'tree'; option: PlaceMatch } | { kind: 'map'; candidate: Phot
 
 const shortName = (name: string) => name.split(',')[0]?.trim() || name;
 
+/** Whether the box already says a place's full name: case, accents and spacing aside, as place search folds them. */
+const sameText = (a: string, b: string) => {
+  const norm = (v: string) => foldForSearch(v).replace(/\s+/g, ' ').trim();
+  return norm(a) === norm(b);
+};
+
 export default function LocationField({
   value, onChange, onResolve, onRemove, initialChain, treeId, className, placeholder, id,
-  placeId, onPlaceIdChange, variant = 'inline', label,
+  placeId, onPlaceIdChange, variant = 'inline', label, quietAtRest = false,
 }: LocationFieldProps) {
   // Chrome's saved-address autofill covers this field's own suggestions and
   // offers the USER's address for a place a relative lived in a century ago (#442).
@@ -109,6 +121,8 @@ export default function LocationField({
   // Setting it alongside the other setState calls in each handler doesn't add
   // an extra render pass; React batches them into the same commit.
   const [userTouched, setUserTouched] = useState(false);
+  // Focus anywhere in the field, its row or its pin popover (quietAtRest only).
+  const [focusWithin, setFocusWithin] = useState(false);
   // Live lookup is opt-in (#791): the first focus of a place field asks once.
   const geocodingChoice = useGeocodingChoice();
   const [lookupAsked, setLookupAsked] = useState(false);
@@ -287,12 +301,15 @@ export default function LocationField({
   const linked = useMemo(() => {
     if (!options || !value.trim()) return null;
     if (placeId != null) {
-      const held = options.find((o) => o.placeId === placeId && o.text === value.trim());
+      // The saved link holds even when the record's text is shorter than the
+      // place's name ("Mountnessing" for Mountnessing, Brentwood, …). Typing clears
+      // placeId, so this is only ever the record's own saved place.
+      const held = options.find((o) => o.placeId === placeId && o.text === value.trim())
+        ?? options.find((o) => o.placeId === placeId && !o.isOtherName);
       if (held) return held;
     }
     return settlePlaceText(options, value);
   }, [options, placeId, value]);
-  const sameName = linked && !linked.isOtherName ? sameNamePlaces(options ?? [], linked) : 0;
 
   // Seeds the badge from an already-saved chain (edit-mode pin display,
   // docs/superpowers/specs/2026-07-09-edit-mode-pin-display-design.md) —
@@ -399,41 +416,30 @@ export default function LocationField({
     </div>
   );
 
-  // What the text links to, once it has settled: the place, the other name it was
-  // written as, or a new place.
-  const status = !typing && value.trim() && options ? (
-    <div className="mt-[6px] flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta leading-[1.4] text-[color:var(--color-text-muted)]">
-      {linked?.isOtherName ? (
-        <>
-          <Tag size={12} aria-hidden="true" className="shrink-0" />
-          <span>{t('written_as', { name: linked.text, place: linked.placeName })}</span>
-        </>
-      ) : linked ? (
-        <>
-          <span>{linked.parentName ? t('place_in', { place: linked.placeName, parent: linked.parentName }) : linked.placeName}</span>
-          {sameName > 1 && (
-            <button
-              type="button"
-              className="text-link underline underline-offset-2 [@media(pointer:coarse)]:min-h-[44px]"
-              onClick={() => {
-                if (variant === 'sheet') { openSheet(); return; }
-                setWanted(true);
-                setListOpen(true);
-                inputRef.current?.focus();
-              }}
-            >
-              {t('not_this', { place: shortName(linked.placeName) })}
-            </button>
-          )}
-        </>
-      ) : (
-        <span>{t('new_place')}</span>
-      )}
-    </div>
+  // The row under the box says only what the box doesn't (#254, layout B): the
+  // place it linked to when the text is shorter, or the place an other name counts
+  // for. A new place, or a place the box already names in full, says nothing here.
+  // Then the pin control. One line of inline text that wraps, icons inline.
+  const info = !typing && value.trim() && options && linked ? (
+    linked.isOtherName ? (
+      <span>
+        <Tag size={12} aria-hidden="true" className="inline-block align-[-1px] mr-1" />
+        {t('counts_for', { place: linked.placeName })}
+      </span>
+    ) : !sameText(value, linked.placeName) ? <span>{linked.placeName}</span> : null
   ) : null;
+  const rowShown = !quietAtRest || focusWithin || userTouched || editing || typing;
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div
+      style={{ position: 'relative' }}
+      {...(quietAtRest ? {
+        onFocus: () => setFocusWithin(true),
+        onBlur: (e: React.FocusEvent<HTMLDivElement>) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusWithin(false);
+        },
+      } : {})}
+    >
       {variant === 'sheet' ? (
         <>
           <button
@@ -499,66 +505,56 @@ export default function LocationField({
       {lookupAsked && geocodingChoice === null && variant === 'inline' && (
         <GeocodingPrompt onEnabled={() => { if (value.trim().length >= 3) runResolve(value); }} />
       )}
-      {status}
-      {/* Pinned → the badge names what it resolved to, plus an Edit link.
-          Not pinned → no badge and no bare "EDIT" beside nothing, but a quiet
-          "Set a map pin" link, because the popover is still the only way to reach
-          manual lat/lng for a place Photon cannot resolve, and the only way to
-          undo a Remove pin without retyping the field.
-          Either way the trigger stays visible while the popover is open: it names
-          the current pin, which is the question that made the user open it, so the
-          popover needs no header of its own. */}
-      {showTrigger && (
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-expanded={editing}
-          onClick={() => setEditing((v) => !v)}
-          className="mt-[6px] gap-[6px] text-meta leading-[1.4] [@media(pointer:coarse)]:min-h-[44px]"
-          style={{
-            display: 'flex', alignItems: 'center',
-            cursor: 'pointer', background: 'none', border: 'none', padding: 0, textAlign: 'left',
-            // fontFamily, NOT the `font` shorthand — `font: inherit` resets font-size,
-            // which silently discarded the 12.5px above and let the badge inherit the
-            // field's font size, making this secondary metadata read as primary text.
-            // --color-*, not the root --text-muted alias, so the caption follows a dark
-            // island's override (the family hero editor, #759).
-            color: 'var(--color-text-muted)', fontFamily: 'inherit',
-          }}
-        >
-          {pin ? (
-            <>
-              {/* One geocode-state symbol set across the app (#266): own = map pin,
-                  inherited = dashed diamond. This badge drew "own" as a filled dot,
-                  which is a shape the Places surfaces do not use at all — same
-                  meaning, second vocabulary. The dashed diamond was already shared,
-                  and `data-pin-kind` still carries the state for tests. */}
-              {isOwnPin ? (
-                <span aria-hidden="true" data-pin-kind="own" className="inline-flex shrink-0 text-[color:var(--color-link)]">
-                  <MapPin size={12} />
-                </span>
+      {rowShown && (info || showTrigger) && (
+        <div className="mt-[6px] text-meta leading-[1.4] text-[color:var(--color-text-muted)]">
+          {info}
+          {info && showTrigger && <span aria-hidden="true"> · </span>}
+          {/* The pin control. A pinned place gets a control, not a status: the
+              own pin says "Edit map pin"; a pin borrowed from a bigger place names
+              only that level, since that tells you something the box doesn't.
+              With no pin, "Set a map pin" — the popover is still the only way to
+              reach manual lat/lng, and to undo a Remove pin without retyping. The
+              trigger stays visible while the popover is open. */}
+          {showTrigger && (
+            <button
+              ref={triggerRef}
+              type="button"
+              aria-expanded={editing}
+              onClick={() => setEditing((v) => !v)}
+              className="inline cursor-pointer bg-transparent border-0 p-0 text-left text-meta leading-[1.4] [font-family:inherit] text-[color:var(--color-text-muted)] [@media(pointer:coarse)]:min-h-[44px]"
+            >
+              {pin ? (
+                isOwnPin ? (
+                  <>
+                    {/* One geocode-state symbol set across the app (#266): own =
+                        map pin, inherited = dashed diamond; data-pin-kind carries it for tests. */}
+                    <span aria-hidden="true" data-pin-kind="own" className="inline-block align-[-1px] mr-1 text-[color:var(--color-link)]">
+                      <MapPin size={12} />
+                    </span>
+                    <span className="text-link underline underline-offset-2">{t('edit_map_pin')}</span>
+                  </>
+                ) : (
+                  <>
+                    {/* The same utility string PinMark uses for this state. */}
+                    <span
+                      aria-hidden="true"
+                      data-pin-kind="inherited"
+                      className="inline-block w-2 h-2 rotate-45 border border-dashed border-[color:var(--color-link)] mr-1.5 align-[0px]"
+                    />
+                    <span>{t('pinned_at', { place: shortName(pin.displayName) })}</span>{' '}
+                    <span className="text-link underline underline-offset-2">{t('edit')}</span>
+                  </>
+                )
               ) : (
-                // The same utility string PinMark uses for this state, so the two
-                // diamonds cannot drift apart.
-                <span
-                  aria-hidden="true"
-                  data-pin-kind="inherited"
-                  className="inline-block w-2 h-2 rotate-45 border border-dashed border-[color:var(--color-link)] shrink-0"
-                />
+                /* Ink + a leading plus, so it reads as an action rather than a caption. */
+                <>
+                  <Plus size={13} aria-hidden="true" className="inline-block align-[-2px] mr-1 text-[color:var(--color-link)]" />
+                  <span className="font-semibold text-[color:var(--color-link)]">{t('set_map_pin')}</span>
+                </>
               )}
-              <span>{t('map_pinned_to', { place: pin.displayName })}</span>
-              {/* A normal text link (#761), not a bold uppercase tag. */}
-              <span className="text-link underline underline-offset-2">{t('edit')}</span>
-            </>
-          ) : (
-            /* Ink + a leading plus, so it reads as an action rather than a
-               caption. Muted body text here looked like an inert note. */
-            <>
-              <Plus size={13} aria-hidden="true" style={{ color: 'var(--color-link)', flexShrink: 0 }} />
-              <span className="font-semibold" style={{ color: 'var(--color-link)' }}>{t('set_map_pin')}</span>
-            </>
+            </button>
           )}
-        </button>
+        </div>
       )}
       {editing && (
         <EditPinPopover

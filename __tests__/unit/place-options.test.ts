@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlaceOptions, matchPlaceOptions, sameNamePlaces, settlePlaceText } from '@/lib/places/place-options';
+import { buildPlaceOptions, matchPlaceOptions, settlePlaceText } from '@/lib/places/place-options';
 import type { PlaceGazetteerNode, PlaceSummary } from '@/lib/data/types';
 
 /** The place field's "In your tree" matching (#1186). */
@@ -58,12 +58,5 @@ describe('settlePlaceText', () => {
         expect(settlePlaceText(options, 'paris')).toBeNull();
         expect(settlePlaceText(options, 'Paris, Texas')).toBeNull();
         expect(settlePlaceText(options, '')).toBeNull();
-    });
-});
-
-describe('sameNamePlaces', () => {
-    it('counts the places that share a name', () => {
-        expect(sameNamePlaces(options, options.find((o) => o.placeId === 2)!)).toBe(2);
-        expect(sameNamePlaces(options, options.find((o) => o.placeId === 5)!)).toBe(1);
     });
 });

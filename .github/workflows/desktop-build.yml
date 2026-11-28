@@ -129,12 +129,46 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # In-app updates (#24): once the owner has made the updater key pair and set
+      # the TAURI_SIGNING_PRIVATE_KEY secret (and its password) plus the
+      # TAURI_UPDATER_PUBKEY variable, the build signs its installer and uploads a
+      # latest.json, and the app's configuration carries the public key so it can
+      # install updates. Without them the build is as before, and the app sends
+      # people to the release page instead.
+      - name: Turn on the updater when its signing key is set up
+        id: updater
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ] || [ -z "$PUBKEY" ]; then
+            echo "::notice::No updater signing key: this build can't update itself."
+            echo "args=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node -e '
+            const fs = require("fs");
+            fs.writeFileSync("src-tauri/tauri.updater.conf.json", JSON.stringify({
+              bundle: { createUpdaterArtifacts: true },
+              plugins: { updater: {
+                pubkey: process.env.PUBKEY,
+                endpoints: [`https://github.com/${process.env.GITHUB_REPOSITORY}/releases/latest/download/latest.json`],
+                windows: { installMode: "passive" },
+              } },
+            }, null, 2));
+          '
+          echo "args=--config src-tauri/tauri.updater.conf.json" >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app and upload to the release
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.id }}
+          args: ${{ steps.updater.outputs.args }}
 
   build-linux:
     needs: create-release

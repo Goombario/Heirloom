@@ -109,7 +109,7 @@ export function LeadsRail({ caseData, treeId, summaries, view, evidenceCount, ca
                                 return (
                                     <li key={p.Id}>
                                         <Link href={`/people/view?id=${p.Id}`} className="flex items-center gap-2 text-sm text-text no-underline hover:underline focus-ring rounded-sm">
-                                            <PersonAvatar as="span" size={24} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
+                                            <PersonAvatar decorative as="span" size={24} treeId={treeId} mediaId={p.PrimaryMediaId} focalX={p.FocalX} focalY={p.FocalY} focalRadius={p.FocalRadius}
                                                 sex={p.Sex} name={name} initials={initialsFromName(name)} />
                                             <span className="serif min-w-0 truncate">{name}</span>
                                         </Link>

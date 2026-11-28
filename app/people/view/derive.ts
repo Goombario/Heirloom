@@ -47,6 +47,24 @@ export function headingNameText(person: DisplayNameParts, variants?: readonly He
     return whole ?? (displayFullName({ FirstName: person.FirstName, LastName: person.LastName, Nickname: nickname }) || unknown);
 }
 
+/**
+ * The page header's name with the name parts (#37, ADR 0053): "Dr Johann von Habsburg
+ * PhD". Only the header and the editor show them; lists, the tree and search keep the
+ * short name. A starred other name replaces the whole name, parts and all.
+ */
+export function headingNameWithParts(
+    person: DisplayNameParts & { NamePrefix?: string | null; SurnamePrefix?: string | null; NameSuffix?: string | null },
+    variants?: readonly HeadingVariant[] | null,
+    unknown = 'Unknown',
+): string {
+    const { whole, nickname } = headingName(person, variants);
+    if (whole) return whole;
+    const given = displayFullName({ FirstName: person.FirstName, LastName: null, Nickname: nickname });
+    const text = [person.NamePrefix, given, person.SurnamePrefix, person.LastName, person.NameSuffix]
+        .map((s) => s?.trim()).filter(Boolean).join(' ');
+    return text && (person.FirstName || person.LastName) ? text : unknown;
+}
+
 export function eventIsBirth(type: string): boolean {
     return type === 'BIRT';
 }

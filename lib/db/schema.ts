@@ -90,6 +90,12 @@ export interface Person {
     DeathRawGedcom?: string | null;
     /** Sub-lines of the primary `1 NAME` the app doesn't model (NPFX, NSFX, SPFX, TYPE, …), re-emitted under it (#964). */
     NameRawGedcom?: string | null;
+    /** The name prefix ("Dr", "Rev."), from GEDCOM `NPFX` (#37). Shown only in the page header and editor. */
+    NamePrefix?: string | null;
+    /** The surname prefix ("von", "de", "van"), from GEDCOM `SPFX` (#37). */
+    SurnamePrefix?: string | null;
+    /** The name suffix ("Jr.", "PhD"), from GEDCOM `NSFX` (#37). */
+    NameSuffix?: string | null;
     /** 1 when the imported INDI had a bare `1 BIRT` (no date, place or anything else), so it exports back (#968). */
     BirthRecorded?: number | null;
 }

@@ -54,7 +54,6 @@ async function openComposer(user: ReturnType<typeof userEvent.setup>) {
  * named after its OWN note, so five rows don't present five identical buttons; the
  * panel then holds Save, Cancel, Delete and the preferred choice.
  */
-const EDIT_PREFIX = en.notes.edit_for.split('{')[0];
 let currentRow: HTMLElement | null = null;
 
 /** The row's opener, where focus returns once its panel closes or it remounts. */
@@ -315,24 +314,14 @@ describe('notes rail — row names and focus', () => {
     const row = async (text: string) =>
         (await screen.findAllByTestId('note-row')).find((r) => r.textContent?.includes(text))!;
 
-    it('names each row after its own note, so a list of them is not five identical buttons', async () => {
+    it('names each row by its visible note text, then the action (#21: the name holds the label)', async () => {
         renderCard([n({ Id: 1, Text: 'Alpha' }), n({ Id: 2, Text: 'Beta' })]);
         await screen.findByText('Alpha');
-        const a = triggerFor(await row('Alpha')).getAttribute('aria-label');
-        const b = triggerFor(await row('Beta')).getAttribute('aria-label');
-        expect(a).toContain('Alpha');
-        expect(b).toContain('Beta');
-        expect(a).not.toEqual(b);
-    });
-
-    it('shortens a long note in that name instead of reading the whole thing out', async () => {
-        const long = 'Emigrated from Cork in the spring of 1867 aboard the Sirius, landing at Boston.';
-        renderCard([n({ Id: 1, Text: long })]);
-        await screen.findByText(long);
-        const label = triggerFor(await row(long)).getAttribute('aria-label')!;
-        expect(label.length).toBeLessThan(EDIT_PREFIX.length + 45);
-        expect(label).toContain('Emigrated from Cork');
-        expect(label.endsWith('…')).toBe(true);
+        const a = triggerFor(await row('Alpha'));
+        const b = triggerFor(await row('Beta'));
+        expect(a.hasAttribute('aria-label')).toBe(false);
+        expect(a).toHaveAccessibleName(/Alpha.*Edit note$/);
+        expect(b).toHaveAccessibleName(/Beta.*Edit note$/);
     });
 
     it('returns focus to the row after promoting, which remounts it', async () => {

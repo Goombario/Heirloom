@@ -54,7 +54,8 @@ export function PinLegend({ className = '' }: { className?: string }) {
           setOpen((v) => !v);
         }}
         title={t('pin_legend_title')}
-        aria-label={t('pin_legend_title')}
+        // Starts with the visible word, so voice control can say it (WCAG 2.5.3, #21).
+        aria-label={`${t('pin_legend')}, ${t('pin_legend_title')}`}
         className="control-h inline-flex items-center gap-1.5 px-2 sm:px-2.5 rounded-lg border border-[color:var(--color-control-border)] text-xs text-text-secondary cursor-pointer hover:bg-surface-2 transition-colors focus-ring"
       >
         <Info size={14} aria-hidden="true" />

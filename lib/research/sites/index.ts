@@ -15,6 +15,7 @@ import freecen from './freecen';
 import internetarchive from './internetarchive';
 import irishgenealogy from './irishgenealogy';
 import lac from './lac';
+import laccensus from './laccensus';
 import novascotia from './novascotia';
 import openarchives from './openarchives';
 import paperspast from './paperspast';
@@ -30,6 +31,7 @@ export const SITES: readonly SiteDefinition[] = [
     internetarchive,
     // Canada
     lac,
+    laccensus,
     canadiana,
     cvwm,
     novascotia,

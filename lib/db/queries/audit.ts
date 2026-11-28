@@ -246,7 +246,7 @@ const ENTITY_CONFIG: Record<string, EntityConfig> = {
         scope: 'user-tree',
         places: 'people',
         // 'Notes' dropped in #524 (ADR 0010) — mirrors ALLOWED_PERSON_FIELDS in people.ts.
-        allowedFields: new Set(['FirstName', 'LastName', 'Sex', 'GedcomId', 'BirthDate', 'BirthPlace', 'DeathDate', 'DeathPlace', 'DeathCause', 'IsDeceased']),
+        allowedFields: new Set(['FirstName', 'LastName', 'NamePrefix', 'SurnamePrefix', 'NameSuffix', 'Sex', 'GedcomId', 'BirthDate', 'BirthPlace', 'DeathDate', 'DeathPlace', 'DeathCause', 'IsDeceased']),
     },
     family: {
         table: '"Families"',

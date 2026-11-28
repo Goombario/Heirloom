@@ -9,6 +9,8 @@ import DesktopNav from './DesktopNav';
 import TreeSwitcher from './TreeSwitcher';
 import UserMenu from '../UserMenu';
 import BackupStatusChip from '../backup/BackupStatusChip';
+import UpdateChip from '../updates/UpdateChip';
+import { useUpdates } from '../updates/UpdateProvider';
 import BackgroundJobsChip from '../media/BackgroundJobsChip';
 import { useBackgroundJobs } from '../media/backgroundMedia';
 
@@ -27,9 +29,11 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
     window.addEventListener('scroll', update, { passive: true });
     return () => window.removeEventListener('scroll', update);
   }, []);
-  // The photo-work chip (#207) needs room: while it shows, search and backup drop
-  // their words and keep their icons, as they do below xl.
-  const compact = useBackgroundJobs().length > 0;
+  // The photo-work chip (#207) and the update chip (#24) need room: while either
+  // shows, search and backup drop their words and keep their icons, as below xl.
+  const jobs = useBackgroundJobs().length > 0;
+  const { available } = useUpdates();
+  const compact = jobs || available !== null;
   const searchHint = mac ? '⌘K' : 'Ctrl+K';
   const openSearch = () => document.dispatchEvent(new CustomEvent('open-global-search'));
 
@@ -57,7 +61,8 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
             {/* Tree switcher: dropdown on desktop; mobile switcher lives in the drawer */}
             <span className="hidden md:block"><TreeSwitcher variant="dropdown" /></span>
 
-            <button onClick={openSearch} aria-label={`${t('search')} (${searchHint})`} title={`${t('search')} (${searchHint})`}
+            <button onClick={openSearch} // No brackets in the name: the visible key must read as part of it (WCAG 2.5.3, #21).
+              aria-label={`${t('search')}, ${searchHint}`} title={`${t('search')} (${searchHint})`}
               // Width tracks --control-h so the icon-only button stays square: on a
               // coarse pointer the token is 50px, and a fixed w-9 would have made it
               // a 36×50 sliver next to the 44×44 hamburger.
@@ -65,6 +70,9 @@ export default function TopRail({ onOpenDrawer, drawerOpen }: { onOpenDrawer: ()
               <Search className="w-[18px] h-[18px]" aria-hidden="true" />
               <kbd className={`hidden ${compact ? '' : 'xl:inline'} px-1.5 py-0.5 text-xs bg-black/20 text-white rounded font-mono`}>{searchHint}</kbd>
             </button>
+
+            {/* A newer release after Later (#24): the desktop app only */}
+            <span className="hidden md:block"><UpdateChip /></span>
 
             {/* Backup status: desktop only (mobile backup lives in the nav rebuild) */}
             <span className="hidden md:block"><BackupStatusChip compact={compact} /></span>

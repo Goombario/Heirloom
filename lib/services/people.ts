@@ -174,7 +174,7 @@ export async function updatePersonService(params: UpdatePersonParams): Promise<A
 
   // Names and places are checked against the stored row: an imported value may
   // exceed the API cap, and an update can't leave the person with no name (#884).
-  const touchesNames = ['FirstName', 'LastName', 'BirthPlace', 'DeathPlace'].some((f) => body[f] !== undefined);
+  const touchesNames = ['FirstName', 'LastName', 'NamePrefix', 'SurnamePrefix', 'NameSuffix', 'BirthPlace', 'DeathPlace'].some((f) => body[f] !== undefined);
   const stored = touchesNames ? await getPersonById(id, scope.treeId) : null;
   if (touchesNames && !stored) throw new NotFoundError('Person not found');
 
@@ -184,6 +184,14 @@ export async function updatePersonService(params: UpdatePersonParams): Promise<A
   if (stored && !(updateData.FirstName !== undefined ? updateData.FirstName : stored.FirstName)
     && !(updateData.LastName !== undefined ? updateData.LastName : stored.LastName)) {
     throw new ValidationError('At least FirstName or LastName is required');
+  }
+  // #37: the name prefix, surname prefix and suffix. Clearing all of them leaves the name as it is.
+  for (const field of ['NamePrefix', 'SurnamePrefix', 'NameSuffix'] as const) {
+    if (body[field] === undefined) continue;
+    const value = validateNameField(body[field], field, 100, stored?.[field]);
+    // The GEDCOM NAME line marks the surname with slashes, so a part can't hold one.
+    if (value?.includes('/')) throw new ValidationError(`${field} can't contain a slash`);
+    updateData[field] = value;
   }
   if (body.Sex !== undefined) updateData.Sex = validateSexField(body.Sex);
   if (body.BirthDate !== undefined) updateData.BirthDate = validateDateField(body.BirthDate, 'BirthDate', 100);

@@ -6,7 +6,7 @@
 // page. A drilled level starts with an "Open <place>" row for the place itself. Explore
 // is the only phone view; Cards and List stay on desktop.
 
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import LocationMap from '@/app/components/LocationMap';
@@ -19,7 +19,7 @@ import { foldForSearch } from '@/lib/utils/search-fold';
 import GuardedLink from '@/app/components/GuardedLink';
 import { FaceStack, PinMark } from '../PinMark';
 import { collectPins } from './collectPins';
-import { flattenWithAncestry, label, levelRows, matchesQuery } from './drillRows';
+import { capDrillRows, flattenWithAncestry, label, levelRows, matchesQuery } from './drillRows';
 import { findNodeById, useExploreState } from './useExploreState';
 import { placeHref } from '@/lib/places/place-key';
 
@@ -38,11 +38,17 @@ export function MobilePlacesExplore({ roots }: { roots: PlaceTreeNode[] }) {
     [state.currentNode, displayRoots],
   );
 
-  const q = foldForSearch(query.trim());
+  // Typing stays responsive while a big level catches up (#4).
+  const deferredQuery = useDeferredValue(query);
+  const q = foldForSearch(deferredQuery.trim());
   const searching = q.length > 0;
   const rows = searching
     ? flattenWithAncestry(displayRoots).filter((row) => matchesQuery(row, q))
     : levelRows(state.children);
+  // A big level draws its first rows, then "Show all"; moving level starts capped again.
+  const levelKey = String(state.currentNode?.id ?? state.currentNode?.name ?? '');
+  const [showAllFor, setShowAllFor] = useState<string | null>(null);
+  const { shown, hidden } = capDrillRows(rows, showAllFor === levelKey, searching);
   const here = searching ? null : state.currentNode;
 
   const counts = (n: PlaceTreeNode) => tm('people_records', { people: n.peopleCount, records: n.rolledCount });
@@ -118,7 +124,7 @@ export function MobilePlacesExplore({ roots }: { roots: PlaceTreeNode[] }) {
         <p className="m-0 px-4 py-6 text-base text-text-muted">{t('no_results')}</p>
       ) : (
         <ul className="m-0 p-0 list-none">
-          {rows.map(({ node, region }, i) => {
+          {shown.map(({ node, region }, i) => {
             const drills = !searching && node.children.length > 0;
             const body = (
               <>
@@ -155,6 +161,14 @@ export function MobilePlacesExplore({ roots }: { roots: PlaceTreeNode[] }) {
               </li>
             );
           })}
+          {hidden > 0 && (
+            <li className="border-t border-border">
+              <button type="button" onClick={() => setShowAllFor(levelKey)}
+                className="flex w-full items-center min-h-14 px-4 py-2.5 text-left text-base text-link underline underline-offset-2 cursor-pointer active:bg-surface-2 focus-ring-inset">
+                {t('explore_show_all', { count: rows.length })}
+              </button>
+            </li>
+          )}
         </ul>
       )}
       <div aria-hidden="true" style={{ height: 'calc(40px + env(safe-area-inset-bottom, 0px))' }} />

@@ -50,6 +50,7 @@ import {
 import type { ParsedSpreadsheetPerson, ParsedSpreadsheetFamily } from '@/lib/spreadsheet/parser';
 import { liftCitationLink } from '@/lib/gedcom/citation-link';
 import { liftRepositoryContacts } from '@/lib/gedcom/repository-contacts';
+import { liftNameParts } from '@/lib/gedcom/name-parts';
 
 /** Join captured passthrough lines into a single TEXT value for storage (null when empty). */
 function rawGedcom(lines: string[] | undefined): string | null {
@@ -1260,6 +1261,7 @@ interface MergeHolder {
   Id: number;
   FirstName: string | null;
   LastName: string | null;
+  SurnamePrefix: string | null;
   Sex: string | null;
   Variants: string[];
 }
@@ -1274,7 +1276,7 @@ async function mergeHoldersByXref(
   xref?: string,
 ): Promise<Map<string, MergeHolder[]>> {
   const res = await client.query(
-    `SELECT p."Id", p."GedcomId", p."FirstName", p."LastName", p."Sex",
+    `SELECT p."Id", p."GedcomId", p."FirstName", p."LastName", p."SurnamePrefix", p."Sex",
             COALESCE(ARRAY_AGG(nv."Name") FILTER (WHERE nv."Name" IS NOT NULL), '{}') AS "Variants"
        FROM "People" p
        LEFT JOIN "NameVariant" nv ON nv."PersonId" = p."Id" AND nv."TreeId" = p."TreeId"
@@ -1829,6 +1831,16 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
     recordTypes,
   } = parseGedcom(gedcomContent);
   const rawPointersDropped = markPassthroughPointers({ people, families, sources, repositories, mediaRecords }, recordTypes);
+  // #37 (ADR 0053): the name prefix, surname prefix and suffix are person fields, lifted
+  // out of the NAME passthrough and off the name text that repeats them.
+  for (const p of people) {
+    const parts = liftNameParts(p.nameRawLines, { FirstName: p.FirstName ?? null, LastName: p.LastName ?? null });
+    p.NamePrefix = parts.NamePrefix;
+    p.SurnamePrefix = parts.SurnamePrefix;
+    p.NameSuffix = parts.NameSuffix;
+    if (parts.FirstName || parts.LastName) { p.FirstName = parts.FirstName; p.LastName = parts.LastName; }
+    p.nameRawLines = parts.rest;
+  }
   // #39: dates that couldn't be read are kept as written; say how many.
   const datesKeptAsWritten = countUnreadableDates(people, families);
 
@@ -1957,6 +1969,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
       await client.query('DELETE FROM "Citation" WHERE "TreeId" = $1', [scope.treeId]);
       // Confirmations name the replaced tree's people and dates (#830).
       await client.query('DELETE FROM "DataCheckConfirmations" WHERE "TreeId" = $1', [scope.treeId]);
+      // Saved searches can name the replaced tree's people, sources and cases (#247).
+      await client.query('DELETE FROM "SavedSearch" WHERE "TreeId" = $1', [scope.treeId]);
       // NoteLink rows cascade when their Note is deleted (FK ON DELETE CASCADE).
       await client.query('DELETE FROM "Note" WHERE "TreeId" = $1', [scope.treeId]);
       await client.query('DELETE FROM "Sources" WHERE "TreeId" = $1', [scope.treeId]);
@@ -2119,6 +2133,7 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         'UserId', 'TreeId', 'FirstName', 'LastName', 'Sex', 'GedcomId', 'BirthDate',
         'DeathDate', 'DeathCause', 'IsDeceased', 'RawGedcom',
         'BirthRawGedcom', 'DeathRawGedcom', 'NameRawGedcom', 'BirthRecorded',
+        'NamePrefix', 'SurnamePrefix', 'NameSuffix',
       ];
       const personRows = people.map((person) => [
         scope.ownerId, scope.treeId, person.FirstName, person.LastName, person.Sex, person.GedcomId,
@@ -2126,6 +2141,7 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         rawGedcom(person.rawLines),
         rawGedcom(person.birthRawLines), rawGedcom(person.deathRawLines), rawGedcom(person.nameRawLines),
         bareBirth(person),
+        person.NamePrefix ?? null, person.SurnamePrefix ?? null, person.NameSuffix ?? null,
       ]);
       const personIds = await batchInsert(client, 'People', personColumns, personRows, { returning: true });
       people.forEach((person, i) => {
@@ -2194,8 +2210,8 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
         }
 
         const result = await client.query(
-          `INSERT INTO "People" ("UserId", "TreeId", "FirstName", "LastName", "Sex", "GedcomId", "BirthDate", "DeathDate", "DeathCause", "IsDeceased", "RawGedcom", "BirthRawGedcom", "DeathRawGedcom", "NameRawGedcom", "BirthRecorded")
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          `INSERT INTO "People" ("UserId", "TreeId", "FirstName", "LastName", "Sex", "GedcomId", "BirthDate", "DeathDate", "DeathCause", "IsDeceased", "RawGedcom", "BirthRawGedcom", "DeathRawGedcom", "NameRawGedcom", "BirthRecorded", "NamePrefix", "SurnamePrefix", "NameSuffix")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
            RETURNING "Id"`,
           [
             scope.ownerId,
@@ -2213,6 +2229,9 @@ export async function importGedcomService(params: ImportGedcomParams): Promise<G
             rawGedcom(person.deathRawLines),
             rawGedcom(person.nameRawLines),
             bareBirth(person),
+            person.NamePrefix ?? null,
+            person.SurnamePrefix ?? null,
+            person.NameSuffix ?? null,
           ]
         );
 
@@ -3510,6 +3529,8 @@ export async function resetService(params: ResetParams): Promise<{ success: true
     storedFiles = media.rows.map((r) => r.FilePath);
     await client.query('DELETE FROM "Cases" WHERE "UserId" = $1', [currentUserId]);
     await client.query('DELETE FROM "DataCheckConfirmations" WHERE "UserId" = $1', [currentUserId]);
+    // Every member's saved searches on these trees name records that are going (#247).
+    await client.query('DELETE FROM "SavedSearch" WHERE "TreeId" IN (SELECT "Id" FROM "Trees" WHERE "OwnerId" = $1)', [currentUserId]);
     await client.query('DELETE FROM "AuditLog" WHERE "TreeOwnerId" = $1', [currentUserId]);
     await client.query('DELETE FROM "TreeSharing" WHERE "OwnerId" = $1', [currentUserId]);
     await client.query('DELETE FROM "PendingShares" WHERE "OwnerId" = $1', [currentUserId]);

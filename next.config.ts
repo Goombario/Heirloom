@@ -134,6 +134,14 @@ const nextConfig: NextConfig = {
       );
     }
     if (!isServer) {
+      // PGlite 0.5 imports `node:module` in a Node-only branch (#235). Webpack
+      // can't read the `node:` scheme, so drop it and let the fallbacks below
+      // stub the bare name for the browser.
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: { request: string }) => {
+          resource.request = resource.request.replace(/^node:/, '');
+        }),
+      );
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,

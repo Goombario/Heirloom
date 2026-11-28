@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import en from '@/messages/en.json';
 import { TreeDisplayControls, type TreeDisplayProps } from '@/app/tree/TreeDisplayControls';
@@ -10,7 +10,7 @@ const props = (over: Partial<TreeDisplayProps> = {}): TreeDisplayProps => ({
     barZoomThreshold: 0.5, onBarZoomThresholdChange: vi.fn(),
     depth: 4, maxDepth: 4, onDepthCommit: vi.fn(), showAges: false, onShowAgesChange: vi.fn(),
     showStatus: true, onShowStatusChange: vi.fn(), colorblind: false, onColorblindChange: vi.fn(),
-    secondNameType: null, onSecondNameTypeChange: vi.fn(), ...over,
+    secondNameType: null, onSecondNameTypeChange: vi.fn(), underName: 'dates', onUnderNameChange: vi.fn(), spacing: 'normal', onSpacingChange: vi.fn(), arrangement: 'compact', onArrangementChange: vi.fn(), partners: 'own', onPartnersChange: vi.fn(), view: 'descendants', ...over,
 });
 const renderControls = (p: TreeDisplayProps) => render(
     <NextIntlClientProvider locale="en" messages={en}><TreeDisplayControls {...p} /></NextIntlClientProvider>,
@@ -81,6 +81,60 @@ describe('TreeDisplayControls', () => {
         fireEvent.click(screen.getByRole('combobox', { name: en.treeView.second_name }));
         fireEvent.click(screen.getByRole('option', { name: en.treeView.second_name_none }));
         expect(q.onSecondNameTypeChange).toHaveBeenCalledWith(null);
+    });
+
+    // #250: Compact (today) or Even, with a help line for the view; none in focus.
+    it('picks an arrangement and explains it for the view', () => {
+        const p = props();
+        const { unmount } = renderControls(p);
+        const group = screen.getByRole('radiogroup', { name: en.treeView.arrangement });
+        expect(screen.getByText(en.treeView.arrangement_help_descendants)).toBeTruthy();
+        fireEvent.click(within(group).getByRole('radio', { name: en.treeView.arrangement_even }));
+        expect(p.onArrangementChange).toHaveBeenCalledWith('even');
+        unmount();
+        const a = renderControls(props({ view: 'ancestors' }));
+        expect(screen.getByText(en.treeView.arrangement_help_ancestors)).toBeTruthy();
+        a.unmount();
+        renderControls(props({ view: 'focus' }));
+        expect(screen.getByText(en.treeView.arrangement_focus_na)).toBeTruthy();
+    });
+
+    // #248: Own cards (today) or One couple card; focus keeps its own cards.
+    it('picks how partners are drawn', () => {
+        const p = props();
+        const { unmount } = renderControls(p);
+        const group = screen.getByRole('radiogroup', { name: en.treeView.partners });
+        expect(screen.getByText(en.treeView.partners_help)).toBeTruthy();
+        fireEvent.click(within(group).getByRole('radio', { name: en.treeView.partners_couple }));
+        expect(p.onPartnersChange).toHaveBeenCalledWith('couple');
+        unmount();
+        renderControls(props({ view: 'focus' }));
+        expect(screen.getByText(en.treeView.partners_focus_na)).toBeTruthy();
+    });
+
+    // #249: Tight, Normal (today's gaps) and Roomy.
+    it('picks a spacing, Normal by default', () => {
+        const p = props();
+        renderControls(p);
+        const group = screen.getByRole('radiogroup', { name: en.treeView.spacing });
+        expect(within(group).getByRole('radio', { name: en.treeView.spacing_normal }).getAttribute('aria-checked')).toBe('true');
+        fireEvent.click(within(group).getByRole('radio', { name: en.treeView.spacing_roomy }));
+        expect(p.onSpacingChange).toHaveBeenCalledWith('roomy');
+    });
+
+    // #12: the line under the name, Dates by default, for both orientations.
+    it('picks what goes under the name', () => {
+        const p = props();
+        renderControls(p);
+        const field = screen.getByRole('combobox', { name: en.treeView.under_name });
+        expect(field.textContent).toContain(en.treeView.under_name_dates);
+        expect(screen.getByText(en.treeView.under_name_help)).toBeTruthy();
+        fireEvent.click(field);
+        expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual([
+            en.treeView.under_name_dates, en.treeView.under_name_occupation, en.treeView.under_name_residence, en.treeView.under_name_birthplace,
+        ]);
+        fireEvent.click(screen.getByRole('option', { name: en.treeView.under_name_residence }));
+        expect(p.onUnderNameChange).toHaveBeenCalledWith('residence');
     });
 
     it('disables Second name in the horizontal layout and says why', () => {

@@ -134,10 +134,14 @@ describe('AddMediaModal: adding in the background on a desktop (#62, #207)', () 
     fireEvent.click(uploadButton(2));
     await waitFor(() => expect(screen.getByText('chip_stopped')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'chip_aria_stopped' }));
-    // The list says why, what it added, and what to do: add the other one again.
-    const row = screen.getByRole('listitem');
-    expect(row).toHaveTextContent('stopped');
-    expect(row).toHaveTextContent('rest_add:1');
+    // The row says why in plain words and which photo wasn't added (#236). Storage
+    // is full, so Retry is offered but greyed out, after "See what uses space".
+    const row = screen.getAllByRole('listitem')[0];
+    expect(row).toHaveTextContent('why_storage');
+    expect(row).toHaveTextContent('not_added:1');
+    expect(row).toHaveTextContent('beta.jpg');
+    expect(screen.getByRole('link', { name: 'see_space' })).toHaveAttribute('href', '/library');
+    expect(screen.getByRole('button', { name: 'retry_rest:1' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'dismiss' }));
     expect(screen.queryByText('chip_stopped')).toBeNull();
   });
@@ -166,7 +170,26 @@ describe('AddMediaModal: adding in the background on a desktop (#62, #207)', () 
     await waitFor(() => expect(screen.getByText('chip_stopped')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'chip_aria_stopped' }));
     expect(screen.getByRole('link', { name: 'sign_in' })).toHaveAttribute('href', '/api/auth/signin');
-    expect(screen.getByRole('listitem')).toHaveTextContent('rest_add:2');
+    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('why_sign_in');
+    expect(screen.getByRole('button', { name: 'retry_rest:2' })).toBeEnabled();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  // #236: Retry queues what the stopped job hadn't done, skipping what made it.
+  it('retries only the photos that were not added', async () => {
+    uploadMock.mockResolvedValueOnce({ Id: 1 }).mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValue({ Id: 3 });
+    render(<><UploadModal /><BackgroundJobsChip /></>);
+    selectFiles([photo('alpha'), photo('beta'), photo('gamma')]);
+    await waitFor(() => expect(uploadButton(3)).toBeInTheDocument());
+
+    fireEvent.click(uploadButton(3));
+    await waitFor(() => expect(screen.getByText('chip_stopped')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'chip_aria_stopped' }));
+    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('why_network');
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'retry_rest:2' }));
+    await waitFor(() => expect(screen.getByText('chip_done:2')).toBeInTheDocument());
+    expect(uploadMock).toHaveBeenCalledTimes(4);
   });
 });
