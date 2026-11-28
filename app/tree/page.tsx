@@ -30,7 +30,7 @@ const TreeVisualization = dynamic(() => import('@/app/components/tree/TreeVisual
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full">
-      <div className="skeleton w-full h-full" aria-hidden="true" />
+      <div className="skeleton tree-canvas-skeleton w-full h-full" aria-hidden="true" />
     </div>
   ),
 });
@@ -205,9 +205,11 @@ function TreePageContent() {
             </div>
           ) : !treeData ? (
             // Canvas-only loading state — same skeleton the dynamic import falls back
-            // to, so the chrome stays put and only this region swaps.
+            // to, so the chrome stays put and only this region swaps. A quick load
+            // (Focus here, a re-root) stays blank: the full-canvas slab only appears
+            // once the load outlasts useLoadPhase's delay, so it can't flash.
             <div className="h-full p-2" role="status" aria-busy="true" aria-label={t('loading')}>
-              <div className="skeleton w-full h-full rounded-lg" aria-hidden="true" />
+              {phase === 'loading' && <div className="skeleton tree-canvas-skeleton w-full h-full rounded-lg" aria-hidden="true" />}
             </div>
           ) : (
           <>

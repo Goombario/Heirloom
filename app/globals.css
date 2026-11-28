@@ -1476,6 +1476,10 @@ select:-webkit-autofill:focus {
 .hero-dark .skeleton { background: rgba(255, 255, 255, 0.16); }
 .detail-body--sheet > .detail-body__main .skeleton { background: var(--color-border); }
 .skeleton.skeleton--round { border-radius: 9999px; }
+/* The tree canvas skeleton fills the whole canvas. Dark card-alt (#44403C) on the
+   near-black page reads as a grey flash at that size, so it takes a quieter step
+   off the surface, about the contrast light mode's card-alt has. */
+html.dark .tree-canvas-skeleton { background: color-mix(in srgb, var(--color-card-alt) 30%, var(--color-surface)); }
 
 /* Hide React Flow minimap on mobile */
 @media (max-width: 768px) {
