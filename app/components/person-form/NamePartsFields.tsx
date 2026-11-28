@@ -40,7 +40,7 @@ export function NamePartsFields({ value, onChange, phone = false }: {
     return (
         <div className="grid gap-2">
             <div>
-                <ActionLink kind="expand" expanded={open} controls={`${ids}-parts`} onClick={() => setOpen((o) => !o)}>
+                <ActionLink kind="expand" expanded={open} controls={`${ids}-parts`} onClick={() => setOpen((o) => !o)} className={phone ? 'min-h-11' : undefined}>
                     {t('more_name_parts')}
                 </ActionLink>
             </div>
