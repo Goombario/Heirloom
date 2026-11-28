@@ -69,7 +69,7 @@ async function drive(): Promise<string[]> {
   try {
     preview = await startStaticPreview({ port: PORT, outDir: outOld });
     await openOptions(page);
-    await page.locator('input[type="file"][accept=".hlbak"]').setInputFiles(restoreFile);
+    await page.locator('input[type="file"][accept*=".hlbak"]').setInputFiles(restoreFile);
     await page.getByRole('dialog').getByRole('button', { name: 'Restore', exact: true }).click({ timeout: 120_000 });
     await page.waitForEvent('load', { timeout: 180_000 });
     await openOptions(page);
