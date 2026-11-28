@@ -63,9 +63,7 @@ jobs:
 
   build-flatpak:
     needs: build-deb
-    # Pinned like build-deb: on ubuntu-latest (26.04) flatpak-builder in this
-    # container fails to update the GNOME SDK ("Invalid cross-device link").
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     container:
       # Must match runtime-version in flatpak/com.heirloom.desktop.yml.
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
@@ -80,6 +78,22 @@ jobs:
 
       - name: Put the .deb where the manifest expects it
         run: mv deb/*.deb flatpak/heirloom.deb
+
+      # The image ships the GNOME SDK in its lower overlay layers. Updating a
+      # runtime renames its old deployment aside, and on hosts whose overlayfs
+      # has redirect_dir off that rename fails with EXDEV ("Invalid
+      # cross-device link"), so flatpak-builder stops before building. Copying
+      # each installation into the container's writable layer first makes the
+      # rename a plain one on every host. The image has sh, not bash.
+      - name: Copy the Flatpak installations into the container layer
+        run: |
+          for dir in /var/lib/flatpak "$HOME/.local/share/flatpak"; do
+            [ -d "$dir" ] || continue
+            cp -a "$dir" "$dir.copy"
+            rm -rf "$dir"
+            mv "$dir.copy" "$dir"
+            echo "copied $dir ($(du -sh "$dir" | cut -f1))"
+          done
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
         with:
