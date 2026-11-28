@@ -1,10 +1,10 @@
 /**
- * Moving local databases from PGlite 0.4 (Postgres 17) to 0.5 (Postgres 18), #235.
+ * Moving local databases from PGlite 0.4 (Postgres 17) to 0.6 (Postgres 19), #235.
  *
- * Postgres 18 refuses a Postgres 17 data directory, so a database or a raw `.tar`
+ * Postgres 19 refuses a Postgres 17 data directory, so a database or a raw `.tar`
  * backup written by 0.4 is converted once: the 0.4 engine (the `pglite-pg17`
- * alias, fetched only when needed) opens it, 0.5's pg_dump (which reads older
- * servers) dumps it without the photo bytes, the dump runs in 0.5, and the photo
+ * alias, fetched only when needed) opens it, the current pg_dump (which reads older
+ * servers) dumps it without the photo bytes, the dump runs in the current engine, and the photo
  * bytes are copied across one at a time. Every table's row count is compared
  * before the result is used.
  */
@@ -120,7 +120,7 @@ async function rowCounts(db: Db): Promise<Map<string, number>> {
 }
 
 /**
- * Convert a Postgres 17 data directory into a Postgres 18 one for 0.5: either a
+ * Convert a Postgres 17 data directory into one for the current engine (0.6, Postgres 19): either a
  * tarball (a raw `.tar` backup) or a 0.4 data directory in IndexedDB, opened in
  * place so the database isn't held in memory twice. Throws, changing nothing,
  * if the converted copy doesn't hold the same rows in every table.

@@ -6,8 +6,8 @@ import { SCHEMA_VERSION } from '@/lib/db/init-schema';
 import { convertLegacyDatadir, tarPgMajor } from '@/lib/db/legacy-datadir';
 import { inspectBackupLogical } from '@/lib/db/connection.pglite';
 
-// #235: a database written by PGlite 0.4 (Postgres 17) is converted for 0.5
-// (Postgres 18) with every row, its photo bytes and its sequences intact.
+// #235: a database written by PGlite 0.4 (Postgres 17) is converted for 0.6
+// (Postgres 19) with every row, its photo bytes and its sequences intact.
 
 const PHOTO = new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x01, 0x02, 0xfe]);
 
@@ -28,13 +28,13 @@ async function legacyTree(): Promise<Blob> {
   }
 }
 
-describe('PGlite 0.4 to 0.5 conversion (#235)', () => {
+describe('PGlite 0.4 to 0.6 conversion (#235)', () => {
   it('reads the Postgres version inside a data directory tarball', async () => {
     const legacy = await legacyTree();
     expect(await tarPgMajor(legacy)).toBe(17);
     const fresh = await PGlite.create();
     try {
-      expect(await tarPgMajor(await fresh.dumpDataDir('none'))).toBe(18);
+      expect(await tarPgMajor(await fresh.dumpDataDir('none'))).toBe(19);
     } finally {
       await fresh.close();
     }
@@ -46,7 +46,7 @@ describe('PGlite 0.4 to 0.5 conversion (#235)', () => {
     await expect(PGlite.create({ loadDataDir: legacy })).rejects.toThrow();
 
     const converted = await convertLegacyDatadir(legacy);
-    expect(await tarPgMajor(converted)).toBe(18);
+    expect(await tarPgMajor(converted)).toBe(19);
 
     const db = await PGlite.create({ loadDataDir: converted });
     try {
@@ -72,7 +72,7 @@ describe('PGlite 0.4 to 0.5 conversion (#235)', () => {
   it('restores a raw .tar backup from 0.4 by converting it, and refuses a file that is neither', async () => {
     const { datadir, totals } = await inspectBackupLogical(await legacyTree());
     expect(totals).toEqual({ trees: 1, people: 2, families: 0, media: 1 });
-    expect(await tarPgMajor(datadir)).toBe(18);
+    expect(await tarPgMajor(datadir)).toBe(19);
     await expect(inspectBackupLogical(new Blob(['not a backup at all']))).rejects.toThrow(/Unrecognized backup format/);
   }, 120_000);
 });

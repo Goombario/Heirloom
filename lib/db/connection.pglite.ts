@@ -218,7 +218,7 @@ async function ensureSchemaOnLeader(db: PGliteInterface): Promise<void> {
 
 /**
  * Move a database written by PGlite 0.4 (Postgres 17) to this engine, once
- * (#235). Postgres 18 can't open it, so it is read with the 0.4 engine,
+ * (#235). Postgres 19 can't open it, so it is read with the 0.4 engine,
  * converted, and switched in the way a restore is (#951): the copy goes into the
  * other data directory, is read back, the pointer moves, and only then is the
  * old one deleted. A failure at any step leaves the old database as it was, and
