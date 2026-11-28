@@ -38,6 +38,20 @@ function ShapeMarker({ index, x, y, color, scale = 1 }: { index: number; x: numb
   }
 }
 
+/** React Flow's default smoothstep stalk: how far the line leaves a handle before turning. */
+const DEFAULT_STALK = 20;
+
+/**
+ * The stalk length for a gap between rows. React Flow walks DEFAULT_STALK out of
+ * each handle; when the two stalks overlap (a gap under 40px, as at Tight spacing),
+ * it thinks the child sits behind the parent and routes the line through a jog at
+ * the parents' midpoint, so every sibling line kinks. Keeping each stalk just under
+ * half the gap leaves the bus at the gap's middle, where it always was.
+ */
+function stalkOffset(gap: number): number {
+  return Math.max(0, Math.min(DEFAULT_STALK, Math.abs(gap) / 2 - 1));
+}
+
 /**
  * Custom React Flow edge for parent-child connections. Renders the same smoothstep path
  * as the built-in type (it is registered for 'smoothstep' too), moving the drop to
@@ -67,6 +81,7 @@ export default function BranchEdge({
     targetPosition,
     targetX,
     targetY,
+    offset: stalkOffset(horizontal ? targetX - sourceX : targetY - sourceY),
   });
 
   const shapeIndex = data?.shapeIndex ?? 0;
