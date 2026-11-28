@@ -36,3 +36,7 @@ updates:
       # databases and .tar backups written before 0.5 and convert them (#235).
       # It must stay a Postgres 17 build.
       - dependency-name: pglite-pg17
+      # Node's types follow the runtime major pinned in .node-version (#239);
+      # bump them by hand in the same change as the runtime.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]

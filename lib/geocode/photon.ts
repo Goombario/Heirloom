@@ -364,6 +364,11 @@ export async function searchPlaces(
 export function __clearGeocodeCache(): void {
   memCache.clear();
   inFlight.clear();
+  // Node 25+ defines a process-wide in-memory sessionStorage, so the session
+  // cache would otherwise carry results from one test into the next.
+  if (typeof sessionStorage !== 'undefined') {
+    try { sessionStorage.removeItem(SS_KEY); } catch { /* ignore */ }
+  }
 }
 
 export interface PinNode {
