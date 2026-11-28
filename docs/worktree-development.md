@@ -15,7 +15,7 @@ node --version
 npm.cmd --version
 ```
 
-- Node.js must satisfy `.node-version` and `package.json`: Node 24 or newer.
+- Node.js must satisfy `.node-version` and `package.json`: Node 24 or newer (CI and the builds use the LTS major in `.node-version`, now 26).
 - npm must satisfy `package.json`: npm 11.16.0 or newer.
 - The npm cache and the worktree directory must be writable by the account running
   the install.
@@ -250,7 +250,7 @@ When a new worktree behaves differently from the main checkout, check these in o
 1. Confirm the worktree branch and base with `git status --short --branch` and
    `git log -1 --oneline`.
 2. Resolve only an exact `safe.directory` ownership error.
-3. Confirm Node 24+ and npm 11.16.0+.
+3. Confirm Node 24+ (26 matches CI) and npm 11.16.0+.
 4. Confirm the npm cache and worktree are writable.
 5. Ensure `npm ci` completed and did not leave a partial dependency tree.
 6. Choose the test tier whose database/server/browser prerequisites are actually

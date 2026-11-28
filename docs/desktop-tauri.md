@@ -37,7 +37,7 @@ sudo apt install build-essential libwebkit2gtk-4.1-dev libappindicator3-dev libr
 ```
 
 To build without installing those on the host, run the build in an `ubuntu:24.04`
-container (the CI runner image): install the apt packages above, Node 24 and
+container (the CI runner image): install the apt packages above, Node 26 and
 rustup, then `AUTH_SECRET=x npm run desktop:build`. The host's glibc only has to be
 no newer than the GNOME runtime's, since the Flatpak runs on the runtime's libraries.
 

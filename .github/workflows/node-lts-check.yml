@@ -1,0 +1,84 @@
+name: Node LTS check
+
+# Opens an issue when the Node major pinned in .node-version needs moving (#239):
+# about six months before it reaches end of life, or once a newer major has gone
+# LTS, whichever comes first. Dependabot does not track Node release lines, so
+# this is the reminder. Dates come from the Node.js release schedule.
+#
+# One open issue at a time: if a "Node LTS check" issue is already open, the run
+# only logs. Close that issue when .node-version moves.
+
+on:
+  schedule:
+    - cron: '17 12 1 * *' # 1st of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compare .node-version with the release schedule
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULE_URL: https://raw.githubusercontent.com/nodejs/Release/main/schedule.json
+          WARN_DAYS: '183'
+        run: |
+          set -euo pipefail
+          major=$(tr -d ' \nv' < .node-version | cut -d. -f1)
+          curl -fsSL "$SCHEDULE_URL" -o schedule.json
+          today=$(date -u +%F)
+
+          end=$(jq -r --arg k "v$major" '.[$k].end // empty' schedule.json)
+          if [ -z "$end" ]; then
+            echo "::error::v$major is not in the Node.js release schedule"
+            exit 1
+          fi
+          days_left=$(( ( $(date -u -d "$end" +%s) - $(date -u -d "$today" +%s) ) / 86400 ))
+
+          # Newest major above ours whose LTS date has passed.
+          newer=$(jq -r --argjson m "$major" --arg t "$today" '
+            to_entries
+            | map(select(.key | test("^v[0-9]+$")))
+            | map({n: (.key[1:] | tonumber), lts: .value.lts})
+            | map(select(.n > $m and .lts != null and .lts <= $t))
+            | max_by(.n) | .n // empty' schedule.json)
+
+          echo "Pinned Node $major: end of life $end ($days_left days). Newer LTS: ${newer:-none}."
+
+          reasons=""
+          if [ "$days_left" -le "$WARN_DAYS" ]; then
+            reasons+="- Node $major reaches end of life on **$end** ($days_left days from now)."$'\n'
+          fi
+          if [ -n "$newer" ]; then
+            reasons+="- Node $newer is now an LTS line."$'\n'
+          fi
+          if [ -z "$reasons" ]; then
+            echo "Nothing to do."
+            exit 0
+          fi
+
+          open=$(gh issue list --state open --search 'in:title "Node LTS check"' --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            echo "A Node LTS check issue is already open; not opening another."
+            exit 0
+          fi
+
+          target=${newer:-the next LTS}
+          body=$(printf '%s\n' \
+            "${reasons}" \
+            "Move \`.node-version\` and the \`Dockerfile\` base image to Node ${target}, and \`@types/node\` with them (Dependabot leaves its majors alone)." \
+            "Follow the checklist in #239: \`npm run verify\` on the new version, CI, desktop builds, a staging smoke test, and a perf baseline re-record." \
+            "Raise \`engines.node\` only once self-hosters have had a release on the new line." \
+            "" \
+            "Schedule: https://github.com/nodejs/Release#release-schedule" \
+            "" \
+            "Opened by the Node LTS check workflow.")
+          gh issue create \
+            --title "Node LTS check: move off Node $major" \
+            --label area:build --label kind:tech-debt \
+            --body "$body"

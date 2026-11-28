@@ -65,7 +65,7 @@ and query layers, tree-scoped data access, the database schema and the API.
 
 ## Getting started
 
-You need Node.js 24 or later and npm 11.16 or later.
+You need Node.js 24 or later (26 LTS recommended, as CI uses) and npm 11.16 or later.
 
 ### Try it without any setup
 
